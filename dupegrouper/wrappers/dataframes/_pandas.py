@@ -1,14 +1,28 @@
 """Defines methods after Pandas API"""
 
+from __future__ import annotations
 from typing_extensions import override
 import typing
 
 import pandas as pd
 
-from dupegrouper.frames.dataframe import DFMethods
+from dupegrouper.definitions import GROUP_ID
+from dupegrouper.wrappers.dataframe import WrappedDataFrame
 
 
-class PandasMethods(DFMethods):
+class WrappedPandasDataFrame(WrappedDataFrame):
+
+    def __init__(self, df: pd.DataFrame, id: str | None):
+        super().__init__(df)
+        self._df: pd.DataFrame = self._add_group_id(df)
+        self._id = id
+
+    @staticmethod
+    @override
+    def _add_group_id(df) -> pd.DataFrame:
+        return df.assign(**{GROUP_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
+
+    # PANDAS API WRAPPERS:
 
     @override
     def put_col(self, column: str, array) -> typing.Self:
@@ -30,10 +44,5 @@ class PandasMethods(DFMethods):
 
     @staticmethod
     @override
-    def fill_na(series: pd.Series, array) -> pd.Series:
+    def fill_na(series: pd.Series, array: pd.Series) -> pd.Series:
         return series.fillna(array)
-
-    @property
-    @override
-    def frame(self):
-        return self._df

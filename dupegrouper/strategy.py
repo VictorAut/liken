@@ -8,16 +8,13 @@ overrideable `dedupe()` is defined.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from functools import singledispatchmethod
 import logging
+import typing
 
 import numpy as np
-import pandas as pd
-import polars as pl
 
-from dupegrouper.definitions import GROUP_ID, frames
-from dupegrouper.frames.methods import PandasMethods, PolarsMethods
-from dupegrouper.frames import DFMethods
+from dupegrouper.definitions import GROUP_ID
+from dupegrouper.wrappers import WrappedDataFrame
 
 
 # LOGGER:
@@ -26,49 +23,20 @@ from dupegrouper.frames import DFMethods
 _logger = logging.getLogger(__name__)
 
 
-# DATAFRAME DISPATCHER
-
-
-class _DataFrameDispatcher:
-    """Dispatcher to collect methods for the given dataframe"""
-
-    def __init__(self, df):
-        self._frame_methods: DFMethods = self._df_dispatch(df)
-
-    @singledispatchmethod
-    @staticmethod
-    def _df_dispatch(df: frames) -> DFMethods:
-        """
-        Dispatch the dataframe to the appropriate handler.
-
-        Args:
-            df: The dataframe to dispatch to the appropriate handler.
-
-        Raises:
-            NotImplementedError
-        """
-        raise NotImplementedError(f"Unsupported data frame: {type(df)}")
-
-    @_df_dispatch.register(pd.DataFrame)
-    def _(self, df) -> DFMethods:
-        return PandasMethods(df)
-
-    @_df_dispatch.register(pl.DataFrame)
-    def _(self, df) -> DFMethods:
-        return PolarsMethods(df)
-
-    @property
-    def frame_methods(self) -> DFMethods:
-        return self._frame_methods
-
-
 # STRATEGY:
 
 
 class DeduplicationStrategy(ABC):
     """Defines a deduplication strategy."""
 
-    def _set_df(self, df):
+    def __init__(self, *args, **kwargs):
+        self._init_args = args
+        self._init_kwargs = kwargs
+
+    def reinstantiate(self):
+        return self.__class__(*self._init_args, **self._init_kwargs)
+
+    def with_frame(self, wrapped_df: WrappedDataFrame) -> typing.Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -78,10 +46,10 @@ class DeduplicationStrategy(ABC):
         Returns:
             self: i.e. allow for further chaining
         """
-        self.frame_methods: DFMethods = _DataFrameDispatcher(df).frame_methods
+        self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def assign_group_id(self, attr: str):
+    def assign_group_id(self, attr: str) -> WrappedDataFrame:
         """Assign new group ids according to duplicated instances of attribute.
 
         Array-like contents of the dataframe's attributes are collected as a
@@ -104,16 +72,15 @@ class DeduplicationStrategy(ABC):
             attr: the dataframe label of the attribute
 
         Returns:
-            frame_methods; i.e. an instance "DFMethods" i.e. container of data
-            and linked dataframe methods; ready for further downstream
+            wrapped_df; i.e. an instance "WrappedDataFrame" i.e. container
+            of data and linked dataframe methods; ready for further downstream
             processing.
         """
         _logger.debug(f'Re-assigning new "group_id" per duped instance of attribute "{attr}"')
 
-        frame_methods: DFMethods = self.frame_methods  # type according to future ABC
-
-        attrs = np.asarray(frame_methods.get_col(attr))
-        groups = np.asarray(frame_methods.get_col(GROUP_ID))
+        attrs = np.asarray(self.wrapped_df.get_col(attr))
+        attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
+        groups = np.asarray(self.wrapped_df.get_col(GROUP_ID))
 
         unique_attrs, unique_indices = np.unique(
             attrs,
@@ -135,18 +102,16 @@ class DeduplicationStrategy(ABC):
             groups,
         )
 
-        frame_methods: DFMethods = frame_methods.put_col(GROUP_ID, new_groups)  # type: ignore[no-redef]
-
-        return frame_methods  # i.e. has `frame` and `methods`
+        return self.wrapped_df.put_col(GROUP_ID, new_groups)
 
     @abstractmethod
-    def dedupe(self, attr: str) -> frames:
+    def dedupe(self, attr: str) -> WrappedDataFrame:
         """Use `assign_group_id` to implement deduplication logic
 
         Args:
             attr: The attribute to use for deduplication.
 
         Returns:
-            frames: the deduplicated dataframe
+            A deduplicated instance of WrappedDataFrame
         """
-        pass
+        pass  # pragma: no cover

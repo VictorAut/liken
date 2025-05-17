@@ -1,4 +1,6 @@
 import pandas as pd
+
+from dupegrouper.base import _wrap
 from dupegrouper.strategies.custom import Custom
 
 
@@ -19,9 +21,10 @@ def my_func(df: pd.DataFrame, attr: str, /, match_str: str) -> dict[str, str]:
 def test_custom_dedupe(df_pandas):
 
     deduper = Custom(my_func, "address", match_str="navarra")
-    deduper._set_df(df_pandas)
+    deduper.with_frame(_wrap(df_pandas))
 
-    updated_df = deduper.dedupe()
+    updated_wrapped_df = deduper.dedupe()
+    updated_df = updated_wrapped_df.unwrap()
 
     expected_group_ids = [1, 2, 3, 3, 5, 6, 3, 8, 1, 1, 11, 12, 13]
 

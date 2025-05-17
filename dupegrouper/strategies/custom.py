@@ -7,8 +7,8 @@ import logging
 import typing
 from typing_extensions import override
 
-from dupegrouper.definitions import TMP_ATTR_LABEL, frames
-from dupegrouper.frames import DFMethods
+from dupegrouper.definitions import TMP_ATTR
+from dupegrouper.wrappers import WrappedDataFrame
 from dupegrouper.strategy import DeduplicationStrategy
 
 
@@ -36,12 +36,17 @@ class Custom(DeduplicationStrategy):
         /,
         **kwargs,
     ):
+        super().__init__(
+            func,
+            attr,
+            **kwargs,
+        )
         self._func = func
         self._attr = attr
         self._kwargs = kwargs
 
     @override
-    def dedupe(self, attr=None) -> frames:
+    def dedupe(self, attr=None) -> WrappedDataFrame:
         """dedupe with custom defined callable
 
         Implements deduplication using a function defined _outside_ of the
@@ -63,21 +68,15 @@ class Custom(DeduplicationStrategy):
             f'({", ".join(f"{k}={v}" for k, v in self._kwargs.items())})'
         )
 
-        frame_methods: DFMethods = self.frame_methods
-
-        tmp_attr: str = self._attr + TMP_ATTR_LABEL
-
-        attr_map = frame_methods.map_dict(
+        attr_map = self.wrapped_df.map_dict(
             self._attr,
             self._func(
-                frame_methods.frame,
+                self.wrapped_df,
                 self._attr,
                 **self._kwargs,
             ),
         )
 
-        logger.debug(f"Assigning duplicated {self._attr} instances to attribute {tmp_attr}")
+        self.wrapped_df.put_col(TMP_ATTR, attr_map)
 
-        frame_methods.put_col(tmp_attr, attr_map)
-
-        return self.assign_group_id(tmp_attr).drop_col(tmp_attr).frame
+        return self.assign_group_id(TMP_ATTR).drop_col(TMP_ATTR)

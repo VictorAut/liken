@@ -3,3 +3,10 @@
 scrap*
 
 **/__pycache__/*
+
+.coverage
+
+htmlcov/
+coverage.xml
+
+.python-version

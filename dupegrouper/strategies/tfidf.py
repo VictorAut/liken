@@ -1,5 +1,6 @@
 """Perform near deduplication with TF-IDF"""
 
+from __future__ import annotations
 import functools
 import logging
 from typing_extensions import override
@@ -11,8 +12,8 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
-from dupegrouper.definitions import TMP_ATTR_LABEL, frames
-from dupegrouper.frames import DFMethods
+from dupegrouper.definitions import TMP_ATTR, SeriesLike
+from dupegrouper.wrappers import WrappedDataFrame
 from dupegrouper.strategy import DeduplicationStrategy
 
 
@@ -44,6 +45,12 @@ class TfIdf(DeduplicationStrategy):
         topn: int = 2,
         **kwargs,
     ):
+        super().__init__(
+            ngram=ngram,
+            tolerance=tolerance,
+            topn=topn,
+            **kwargs,
+        )
         self._ngram = ngram
         self._tolerance = tolerance
         self._topn = topn
@@ -59,7 +66,7 @@ class TfIdf(DeduplicationStrategy):
         Args:
             ngram: the n-gram range"""
         del ngram  # Unused by generic
-        return TypeError("ngram must be of type int or a length 2 tuple of integers")
+        raise TypeError("ngram must be of type int or a length 2 tuple of integers")
 
     @_vectorize.register(int)
     def _(self, ngram) -> TfidfVectorizer:
@@ -159,7 +166,7 @@ class TfIdf(DeduplicationStrategy):
                 yield {i: j}
 
     @override
-    def dedupe(self, attr: str, /) -> frames:
+    def dedupe(self, attr: str, /) -> WrappedDataFrame:
         """Deduplicate with term frequency, inverse document frequency.
 
         Here, 1-to-1 maps are identified using the procedure i.e. for *each*
@@ -179,25 +186,20 @@ class TfIdf(DeduplicationStrategy):
             ")"
         )
 
-        frame_methods: DFMethods = self.frame_methods
-
-        tmp_attr: str = attr + TMP_ATTR_LABEL
-
         vectorizer = self._vectorize(self._ngram)
 
-        similarities = self._get_similarities_matrix(vectorizer, frame_methods.get_col(attr))
+        similarities = self._get_similarities_matrix(vectorizer, np.array(self.wrapped_df.get_col(attr)))
 
-        matches = self._get_matches_array(similarities, np.array(frame_methods.get_col(attr)))
+        matches = self._get_matches_array(similarities, np.array(self.wrapped_df.get_col(attr)))
 
-        logger.debug(f'Assigning duplicated "{attr}" instances to attribute "{tmp_attr}"')
         for tfidf_map in self._gen_map(matches):
 
-            attr_map = frame_methods.map_dict(attr, tfidf_map)  # i.e. "Series" like
+            attr_map: SeriesLike = self.wrapped_df.map_dict(attr, tfidf_map)
 
-            new_attr = frame_methods.fill_na(attr_map, frame_methods.get_col(attr))  # i.e. "Series" like
+            new_attr: SeriesLike = self.wrapped_df.fill_na(attr_map, self.wrapped_df.get_col(attr))
 
-            frame_methods.put_col(tmp_attr, new_attr)  # inplace create column
+            self.wrapped_df.put_col(TMP_ATTR, new_attr)
 
-            self.assign_group_id(tmp_attr).drop_col(tmp_attr)  # updates `framemethods`
+            self.assign_group_id(TMP_ATTR).drop_col(TMP_ATTR)
 
-        return frame_methods.frame
+        return self.wrapped_df

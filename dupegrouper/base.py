@@ -4,157 +4,51 @@ This module contains `DupeGrouper`, at the core of all 'dupe and group'
 functionality provided by dupegrouper.
 """
 
-import collections.abc
+from __future__ import annotations
 import collections
-from functools import singledispatchmethod
+from functools import singledispatch, singledispatchmethod
 import inspect
-from types import NoneType
+import logging
+
+try:
+    from types import NoneType
+except ImportError:  # pragma: no cover
+    NoneType = type(None)  # type: ignore
 import typing
 
 import pandas as pd
 import polars as pl
+from pyspark.sql import (
+    SparkSession,
+    Row,
+    DataFrame as SparkDataFrame,  # i.e. no clash with generic DataFrame
+)
+from pyspark.sql.types import StructField, StructType, DataType
 
 from dupegrouper.definitions import (
+    StrategyMapCollection,
+    DataFrameLike,
     GROUP_ID,
-    strategy_map_collection,
-    frames,
+    PYSPARK_TYPES,
 )
 from dupegrouper.strategies.custom import Custom
 from dupegrouper.strategy import DeduplicationStrategy
+from dupegrouper.wrappers.dataframes import (
+    WrappedPandasDataFrame,
+    WrappedPolarsDataFrame,
+    WrappedSparkDataFrame,
+    WrappedSparkRows,
+)
+from dupegrouper.wrappers import WrappedDataFrame
 
 
-# DATAFRAME CONSTRUCTOR:
+# LOGGER:
 
 
-class _InitDataFrame:
-    """Initialize a DataFrame with a unique group identifier column.
-
-    Modifies the input DataFrame (either Pandas or Polars) to include a new
-    column "group_id", which contains sequential integer values starting from
-    from 1, to act as the new unique identified of duplicate, or near-duplicate
-    rows in the dataframe.
-
-    Note: the default label, "group_id" can be overriden via the environment
-    variable `GROUP_ID`.
-    """
-
-    def __init__(self, df):
-        self._df: frames = self._init_dispatch(df)
-
-    @singledispatchmethod
-    @staticmethod
-    def _init_dispatch(df: frames):
-        """Dispatch method to initialise a dataframe with a new group id.
-
-        Args:
-            df: the input dataframe
-
-        Returns:
-            The dataframe, with new "group_id", or similarly named.
-
-        Raises:
-            NotImplemenetedError
-        """
-        raise NotImplementedError(f"Unsupported data frame: {type(df)}")
-
-    @_init_dispatch.register(pd.DataFrame)
-    def _(self, df):
-        return df.assign(**{GROUP_ID: range(1, len(df) + 1)})
-
-    @_init_dispatch.register(pl.DataFrame)
-    def _(self, df):
-        return df.with_columns(**{GROUP_ID: range(1, len(df) + 1)})
-
-    @property
-    def choose(self):
-        return self._df
+_logger = logging.getLogger(__name__)
 
 
-# STRATEGY MANAGMENT:
-
-
-class _StrategyManager:
-    """
-    Manage and validate collection(s) of deduplication strategies.
-
-    Strategies are collected into a dictionary-like collection where keys are
-    attribute names, and values are lists of strategies. Validation is provided
-    upon addition allowing only the following stratgies types:
-        - `DeduplicationStrategy`
-        - a tuple, typed as tuple[callable, dict[str, str]]
-    A public property exposes stratgies upon successul addition and validation.
-    A `StrategyTypeError` is thrown, otherwise.
-    """
-
-    def __init__(self):
-        self._strategies: strategy_map_collection = collections.defaultdict(list)
-
-    def add(
-        self,
-        attr_key: str,
-        strategy: DeduplicationStrategy | tuple,
-    ):
-        """Adds a strategy to the collection under a specific attribute key.
-
-        Validates the strategy before adding it to the collection. If the
-        strategy is not valid, a `StrategyTypeError` is raised.
-
-        Args:
-            attr_key: The key representing the attribute the strategy applies
-                to.
-            strategy: The deduplication strategy or a tuple containing a
-                callable and its associated keyword arguments, as a mapping
-
-        Raises:
-            StrategyTypeError: If the strategy is not valid according to
-            validation rules.
-        """
-        if self.validate(strategy):
-            self._strategies[attr_key].append(strategy)  # type: ignore[attr-defined]
-            return
-        raise StrategyTypeError(strategy)
-
-    def get(self):
-        return self._strategies
-
-    def validate(self, strategy):
-        """
-        Validates a strategy
-
-        The strategy to validate. Can be a `DeduplicationStrategy`, a tuple, or
-        a dict of the aforementioned strategies types i.e.
-        dict[str, DeduplicationStrategy | tuple]. As such the function checks
-        such dict instances via recursion.
-
-        Args:
-            strategy: The strategy to validate. `DeduplicationStrategy`, tuple,
-            or a dict of such
-
-        Returns:
-            bool: strategy is | isn't valid
-
-        A valid strategy is one of the following:
-            - A `DeduplicationStrategy` instance.
-            - A tuple where the first element is a callable and the second element is a dictionary.
-            - A dictionary where each item is a valid strategy.
-        """
-        if isinstance(strategy, DeduplicationStrategy):
-            return True
-        if isinstance(strategy, tuple) and len(strategy) == 2:
-            func, kwargs = strategy
-            return callable(func) and isinstance(kwargs, dict)
-        if isinstance(strategy, dict):
-            for _, v in strategy.items():
-                if not self.validate(v) or not isinstance(v, list):
-                    return False
-        return False
-
-    def reset(self):
-        """Reset strategy collection to empty default dictionary"""
-        self.__init__()
-
-
-# BASE:
+# CORE:
 
 
 class DupeGrouper:
@@ -167,13 +61,20 @@ class DupeGrouper:
 
     Upon initialisation, `DupeGrouper` sets a new column, usually `"group_id"`
     — but you can control this by setting an environment variable `GROUP_ID` at
-    runtime. The group_id is linearly increasing, numeric id column starting at
-    1 to the length of the dataframe provided.
+    runtime. The group_id is a monotonically increasing, numeric id column
+    starting at 1 to the length of the dataframe provided.
     """
 
-    def __init__(self, df: pd.DataFrame):
-        self._df = _InitDataFrame(df).choose
+    def __init__(
+        self,
+        df: DataFrameLike,
+        spark_session: SparkSession | None = None,
+        id: str | None = None,
+    ):
+        self._df: WrappedDataFrame = _wrap(df, id)
         self._strategy_manager = _StrategyManager()
+        self._spark_session = spark_session
+        self._id = id
 
     @singledispatchmethod
     def _call_strategy_deduper(
@@ -200,22 +101,23 @@ class DupeGrouper:
             NotImplementedError.
         """
         del attr  # Unused
-        return NotImplementedError(f"Unsupported strategy: {type(strategy)}")
+
+        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
     @_call_strategy_deduper.register(DeduplicationStrategy)
-    def _(self, strategy, attr):
-        return strategy._set_df(self._df).dedupe(attr)
+    def _(self, strategy, attr) -> WrappedDataFrame:
+        return strategy.with_frame(self._df).dedupe(attr)
 
     @_call_strategy_deduper.register(tuple)
-    def _(self, strategy: tuple[typing.Callable, typing.Any], attr):
+    def _(self, strategy: tuple[typing.Callable, typing.Any], attr) -> WrappedDataFrame:
         func, kwargs = strategy
-        return Custom(func, attr, **kwargs)._set_df(self._df).dedupe()
+        return Custom(func, attr, **kwargs).with_frame(self._df).dedupe()
 
     @singledispatchmethod
     def _dedupe(
         self,
         attr: str | None,
-        strategy_collection: strategy_map_collection,
+        strategies: StrategyMapCollection,
     ):
         """Dispatch the appropriate deduplication logic.
 
@@ -237,27 +139,53 @@ class DupeGrouper:
         Raises:
             NotImplementedError.
         """
-        del strategy_collection  # Unused
-        raise NotImplementedError(f"Unsupported type: {type(attr)}")
+        del strategies  # Unused
+        raise NotImplementedError(f"Unsupported attribute type: {type(attr)}")
 
     @_dedupe.register(str)
-    def _(self, attr, strategy_collection):
-        for strategy in strategy_collection["default"]:
+    def _(self, attr, strategies):
+        for strategy in strategies["default"]:
             self._df = self._call_strategy_deduper(strategy, attr)
-        self._strategy_manager.reset()
 
     @_dedupe.register(NoneType)
-    def _(self, attr, strategy_collection):
+    def _(self, attr, strategies):
         del attr  # Unused
-        for attr, strategies in strategy_collection.items():
+        for attr, strategies in strategies.items():
             for strategy in strategies:
                 self._df = self._call_strategy_deduper(strategy, attr)
-        self._strategy_manager.reset()
+
+    def _dedupe_spark(self, attr: str | None, strategies: StrategyMapCollection):
+        """Spark specific deduplication helper
+
+        Maps dataframe partitions to be processed via the RDD API yielding low-
+        level list[Rows], which are then post-processed back to a dataframe.
+
+        Args:
+            attr: The attribute to deduplicate.
+            strategies: the collection of strategies
+        Retuns:
+            Instance's _df attribute is updated
+        """
+        id = typing.cast(str, self._id)
+        id_type = typing.cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
+
+        deduped_rdd = self._df.rdd.mapPartitions(
+            lambda partition_iter: _process_partition(partition_iter, strategies, id, attr)
+        )
+
+        if GROUP_ID in self._df.columns:
+            schema = StructType(self._df.schema.fields)
+        else:
+            schema = StructType(self._df.schema.fields + [StructField(GROUP_ID, id_type, True)])
+
+        self._df = WrappedSparkDataFrame(
+            typing.cast(SparkSession, self._spark_session).createDataFrame(deduped_rdd, schema=schema), id
+        )
 
     # PUBLIC API:
 
     @singledispatchmethod
-    def add_strategy(self, strategy: DeduplicationStrategy | tuple | strategy_map_collection):
+    def add_strategy(self, strategy: DeduplicationStrategy | tuple | StrategyMapCollection):
         """
         Add a strategy to the strategy manager.
 
@@ -274,7 +202,7 @@ class DupeGrouper:
         Raises:
             NotImplementedError
         """
-        return NotImplementedError(f"Unsupported strategy: {type(strategy)}")
+        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
     @add_strategy.register(DeduplicationStrategy)
     @add_strategy.register(tuple)
@@ -282,7 +210,7 @@ class DupeGrouper:
         self._strategy_manager.add("default", strategy)
 
     @add_strategy.register(dict)
-    def _(self, strategy: strategy_map_collection):
+    def _(self, strategy: StrategyMapCollection):
         for attr, strat_list in strategy.items():
             for strat in strat_list:
                 self._strategy_manager.add(attr, strat)
@@ -291,11 +219,18 @@ class DupeGrouper:
         """dedupe, and group, the data based on the provided attribute
 
         Args:
-            attr: The attribute to deduplicate. If stratgies have been added as
-                a mapping object, this must not passed, as the keys of the
+            attr: The attribute to deduplicate. If strategies have been added
+                as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
-        self._dedupe(attr, self._strategy_manager.get())
+        strategies = self._strategy_manager.get()
+
+        if isinstance(self._df, WrappedSparkDataFrame):
+            self._dedupe_spark(attr, strategies)
+        else:
+            self._dedupe(attr, strategies)
+
+        self._strategy_manager.reset()
 
     @property
     def strategies(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
@@ -314,15 +249,102 @@ class DupeGrouper:
             return None
 
         def parse_strategies(dict_values):
-            return tuple([(vx[0].__name__ if isinstance(vx, tuple) else vx.__class__.__name__) for vx in dict_values])
+            return tuple(
+                [
+                    (vx[0].__name__ if isinstance(vx, tuple) else vx.__class__.__name__)
+                    #
+                    for vx in dict_values
+                ]
+            )
 
         if "default" in strategies:
             return tuple([parse_strategies(v) for _, v in strategies.items()])[0]
         return {k: parse_strategies(v) for k, v in strategies.items()}
 
     @property
-    def df(self) -> pd.DataFrame:
-        return self._df
+    def df(self) -> DataFrameLike:
+        return self._df.unwrap()
+
+
+# STRATEGY MANAGER:
+
+
+class _StrategyManager:
+    """
+    Manage and validate collection(s) of deduplication strategies.
+
+    Strategies are collected into a dictionary-like collection where keys are
+    attribute names, and values are lists of strategies. Validation is provided
+    upon addition allowing only the following stratgies types:
+        - `DeduplicationStrategy`
+        - a tuple, typed as tuple[callable, dict[str, str]]
+    A public property exposes stratgies upon successul addition and validation.
+    A `StrategyTypeError` is thrown, otherwise.
+    """
+
+    def __init__(self) -> None:
+        self._strategies: StrategyMapCollection = collections.defaultdict(list)
+
+    def add(
+        self,
+        attr_key: str,
+        strategy: DeduplicationStrategy | tuple,
+    ):
+        """Adds a strategy to the collection under a specific attribute key.
+
+        Validates the strategy before adding it to the collection. If the
+        strategy is not valid, a `StrategyTypeError` is raised.
+
+        Args:
+            attr_key: The key representing the attribute the strategy applies
+                to.
+            strategy: The deduplication strategy or a tuple containing a
+                callable and its associated keyword arguments, as a mapping
+
+        Raises:
+            StrategyTypeError: If the strategy is not valid according to
+            validation rules.
+        """
+        if self.validate(strategy):
+            self._strategies[attr_key].append(strategy)  # type: ignore[attr-defined]
+            return
+        raise StrategyTypeError(strategy)
+
+    def get(self) -> StrategyMapCollection:
+        return self._strategies
+
+    def validate(self, strategy) -> bool:
+        """
+        Validates a strategy
+
+        The strategy to validate. Can be a `DeduplicationStrategy`, a tuple, or
+        a dict of the aforementioned strategies types i.e.
+        dict[str, DeduplicationStrategy | tuple]. As such the function checks
+        such dict instances via recursion.
+
+        Args:
+            strategy: The strategy to validate. `DeduplicationStrategy`, tuple,
+            or a dict of such
+
+        Returns:
+            bool: strategy is | isn't valid
+
+        A valid strategy is one of the following:
+            - A `DeduplicationStrategy` instance.
+            - A tuple where the first element is a callable and the second
+                element is a dictionary.
+            - A dictionary where each item is a valid strategy.
+        """
+        if isinstance(strategy, DeduplicationStrategy):
+            return True
+        if isinstance(strategy, tuple) and len(strategy) == 2:
+            func, kwargs = strategy
+            return callable(func) and isinstance(kwargs, dict)
+        return False
+
+    def reset(self):
+        """Reset strategy collection to empty default dictionary"""
+        self.__init__()
 
 
 # EXCEPTION CLASS
@@ -332,7 +354,7 @@ class StrategyTypeError(Exception):
     """Strategy type not valid errors"""
 
     def __init__(self, strategy: DeduplicationStrategy | tuple):
-        base_msg = "Input is not valid"  # i.e. default; allow for easier testing
+        base_msg = "Input is not valid"  # i.e. default
         context = ""
         if inspect.isclass(strategy):
             base_msg = "Input class is not valid: must be an instance of `DeduplicationStrategy`"
@@ -344,3 +366,91 @@ class StrategyTypeError(Exception):
             base_msg = "Input dict is not valid: items must be a list of `DeduplicationStrategy` or tuples"
             context = ""
         super().__init__(base_msg + context)
+
+
+# WRAP DATAFRAME DISPATCHER:
+
+
+@singledispatch
+def _wrap(df: DataFrameLike, id: str | None = None) -> WrappedDataFrame:
+    """
+    Dispatch the dataframe to the appropriate wrapping handler.
+
+    Args:
+        df: The dataframe to dispatch to the appropriate handler.
+
+    Returns:
+        WrappedDataFrame, a DataFrame wrapped with a uniform interface.
+
+    Raises:
+        NotImplementedError
+    """
+    del id  # Unused
+    raise NotImplementedError(f"Unsupported data frame: {type(df)}")
+
+
+@_wrap.register(pd.DataFrame)
+def _(df, id: str | None = None):
+    return WrappedPandasDataFrame(df, id)
+
+
+@_wrap.register(pl.DataFrame)
+def _(df, id: str | None = None):
+    return WrappedPolarsDataFrame(df, id)
+
+
+@_wrap.register(SparkDataFrame)
+def _(df, id: str | None = None):
+    return WrappedSparkDataFrame(df, id)
+
+
+@_wrap.register(list)
+def _(df: list[Row], id: str):
+    """As lists can be large: `all` membership is `Row` is *not* validated!"""
+    return WrappedSparkRows(df, id)
+
+
+# PARTITION PROCESSING:
+
+
+def _process_partition(
+    partition_iter: typing.Iterator[Row],
+    strategies: StrategyMapCollection,
+    id: str,
+    attr: str | None,
+) -> typing.Iterator[Row]:
+    """process a spark dataframe partition i.e. a list[Row]
+
+    This function is functionality mapped to a worker node. For clean
+    separation from the driver, strategies are re-instantiated and the main
+    dupegrouper API is executed *per* worker node.
+
+    Args:
+        paritition_iter: a partition
+        strategies: the collection of strategies
+        id: the unique identified of the dataset a.k.a "business key"
+        attr: the attribute on which to deduplicate
+
+    Returns:
+        A list[Row], deduplicated
+    """
+    # handle empty partitions
+    rows = list(partition_iter)
+    if not rows:
+        return iter([])
+
+    # re-instantiate strategies based on driver's
+    reinstantiated_strategies = {}
+    for key, values in strategies.items():
+        reinstantiated_strategies[key] = [
+            v if isinstance(v, tuple) else v.reinstantiate()
+            #
+            for v in values
+        ]
+
+    # Core API reused per partition, per worker node
+    dg = DupeGrouper(rows, id=id)
+    dg.add_strategy(strategies)
+    dg.dedupe(attr)
+
+    return iter(dg.df)  # type: ignore[arg-type]
