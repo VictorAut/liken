@@ -63,6 +63,5 @@ class WrappedDataFrame(ABC):
 
     # THIN TRANSPARENCY DELEGATION
 
-    # @abstractmethod
     def __getattr__(self, name: str) -> typing.Any:
         return getattr(self._df, name)
