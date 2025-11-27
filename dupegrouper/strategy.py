@@ -93,14 +93,8 @@ class DeduplicationStrategy(ABC):
 
         # iteratively: attrs -> value param; groups -> default param
         new_groups: np.ndarray = np.vectorize(
-            lambda value, default: attr_group_map.get(
-                value,
-                default,
-            )
-        )(
-            attrs,
-            groups,
-        )
+            lambda value, default: attr_group_map.get(value, default),
+        )(attrs, groups)
 
         return self.wrapped_df.put_col(GROUP_ID, new_groups)
 

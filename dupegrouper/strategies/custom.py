@@ -7,7 +7,7 @@ import logging
 import typing
 from typing_extensions import override
 
-from dupegrouper.definitions import TMP_ATTR
+from dupegrouper.definitions import TMP_ATTR_LABEL, SeriesLike
 from dupegrouper.wrappers import WrappedDataFrame
 from dupegrouper.strategy import DeduplicationStrategy
 
@@ -68,7 +68,7 @@ class Custom(DeduplicationStrategy):
             f'({", ".join(f"{k}={v}" for k, v in self._kwargs.items())})'
         )
 
-        attr_map = self.wrapped_df.map_dict(
+        new_attr: SeriesLike = self.wrapped_df.map_dict(
             self._attr,
             self._func(
                 self.wrapped_df,
@@ -77,6 +77,6 @@ class Custom(DeduplicationStrategy):
             ),
         )
 
-        self.wrapped_df.put_col(TMP_ATTR, attr_map)
+        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
 
-        return self.assign_group_id(TMP_ATTR).drop_col(TMP_ATTR)
+        return self.assign_group_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
