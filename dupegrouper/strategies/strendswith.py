@@ -16,10 +16,10 @@ from dupegrouper.strategy import DeduplicationStrategy
 logger = logging.getLogger(__name__)
 
 
-# STR STARTS WITH:
+# STR ENDS WITH:
 
 
-class StrStartsWith(DeduplicationStrategy):
+class StrEndsWith(DeduplicationStrategy):
     """Strings start with deduper.
 
     Defaults to case sensitive.
@@ -37,23 +37,23 @@ class StrStartsWith(DeduplicationStrategy):
 
     @override
     def dedupe(self, attr: str, /) -> WrappedDataFrame:
-        """Deduplicate records starting with the given pattern
+        """Deduplicate records ending with the given pattern
         """
         logger.debug(f'Deduping attribute "{attr}" with {self.__class__.__name__}' f"(pattern={self._pattern})")
 
-        def _startswith_case(value: str) -> bool:
+        def _endswith_case(value: str) -> bool:
             return (
-                value.startswith(self._pattern)
+                value.endswith(self._pattern)
                 #
                 if self._case
-                else value.lower().startswith(self._pattern.lower())
+                else value.lower().endswith(self._pattern.lower())
             )
 
         match_map = {}
         for key in (col := np.unique(self.wrapped_df.get_col(attr))):
             for value in col:
-                key_starts = _startswith_case(key)
-                value_starts = _startswith_case(value)
+                key_starts = _endswith_case(key)
+                value_starts = _endswith_case(value)
 
                 if key_starts and value_starts:
                     match_map[key] = value
