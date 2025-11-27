@@ -53,8 +53,6 @@ class Fuzzy(DeduplicationStrategy):
 
         new_attr: SeriesLike = self.wrapped_df.map_dict(attr, fuzzy_map)
 
-        print(new_attr)
-
         self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
 
         return self.assign_group_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
