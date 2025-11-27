@@ -37,8 +37,7 @@ class StrStartsWith(DeduplicationStrategy):
 
     @override
     def dedupe(self, attr: str, /) -> WrappedDataFrame:
-        """Deduplicate records starting with the given pattern
-        """
+        """Deduplicate records starting with the given pattern"""
         logger.debug(f'Deduping attribute "{attr}" with {self.__class__.__name__}' f"(pattern={self._pattern})")
 
         def _startswith_case(value: str) -> bool:
