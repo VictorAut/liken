@@ -116,8 +116,6 @@ class StrContains(DeduplicationStrategy):
         if self._regex:
             flags = 0 if self._case else re.IGNORECASE
             self._compiled_pattern = re.compile(self._pattern, flags)
-        else:
-            self._compiled_pattern = None
 
     @override
     def dedupe(self, attr: str, /) -> WrappedDataFrame:
