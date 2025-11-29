@@ -1,9 +1,11 @@
 from .exact import Exact
 from .fuzzy import Fuzzy
 from .tfidf import TfIdf
-from .strstartswith import StrStartsWith
-from .strendswith import StrEndsWith
-from .strcontains import StrContains
+from .strdedupers import (
+    StrStartsWith,
+    StrEndsWith,
+    StrContains,
+)
 
 __all__ = [
     "Exact",
