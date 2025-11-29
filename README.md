@@ -22,6 +22,9 @@ Deduplicating data is a hard task — validating approaches takes time, can requ
 | Exact string       | Jaccard*    |
 | Fuzzy matching       | Cosine similarity*    |
 | TfIdf       | -    |
+| Str starts with       | -    |
+| Str ends with       | -    |
+| Str contains       | -    |
 | LSH*       | -    |
 
 \* *due for implementation in a future version*

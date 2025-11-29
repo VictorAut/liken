@@ -49,7 +49,7 @@ class DeduplicationStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def assign_group_id(self, attr: str) -> WrappedDataFrame:
+    def assign_group_id(self, attr: str, include_exact: bool = True) -> WrappedDataFrame:
         """Assign new group ids according to duplicated instances of attribute.
 
         Array-like contents of the dataframe's attributes are collected as a
@@ -70,6 +70,7 @@ class DeduplicationStrategy(ABC):
 
         Args:
             attr: the dataframe label of the attribute
+            include_exact: if True also exact deduplicates.
 
         Returns:
             wrapped_df; i.e. an instance "WrappedDataFrame" i.e. container
@@ -78,29 +79,27 @@ class DeduplicationStrategy(ABC):
         """
         _logger.debug(f'Re-assigning new "group_id" per duped instance of attribute "{attr}"')
 
-        attrs = np.asarray(self.wrapped_df.get_col(attr))
-        attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
-        groups = np.asarray(self.wrapped_df.get_col(GROUP_ID))
+        # `object` allos mixing np.nan with string-type data
+        attrs = np.asarray(self.wrapped_df.get_col(attr), dtype=object)
+        groups = np.asarray(self.wrapped_df.get_col(GROUP_ID), dtype=object)
 
-        unique_attrs, unique_indices = np.unique(
-            attrs,
-            return_index=True,
-        )
+        if include_exact:
+            attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
+            unique_attrs, unique_indices = np.unique(attrs, return_index=True)
+        else:
+            # remove null types
+            mask = np.array([(x is not None) and not (isinstance(x, float) and np.isnan(x)) for x in attrs])
+            filtered = attrs[mask]
+            unique_attrs, unique_indices_filtered = np.unique(filtered, return_index=True)
+            unique_indices = np.where(mask)[0][unique_indices_filtered]
 
         first_groups = groups[unique_indices]
-
         attr_group_map = dict(zip(unique_attrs, first_groups))
 
         # iteratively: attrs -> value param; groups -> default param
         new_groups: np.ndarray = np.vectorize(
-            lambda value, default: attr_group_map.get(
-                value,
-                default,
-            )
-        )(
-            attrs,
-            groups,
-        )
+            lambda value, default: attr_group_map.get(value, default),
+        )(attrs, groups)
 
         return self.wrapped_df.put_col(GROUP_ID, new_groups)
 

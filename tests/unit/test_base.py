@@ -110,7 +110,6 @@ def test_group_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
         assert expected_value not in df.columns  # no change
     elif isinstance(df, WrappedSparkRows):
         for row in df.unwrap():
-            print(row.asDict().keys())
             assert expected_value in row.asDict().keys()
     else:
         assert expected_value in df.columns
@@ -614,7 +613,6 @@ def patch_helper_reset(grouper: DupeGrouper):
         mock_dedupe.assert_called_once_with("address", ANY)
 
         grouper._strategy_manager = _StrategyManager()
-        print(grouper.strategies)
 
     assert not grouper.strategies
 

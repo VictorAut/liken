@@ -6,7 +6,7 @@ import pytest
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
 from dupegrouper.base import _wrap
-from dupegrouper.definitions import TMP_ATTR, GROUP_ID
+from dupegrouper.definitions import TMP_ATTR_LABEL, GROUP_ID
 from dupegrouper.strategies.tfidf import TfIdf
 
 
@@ -88,7 +88,7 @@ def test_dedupe_unit():
 
         # second put call is part of assign_group_id which in another unit test
         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
-        assert put_col_call == call(TMP_ATTR, ["foo", "bar", "bar"])
+        assert put_col_call == call(TMP_ATTR_LABEL, ["foo", "bar", "bar"])
 
         mock_assign_group_id.assert_called_once()
         mock_wrapped_df.drop_col.assert_called_once()
