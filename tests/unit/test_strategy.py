@@ -8,14 +8,14 @@ import pandas as pd
 import pytest
 
 from dupegrouper.base import _wrap
-from dupegrouper.definitions import GROUP_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategy import DeduplicationStrategy
 from dupegrouper.wrappers import WrappedDataFrame
 
 
 class DummyStrategy(DeduplicationStrategy):
     def dedupe(self, attr: str):
-        return self.assign_group_id(attr).unwrap()
+        return self.assign_canonical_id(attr).unwrap()
 
 
 ###########################
@@ -47,7 +47,7 @@ def test_with_frame(dataframe):
 
 
 @pytest.mark.parametrize(
-    "attribute_array, expected_group_id",
+    "attribute_array, expected_canonical_id",
     [
         # standard: matches
         (["Alice", "Bob", "Alice", "Charlie", "Bob", "Charlie"], [1, 2, 1, 4, 2, 4]),
@@ -71,13 +71,13 @@ def test_with_frame(dataframe):
         "whitespace no string match",
     ],
 )
-def test_assign_group_id(attribute_array, expected_group_id):
+def test_assign_canonical_id(attribute_array, expected_canonical_id):
     attr = "address"
-    input_group_ids = [1, 2, 3, 4, 5, 6]
+    input_canonical_ids = [1, 2, 3, 4, 5, 6]
 
     mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.side_effect = lambda key: attribute_array if key == attr else input_group_ids
-    mock_wrapped_df.put_col.return_value = expected_group_id
+    mock_wrapped_df.get_col.side_effect = lambda key: attribute_array if key == attr else input_canonical_ids
+    mock_wrapped_df.put_col.return_value = expected_canonical_id
 
     class Dummy(DeduplicationStrategy):
         def __init__(self, wrapped_df):
@@ -87,13 +87,13 @@ def test_assign_group_id(attribute_array, expected_group_id):
             pass
 
     obj = Dummy(mock_wrapped_df)
-    result = obj.assign_group_id(attr)
+    result = obj.assign_canonical_id(attr)
 
     # Assert
     mock_wrapped_df.get_col.assert_any_call(attr)
-    mock_wrapped_df.get_col.assert_any_call(GROUP_ID)
+    mock_wrapped_df.get_col.assert_any_call(CANONICAL_ID)
     mock_wrapped_df.put_col.assert_called_once()
-    np.testing.assert_array_equal(result, expected_group_id)
+    np.testing.assert_array_equal(result, expected_canonical_id)
 
 
 def test_dedupe(helpers):
@@ -109,14 +109,14 @@ def test_dedupe(helpers):
                 "Bob",
                 "Charlie",
             ],
-            "group_id": [1, 2, 3, 4, 5, 6],
+            "canonical_id": [1, 2, 3, 4, 5, 6],
         }
     )
 
     strategy = DummyStrategy()
     strategy.with_frame(_wrap(df))
 
-    deduped_df = strategy.dedupe("name")  # Uses assign_group_id internally
+    deduped_df = strategy.dedupe("name")  # Uses assign_canonical_id internally
 
     expected_groups = [1, 2, 1, 4, 2, 4]
-    assert helpers.get_column_as_list(deduped_df, GROUP_ID) == expected_groups
+    assert helpers.get_column_as_list(deduped_df, CANONICAL_ID) == expected_groups

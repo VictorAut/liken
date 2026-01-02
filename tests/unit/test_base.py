@@ -69,7 +69,7 @@ def test__wrap_dataframe_raises():
 
 
 ######################
-#  TEST set group_id #
+#  TEST set canonical_id #
 ######################
 
 
@@ -84,9 +84,9 @@ def reload():
     "env_var_value, expected_value",
     [
         # i.e. the default
-        ("group_id", "group_id"),
+        ("canonical_id", "canonical_id"),
         # null override to default, simulates unset
-        (None, "group_id"),
+        (None, "canonical_id"),
         # arbitrary: different value
         ("beep_boop_id", "beep_boop_id"),
         # arbitrary: supported (but bad!) column naming with whitespace
@@ -94,13 +94,13 @@ def reload():
     ],
     ids=["default", "null", "default-override", "default-override-bad-format"],
 )
-def test_group_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
+def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
     df, wrapper, id = lowlevel_dataframe
 
     if env_var_value:
-        os.environ["GROUP_ID"] = env_var_value
+        os.environ["CANONICAL_ID"] = env_var_value
     else:
-        os.environ.pop("GROUP_ID", None)  # remove it if exists
+        os.environ.pop("CANONICAL_ID", None)  # remove it if exists
 
     reload()
 
@@ -115,7 +115,7 @@ def test_group_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
         assert expected_value in df.columns
 
     # clean up
-    os.environ["GROUP_ID"] = "group_id"
+    os.environ["CANONICAL_ID"] = "canonical_id"
 
     reload()
 
@@ -469,7 +469,7 @@ def test_dedupe_spark(mocked_spark_dupegrouper, strategy_mock):
 
     with patch(
         "dupegrouper.base._process_partition",
-        return_value=iter([Row(id="1", address="45th street", email="random@ghs.com", group_id=1)]),
+        return_value=iter([Row(id="1", address="45th street", email="random@ghs.com", canonical_id=1)]),
     ):
         with patch("dupegrouper.base.WrappedSparkDataFrame") as mock_wrapped_df:
             mock_wrapped_result = Mock()
@@ -509,7 +509,7 @@ def test__process_partition_empty_iter(strategy_mock):
 @patch("dupegrouper.base.DupeGrouper")
 def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
     mock_instance = Mock()
-    mock_instance.df = [Row(id=1, group_id=0), Row(id=2, group_id=0)]
+    mock_instance.df = [Row(id=1, canonical_id=0), Row(id=2, canonical_id=0)]
     dupegrouper_mock.return_value = mock_instance
 
     strategy_mock = Mock()
@@ -527,7 +527,7 @@ def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
 @patch("dupegrouper.base.DupeGrouper")
 def test__process_partitions_reinstantiated(dupegrouper_mock, partition):
     mock_instance = Mock()
-    mock_instance.df = [Row(id=1, group_id=0)]
+    mock_instance.df = [Row(id=1, canonical_id=0)]
     dupegrouper_mock.return_value = mock_instance
 
     mock_strategy = Mock()

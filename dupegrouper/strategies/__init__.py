@@ -1,6 +1,6 @@
 from .exact import Exact
 from .fuzzy import Fuzzy
-from .jaccard import Jaccard
+from .compound_columns import Jaccard, Cosine
 from .tfidf import TfIdf
 from .strdedupers import (
     StrStartsWith,
@@ -9,6 +9,7 @@ from .strdedupers import (
 )
 
 __all__ = [
+    "Cosine",
     "Exact",
     "Fuzzy",
     "Jaccard",

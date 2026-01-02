@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from dupegrouper.base import _wrap
-from dupegrouper.definitions import TMP_ATTR_LABEL, GROUP_ID
+from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
 from dupegrouper.strategies.strdedupers import (
     StrStartsWith,
     StrEndsWith,
@@ -30,14 +30,14 @@ def test_str_starts_dedupe_unit():
 
     with patch.object(
         deduper,
-        "assign_group_id",
+        "assign_canonical_id",
         return_value=mock_wrapped_df,
-    ) as mock_assign_group_id:
+    ) as mock_assign_canonical_id:
 
         # Also mock wrapped_df chaining methods
         mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
         mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.assign_group_id.return_value = mock_wrapped_df
+        mock_wrapped_df.assign_canonical_id.return_value = mock_wrapped_df
         mock_wrapped_df.drop_col.return_value = mock_wrapped_df
 
         # Run dedupe
@@ -45,11 +45,11 @@ def test_str_starts_dedupe_unit():
 
         mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
-        # second put call is part of assign_group_id which in another unit test
+        # second put call is part of assign_canonical_id which in another unit test
         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
-        mock_assign_group_id.assert_called_once()
+        mock_assign_canonical_id.assert_called_once()
         mock_wrapped_df.drop_col.assert_called_once()
 
         assert result == mock_wrapped_df
@@ -67,14 +67,14 @@ def test_str_ends_dedupe_unit():
 
     with patch.object(
         deduper,
-        "assign_group_id",
+        "assign_canonical_id",
         return_value=mock_wrapped_df,
-    ) as mock_assign_group_id:
+    ) as mock_assign_canonical_id:
 
         # Also mock wrapped_df chaining methods
         mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
         mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.assign_group_id.return_value = mock_wrapped_df
+        mock_wrapped_df.assign_canonical_id.return_value = mock_wrapped_df
         mock_wrapped_df.drop_col.return_value = mock_wrapped_df
 
         # Run dedupe
@@ -82,11 +82,11 @@ def test_str_ends_dedupe_unit():
 
         mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
-        # second put call is part of assign_group_id which in another unit test
+        # second put call is part of assign_canonical_id which in another unit test
         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
-        mock_assign_group_id.assert_called_once()
+        mock_assign_canonical_id.assert_called_once()
         mock_wrapped_df.drop_col.assert_called_once()
 
         assert result == mock_wrapped_df
@@ -104,14 +104,14 @@ def test_str_contains_dedupe_unit():
 
     with patch.object(
         deduper,
-        "assign_group_id",
+        "assign_canonical_id",
         return_value=mock_wrapped_df,
-    ) as mock_assign_group_id:
+    ) as mock_assign_canonical_id:
 
         # Also mock wrapped_df chaining methods
         mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
         mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.assign_group_id.return_value = mock_wrapped_df
+        mock_wrapped_df.assign_canonical_id.return_value = mock_wrapped_df
         mock_wrapped_df.drop_col.return_value = mock_wrapped_df
 
         # Run dedupe
@@ -119,11 +119,11 @@ def test_str_contains_dedupe_unit():
 
         mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
-        # second put call is part of assign_group_id which in another unit test
+        # second put call is part of assign_canonical_id which in another unit test
         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
-        mock_assign_group_id.assert_called_once()
+        mock_assign_canonical_id.assert_called_once()
         mock_wrapped_df.drop_col.assert_called_once()
 
         assert result == mock_wrapped_df
@@ -157,7 +157,7 @@ def test_str_starts_dedupe_integrated(input, output, dataframe, helpers):
 
     df = tfidf.dedupe("address").unwrap()
 
-    assert helpers.get_column_as_list(df, GROUP_ID) == output
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == output
 
 
 star_ends_parametrize_data = [
@@ -184,7 +184,7 @@ def test_str_ends_dedupe_integrated(input, output, dataframe, helpers):
 
     df = tfidf.dedupe("address").unwrap()
 
-    assert helpers.get_column_as_list(df, GROUP_ID) == output
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == output
 
 
 star_contains_parametrize_data = [
@@ -216,4 +216,4 @@ def test_str_contains_dedupe_integrated(input, output, dataframe, helpers):
 
     df = tfidf.dedupe("address").unwrap()
 
-    assert helpers.get_column_as_list(df, GROUP_ID) == output
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == output

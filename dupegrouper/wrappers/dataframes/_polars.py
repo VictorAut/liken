@@ -6,7 +6,7 @@ import typing
 
 import polars as pl
 
-from dupegrouper.definitions import GROUP_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.wrappers.dataframe import WrappedDataFrame
 
 
@@ -14,13 +14,13 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
 
     def __init__(self, df: pl.DataFrame, id: str | None):
         super().__init__(df)
-        self._df: pl.DataFrame = self._add_group_id(df)
+        self._df: pl.DataFrame = self._add_canonical_id(df)
         self._id = id
 
     @staticmethod
     @override
-    def _add_group_id(df) -> pl.DataFrame:
-        return df.with_columns(pl.arange(1, len(df) + 1).alias(GROUP_ID))
+    def _add_canonical_id(df) -> pl.DataFrame:
+        return df.with_columns(pl.arange(1, len(df) + 1).alias(CANONICAL_ID))
 
     # POLARS API WRAPPERS:
 

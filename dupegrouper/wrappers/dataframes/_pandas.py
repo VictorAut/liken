@@ -6,7 +6,7 @@ import typing
 
 import pandas as pd
 
-from dupegrouper.definitions import GROUP_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.wrappers.dataframe import WrappedDataFrame
 
 
@@ -14,13 +14,13 @@ class WrappedPandasDataFrame(WrappedDataFrame):
 
     def __init__(self, df: pd.DataFrame, id: str | None):
         super().__init__(df)
-        self._df: pd.DataFrame = self._add_group_id(df)
+        self._df: pd.DataFrame = self._add_canonical_id(df)
         self._id = id
 
     @staticmethod
     @override
-    def _add_group_id(df) -> pd.DataFrame:
-        return df.assign(**{GROUP_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
+    def _add_canonical_id(df) -> pd.DataFrame:
+        return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
 
     # PANDAS API WRAPPERS:
 
