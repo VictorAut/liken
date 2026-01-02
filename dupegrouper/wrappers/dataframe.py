@@ -43,6 +43,11 @@ class WrappedDataFrame(ABC):
         pass  # pragma: no cover
 
     @abstractmethod
+    def get_cols(self, columns: typing.Iterable[str]) -> DataFrameLike:
+        """Return columns dataframe-like of data"""
+        pass  # pragma: no cover
+
+    @abstractmethod
     def map_dict(self, column: str, mapping: dict) -> SeriesLike:
         """Return a column array-like of data mapped with `mapping`"""
         pass  # pragma: no cover

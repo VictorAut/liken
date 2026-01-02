@@ -28,8 +28,9 @@ if typing.TYPE_CHECKING:
 # the group_id label in the dataframe
 GROUP_ID: typing.Final[str] = os.environ.get("GROUP_ID", "group_id")
 
-# the ethereal dataframe label created whilst deduplicating
-TMP_ATTR_LABEL: typing.Final[str] = os.environ.get("TMP_ATTR_LABEL", "__tmp_attr_label")
+# ethereal labels during deduplication
+TMP_ATTR_LABEL: typing.Final[str] = os.environ.get("TMP_ATTR_LABEL", "_tmp_attr_label")
+HASH_ATTR_LABEL: typing.Final[str] = os.environ.get("HASH_ATTR_LABEL", "_tmp_hash_label")
 
 
 # TYPES:

@@ -159,3 +159,14 @@ def get_matches(
                 match_map[key] = value
                 break
     return match_map
+
+# Don't need second loop; should look something like this:
+
+# def get_matches(match_fn: typing.Callable[[str], bool], attr: np.ndarray) -> dict[str, str]:
+#     # Find first value that matches the pattern
+#     first_match = next((v for v in attr if match_fn(v)), None)
+#     if first_match is None:
+#         return {}  # no matches
+
+#     # Map all matching values to the representative
+#     return {v: first_match for v in attr if match_fn(v)}

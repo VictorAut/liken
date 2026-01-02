@@ -26,12 +26,17 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
 
     @override
     def put_col(self, column: str, array) -> typing.Self:
+        array = pl.Series(array) # important; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
         return self
 
     @override
     def get_col(self, column: str) -> pl.Series:
         return self._df.get_column(column)
+
+    @override
+    def get_cols(self, columns: typing.Iterable[str]) -> pl.DataFrame:
+        return self._df.select(columns)
 
     @override
     def map_dict(self, column: str, mapping: dict) -> pl.Series:
