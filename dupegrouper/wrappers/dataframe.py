@@ -23,7 +23,7 @@ class WrappedDataFrame(ABC):
 
     @staticmethod
     @abstractmethod
-    def _add_group_id(df: DataFrameLike):
+    def _add_canonical_id(df: DataFrameLike):
         """Return a dataframe with a group id column"""
         pass  # pragma: no cover
 

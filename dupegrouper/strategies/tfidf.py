@@ -200,6 +200,6 @@ class TfIdf(DeduplicationStrategy):
 
             self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
 
-            self.assign_group_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
+            self.assign_canonical_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
 
         return self.wrapped_df

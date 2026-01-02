@@ -1,7 +1,7 @@
 """Abstract base class for derived deduplication atrategies
 
 This module contains `DeduplicationStrategy` which provides
-`assign_group_id()`, which is at the core functionality of `dupegrouper` and is
+`assign_canonical_id()`, which is at the core functionality of `dupegrouper` and is
 used for any deduplication that requires *grouping*. Additionally, the
 overrideable `dedupe()` is defined.
 """
@@ -13,7 +13,7 @@ import typing
 
 import numpy as np
 
-from dupegrouper.definitions import GROUP_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.wrappers import WrappedDataFrame
 
 
@@ -49,7 +49,7 @@ class DeduplicationStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def assign_group_id(self, attr: str, include_exact: bool = True) -> WrappedDataFrame:
+    def assign_canonical_id(self, attr: str, include_exact: bool = True) -> WrappedDataFrame:
         """Assign new group ids according to duplicated instances of attribute.
 
         Array-like contents of the dataframe's attributes are collected as a
@@ -60,7 +60,7 @@ class DeduplicationStrategy(ABC):
 
         This implementation is akin to
 
-            df.groupby(attr).transform("first").fill_null("group_id")
+            df.groupby(attr).transform("first").fill_null("canonical_id")
 
         Where the null backfill is implemented to handle instances where data
         in the attribute `attr` is incomplete — which happens in instances of
@@ -77,11 +77,11 @@ class DeduplicationStrategy(ABC):
             of data and linked dataframe methods; ready for further downstream
             processing.
         """
-        _logger.debug(f'Re-assigning new "group_id" per duped instance of attribute "{attr}"')
+        _logger.debug(f'Re-assigning new "canonical_id" per duped instance of attribute "{attr}"')
 
         # `object` allows mixing np.nan with string-type data
         attrs = np.asarray(self.wrapped_df.get_col(attr), dtype=object)
-        groups = np.asarray(self.wrapped_df.get_col(GROUP_ID), dtype=object)
+        groups = np.asarray(self.wrapped_df.get_col(CANONICAL_ID), dtype=object)
 
         if include_exact:
             attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
@@ -101,11 +101,11 @@ class DeduplicationStrategy(ABC):
             lambda value, default: attr_group_map.get(value, default),
         )(attrs, groups)
 
-        return self.wrapped_df.put_col(GROUP_ID, new_groups)
+        return self.wrapped_df.put_col(CANONICAL_ID, new_groups)
 
     @abstractmethod
     def dedupe(self, attr: str) -> WrappedDataFrame:
-        """Use `assign_group_id` to implement deduplication logic
+        """Use `assign_canonical_id` to implement deduplication logic
 
         Args:
             attr: The attribute to use for deduplication.

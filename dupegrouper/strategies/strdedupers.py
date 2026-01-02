@@ -1,5 +1,3 @@
-"""Perform near deduplication with fuzzywuzzy string matching"""
-
 import logging
 import re
 import typing
@@ -18,10 +16,48 @@ from dupegrouper.strategy import DeduplicationStrategy
 logger = logging.getLogger(__name__)
 
 
+# GENERIC STRING METHODS:
+
+
+class StringMethods(DeduplicationStrategy):
+    """TODO"""
+
+    def __init__(self, pattern: str, case: bool = True):
+        self._pattern = pattern
+        self._case = case
+
+    def _matches(self, value):
+        del value  # Unused
+        pass
+
+    @staticmethod
+    def get_matches(
+        match_fn: typing.Callable[[str], bool],
+        attr: np.ndarray,
+    ) -> dict[str, str]:
+        match_map = {}
+        for key in attr:
+            for value in attr:
+                if match_fn(key) and match_fn(value):
+                    match_map[key] = value
+                    break
+        return match_map
+    
+    @override
+    def dedupe(self, attr: str, /) -> WrappedDataFrame:
+
+        unique_attr: np.ndarray = np.unique(self.wrapped_df.get_col(attr))
+        match_map: dict = self.get_matches(self._matches, unique_attr)
+        new_attr: SeriesLike = self.wrapped_df.map_dict(attr, match_map)
+        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
+
+        return self.assign_canonical_id(TMP_ATTR_LABEL, include_exact=False).drop_col(TMP_ATTR_LABEL)
+
+
 # STR STARTS WITH:
 
 
-class StrStartsWith(DeduplicationStrategy):
+class StrStartsWith(StringMethods):
     """Strings start with deduper.
 
     Defaults to case sensitive.
@@ -29,39 +65,20 @@ class StrStartsWith(DeduplicationStrategy):
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    def __init__(self, pattern: str, case: bool = True):
-        super().__init__(
-            pattern=pattern,
-            case=case,
-        )
-        self._pattern = pattern
-        self._case = case
-
     @override
-    def dedupe(self, attr: str, /) -> WrappedDataFrame:
-        """Deduplicate records starting with the given pattern"""
-        logger.debug(f'Deduping attribute "{attr}" with {self.__class__.__name__}' f"(pattern={self._pattern})")
-
-        def _matches(value: str) -> bool:
-            return (
-                value.startswith(self._pattern)
-                #
-                if self._case
-                else value.lower().startswith(self._pattern.lower())
-            )
-
-        unique_attr: np.ndarray = np.unique(self.wrapped_df.get_col(attr))
-        match_map: dict = get_matches(_matches, unique_attr)
-        new_attr: SeriesLike = self.wrapped_df.map_dict(attr, match_map)
-        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-
-        return self.assign_group_id(TMP_ATTR_LABEL, include_exact=False).drop_col(TMP_ATTR_LABEL)
+    def _matches(self, value: str) -> bool:
+        return (
+            value.startswith(self._pattern)
+            #
+            if self._case
+            else value.lower().startswith(self._pattern.lower())
+        )
 
 
 # STR ENDS WITH:
 
 
-class StrEndsWith(DeduplicationStrategy):
+class StrEndsWith(StringMethods):
     """Strings start with deduper.
 
     Defaults to case sensitive.
@@ -69,48 +86,27 @@ class StrEndsWith(DeduplicationStrategy):
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    def __init__(self, pattern: str, case: bool = True):
-        super().__init__(
-            pattern=pattern,
-            case=case,
-        )
-        self._pattern = pattern
-        self._case = case
-
     @override
-    def dedupe(self, attr: str, /) -> WrappedDataFrame:
-        """Deduplicate records ending with the given pattern"""
-        logger.debug(f'Deduping attribute "{attr}" with {self.__class__.__name__}' f"(pattern={self._pattern})")
-
-        def _matches(value: str) -> bool:
-            return (
-                value.endswith(self._pattern)
-                #
-                if self._case
-                else value.lower().endswith(self._pattern.lower())
-            )
-
-        unique_attr: np.ndarray = np.unique(self.wrapped_df.get_col(attr))
-        match_map: dict = get_matches(_matches, unique_attr)
-        new_attr: SeriesLike = self.wrapped_df.map_dict(attr, match_map)
-        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-
-        return self.assign_group_id(TMP_ATTR_LABEL, include_exact=False).drop_col(TMP_ATTR_LABEL)
+    def _matches(self, value: str) -> bool:
+        return (
+            value.endswith(self._pattern)
+            #
+            if self._case
+            else value.lower().endswith(self._pattern.lower())
+        )
 
 
 # STR CONTAINS:
 
 
-class StrContains(DeduplicationStrategy):
+class StrContains(StringMethods):
     """Strings contains deduper.
 
     Defaults to case sensitive. Supports literal substring or regex search.
     """
 
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
-        super().__init__(pattern=pattern, case=case, regex=regex)
-        self._pattern = pattern
-        self._case = case
+        super().__init__(pattern=pattern, case=case)
         self._regex = regex
 
         if self._regex:
@@ -118,55 +114,14 @@ class StrContains(DeduplicationStrategy):
             self._compiled_pattern = re.compile(self._pattern, flags)
 
     @override
-    def dedupe(self, attr: str, /) -> WrappedDataFrame:
-        """Deduplicate records containing the given pattern."""
-        logger.debug(
-            f'Deduping attribute "{attr}" with {self.__class__.__name__}'
-            f"(pattern={self._pattern}, regex={self._regex}, case={self._case})"
-        )
+    def _matches(self, value: str) -> bool:
+        if value is None or (isinstance(value, float) and np.isnan(value)):
+            return False
 
-        def _matches(value: str) -> bool:
-            if value is None or (isinstance(value, float) and np.isnan(value)):
-                return False
-
-            if self._regex:
-                return bool(self._compiled_pattern.search(value))
+        if self._regex:
+            return bool(self._compiled_pattern.search(value))
+        else:
+            if self._case:
+                return self._pattern in value
             else:
-                if self._case:
-                    return self._pattern in value
-                else:
-                    return self._pattern.lower() in value.lower()
-
-        unique_attr: np.ndarray = np.unique(self.wrapped_df.get_col(attr))
-        match_map: dict = get_matches(_matches, unique_attr)
-        new_attr: SeriesLike = self.wrapped_df.map_dict(attr, match_map)
-        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-
-        return self.assign_group_id(TMP_ATTR_LABEL, include_exact=False).drop_col(TMP_ATTR_LABEL)
-
-
-# HELPERS:
-
-
-def get_matches(
-    match_fn: typing.Callable[[str], bool],
-    attr: np.ndarray,
-) -> dict[str, str]:
-    match_map = {}
-    for key in attr:
-        for value in attr:
-            if match_fn(key) and match_fn(value):
-                match_map[key] = value
-                break
-    return match_map
-
-# Don't need second loop; should look something like this:
-
-# def get_matches(match_fn: typing.Callable[[str], bool], attr: np.ndarray) -> dict[str, str]:
-#     # Find first value that matches the pattern
-#     first_match = next((v for v in attr if match_fn(v)), None)
-#     if first_match is None:
-#         return {}  # no matches
-
-#     # Map all matching values to the representative
-#     return {v: first_match for v in attr if match_fn(v)}
+                return self._pattern.lower() in value.lower()

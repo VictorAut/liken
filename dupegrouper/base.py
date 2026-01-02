@@ -28,7 +28,7 @@ from pyspark.sql.types import StructField, StructType, DataType
 from dupegrouper.definitions import (
     StrategyMapCollection,
     DataFrameLike,
-    GROUP_ID,
+    CANONICAL_ID,
     PYSPARK_TYPES,
 )
 from dupegrouper.strategies.custom import Custom
@@ -59,9 +59,9 @@ class DupeGrouper:
     class can then accept a variety of strategies for deduplication and
     grouping.
 
-    Upon initialisation, `DupeGrouper` sets a new column, usually `"group_id"`
-    — but you can control this by setting an environment variable `GROUP_ID` at
-    runtime. The group_id is a monotonically increasing, numeric id column
+    Upon initialisation, `DupeGrouper` sets a new column, usually `"canonical_id"`
+    — but you can control this by setting an environment variable `CANONICAL_ID` at
+    runtime. The canonical_id is a monotonically increasing, numeric id column
     starting at 1 to the length of the dataframe provided.
     """
 
@@ -173,10 +173,10 @@ class DupeGrouper:
             lambda partition_iter: _process_partition(partition_iter, strategies, id, attr)
         )
 
-        if GROUP_ID in self._df.columns:
+        if CANONICAL_ID in self._df.columns:
             schema = StructType(self._df.schema.fields)
         else:
-            schema = StructType(self._df.schema.fields + [StructField(GROUP_ID, id_type, True)])
+            schema = StructType(self._df.schema.fields + [StructField(CANONICAL_ID, id_type, True)])
 
         self._df = WrappedSparkDataFrame(
             typing.cast(SparkSession, self._spark_session).createDataFrame(deduped_rdd, schema=schema), id

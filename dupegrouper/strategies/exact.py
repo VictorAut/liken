@@ -21,4 +21,4 @@ class Exact(DeduplicationStrategy):
     @override
     def dedupe(self, attr: str, /) -> WrappedDataFrame:
         logger.debug(f'Deduping attribute "{attr}" with {self.__class__.__name__}()')
-        return self.assign_group_id(attr)
+        return self.assign_canonical_id(attr)

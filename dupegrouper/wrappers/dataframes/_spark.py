@@ -7,7 +7,7 @@ import typing
 import numpy as np
 from pyspark.sql import DataFrame, Row
 
-from dupegrouper.definitions import GROUP_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.wrappers.dataframe import WrappedDataFrame
 
 
@@ -20,7 +20,7 @@ class WrappedSparkDataFrame(WrappedDataFrame):
         del id  # Not implemented, input param there for API consistency
 
     @override
-    def _add_group_id(self):
+    def _add_canonical_id(self):
         raise NotImplementedError(self.not_implemented)  # pragma: no cover
 
     # SPARK API WRAPPERS:
@@ -59,12 +59,12 @@ class WrappedSparkRows(WrappedDataFrame):
 
     def __init__(self, df: list[Row], id: str):
         super().__init__(df)
-        self._df: list[Row] = self._add_group_id(df, id)
+        self._df: list[Row] = self._add_canonical_id(df, id)
 
     @staticmethod
     @override
-    def _add_group_id(df: list[Row], id: str) -> list[Row]:  # type: ignore[override]
-        return [Row(**{**row.asDict(), GROUP_ID: row[id]}) for row in df]
+    def _add_canonical_id(df: list[Row], id: str) -> list[Row]:  # type: ignore[override]
+        return [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in df]
 
     # SPARK API WRAPPERS:
 

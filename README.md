@@ -17,15 +17,15 @@ Deduplicating data is a hard task — validating approaches takes time, can requ
 
 ### Ready-to-use deduplication strategies
 **dupegrouper** currently offers the following deduplication strategies:
-| string type | numeric type|
+| single column | compound column|
 |:------------|-------------|
-| Exact string       | Jaccard*    |
-| Fuzzy matching       | Cosine similarity*    |
-| TfIdf       | -    |
+| Exact match       | Jaccard    |
+| Fuzzy string matching       | Cosine similarity    |
+| Tf-Idf       | -    |
 | Str starts with       | -    |
 | Str ends with       | -    |
 | Str contains       | -    |
-| LSH*       | -    |
+| Locality sensitive Hashing       | -    |
 
 \* *due for implementation in a future version*
 

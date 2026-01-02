@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 
 from dupegrouper.base import _wrap
-from dupegrouper.definitions import TMP_ATTR_LABEL, GROUP_ID
-from dupegrouper.strategies.jaccard import Jaccard
+from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
+from dupegrouper.strategies.compound_columns import Jaccard
 
 
 ##################################
@@ -47,4 +47,4 @@ def test_dedupe_integrated(input, output, dataframe, helpers):
 
     df = tfidf.dedupe(compound_col).unwrap()
 
-    assert helpers.get_column_as_list(df, GROUP_ID) == output
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == output

@@ -25,8 +25,8 @@ if typing.TYPE_CHECKING:
 # CONSTANTS
 
 
-# the group_id label in the dataframe
-GROUP_ID: typing.Final[str] = os.environ.get("GROUP_ID", "group_id")
+# the canonical_id label in the dataframe
+CANONICAL_ID: typing.Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
 # ethereal labels during deduplication
 TMP_ATTR_LABEL: typing.Final[str] = os.environ.get("TMP_ATTR_LABEL", "_tmp_attr_label")

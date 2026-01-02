@@ -26,6 +26,6 @@ def test_custom_dedupe(df_pandas):
     updated_wrapped_df = deduper.dedupe()
     updated_df = updated_wrapped_df.unwrap()
 
-    expected_group_ids = [1, 2, 3, 3, 5, 6, 3, 8, 1, 1, 11, 12, 13]
+    expected_canonical_ids = [1, 2, 3, 3, 5, 6, 3, 8, 1, 1, 11, 12, 13]
 
-    assert list(updated_df["group_id"]) == expected_group_ids
+    assert list(updated_df["canonical_id"]) == expected_canonical_ids
