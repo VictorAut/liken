@@ -59,6 +59,101 @@ def email():
 
 
 @pytest.fixture(scope="session")
+def account():
+    return [
+        "reddit",
+        "reddit",
+        "facebook",
+        "pinterest",
+        "pinterest",
+        "flickr",
+        "reddit",
+        "reddit",
+        "facebook",
+        "google",
+        "flickr",
+        "linkedin",
+        "linkedin",
+    ]
+
+
+@pytest.fixture(scope="session")
+def birth_country():
+    return [
+        "spain",
+        "spain",
+        "germany",
+        "japan",
+        "malaysia",
+        "malaysia",
+        "japan",
+        "germany",
+        "japan",
+        "malaysia",
+        "germany",
+        "france",
+        "japan",
+    ]
+
+
+@pytest.fixture(scope="session")
+def martial_status():
+    return [
+        "married",
+        "married",
+        "single",
+        "married",
+        "single",
+        "single",
+        "married",
+        "married",
+        "single",
+        "divorced",
+        "married",
+        "married",
+        "single",
+    ]
+
+
+@pytest.fixture(scope="session")
+def number_children():
+    return [
+        1,
+        0,
+        2,
+        0,
+        0,
+        0,
+        1,
+        0,
+        3,
+        1,
+        1,
+        1,
+        0,
+    ]
+
+
+@pytest.fixture(scope="session")
+def property_type():
+    return [
+        "rental",
+        "rental",
+        "rental",
+        "owner",
+        "rental",
+        "owner",
+        "rental",
+        "owner",
+        "owner",
+        "social housing",
+        "rental",
+        "rental",
+        "rental",
+    ]
+
+
+@pytest.fixture(scope="session")
 def blocking_key():
     return [
         "key_2",
@@ -101,21 +196,96 @@ def spark():
 
 
 @pytest.fixture(scope="session")
-def df_pandas(id, address, email):
-    return pd.DataFrame({"id": id, "address": address, "email": email})
+def df_pandas(
+    id,
+    address,
+    email,
+    account,
+    birth_country,
+    martial_status,
+    number_children,
+    property_type,
+):
+    return pd.DataFrame(
+        {
+            "id": id,
+            "address": address,
+            "email": email,
+            "account": account,
+            "birth_country": birth_country,
+            "martial_status": martial_status,
+            "number_children": number_children,
+            "property_type": property_type,
+        }
+    )
 
 
 @pytest.fixture(scope="session")
-def df_polars(id, address, email):
-    return pl.DataFrame({"id": id, "address": address, "email": email})
+def df_polars(
+    id,
+    address,
+    email,
+    account,
+    birth_country,
+    martial_status,
+    number_children,
+    property_type,
+):
+    return pl.DataFrame(
+        {
+            "id": id,
+            "address": address,
+            "email": email,
+            "account": account,
+            "birth_country": birth_country,
+            "martial_status": martial_status,
+            "number_children": number_children,
+            "property_type": property_type,
+        }
+    )
 
 
 @pytest.fixture(scope="session")
-def df_spark(spark, id, address, email, blocking_key):
-    """default is a single partition"""
+def df_spark(
+    spark,
+    id,
+    address,
+    email,
+    account,
+    birth_country,
+    martial_status,
+    number_children,
+    property_type,
+    blocking_key,
+):
+    """Default is a single partition"""
+
     return spark.createDataFrame(
-        [[id[i], address[i], email[i], blocking_key[i]] for i in range(len(id))],
-        schema=("id", "address", "email", "blocking_key"),
+        [
+            [
+                id[i],
+                address[i],
+                email[i],
+                account[i],
+                birth_country[i],
+                martial_status[i],
+                number_children[i],
+                property_type[i],
+                blocking_key[i],
+            ]
+            for i in range(len(id))
+        ],
+        schema=(
+            "id",
+            "address",
+            "email",
+            "account",
+            "birth_country",
+            "martial_status",
+            "number_children",
+            "property_type",
+            "blocking_key",
+        ),
     ).repartition(1, "blocking_key")
 
 

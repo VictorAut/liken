@@ -142,7 +142,7 @@ class DupeGrouper:
         del strategies  # Unused
         raise NotImplementedError(f"Unsupported attribute type: {type(attr)}")
 
-    @_dedupe.register(str)
+    @_dedupe.register(str | tuple)
     def _(self, attr, strategies):
         for strategy in strategies["default"]:
             self._df = self._call_strategy_deduper(strategy, attr)

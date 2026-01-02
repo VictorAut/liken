@@ -34,6 +34,10 @@ class WrappedSparkDataFrame(WrappedDataFrame):
         raise NotImplementedError(self.not_implemented)
 
     @override
+    def get_cols(self):
+        raise NotImplementedError(self.not_implemented)
+
+    @override
     def map_dict(self):
         raise NotImplementedError(self.not_implemented)
 
@@ -73,6 +77,10 @@ class WrappedSparkRows(WrappedDataFrame):
     @override
     def get_col(self, column: str) -> list[typing.Any]:
         return [row[column] for row in self._df]
+
+    @override
+    def get_cols(self, columns: typing.Iterable[str]) -> list[list[typing.Any]]:
+        return [[row[c] for c in columns] for row in self._df]
 
     @override
     def map_dict(self, column: str, mapping: dict) -> list[typing.Any]:

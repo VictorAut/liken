@@ -355,11 +355,10 @@ def test__dedupe_nonetype_attr(dupegrouper_mock, strategy_mock):
     [
         (42, r".*int.*"),
         ([42], r".*list.*"),
-        ((42,), r".*tuple.*"),
         ({"a": 42}, r".*dict.*"),
         (42.0, r".*float.*"),
     ],
-    ids=["invalid int", "invalid list", "invalid tuple", "invalid dict", "invalid float"],
+    ids=["invalid int", "invalid list", "invalid dict", "invalid float"],
 )
 def test__dedupe_raises(attr_input, type, dupegrouper_mock):
     with pytest.raises(NotImplementedError, match=f"Unsupported attribute type: {type}"):

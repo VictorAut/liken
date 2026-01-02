@@ -34,6 +34,10 @@ class WrappedPandasDataFrame(WrappedDataFrame):
         return self._df[column]
 
     @override
+    def get_cols(self, columns: typing.Iterable[str]) -> pd.DataFrame:
+        return self._df[list(columns)]
+
+    @override
     def map_dict(self, column: str, mapping: dict) -> pd.Series:
         return self.get_col(column).map(mapping)
 

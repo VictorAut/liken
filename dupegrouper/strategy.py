@@ -79,7 +79,7 @@ class DeduplicationStrategy(ABC):
         """
         _logger.debug(f'Re-assigning new "group_id" per duped instance of attribute "{attr}"')
 
-        # `object` allos mixing np.nan with string-type data
+        # `object` allows mixing np.nan with string-type data
         attrs = np.asarray(self.wrapped_df.get_col(attr), dtype=object)
         groups = np.asarray(self.wrapped_df.get_col(GROUP_ID), dtype=object)
 

@@ -9,7 +9,10 @@ from dupegrouper.strategies import Exact
 
 @pytest.mark.parametrize(
     "num_partitions, expected_ids",
-    [(1, [1, 2, 3, 4, 5, 6, 5, 8, 1, 1, 11, 12, 13]), (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 11, 12, 13])],
+    [
+        (1, [1, 2, 3, 4, 5, 6, 5, 8, 1, 1, 11, 12, 13]),
+        (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 11, 12, 13]),
+    ],
     ids=["1 partitions", "2 partitions"],
 )
 def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, helpers):
