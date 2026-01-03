@@ -5,7 +5,7 @@ import polars as pl
 from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
 import pytest
 
-from dupegrouper.base import DupeGrouper, BaseStrategy
+from dupegrouper.base import Duped, BaseStrategy
 from dupegrouper.definitions import DataFrameLike
 from dupegrouper.dataframe import (
     WrappedPandasDataFrame,
@@ -291,7 +291,7 @@ def df_spark(
 
 @pytest.fixture(params=["pandas", "polars", "spark"], scope="session")
 def dataframe(request, df_pandas, df_polars, df_spark, spark):
-    """return a tuple of positionally ordered input parameters of DupeGrouper
+    """return a tuple of positionally ordered input parameters of Duped
 
     This is useful for implementations that ARE part of the public API
     """
@@ -333,7 +333,7 @@ def dupegrouper_mock(dataframe):
     df_mock = Mock(spec=type(df))
 
     with patch("dupegrouper.base.wrap"):
-        instance = DupeGrouper(df_mock, id)
+        instance = Duped(df_mock, id)
         instance._df = Mock()
         yield instance
 

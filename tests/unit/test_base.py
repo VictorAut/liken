@@ -11,7 +11,7 @@ from pyspark.sql.types import StructField, StringType, IntegerType
 import pytest
 
 from dupegrouper.base import (
-    DupeGrouper,
+    Duped,
     BaseStrategy,
     StrategyTypeError,
     _StrategyManager,
@@ -364,7 +364,7 @@ def test__dedupe_raises(attr_input, type, dupegrouper_mock):
 
 
 #####################
-# TEST add_strategy #
+# TEST apply #
 #####################
 
 
@@ -373,20 +373,20 @@ def test__dedupe_raises(attr_input, type, dupegrouper_mock):
     [(dummy_func, {"tolerance": 0.8}), Mock(spec=BaseStrategy)],
     ids=["tuple", "BaseStrategy"],
 )
-def test_add_strategy_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
+def test_apply_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
 
     with patch.object(dupegrouper_mock, "_strategy_manager") as strategy_manager:
 
         with patch.object(strategy_manager, "add") as add:
 
-            dupegrouper_mock.add_strategy(strategy)
+            dupegrouper_mock.apply(strategy)
 
             assert add.call_count == 1
 
             add.assert_any_call("default", strategy)
 
 
-def test_add_strategy_dict(dupegrouper_mock, strategy_mock):
+def test_apply_dict(dupegrouper_mock, strategy_mock):
 
     strategy = {
         "attr1": [strategy_mock, strategy_mock],
@@ -397,7 +397,7 @@ def test_add_strategy_dict(dupegrouper_mock, strategy_mock):
 
         with patch.object(strategy_manager, "add") as add:
 
-            dupegrouper_mock.add_strategy(strategy)
+            dupegrouper_mock.apply(strategy)
 
             assert add.call_count == 4
 
@@ -415,9 +415,9 @@ def test_add_strategy_dict(dupegrouper_mock, strategy_mock):
     ],
     ids=["invalid class", "invalid list"],
 )
-def test_add_strategy_raises(strategy, type, dupegrouper_mock):
+def test_apply_raises(strategy, type, dupegrouper_mock):
     with pytest.raises(NotImplementedError, match=f"Unsupported strategy: {type}"):
-        dupegrouper_mock.add_strategy(strategy)
+        dupegrouper_mock.apply(strategy)
 
 
 ###########################
@@ -431,7 +431,7 @@ def mocked_spark_dupegrouper():
     id_mock = Mock()
 
     with patch("dupegrouper.base.wrap"):
-        instance = DupeGrouper(df_mock, id_mock)
+        instance = Duped(df_mock, id_mock)
         instance._df = df_mock
         instance._id = "id"
         instance._id = "id"
@@ -504,7 +504,7 @@ def test__process_partition_empty_iter(strategy_mock):
     assert result == []
 
 
-@patch("dupegrouper.base.DupeGrouper")
+@patch("dupegrouper.base.Duped")
 def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
     mock_instance = Mock()
     mock_instance.df = [Row(id=1, canonical_id=0), Row(id=2, canonical_id=0)]
@@ -517,12 +517,12 @@ def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
     result = list(_process_partition(partition, strategies, id="id", attr="address"))
 
     dupegrouper_mock.assert_called_once()
-    mock_instance.add_strategy.assert_called_once_with(strategies)
+    mock_instance.apply.assert_called_once_with(strategies)
     mock_instance.dedupe.assert_called_once_with("address")
     assert result == mock_instance.df
 
 
-@patch("dupegrouper.base.DupeGrouper")
+@patch("dupegrouper.base.Duped")
 def test__process_partitions_reinstantiated(dupegrouper_mock, partition):
     mock_instance = Mock()
     mock_instance.df = [Row(id=1, canonical_id=0)]
@@ -548,7 +548,7 @@ def test__process_partitions_reinstantiated(dupegrouper_mock, partition):
 def dupgrouper_context(request):
     df_type, dfwrapper = request.param
     with patch("dupegrouper.base.wrap"):
-        dg = DupeGrouper(Mock(spec=df_type), "id")
+        dg = Duped(Mock(spec=df_type), "id")
         dg._df = Mock(spec=dfwrapper)
 
         with patch.object(dg, "_strategy_manager") as strategy_manager:
@@ -594,11 +594,11 @@ def test_dedupe(dupgrouper_context):
 
 
 ##################################
-# TEST DupeGrouper - public API! #
+# TEST Duped - public API! #
 ##################################
 
 
-def patch_helper_reset(grouper: DupeGrouper):
+def patch_helper_reset(grouper: Duped):
     with patch.object(grouper, "_dedupe") as mock_dedupe, patch.object(
         grouper._strategy_manager, "reset"
     ) as mock_reset:
@@ -615,11 +615,11 @@ def patch_helper_reset(grouper: DupeGrouper):
 
 
 def test_dupegrouper_strategies_attribute_inline(df_pandas):
-    grouper = DupeGrouper(df_pandas)
+    grouper = Duped(df_pandas)
 
-    grouper.add_strategy(Mock(spec=Exact))
-    grouper.add_strategy(Mock(spec=Fuzzy))
-    grouper.add_strategy((dummy_func, {"str": "random"}))
+    grouper.apply(Mock(spec=Exact))
+    grouper.apply(Mock(spec=Fuzzy))
+    grouper.apply((dummy_func, {"str": "random"}))
 
     assert grouper.strategies == tuple(["Exact", "Fuzzy", "dummy_func"])
 
@@ -627,9 +627,9 @@ def test_dupegrouper_strategies_attribute_inline(df_pandas):
 
 
 def test_dupegrouper_strategies_attribute_dict(df_pandas):
-    grouper = DupeGrouper(df_pandas)
+    grouper = Duped(df_pandas)
 
-    grouper.add_strategy(
+    grouper.apply(
         {
             "address": [
                 Mock(spec=Exact),

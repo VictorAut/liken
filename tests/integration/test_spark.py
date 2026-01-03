@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from dupegrouper.base import DupeGrouper
+from dupegrouper.base import Duped
 from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import Exact
 
@@ -23,8 +23,8 @@ def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, helpers
         "address": [Exact()],
         "email": [Exact()],
     }
-    dg = DupeGrouper(df_spark, spark_session=spark, id="id")
-    dg.add_strategy(strategies)
+    dg = Duped(df_spark, spark_session=spark, id="id")
+    dg.apply(strategies)
     dg.dedupe()
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_ids

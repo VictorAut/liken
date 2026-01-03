@@ -2,13 +2,13 @@
 .. include:: ../README.md
 """
 
-from dupegrouper.base import DupeGrouper
+from dupegrouper.base import Duped
 from dupegrouper import dataframe
 from dupegrouper import strategies
 
 
 __all__ = [
-    "DupeGrouper",
+    "Duped",
     "dataframe",
     "strategies",
 ]

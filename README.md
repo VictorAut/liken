@@ -55,9 +55,9 @@ pip install dupegrouper
 ```python
 import dupegrouper
 
-dg = dupegrouper.DupeGrouper(df) # input dataframe
+dg = dupegrouper.Duped(df) # input dataframe
 
-dg.add_strategy(dupegrouper.strategies.Exact())
+dg.apply(dupegrouper.strategies.Exact())
 
 dg.dedupe("address")
 
@@ -79,10 +79,10 @@ Strategies can be added one-by-one and are executed in *the order in which they 
 ```python
 # Deduplicate the address column
 
-dg = dupegrouper.DupeGrouper(df)
+dg = dupegrouper.Duped(df)
 
-dg.add_strategy(dupegrouper.strategies.Exact())
-dg.add_strategy(dupegrouper.strategies.Fuzzy(tolerance=0.3))
+dg.apply(dupegrouper.strategies.Exact())
+dg.apply(dupegrouper.strategies.Fuzzy(tolerance=0.3))
 
 dg.dedupe("address")
 ```
@@ -92,9 +92,9 @@ Or, you can add a map of strategies. In this case, strategies are executed in th
 ```python
 # Also deduplicates the address column
 
-dg = dupegrouper.DupeGrouper(df)
+dg = dupegrouper.Duped(df)
 
-dg.add_strategy({
+dg.apply({
     "address": [
         dupegrouper.strategies.Exact(),
         dupegrouper.strategies.Fuzzy(tolerance=0.3),
@@ -118,7 +118,7 @@ print(dg.strategies)
 
 ## Custom Strategies
 
-Maybe you need some custom deduplication methodology. An instance of `dupegrouper.DupeGrouper` can accept custom functions too.
+Maybe you need some custom deduplication methodology. An instance of `dupegrouper.Duped` can accept custom functions too.
 
 ```python
 def my_func(df, attr: str, /, **kwargs) -> dict[str, str]:
@@ -142,9 +142,9 @@ Look closely at the function signature — your function needs to implement this
 You can proceed to add your custom function as a strategy:
 
 ```python
-dg = dupegrouper.DupeGrouper(df)
+dg = dupegrouper.Duped(df)
 
-dg.add_strategy((my_func, {"match_str": "london"}))
+dg.apply((my_func, {"match_str": "london"}))
 
 print(dg.strategies) # returns ("my_func",)
 
@@ -165,7 +165,7 @@ import pandas # | polars | pyspark
 
 df = pd.read_csv("example.csv")
 
-dg = dupegrouper.DupeGrouper(df)
+dg = dupegrouper.Duped(df)
 
 strategies = {
     "address": [
@@ -180,7 +180,7 @@ strategies = {
     ],
 }
 
-dg.add_strategy(strategies)
+dg.apply(strategies)
 
 dg.dedupe()
 
@@ -198,7 +198,7 @@ The above problem is typically dealt with the use of a "blocking key" which is t
 ## Extending the API for Custom Implementations
 It's recommended that for simple custom implementations you use the approach discussed for custom functions. (see [*Custom Strategies*](#custom-strategies)).
 
-However, you can derive directly from the abstract base class `dupegrouper.strategies.BaseStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#BaseStrategy). This will expose a `dedupe()` method, ready for direct use within an instance of `DupeGrouper`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
+However, you can derive directly from the abstract base class `dupegrouper.strategies.BaseStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#BaseStrategy). This will expose a `dedupe()` method, ready for direct use within an instance of `Duped`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
 
 # About
 

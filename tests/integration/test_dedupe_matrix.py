@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from dupegrouper import DupeGrouper
+from dupegrouper import Duped
 from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import Exact, Fuzzy, TfIdf
 
@@ -41,15 +41,15 @@ def test_dedupe_matrix(strategy_class, strategy_params, expected_canonical_id, d
 
     df, spark_session, id = dataframe
 
-    dg = DupeGrouper(df=df, spark_session=spark_session, id=id)
+    dg = Duped(df=df, spark_session=spark_session, id=id)
 
     # single strategy item addition
-    dg.add_strategy(strategy_class(**strategy_params))
+    dg.apply(strategy_class(**strategy_params))
     dg.dedupe("address")
     df1 = dg.df
 
     # dictionary straegy addition
-    dg.add_strategy({"address": [strategy_class(**strategy_params)]})
+    dg.apply({"address": [strategy_class(**strategy_params)]})
     dg.dedupe()
     df2 = dg.df
 
