@@ -28,6 +28,7 @@ sparse-dot-topn = "^1.1.5"
 multipledispatch = "^1.0.0"
 typing-extensions = "^4.13.0"
 pyspark = "^3.5.5"
+datasketch = "^1.8.0"
 
 
 [tool.poetry.group.dev.dependencies]

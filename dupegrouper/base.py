@@ -31,7 +31,7 @@ from dupegrouper.definitions import (
     CANONICAL_ID,
     PYSPARK_TYPES,
 )
-from dupegrouper.strategies.custom import Custom
+from dupegrouper.strategies.strategies import Custom
 from dupegrouper.strategy import DeduplicationStrategy
 from dupegrouper.wrappers.dataframes import (
     WrappedPandasDataFrame,

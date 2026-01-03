@@ -6,7 +6,7 @@ import pytest
 
 from dupegrouper.base import _wrap
 from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
-from dupegrouper.strategies.compound_columns import Jaccard
+from dupegrouper.strategies.strategies import Jaccard
 
 
 ##################################
@@ -16,12 +16,12 @@ from dupegrouper.strategies.compound_columns import Jaccard
 
 fuzzy_parametrize_data = [
     # i.e. no deduping
-    ({"tolerance": 0}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
+    ({"threshold": 1}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     # progressive deduping
-    ({"tolerance": 0.35}, [1, 1, 3, 4, 5, 6, 1, 8, 9, 10, 11, 12, 13]),
-    ({"tolerance": 0.65}, [1, 1, 3, 4, 5, 5, 1, 4, 9, 10, 1, 1, 5]),
-    ({"tolerance": 0.85}, [1, 1, 3, 1, 1, 1, 1, 1, 1, 10, 1, 1, 1]),
-    ({"tolerance": 0.95}, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+    ({"threshold": 0.65}, [1, 1, 3, 4, 5, 6, 1, 8, 9, 10, 11, 12, 13]),
+    ({"threshold": 0.35}, [1, 1, 3, 4, 5, 5, 1, 4, 9, 10, 1, 1, 5]),
+    ({"threshold": 0.15}, [1, 1, 3, 1, 1, 1, 1, 1, 1, 10, 1, 1, 1]),
+    ({"threshold": 0.05}, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
 ]
 
 

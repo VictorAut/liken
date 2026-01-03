@@ -1,11 +1,13 @@
-from .exact import Exact
-from .fuzzy import Fuzzy
-from .compound_columns import Jaccard, Cosine
-from .tfidf import TfIdf
-from .strdedupers import (
+from .strategies import (
+    Cosine,
+    Exact,
+    Fuzzy,
+    Jaccard,
+    Lsh,
     StrStartsWith,
     StrEndsWith,
     StrContains,
+    TfIdf,
 )
 
 __all__ = [
@@ -13,6 +15,7 @@ __all__ = [
     "Exact",
     "Fuzzy",
     "Jaccard",
+    "Lsh",
     "TfIdf",
     "StrStartsWith",
     "StrEndsWith",
