@@ -16,13 +16,7 @@ except ImportError:  # pragma: no cover
     NoneType = type(None)  # type: ignore
 import typing
 
-import pandas as pd
-import polars as pl
-from pyspark.sql import (
-    SparkSession,
-    Row,
-    DataFrame as SparkDataFrame,  # i.e. no clash with generic DataFrame
-)
+from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
 
 from dupegrouper.definitions import (
@@ -31,15 +25,12 @@ from dupegrouper.definitions import (
     CANONICAL_ID,
     PYSPARK_TYPES,
 )
-from dupegrouper.strategies.strategies import Custom
-from dupegrouper.strategy import DeduplicationStrategy
-from dupegrouper.wrappers.dataframes import (
-    WrappedPandasDataFrame,
-    WrappedPolarsDataFrame,
+from dupegrouper.strategies import BaseStrategy, Custom
+from dupegrouper.dataframe import (
+    wrap,
+    WrappedDataFrame,
     WrappedSparkDataFrame,
-    WrappedSparkRows,
 )
-from dupegrouper.wrappers import WrappedDataFrame
 
 
 # LOGGER:
@@ -48,7 +39,7 @@ from dupegrouper.wrappers import WrappedDataFrame
 _logger = logging.getLogger(__name__)
 
 
-# CORE:
+# BASE:
 
 
 class DupeGrouper:
@@ -71,7 +62,7 @@ class DupeGrouper:
         spark_session: SparkSession | None = None,
         id: str | None = None,
     ):
-        self._df: WrappedDataFrame = _wrap(df, id)
+        self._df: WrappedDataFrame = wrap(df, id)
         self._strategy_manager = _StrategyManager()
         self._spark_session = spark_session
         self._id = id
@@ -79,12 +70,12 @@ class DupeGrouper:
     @singledispatchmethod
     def _call_strategy_deduper(
         self,
-        strategy: DeduplicationStrategy | tuple[typing.Callable, typing.Any],
+        strategy: BaseStrategy | tuple[typing.Callable, typing.Any],
         attr: str,
     ):
         """Dispatch the appropriate strategy deduplication method.
 
-        If the strategy is an instance of a dupegrouper `DeduplicationStrategy`
+        If the strategy is an instance of a dupegrouper `BaseStrategy`
         the strategy will have been added as such, with it's parameters. In the
         case of a custom implementation of a Callable, passed as a tuple, we
         pass this *directly* to the `Custom` class and initialise that.
@@ -104,7 +95,7 @@ class DupeGrouper:
 
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
-    @_call_strategy_deduper.register(DeduplicationStrategy)
+    @_call_strategy_deduper.register(BaseStrategy)
     def _(self, strategy, attr) -> WrappedDataFrame:
         return strategy.with_frame(self._df).dedupe(attr)
 
@@ -185,11 +176,11 @@ class DupeGrouper:
     # PUBLIC API:
 
     @singledispatchmethod
-    def add_strategy(self, strategy: DeduplicationStrategy | tuple | StrategyMapCollection):
+    def add_strategy(self, strategy: BaseStrategy | tuple | StrategyMapCollection):
         """
         Add a strategy to the strategy manager.
 
-        Instances of `DeduplicationStrategy` or tuple are added to the
+        Instances of `BaseStrategy` or tuple are added to the
         "default" key. Mapping objects update the manager directly
 
         Args:
@@ -204,7 +195,7 @@ class DupeGrouper:
         """
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
-    @add_strategy.register(DeduplicationStrategy)
+    @add_strategy.register(BaseStrategy)
     @add_strategy.register(tuple)
     def _(self, strategy):
         self._strategy_manager.add("default", strategy)
@@ -276,7 +267,7 @@ class _StrategyManager:
     Strategies are collected into a dictionary-like collection where keys are
     attribute names, and values are lists of strategies. Validation is provided
     upon addition allowing only the following stratgies types:
-        - `DeduplicationStrategy`
+        - `BaseStrategy`
         - a tuple, typed as tuple[callable, dict[str, str]]
     A public property exposes stratgies upon successul addition and validation.
     A `StrategyTypeError` is thrown, otherwise.
@@ -288,7 +279,7 @@ class _StrategyManager:
     def add(
         self,
         attr_key: str,
-        strategy: DeduplicationStrategy | tuple,
+        strategy: BaseStrategy | tuple,
     ):
         """Adds a strategy to the collection under a specific attribute key.
 
@@ -317,25 +308,25 @@ class _StrategyManager:
         """
         Validates a strategy
 
-        The strategy to validate. Can be a `DeduplicationStrategy`, a tuple, or
+        The strategy to validate. Can be a `BaseStrategy`, a tuple, or
         a dict of the aforementioned strategies types i.e.
-        dict[str, DeduplicationStrategy | tuple]. As such the function checks
+        dict[str, BaseStrategy | tuple]. As such the function checks
         such dict instances via recursion.
 
         Args:
-            strategy: The strategy to validate. `DeduplicationStrategy`, tuple,
+            strategy: The strategy to validate. `BaseStrategy`, tuple,
             or a dict of such
 
         Returns:
             bool: strategy is | isn't valid
 
         A valid strategy is one of the following:
-            - A `DeduplicationStrategy` instance.
+            - A `BaseStrategy` instance.
             - A tuple where the first element is a callable and the second
                 element is a dictionary.
             - A dictionary where each item is a valid strategy.
         """
-        if isinstance(strategy, DeduplicationStrategy):
+        if isinstance(strategy, BaseStrategy):
             return True
         if isinstance(strategy, tuple) and len(strategy) == 2:
             func, kwargs = strategy
@@ -353,61 +344,19 @@ class _StrategyManager:
 class StrategyTypeError(Exception):
     """Strategy type not valid errors"""
 
-    def __init__(self, strategy: DeduplicationStrategy | tuple):
+    def __init__(self, strategy: BaseStrategy | tuple):
         base_msg = "Input is not valid"  # i.e. default
         context = ""
         if inspect.isclass(strategy):
-            base_msg = "Input class is not valid: must be an instance of `DeduplicationStrategy`"
+            base_msg = "Input class is not valid: must be an instance of `BaseStrategy`"
             context = f"not: {type(strategy())}"
         if isinstance(strategy, tuple):
             base_msg = "Input tuple is not valid: must be a length 2 [callable, dict]"
             context = f"not: {strategy}"
         if isinstance(strategy, dict):
-            base_msg = "Input dict is not valid: items must be a list of `DeduplicationStrategy` or tuples"
+            base_msg = "Input dict is not valid: items must be a list of `BaseStrategy` or tuples"
             context = ""
         super().__init__(base_msg + context)
-
-
-# WRAP DATAFRAME DISPATCHER:
-
-
-@singledispatch
-def _wrap(df: DataFrameLike, id: str | None = None) -> WrappedDataFrame:
-    """
-    Dispatch the dataframe to the appropriate wrapping handler.
-
-    Args:
-        df: The dataframe to dispatch to the appropriate handler.
-
-    Returns:
-        WrappedDataFrame, a DataFrame wrapped with a uniform interface.
-
-    Raises:
-        NotImplementedError
-    """
-    del id  # Unused
-    raise NotImplementedError(f"Unsupported data frame: {type(df)}")
-
-
-@_wrap.register(pd.DataFrame)
-def _(df, id: str | None = None):
-    return WrappedPandasDataFrame(df, id)
-
-
-@_wrap.register(pl.DataFrame)
-def _(df, id: str | None = None):
-    return WrappedPolarsDataFrame(df, id)
-
-
-@_wrap.register(SparkDataFrame)
-def _(df, id: str | None = None):
-    return WrappedSparkDataFrame(df, id)
-
-
-@_wrap.register(list)
-def _(df: list[Row], id: str):
-    """As lists can be large: `all` membership is `Row` is *not* validated!"""
-    return WrappedSparkRows(df, id)
 
 
 # PARTITION PROCESSING:

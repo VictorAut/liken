@@ -10,13 +10,13 @@ import pytest
 
 from dupegrouper import DupeGrouper
 from dupegrouper.definitions import CANONICAL_ID
-from dupegrouper.strategies import strategies
+from dupegrouper.strategies import Exact, Fuzzy, TfIdf
 
 
 STRATEGY_CLASSES = (
-    strategies.Exact,
-    strategies.Fuzzy,
-    strategies.TfIdf,
+    Exact,
+    Fuzzy,
+    TfIdf,
 )
 
 STRATEGY_PARAMS: tuple[dict, ...] = (

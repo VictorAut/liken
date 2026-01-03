@@ -12,17 +12,17 @@ import pytest
 
 from dupegrouper.base import (
     DupeGrouper,
-    DeduplicationStrategy,
+    BaseStrategy,
     StrategyTypeError,
     _StrategyManager,
-    _wrap,
+    wrap,
     _process_partition,
 )
 
 import dupegrouper.definitions
 from dupegrouper.strategies import Exact, Fuzzy
-from dupegrouper.wrappers import WrappedDataFrame
-from dupegrouper.wrappers.dataframes import (
+from dupegrouper.dataframe import (
+    WrappedDataFrame,
     WrappedPandasDataFrame,
     WrappedPolarsDataFrame,
     WrappedSparkDataFrame,
@@ -42,7 +42,7 @@ def dummy_func():
 
 
 ###############
-#  TEST _wrap #
+#  TEST wrap #
 ###############
 
 DATAFRAME_TYPES = {
@@ -53,19 +53,19 @@ DATAFRAME_TYPES = {
 }
 
 
-def test__wrap_dataframe(dataframe):
+def test_wrap_dataframe(dataframe):
     df, _, id = dataframe
 
     expected_type = DATAFRAME_TYPES.get(type(df))
 
-    df_wrapped: WrappedDataFrame = _wrap(df, id)
+    dfwrapped: WrappedDataFrame = wrap(df, id)
 
-    assert isinstance(df_wrapped, expected_type)
+    assert isinstance(dfwrapped, expected_type)
 
 
-def test__wrap_dataframe_raises():
+def test_wrap_dataframe_raises():
     with pytest.raises(NotImplementedError, match="Unsupported data frame"):
-        _wrap(DummyClass())
+        wrap(DummyClass())
 
 
 ######################
@@ -75,9 +75,7 @@ def test__wrap_dataframe_raises():
 
 def reload():
     importlib.reload(dupegrouper.definitions)  # reset constant
-    importlib.reload(dupegrouper.wrappers.dataframes._pandas)
-    importlib.reload(dupegrouper.wrappers.dataframes._polars)
-    importlib.reload(dupegrouper.wrappers.dataframes._spark)
+    importlib.reload(dupegrouper.dataframe)
 
 
 @pytest.mark.parametrize(
@@ -126,26 +124,26 @@ def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe)
 
 
 DEFAULT_ERROR_MSG = "Input is not valid"
-CLASS_ERROR_MSG = "Input class is not valid: must be an instance of `DeduplicationStrategy`"
+CLASS_ERROR_MSG = "Input class is not valid: must be an instance of `BaseStrategy`"
 TUPLE_ERROR_MSG = "Input tuple is not valid: must be a length 2 [callable, dict]"
-DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `DeduplicationStrategy` or tuples"
+DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy` or tuples"
 
 
 @pytest.mark.parametrize(
     "strategy, expected_to_pass, base_msg",
     [
         # correct base inputs
-        (Mock(spec=DeduplicationStrategy), True, None),
+        (Mock(spec=BaseStrategy), True, None),
         ((lambda x: x, {"key": "value"}), True, None),
         (
             {
                 "address": [
-                    Mock(spec=DeduplicationStrategy),
+                    Mock(spec=BaseStrategy),
                     (lambda x: x, {"key": "value"}),
                 ],
                 "email": [
-                    Mock(spec=DeduplicationStrategy),
-                    Mock(spec=DeduplicationStrategy),
+                    Mock(spec=BaseStrategy),
+                    Mock(spec=BaseStrategy),
                 ],
             },
             True,
@@ -203,7 +201,7 @@ def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass
 
 def test__strategy_manager_reset():
     manager = _StrategyManager()
-    strategy = Mock(spec=DeduplicationStrategy)
+    strategy = Mock(spec=BaseStrategy)
     manager.add("name", strategy)
     manager.reset()
     assert manager.get() == {}
@@ -372,8 +370,8 @@ def test__dedupe_raises(attr_input, type, dupegrouper_mock):
 
 @pytest.mark.parametrize(
     "strategy",
-    [(dummy_func, {"tolerance": 0.8}), Mock(spec=DeduplicationStrategy)],
-    ids=["tuple", "DeduplicationStrategy"],
+    [(dummy_func, {"tolerance": 0.8}), Mock(spec=BaseStrategy)],
+    ids=["tuple", "BaseStrategy"],
 )
 def test_add_strategy_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
 
@@ -432,7 +430,7 @@ def mocked_spark_dupegrouper():
     df_mock = Mock(spec=SparkDataFrame)
     id_mock = Mock()
 
-    with patch("dupegrouper.base._wrap"):
+    with patch("dupegrouper.base.wrap"):
         instance = DupeGrouper(df_mock, id_mock)
         instance._df = df_mock
         instance._id = "id"
@@ -471,18 +469,18 @@ def test_dedupe_spark(mocked_spark_dupegrouper, strategy_mock):
         "dupegrouper.base._process_partition",
         return_value=iter([Row(id="1", address="45th street", email="random@ghs.com", canonical_id=1)]),
     ):
-        with patch("dupegrouper.base.WrappedSparkDataFrame") as mock_wrapped_df:
-            mock_wrapped_result = Mock()
-            mock_wrapped_df.return_value = mock_wrapped_result
+        with patch("dupegrouper.base.WrappedSparkDataFrame") as mockwrapped_df:
+            mockwrapped_result = Mock()
+            mockwrapped_df.return_value = mockwrapped_result
 
             dg._dedupe_spark(attr, strategies)
 
             # Assertions
             dg._mock_rdd.mapPartitions.assert_called_once()
             mock_spark.createDataFrame.assert_called_once_with(dg._dummy_rdd, schema=ANY)
-            mock_wrapped_df.assert_called_once_with(mock_df_result, "id")
+            mockwrapped_df.assert_called_once_with(mock_df_result, "id")
 
-            assert dg._df == mock_wrapped_result
+            assert dg._df == mockwrapped_result
 
 
 ###########################
@@ -548,10 +546,10 @@ def test__process_partitions_reinstantiated(dupegrouper_mock, partition):
 
 @pytest.fixture
 def dupgrouper_context(request):
-    df_type, df_wrapper = request.param
-    with patch("dupegrouper.base._wrap"):
+    df_type, dfwrapper = request.param
+    with patch("dupegrouper.base.wrap"):
         dg = DupeGrouper(Mock(spec=df_type), "id")
-        dg._df = Mock(spec=df_wrapper)
+        dg._df = Mock(spec=dfwrapper)
 
         with patch.object(dg, "_strategy_manager") as strategy_manager:
 
@@ -563,7 +561,7 @@ def dupgrouper_context(request):
             yield {
                 "dg": dg,
                 "strategy_manager": strategy_manager,
-                "is_spark": "WrappedSparkDataFrame" == df_wrapper.__name__,
+                "is_spark": "WrappedSparkDataFrame" == dfwrapper.__name__,
             }
 
 

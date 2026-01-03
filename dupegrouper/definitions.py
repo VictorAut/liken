@@ -19,7 +19,7 @@ from pyspark.sql.types import (
 )
 
 if typing.TYPE_CHECKING:
-    from dupegrouper.strategy import DeduplicationStrategy  # pragma: no cover
+    from dupegrouper.strategies import BaseStrategy  # pragma: no cover
 
 
 # CONSTANTS
@@ -38,7 +38,7 @@ HASH_ATTR_LABEL: typing.Final[str] = os.environ.get("HASH_ATTR_LABEL", "_tmp_has
 
 StrategyMapCollection: typing.TypeAlias = typing.DefaultDict[
     str,
-    list["DeduplicationStrategy | tuple[typing.Callable, dict[str, str]]"],
+    list["BaseStrategy | tuple[typing.Callable, dict[str, str]]"],
 ]
 
 

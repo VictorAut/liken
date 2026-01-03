@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch, call
 import numpy as np
 import pytest
 
-from dupegrouper.base import _wrap
+from dupegrouper.base import wrap
 from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
-from dupegrouper.strategies.strategies import Jaccard
+from dupegrouper.strategies import Jaccard
 
 
 ##################################
@@ -35,7 +35,7 @@ def test_dedupe_integrated(input, output, dataframe, helpers):
         df = df.collect()
 
     tfidf = Jaccard(**input)
-    tfidf.with_frame(_wrap(df, id_col))
+    tfidf.with_frame(wrap(df, id_col))
 
     compound_col = (
         "account",
