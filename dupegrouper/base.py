@@ -1,12 +1,12 @@
 """dupegrouper main entrypoint
 
-This module contains `DupeGrouper`, at the core of all 'dupe and group'
+This module contains `Duped`, at the core of all 'dupe and group'
 functionality provided by dupegrouper.
 """
 
 from __future__ import annotations
 import collections
-from functools import singledispatch, singledispatchmethod
+from functools import singledispatchmethod
 import inspect
 import logging
 
@@ -42,7 +42,7 @@ _logger = logging.getLogger(__name__)
 # BASE:
 
 
-class DupeGrouper:
+class Duped:
     """Top-level entrypoint for grouping duplicates
 
     This class handles initialisation of a dataframe, dispatching appropriately
@@ -50,7 +50,7 @@ class DupeGrouper:
     class can then accept a variety of strategies for deduplication and
     grouping.
 
-    Upon initialisation, `DupeGrouper` sets a new column, usually `"canonical_id"`
+    Upon initialisation, `Duped` sets a new column, usually `"canonical_id"`
     — but you can control this by setting an environment variable `CANONICAL_ID` at
     runtime. The canonical_id is a monotonically increasing, numeric id column
     starting at 1 to the length of the dataframe provided.
@@ -176,7 +176,7 @@ class DupeGrouper:
     # PUBLIC API:
 
     @singledispatchmethod
-    def add_strategy(self, strategy: BaseStrategy | tuple | StrategyMapCollection):
+    def apply(self, strategy: BaseStrategy | tuple | StrategyMapCollection):
         """
         Add a strategy to the strategy manager.
 
@@ -195,12 +195,12 @@ class DupeGrouper:
         """
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
-    @add_strategy.register(BaseStrategy)
-    @add_strategy.register(tuple)
+    @apply.register(BaseStrategy)
+    @apply.register(tuple)
     def _(self, strategy):
         self._strategy_manager.add("default", strategy)
 
-    @add_strategy.register(dict)
+    @apply.register(dict)
     def _(self, strategy: StrategyMapCollection):
         for attr, strat_list in strategy.items():
             for strat in strat_list:
@@ -398,8 +398,8 @@ def _process_partition(
         ]
 
     # Core API reused per partition, per worker node
-    dg = DupeGrouper(rows, id=id)
-    dg.add_strategy(strategies)
+    dg = Duped(rows, id=id)
+    dg.apply(strategies)
     dg.dedupe(attr)
 
     return iter(dg.df)  # type: ignore[arg-type]
