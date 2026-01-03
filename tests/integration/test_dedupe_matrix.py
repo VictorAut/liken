@@ -10,24 +10,24 @@ import pytest
 
 from dupegrouper import DupeGrouper
 from dupegrouper.definitions import CANONICAL_ID
-from dupegrouper.strategies import exact, fuzzy, tfidf
+from dupegrouper.strategies import strategies
 
 
 STRATEGY_CLASSES = (
-    exact.Exact,
-    fuzzy.Fuzzy,
-    tfidf.TfIdf,
+    strategies.Exact,
+    strategies.Fuzzy,
+    strategies.TfIdf,
 )
 
 STRATEGY_PARAMS: tuple[dict, ...] = (
     {},  # for exact
-    {"tolerance": 0.45},  # for fuzzy
-    {"ngram": (1, 1), "tolerance": 0.20, "topn": 2},  # for tfidf
+    {"threshold": 0.55},  # for fuzzy
+    {"ngram": (1, 1), "threshold": 0.80, "topn": 2},  # for tfidf
 )
 
 EXPECTED_CANONICAL_ID = (
     [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13],  # for exact
-    [1, 2, 3, 3, 5, 6, 3, 2, 1, 1, 11, 12, 13],  # for fuzzy
+    [1, 2, 3, 3, 2, 6, 3, 2, 1, 1, 2, 12, 13],  # for fuzzy
     [1, 2, 3, 3, 5, 2, 3, 2, 1, 1, 5, 12, 13],  # for tfidf
 )
 

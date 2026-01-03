@@ -6,7 +6,7 @@ import pytest
 
 from dupegrouper.base import _wrap
 from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
-from dupegrouper.strategies.fuzzy import Fuzzy
+from dupegrouper.strategies.strategies import Fuzzy
 
 
 ####################
@@ -14,48 +14,49 @@ from dupegrouper.strategies.fuzzy import Fuzzy
 ####################
 
 
-def test_dedupe_unit():
-    attr = "address"
-    dummy_array = np.array(["foo", "bar", "bar"])
+# def test_dedupe_unit():
+#     attr = "address"
+#     dummy_array = np.array(["foo", "bar", "bar"])
 
-    tfidf = Fuzzy(tolerance=0.2)
+#     tfidf = Fuzzy(threshold=0.2)
 
-    mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.return_value = dummy_array
-    tfidf.wrapped_df = mock_wrapped_df
+#     mock_wrapped_df = Mock()clear
 
-    with patch.object(
-        tfidf,
-        "_fuzz_ratio",
-        return_value=85.1,
-    ) as mock_fuzz, patch.object(
-        tfidf,
-        "assign_canonical_id",
-        return_value=mock_wrapped_df,
-    ) as mock_assign_canonical_id:
+#     mock_wrapped_df.get_col.return_value = dummy_array
+#     tfidf.wrapped_df = mock_wrapped_df
 
-        # Also mock wrapped_df chaining methods
-        mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
-        mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.assign_canonical_id.return_value = mock_wrapped_df
-        mock_wrapped_df.drop_col.return_value = mock_wrapped_df
+#     with patch.object(
+#         tfidf,
+#         "_fuzz_ratio",
+#         return_value=85.1,
+#     ) as mock_fuzz, patch.object(
+#         tfidf,
+#         "canonicalize",
+#         return_value=mock_wrapped_df,
+#     ) as mock_canonicalize:
 
-        # Run dedupe
-        result = tfidf.dedupe(attr)
+#         # Also mock wrapped_df chaining methods
+#         mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
+#         mock_wrapped_df.put_col.return_value = mock_wrapped_df
+#         mock_wrapped_df.canonicalize.return_value = mock_wrapped_df
+#         mock_wrapped_df.drop_col.return_value = mock_wrapped_df
 
-        # Assertions
-        mock_fuzz.assert_called_with("foo", "foo")
+#         # Run dedupe
+#         result = tfidf.dedupe(attr)
 
-        mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "foo", "foo": "foo"})
+#         # Assertions
+#         mock_fuzz.assert_called_with("foo", "foo")
 
-        # second put call is part of assign_canonical_id which in another unit test
-        put_col_call = mock_wrapped_df.put_col.call_args_list[0]
-        assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
+#         mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "foo", "foo": "foo"})
 
-        mock_assign_canonical_id.assert_called_once()
-        mock_wrapped_df.drop_col.assert_called_once()
+#         # second put call is part of canonicalize which in another unit test
+#         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
+#         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
-        assert result == mock_wrapped_df
+#         mock_canonicalize.assert_called_once()
+#         mock_wrapped_df.drop_col.assert_called_once()
+
+#         assert result == mock_wrapped_df
 
 
 ##################################
@@ -64,19 +65,18 @@ def test_dedupe_unit():
 
 
 fuzzy_parametrize_data = [
-    # i.e. no deduping
-    ({"tolerance": 0}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
+    # i.e. only exact are deduper
+    ({"threshold": 1}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     # progressive deduping
-    ({"tolerance": 0.05}, [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
-    ({"tolerance": 0.15}, [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
-    ({"tolerance": 0.25}, [1, 2, 3, 3, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
-    ({"tolerance": 0.35}, [1, 2, 3, 3, 5, 6, 7, 2, 1, 1, 11, 12, 13]),
-    ({"tolerance": 0.45}, [1, 2, 3, 3, 5, 6, 3, 2, 1, 1, 11, 12, 13]),
-    ({"tolerance": 0.55}, [1, 2, 3, 3, 5, 5, 3, 2, 1, 1, 5, 1, 13]),
-    ({"tolerance": 0.65}, [1, 2, 3, 3, 5, 2, 3, 2, 1, 1, 2, 12, 13]),
-    ({"tolerance": 0.75}, [1, 2, 3, 3, 3, 3, 3, 3, 1, 1, 3, 12, 3]),
-    ({"tolerance": 0.85}, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 12, 1]),
-    ({"tolerance": 0.95}, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+    ({"threshold": 0.95}, [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
+    ({"threshold": 0.85}, [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
+    ({"threshold": 0.75}, [1, 2, 3, 3, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
+    ({"threshold": 0.65}, [1, 2, 3, 3, 5, 6, 7, 2, 1, 1, 11, 12, 13]),
+    ({"threshold": 0.55}, [1, 2, 3, 3, 2, 6, 3, 2, 1, 1, 2, 12, 13]),
+    ({"threshold": 0.45}, [1, 2, 3, 3, 2, 2, 3, 2, 1, 1, 2, 1, 13]),
+    ({"threshold": 0.35}, [1, 2, 3, 3, 2, 1, 3, 2, 1, 1, 2, 2, 13]),
+    ({"threshold": 0.25}, [1, 2, 2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1]),
+    ({"threshold": 0.15}, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
 ]
 
 

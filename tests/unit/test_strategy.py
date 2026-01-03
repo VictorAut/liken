@@ -15,7 +15,7 @@ from dupegrouper.wrappers import WrappedDataFrame
 
 class DummyStrategy(DeduplicationStrategy):
     def dedupe(self, attr: str):
-        return self.assign_canonical_id(attr).unwrap()
+        return self.canonicalize(attr).unwrap()
 
 
 ###########################
@@ -71,7 +71,7 @@ def test_with_frame(dataframe):
         "whitespace no string match",
     ],
 )
-def test_assign_canonical_id(attribute_array, expected_canonical_id):
+def test_canonicalize(attribute_array, expected_canonical_id):
     attr = "address"
     input_canonical_ids = [1, 2, 3, 4, 5, 6]
 
@@ -87,7 +87,7 @@ def test_assign_canonical_id(attribute_array, expected_canonical_id):
             pass
 
     obj = Dummy(mock_wrapped_df)
-    result = obj.assign_canonical_id(attr)
+    result = obj.canonicalize(attr)
 
     # Assert
     mock_wrapped_df.get_col.assert_any_call(attr)
@@ -116,7 +116,7 @@ def test_dedupe(helpers):
     strategy = DummyStrategy()
     strategy.with_frame(_wrap(df))
 
-    deduped_df = strategy.dedupe("name")  # Uses assign_canonical_id internally
+    deduped_df = strategy.dedupe("name")  # Uses canonicalize internally
 
     expected_groups = [1, 2, 1, 4, 2, 4]
     assert helpers.get_column_as_list(deduped_df, CANONICAL_ID) == expected_groups

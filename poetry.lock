@@ -467,6 +467,30 @@ files = [
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
+name = "datasketch"
+version = "1.8.0"
+description = "Probabilistic data structures for processing and searching very large datasets"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "datasketch-1.8.0-py3-none-any.whl", hash = "sha256:84641506b4b9283e884f13bd888d58e687a8b56fd1cf7d1667cf2ad12a7185a8"},
+    {file = "datasketch-1.8.0.tar.gz", hash = "sha256:1cb7af36d57d3d22382bdb52629ff44e6708d147dcbfbf70e6b66d8944b14b77"},
+]
+
+[package.dependencies]
+numpy = ">=1.11"
+scipy = ">=1.0.0"
+
+[package.extras]
+benchmark = ["matplotlib (>=3.1.2)", "nltk (>=3.4.5)", "pandas (>=0.25.3)", "pyfarmhash (>=0.2.2)", "pyhash (>=0.9.3)", "scikit-learn (>=0.21.3)", "scipy (>=1.3.3)", "setsimilaritysearch (>=0.1.7)"]
+bloom = ["pybloomfilter3 (>=0.7.2)"]
+cassandra = ["cassandra-driver (>=3.20)"]
+experimental-aio = ["aiounittest", "motor (>3.6.0)"]
+redis = ["redis (>=2.10.0)"]
+test = ["cassandra-driver (>=3.20)", "coverage", "mock (>=2.0.0)", "mockredispy", "nose (>=1.3.7)", "nose-exclude (>=0.5.0)", "pymongo (>=3.9.0)", "pytest", "pytest-rerunfailures", "redis (>=2.10.0)"]
+
+[[package]]
 name = "debugpy"
 version = "1.8.17"
 description = "An implementation of the Debug Adapter Protocol for Python"
@@ -2856,4 +2880,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "9530ea306374559fef982344bc241dda2ab4098e6c46d983143451c3c55d79bb"
+content-hash = "771bf0dc93965ac84a7dcd534019231902f5195f6498006b3b6ce4d055766859"
