@@ -198,7 +198,7 @@ The above problem is typically dealt with the use of a "blocking key" which is t
 ## Extending the API for Custom Implementations
 It's recommended that for simple custom implementations you use the approach discussed for custom functions. (see [*Custom Strategies*](#custom-strategies)).
 
-However, you can derive directly from the abstract base class `dupegrouper.strategy.DeduplicationStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#DeduplicationStrategy). This will expose a `dedupe()` method, ready for direct use within an instance of `DupeGrouper`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
+However, you can derive directly from the abstract base class `dupegrouper.strategies.BaseStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#BaseStrategy). This will expose a `dedupe()` method, ready for direct use within an instance of `DupeGrouper`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
 
 # About
 

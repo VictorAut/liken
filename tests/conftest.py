@@ -5,9 +5,9 @@ import polars as pl
 from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
 import pytest
 
-from dupegrouper.base import DupeGrouper, DeduplicationStrategy
+from dupegrouper.base import DupeGrouper, BaseStrategy
 from dupegrouper.definitions import DataFrameLike
-from dupegrouper.wrappers.dataframes import (
+from dupegrouper.dataframe import (
     WrappedPandasDataFrame,
     WrappedPolarsDataFrame,
     WrappedSparkDataFrame,
@@ -332,7 +332,7 @@ def dupegrouper_mock(dataframe):
 
     df_mock = Mock(spec=type(df))
 
-    with patch("dupegrouper.base._wrap"):
+    with patch("dupegrouper.base.wrap"):
         instance = DupeGrouper(df_mock, id)
         instance._df = Mock()
         yield instance
@@ -340,7 +340,7 @@ def dupegrouper_mock(dataframe):
 
 @pytest.fixture
 def strategy_mock():
-    return Mock(spec=DeduplicationStrategy)
+    return Mock(spec=BaseStrategy)
 
 
 # helpers

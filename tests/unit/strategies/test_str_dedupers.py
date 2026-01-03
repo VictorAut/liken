@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch, call
 import numpy as np
 import pytest
 
-from dupegrouper.base import _wrap
+from dupegrouper.base import wrap
 from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
-from dupegrouper.strategies.strategies import (
+from dupegrouper.strategies import (
     StrStartsWith,
     StrEndsWith,
     StrContains,
@@ -24,35 +24,35 @@ def test_str_starts_dedupe_unit():
 
     deduper = StrStartsWith(pattern="b")
 
-    mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.return_value = dummy_array
-    deduper.wrapped_df = mock_wrapped_df
+    mockwrapped_df = Mock()
+    mockwrapped_df.get_col.return_value = dummy_array
+    deduper.wrapped_df = mockwrapped_df
 
     with patch.object(
         deduper,
         "canonicalize",
-        return_value=mock_wrapped_df,
+        return_value=mockwrapped_df,
     ) as mock_canonicalize:
 
         # Also mock wrapped_df chaining methods
-        mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
-        mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.canonicalize.return_value = mock_wrapped_df
-        mock_wrapped_df.drop_col.return_value = mock_wrapped_df
+        mockwrapped_df.map_dict.return_value = [None, "bar", "bar"]
+        mockwrapped_df.put_col.return_value = mockwrapped_df
+        mockwrapped_df.canonicalize.return_value = mockwrapped_df
+        mockwrapped_df.drop_col.return_value = mockwrapped_df
 
         # Run dedupe
         result = deduper.dedupe(attr)
 
-        mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
+        mockwrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
         # second put call is part of canonicalize which in another unit test
-        put_col_call = mock_wrapped_df.put_col.call_args_list[0]
+        put_col_call = mockwrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
         mock_canonicalize.assert_called_once()
-        mock_wrapped_df.drop_col.assert_called_once()
+        mockwrapped_df.drop_col.assert_called_once()
 
-        assert result == mock_wrapped_df
+        assert result == mockwrapped_df
 
 
 def test_str_ends_dedupe_unit():
@@ -61,35 +61,35 @@ def test_str_ends_dedupe_unit():
 
     deduper = StrEndsWith(pattern="ar")
 
-    mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.return_value = dummy_array
-    deduper.wrapped_df = mock_wrapped_df
+    mockwrapped_df = Mock()
+    mockwrapped_df.get_col.return_value = dummy_array
+    deduper.wrapped_df = mockwrapped_df
 
     with patch.object(
         deduper,
         "canonicalize",
-        return_value=mock_wrapped_df,
+        return_value=mockwrapped_df,
     ) as mock_canonicalize:
 
         # Also mock wrapped_df chaining methods
-        mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
-        mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.canonicalize.return_value = mock_wrapped_df
-        mock_wrapped_df.drop_col.return_value = mock_wrapped_df
+        mockwrapped_df.map_dict.return_value = [None, "bar", "bar"]
+        mockwrapped_df.put_col.return_value = mockwrapped_df
+        mockwrapped_df.canonicalize.return_value = mockwrapped_df
+        mockwrapped_df.drop_col.return_value = mockwrapped_df
 
         # Run dedupe
         result = deduper.dedupe(attr)
 
-        mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
+        mockwrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
         # second put call is part of canonicalize which in another unit test
-        put_col_call = mock_wrapped_df.put_col.call_args_list[0]
+        put_col_call = mockwrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
         mock_canonicalize.assert_called_once()
-        mock_wrapped_df.drop_col.assert_called_once()
+        mockwrapped_df.drop_col.assert_called_once()
 
-        assert result == mock_wrapped_df
+        assert result == mockwrapped_df
 
 
 def test_str_contains_dedupe_unit():
@@ -98,35 +98,35 @@ def test_str_contains_dedupe_unit():
 
     deduper = StrContains(pattern="a")
 
-    mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.return_value = dummy_array
-    deduper.wrapped_df = mock_wrapped_df
+    mockwrapped_df = Mock()
+    mockwrapped_df.get_col.return_value = dummy_array
+    deduper.wrapped_df = mockwrapped_df
 
     with patch.object(
         deduper,
         "canonicalize",
-        return_value=mock_wrapped_df,
+        return_value=mockwrapped_df,
     ) as mock_canonicalize:
 
         # Also mock wrapped_df chaining methods
-        mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
-        mock_wrapped_df.put_col.return_value = mock_wrapped_df
-        mock_wrapped_df.canonicalize.return_value = mock_wrapped_df
-        mock_wrapped_df.drop_col.return_value = mock_wrapped_df
+        mockwrapped_df.map_dict.return_value = [None, "bar", "bar"]
+        mockwrapped_df.put_col.return_value = mockwrapped_df
+        mockwrapped_df.canonicalize.return_value = mockwrapped_df
+        mockwrapped_df.drop_col.return_value = mockwrapped_df
 
         # Run dedupe
         result = deduper.dedupe(attr)
 
-        mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
+        mockwrapped_df.map_dict.assert_called_once_with(attr, {"bar": "bar"})
 
         # second put call is part of canonicalize which in another unit test
-        put_col_call = mock_wrapped_df.put_col.call_args_list[0]
+        put_col_call = mockwrapped_df.put_col.call_args_list[0]
         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
         mock_canonicalize.assert_called_once()
-        mock_wrapped_df.drop_col.assert_called_once()
+        mockwrapped_df.drop_col.assert_called_once()
 
-        assert result == mock_wrapped_df
+        assert result == mockwrapped_df
 
 
 ##################################
@@ -153,7 +153,7 @@ def test_str_starts_dedupe_integrated(input, output, dataframe, helpers):
         df = df.collect()
 
     tfidf = StrStartsWith(**input)
-    tfidf.with_frame(_wrap(df, id_col))
+    tfidf.with_frame(wrap(df, id_col))
 
     df = tfidf.dedupe("address").unwrap()
 
@@ -180,7 +180,7 @@ def test_str_ends_dedupe_integrated(input, output, dataframe, helpers):
         df = df.collect()
 
     tfidf = StrEndsWith(**input)
-    tfidf.with_frame(_wrap(df, id_col))
+    tfidf.with_frame(wrap(df, id_col))
 
     df = tfidf.dedupe("address").unwrap()
 
@@ -212,7 +212,7 @@ def test_str_contains_dedupe_integrated(input, output, dataframe, helpers):
         df = df.collect()
 
     tfidf = StrContains(**input)
-    tfidf.with_frame(_wrap(df, id_col))
+    tfidf.with_frame(wrap(df, id_col))
 
     df = tfidf.dedupe("address").unwrap()
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
-from dupegrouper.base import _wrap
-from dupegrouper.strategies.custom import Custom
+from dupegrouper.base import wrap
+from dupegrouper.strategies import Custom
 
 
 # Custom callable function
@@ -21,10 +21,10 @@ def my_func(df: pd.DataFrame, attr: str, /, match_str: str) -> dict[str, str]:
 def test_custom_dedupe(df_pandas):
 
     deduper = Custom(my_func, "address", match_str="navarra")
-    deduper.with_frame(_wrap(df_pandas))
+    deduper.with_frame(wrap(df_pandas))
 
-    updated_wrapped_df = deduper.dedupe()
-    updated_df = updated_wrapped_df.unwrap()
+    updatedwrapped_df = deduper.dedupe()
+    updated_df = updatedwrapped_df.unwrap()
 
     expected_canonical_ids = [1, 2, 3, 3, 5, 6, 3, 8, 1, 1, 11, 12, 13]
 

@@ -1,6 +1,6 @@
 """Abstract base class for derived deduplication atrategies
 
-This module contains `DeduplicationStrategy` which provides
+This module contains `BaseStrategy` which provides
 `canonicalize()`, which is at the core functionality of `dupegrouper` and is
 used for any deduplication that requires *grouping*. Additionally, the
 overrideable `dedupe()` is defined.
@@ -29,7 +29,7 @@ from dupegrouper.definitions import (
     TMP_ATTR_LABEL,
     SeriesLike,
 )
-from dupegrouper.wrappers import WrappedDataFrame
+from dupegrouper.dataframe import WrappedDataFrame
 
 
 # LOGGER:
@@ -44,10 +44,10 @@ logger = logging.getLogger(__name__)
 _T = typing.TypeVar("_T")
 
 
-# STRATEGY:
+# BASE STRATEGY:
 
 
-class DeduplicationStrategy(ABC):
+class BaseStrategy(ABC):
     """Defines a deduplication strategy."""
 
     def __init__(self, *args, **kwargs):
@@ -140,7 +140,7 @@ class DeduplicationStrategy(ABC):
 # EXACT DEDUPER:
 
 
-class Exact(DeduplicationStrategy):
+class Exact(BaseStrategy):
 
     @override
     def dedupe(self, columns: str, /) -> WrappedDataFrame:
@@ -150,7 +150,7 @@ class Exact(DeduplicationStrategy):
 # BINARY DEDUPERS:
 
 
-class BinaryDedupers(DeduplicationStrategy):
+class BinaryDedupers(BaseStrategy):
     """TODO"""
 
     def __init__(self, pattern: str, case: bool = True):
@@ -254,7 +254,7 @@ class StrContains(BinaryDedupers):
 # THRESHOLD DEDUPERS:
 
 
-class ThresholdDedupers(DeduplicationStrategy):
+class ThresholdDedupers(BaseStrategy):
     def __init__(self, threshold: float = 0.95):
         super().__init__(threshold=threshold)
         self._threshold = threshold
@@ -499,7 +499,7 @@ class Cosine(CompoundColumn):
 # CUSTOM:
 
 
-class Custom(DeduplicationStrategy):
+class Custom(BaseStrategy):
 
     def __init__(
         self,

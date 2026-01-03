@@ -6,7 +6,11 @@ import polars as pl
 import pytest
 
 from dupegrouper.definitions import CANONICAL_ID
-from dupegrouper.wrappers.dataframes import WrappedSparkDataFrame, WrappedPandasDataFrame, WrappedPolarsDataFrame
+from dupegrouper.dataframe import (
+    WrappedSparkDataFrame,
+    WrappedPandasDataFrame,
+    WrappedPolarsDataFrame,
+)
 
 
 def test__add_canonical_id(lowlevel_dataframe, helpers):

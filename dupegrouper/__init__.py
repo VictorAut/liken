@@ -3,11 +3,12 @@
 """
 
 from dupegrouper.base import DupeGrouper
-from dupegrouper import strategy, strategies  # submodules
+from dupegrouper import dataframe
+from dupegrouper import strategies
 
 
 __all__ = [
     "DupeGrouper",
-    "strategy",
+    "dataframe",
     "strategies",
 ]

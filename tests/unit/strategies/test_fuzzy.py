@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch, call
 import numpy as np
 import pytest
 
-from dupegrouper.base import _wrap
+from dupegrouper.base import wrap
 from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
-from dupegrouper.strategies.strategies import Fuzzy
+from dupegrouper.strategies import Fuzzy
 
 
 ####################
@@ -20,10 +20,10 @@ from dupegrouper.strategies.strategies import Fuzzy
 
 #     tfidf = Fuzzy(threshold=0.2)
 
-#     mock_wrapped_df = Mock()clear
+#     mockwrapped_df = Mock()clear
 
-#     mock_wrapped_df.get_col.return_value = dummy_array
-#     tfidf.wrapped_df = mock_wrapped_df
+#     mockwrapped_df.get_col.return_value = dummy_array
+#     tfidf.wrapped_df = mockwrapped_df
 
 #     with patch.object(
 #         tfidf,
@@ -32,14 +32,14 @@ from dupegrouper.strategies.strategies import Fuzzy
 #     ) as mock_fuzz, patch.object(
 #         tfidf,
 #         "canonicalize",
-#         return_value=mock_wrapped_df,
+#         return_value=mockwrapped_df,
 #     ) as mock_canonicalize:
 
 #         # Also mock wrapped_df chaining methods
-#         mock_wrapped_df.map_dict.return_value = [None, "bar", "bar"]
-#         mock_wrapped_df.put_col.return_value = mock_wrapped_df
-#         mock_wrapped_df.canonicalize.return_value = mock_wrapped_df
-#         mock_wrapped_df.drop_col.return_value = mock_wrapped_df
+#         mockwrapped_df.map_dict.return_value = [None, "bar", "bar"]
+#         mockwrapped_df.put_col.return_value = mockwrapped_df
+#         mockwrapped_df.canonicalize.return_value = mockwrapped_df
+#         mockwrapped_df.drop_col.return_value = mockwrapped_df
 
 #         # Run dedupe
 #         result = tfidf.dedupe(attr)
@@ -47,16 +47,16 @@ from dupegrouper.strategies.strategies import Fuzzy
 #         # Assertions
 #         mock_fuzz.assert_called_with("foo", "foo")
 
-#         mock_wrapped_df.map_dict.assert_called_once_with(attr, {"bar": "foo", "foo": "foo"})
+#         mockwrapped_df.map_dict.assert_called_once_with(attr, {"bar": "foo", "foo": "foo"})
 
 #         # second put call is part of canonicalize which in another unit test
-#         put_col_call = mock_wrapped_df.put_col.call_args_list[0]
+#         put_col_call = mockwrapped_df.put_col.call_args_list[0]
 #         assert put_col_call == call(TMP_ATTR_LABEL, [None, "bar", "bar"])
 
 #         mock_canonicalize.assert_called_once()
-#         mock_wrapped_df.drop_col.assert_called_once()
+#         mockwrapped_df.drop_col.assert_called_once()
 
-#         assert result == mock_wrapped_df
+#         assert result == mockwrapped_df
 
 
 ##################################
@@ -90,7 +90,7 @@ def test_dedupe_integrated(input, output, dataframe, helpers):
         df = df.collect()
 
     tfidf = Fuzzy(**input)
-    tfidf.with_frame(_wrap(df, id_col))
+    tfidf.with_frame(wrap(df, id_col))
 
     df = tfidf.dedupe("address").unwrap()
 

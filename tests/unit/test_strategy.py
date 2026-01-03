@@ -1,4 +1,4 @@
-"""Tests for dupegrouper.strategy"""
+"""Tests for dupegrouper.strategies"""
 
 from __future__ import annotations
 from unittest.mock import Mock
@@ -7,19 +7,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from dupegrouper.base import _wrap
+from dupegrouper.base import wrap
 from dupegrouper.definitions import CANONICAL_ID
-from dupegrouper.strategy import DeduplicationStrategy
-from dupegrouper.wrappers import WrappedDataFrame
+from dupegrouper.strategies import BaseStrategy
+from dupegrouper.dataframe import WrappedDataFrame
 
 
-class DummyStrategy(DeduplicationStrategy):
+class DummyStrategy(BaseStrategy):
     def dedupe(self, attr: str):
         return self.canonicalize(attr).unwrap()
 
 
 ###########################
-# `DeduplicationStrategy` #
+# `BaseStrategy` #
 ###########################
 
 
@@ -41,7 +41,7 @@ def test_with_frame(dataframe):
     df, _, _ = dataframe
 
     strategy = DummyStrategy()
-    strategy.with_frame(_wrap(df))
+    strategy.with_frame(wrap(df))
 
     assert isinstance(strategy.wrapped_df, WrappedDataFrame)
 
@@ -75,24 +75,24 @@ def test_canonicalize(attribute_array, expected_canonical_id):
     attr = "address"
     input_canonical_ids = [1, 2, 3, 4, 5, 6]
 
-    mock_wrapped_df = Mock()
-    mock_wrapped_df.get_col.side_effect = lambda key: attribute_array if key == attr else input_canonical_ids
-    mock_wrapped_df.put_col.return_value = expected_canonical_id
+    mockwrapped_df = Mock()
+    mockwrapped_df.get_col.side_effect = lambda key: attribute_array if key == attr else input_canonical_ids
+    mockwrapped_df.put_col.return_value = expected_canonical_id
 
-    class Dummy(DeduplicationStrategy):
+    class Dummy(BaseStrategy):
         def __init__(self, wrapped_df):
             self.wrapped_df = wrapped_df
 
         def dedupe():  # ABC contract forces this
             pass
 
-    obj = Dummy(mock_wrapped_df)
+    obj = Dummy(mockwrapped_df)
     result = obj.canonicalize(attr)
 
     # Assert
-    mock_wrapped_df.get_col.assert_any_call(attr)
-    mock_wrapped_df.get_col.assert_any_call(CANONICAL_ID)
-    mock_wrapped_df.put_col.assert_called_once()
+    mockwrapped_df.get_col.assert_any_call(attr)
+    mockwrapped_df.get_col.assert_any_call(CANONICAL_ID)
+    mockwrapped_df.put_col.assert_called_once()
     np.testing.assert_array_equal(result, expected_canonical_id)
 
 
@@ -114,7 +114,7 @@ def test_dedupe(helpers):
     )
 
     strategy = DummyStrategy()
-    strategy.with_frame(_wrap(df))
+    strategy.with_frame(wrap(df))
 
     deduped_df = strategy.dedupe("name")  # Uses canonicalize internally
 
