@@ -383,6 +383,8 @@ class Lsh(SingleColumn):
         super().__init__(
             threshold=threshold,
         )
+        if not (0 < threshold < 1):
+            raise ValueError("LSH threshold must be in (0, 1)")
         self._ngram = ngram
         self._threshold = threshold
         self._num_perm = num_perm

@@ -154,6 +154,82 @@ def property_type():
 
 
 @pytest.fixture(scope="session")
+def property_height():
+    return [
+        2.4,
+        2.4,
+        2.5,
+        4.0,
+        6.0,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.7,
+        4.0,
+    ]
+
+
+@pytest.fixture(scope="session")
+def property_area_sq_ft():
+    return [
+        545,
+        452,
+        623,
+        2077,
+        3656,
+        4000,
+        1323,
+        509,
+        500,
+        450,
+        345,
+        1045,
+        1545,
+    ]
+
+
+@pytest.fixture(scope="session")
+def property_sea_level_elevation_m():
+    return [
+        5,
+        6,
+        5,
+        305,
+        1342,
+        25,
+        132,
+        200,
+        300,
+        15,
+        22,
+        42,
+        62,
+    ]
+
+
+@pytest.fixture(scope="session")
+def property_num_rooms():
+    return [
+        3,
+        3,
+        3,
+        6,
+        7,
+        8,
+        4,
+        2,
+        3,
+        3,
+        3,
+        4,
+        6,
+    ]
+
+
+@pytest.fixture(scope="session")
 def blocking_key():
     return [
         "key_2",
@@ -205,6 +281,10 @@ def df_pandas(
     martial_status,
     number_children,
     property_type,
+    property_height,
+    property_area_sq_ft,
+    property_sea_level_elevation_m,
+    property_num_rooms,
 ):
     return pd.DataFrame(
         {
@@ -216,6 +296,10 @@ def df_pandas(
             "martial_status": martial_status,
             "number_children": number_children,
             "property_type": property_type,
+            "property_height": property_height,
+            "property_area_sq_ft": property_area_sq_ft,
+            "property_sea_level_elevation_m": property_sea_level_elevation_m,
+            "property_num_rooms": property_num_rooms,
         }
     )
 
@@ -230,6 +314,10 @@ def df_polars(
     martial_status,
     number_children,
     property_type,
+    property_height,
+    property_area_sq_ft,
+    property_sea_level_elevation_m,
+    property_num_rooms,
 ):
     return pl.DataFrame(
         {
@@ -241,6 +329,10 @@ def df_polars(
             "martial_status": martial_status,
             "number_children": number_children,
             "property_type": property_type,
+            "property_height": property_height,
+            "property_area_sq_ft": property_area_sq_ft,
+            "property_sea_level_elevation_m": property_sea_level_elevation_m,
+            "property_num_rooms": property_num_rooms,
         }
     )
 
@@ -256,6 +348,10 @@ def df_spark(
     martial_status,
     number_children,
     property_type,
+    property_height,
+    property_area_sq_ft,
+    property_sea_level_elevation_m,
+    property_num_rooms,
     blocking_key,
 ):
     """Default is a single partition"""
@@ -271,6 +367,10 @@ def df_spark(
                 martial_status[i],
                 number_children[i],
                 property_type[i],
+                property_height[i],
+                property_area_sq_ft[i],
+                property_sea_level_elevation_m[i],
+                property_num_rooms[i],
                 blocking_key[i],
             ]
             for i in range(len(id))
@@ -284,6 +384,10 @@ def df_spark(
             "martial_status",
             "number_children",
             "property_type",
+            "property_height",
+            "property_area_sq_ft",
+            "property_sea_level_elevation_m",
+            "property_num_rooms",
             "blocking_key",
         ),
     ).repartition(1, "blocking_key")
