@@ -36,12 +36,12 @@ def test_reinstantiate():
     assert instance._init_kwargs == instance_reinstantiated._init_kwargs == dummy_kwargs
 
 
-def test_with_frame(dataframe):
+def test_bind_frame(dataframe):
 
     df, _, _ = dataframe
 
     strategy = DummyStrategy()
-    strategy.with_frame(wrap(df))
+    strategy.bind_frame(wrap(df))
 
     assert isinstance(strategy.wrapped_df, WrappedDataFrame)
 
@@ -80,8 +80,9 @@ def test_propagate_canonical_id(attribute_array, expected_canonical_id):
     mockwrapped_df.put_col.return_value = expected_canonical_id
 
     class Dummy(BaseStrategy):
-        def __init__(self, wrapped_df):
+        def __init__(self, wrapped_df, rule = "first"):
             self.wrapped_df = wrapped_df
+            self.rule = rule
 
         def canonicalize():  # ABC contract forces this
             pass
@@ -114,7 +115,7 @@ def test_canonicalize(helpers):
     )
 
     strategy = DummyStrategy()
-    strategy.with_frame(wrap(df))
+    strategy.bind_frame(wrap(df)).bind_rule("first")
 
     canonicalized_df = strategy.canonicalize("name")  # Uses propagate_canonical_id internally
 
@@ -147,7 +148,7 @@ def my_func(df: pd.DataFrame, attr: str, /, match_str: str) -> dict[str, str]:
 def test_custom_canonicalize(df_pandas):
 
     canonicalizer = Custom(my_func, "address", match_str="navarra")
-    canonicalizer.with_frame(wrap(df_pandas))
+    canonicalizer.bind_frame(wrap(df_pandas)).bind_rule("first")
 
     updatedwrapped_df = canonicalizer.canonicalize()
     updated_df = updatedwrapped_df.unwrap()

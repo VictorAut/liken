@@ -61,11 +61,13 @@ class Duped:
         df: DataFrameLike,
         spark_session: SparkSession | None = None,
         id: str | None = None,
+        canonicalization_rule: typing.Literal["first", "last"] = "first",
     ):
         self._df: WrappedDataFrame = wrap(df, id)
         self._strategy_manager = _StrategyManager()
         self._spark_session = spark_session
         self._id = id
+        self._canonicalization_rule = canonicalization_rule
 
     @singledispatchmethod
     def _call_strategy_canonicalizer(
@@ -97,12 +99,24 @@ class Duped:
 
     @_call_strategy_canonicalizer.register(BaseStrategy)
     def _(self, strategy, attr) -> WrappedDataFrame:
-        return strategy.with_frame(self._df).canonicalize(attr)
+        return (
+            strategy
+            #
+            .bind_frame(self._df)
+            .bind_rule(self._canonicalization_rule)
+            .canonicalize(attr)
+        )
 
     @_call_strategy_canonicalizer.register(tuple)
     def _(self, strategy: tuple[typing.Callable, typing.Any], attr) -> WrappedDataFrame:
         func, kwargs = strategy
-        return Custom(func, attr, **kwargs).with_frame(self._df).canonicalize()
+        return (
+            Custom(func, attr, **kwargs)
+            #
+            .bind_frame(self._df)
+            .bind_rule(self._canonicalization_rule)
+            .canonicalize()
+        )
 
     @singledispatchmethod
     def _canonicalize(
@@ -158,10 +172,17 @@ class Duped:
             Instance's _df attribute is updated
         """
         id = typing.cast(str, self._id)
+        rule = typing.cast(str, self._canonicalization_rule)
         id_type = typing.cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
 
         canonicalized_rdd = self._df.rdd.mapPartitions(
-            lambda partition_iter: _process_partition(partition_iter, strategies, id, attr)
+            lambda partition_iter: _process_partition(
+                partition_iter,
+                strategies,
+                id,
+                attr,
+                rule,
+            )
         )
 
         if CANONICAL_ID in self._df.columns:
@@ -367,6 +388,7 @@ def _process_partition(
     strategies: StrategyMapCollection,
     id: str,
     attr: str | None,
+    canonicalization_rule: typing.Literal["first", "last"] = "first",
 ) -> typing.Iterator[Row]:
     """process a spark dataframe partition i.e. a list[Row]
 
@@ -398,7 +420,7 @@ def _process_partition(
         ]
 
     # Core API reused per partition, per worker node
-    dg = Duped(rows, id=id)
+    dg = Duped(rows, id=id, canonicalization_rule=canonicalization_rule)
     dg.apply(strategies)
     dg.canonicalize(attr)
 

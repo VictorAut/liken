@@ -57,7 +57,7 @@ class BaseStrategy(ABC):
     def reinstantiate(self):
         return self.__class__(*self._init_args, **self._init_kwargs)
 
-    def with_frame(self, wrapped_df: WrappedDataFrame) -> typing.Self:
+    def bind_frame(self, wrapped_df: WrappedDataFrame) -> typing.Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -70,7 +70,20 @@ class BaseStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def propagate_canonical_id(self, columns: str, include_exact: bool = True) -> WrappedDataFrame:
+    def bind_rule(
+        self,
+        rule: typing.Literal["first", "last"] = "first",
+    ) -> typing.Self:
+        if rule not in ("first", "last"):
+            raise ValueError("Rule must be one of 'first' or 'last'")
+        self.rule = rule
+        return self
+
+    def propagate_canonical_id(
+        self,
+        columns: str,
+        include_exact: bool = True,
+    ) -> WrappedDataFrame:
         """Assign new group ids according to duplicated instances of attribute.
 
         Array-like contents of the dataframe's attributes are collected as a
@@ -105,11 +118,29 @@ class BaseStrategy(ABC):
         if include_exact:
             attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
             unique_attrs, unique_indices = np.unique(attrs, return_index=True)
+
+            if self.rule == "first":
+                unique_attrs, unique_indices = np.unique(attrs, return_index=True)
+
+            elif self.rule == "last":
+                rev_attrs = attrs[::-1]
+                _, rev_indices = np.unique(rev_attrs, return_index=True)
+                unique_indices = len(attrs) - 1 - rev_indices
+                unique_attrs = attrs[unique_indices]
         else:
             # remove null types
             mask = np.array([(x is not None) and not (isinstance(x, float) and np.isnan(x)) for x in attrs])
             filtered = attrs[mask]
-            unique_attrs, unique_indices_filtered = np.unique(filtered, return_index=True)
+
+            if self.rule == "first":
+                unique_attrs, unique_indices_filtered = np.unique(filtered, return_index=True)
+
+            elif self.rule == "last":
+                rev_attrs = filtered[::-1]
+                _, rev_indices = np.unique(rev_attrs, return_index=True)
+                unique_indices_filtered = len(filtered) - 1 - rev_indices
+                unique_attrs = filtered[unique_indices_filtered]
+
             unique_indices = np.where(mask)[0][unique_indices_filtered]
 
         first_canonicals = canonicals[unique_indices]
@@ -265,24 +296,78 @@ class ThresholdDedupers(BaseStrategy):
         pass
 
 
+class UnionFind:
+    def __init__(self, n: int):
+        self.parent = list(range(n))
+
+    def find(self, x: int) -> int:
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+
+    def union(self, x: int, y: int) -> None:
+        rx, ry = self.find(x), self.find(y)
+        if rx != ry:
+            self.parent[ry] = rx
+
+
 # SINGLE COLUMN:
 
 
 class SingleColumn(ThresholdDedupers):
+    # @override
+    # def canonicalize(self, columns: str, /) -> WrappedDataFrame:
+
+    #     attr: np.ndarray = np.asarray(self.wrapped_df.get_col(columns))
+
+    #     for idx, idy in self._gen_similarity_indices(attr):
+    #         indice_map: dict[str, str] = {attr[idx]: attr[idy]}
+    #         new_attr: SeriesLike = self.wrapped_df.map_dict(columns, indice_map)
+    #         new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(columns))
+    #         self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
+    #         self.propagate_canonical_id(TMP_ATTR_LABEL)
+    #         self.wrapped_df.drop_col(TMP_ATTR_LABEL)
+
+    #     return self.wrapped_df
     @override
     def canonicalize(self, columns: str, /) -> WrappedDataFrame:
 
-        attr: np.ndarray = np.asarray(self.wrapped_df.get_col(columns))
+        attr = np.asarray(self.wrapped_df.get_col(columns))
+        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID))
 
-        for idx, idy in self._gen_similarity_indices(attr):
-            indice_map: dict[str, str] = {attr[idx]: attr[idy]}
-            new_attr: SeriesLike = self.wrapped_df.map_dict(columns, indice_map)
-            new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(columns))
-            self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
-            self.propagate_canonical_id(TMP_ATTR_LABEL)
-            self.wrapped_df.drop_col(TMP_ATTR_LABEL)
+        n = len(attr)
+        uf = UnionFind(n)
 
-        return self.wrapped_df
+        # 1) Build connected components
+        for i, j in self._gen_similarity_indices(attr):
+            uf.union(i, j)
+
+        # 2) Collect components
+        components: dict[int, list[int]] = {}
+        for i in range(n):
+            root = uf.find(i)
+            components.setdefault(root, []).append(i)
+
+        # 3) Choose representative per component
+        rep_index: dict[int, int] = {}
+        for members in components.values():
+            if self.rule == "first":
+                rep = min(members)
+            elif self.rule == "last":
+                rep = max(members)
+            else:
+                raise ValueError(f"Unknown rule: {self.rule}")
+
+            for i in members:
+                rep_index[i] = rep
+
+        # 4) Propagate canonical IDs once
+        new_canonicals = np.array(
+            [canonicals[rep_index[i]] for i in range(n)],
+            dtype=object,
+        )
+
+        return self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
 
 
 class Fuzzy(SingleColumn):
