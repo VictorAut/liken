@@ -216,7 +216,7 @@ def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, s
     attr = "address"
 
     canonicalized_df_mock = Mock()
-    strategy_mock.with_frame.return_value.canonicalize.return_value = canonicalized_df_mock
+    strategy_mock.bind_frame.return_value.bind_rule.return_value.canonicalize.return_value = canonicalized_df_mock
 
     # call
 
@@ -224,8 +224,8 @@ def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, s
 
     # assert
 
-    strategy_mock.with_frame.assert_called_once_with(dupegrouper_mock._df)
-    strategy_mock.with_frame.return_value.canonicalize.assert_called_once_with(attr)
+    strategy_mock.bind_frame.assert_called_once_with(dupegrouper_mock._df)
+    strategy_mock.bind_frame.return_value.bind_rule.return_value.canonicalize.assert_called_once_with(attr)
 
     assert result == canonicalized_df_mock
 
@@ -247,7 +247,7 @@ def test__call_strategy_canonicalizer_tuple(dupegrouper_mock):
         Custom.return_value = instance
 
         # Ensure full method chain is mocked
-        instance.with_frame.return_value = instance
+        instance.bind_frame.return_value.bind_rule.return_value = instance
         instance.canonicalize.return_value = canonicalized_df_mock
 
         result = dupegrouper_mock._call_strategy_canonicalizer(
@@ -258,8 +258,8 @@ def test__call_strategy_canonicalizer_tuple(dupegrouper_mock):
         # assert
 
         Custom.assert_called_once_with(mock_callable, attr, **mock_kwargs)
-        instance.with_frame.assert_called_once_with(dupegrouper_mock._df)
-        instance.with_frame.return_value.canonicalize.assert_called_once_with()
+        instance.bind_frame.assert_called_once_with(dupegrouper_mock._df)
+        instance.bind_frame.return_value.bind_rule.return_value.canonicalize.assert_called_once_with()
 
         assert result == canonicalized_df_mock
 
