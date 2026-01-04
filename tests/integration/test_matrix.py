@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from dupegrouper import Duped
 from dupegrouper.base import wrap
 from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import (
@@ -98,7 +99,7 @@ PARAMS = [
     # i.e. no deduping because no string starts with the pattern
     (StrStartsWith, SINGLE_COL, {"pattern": "zzzzz", "case": True}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrStartsWith, SINGLE_COL, {"pattern": "zzzzz", "case": False}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
-    # String does dedupe if case correct; but doesn't otherwise
+    # String does canonicalize if case correct; but doesn't otherwise
     (StrStartsWith, SINGLE_COL, {"pattern": "calle", "case": True}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrStartsWith, SINGLE_COL, {"pattern": "calle", "case": False}, [1, 2, 3, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     #
@@ -106,7 +107,7 @@ PARAMS = [
     # i.e. no deduping because no string starts with the pattern
     (StrEndsWith, SINGLE_COL, {"pattern": "zzzzz", "case": True}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrEndsWith, SINGLE_COL, {"pattern": "zzzzz", "case": False}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
-    # String does dedupe if case correct; but doesn't otherwise
+    # String does canonicalize if case correct; but doesn't otherwise
     (StrEndsWith, SINGLE_COL, {"pattern": "kingdom", "case": True}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrEndsWith, SINGLE_COL, {"pattern": "kingdom", "case": False}, [1, 2, 3, 4, 2, 2, 7, 8, 9, 10, 11, 12, 13]),
     #
@@ -116,10 +117,10 @@ PARAMS = [
     (StrContains, SINGLE_COL, {"pattern": "zzzzz", "case": False, "regex": True}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrContains, SINGLE_COL, {"pattern": "zzzzz", "case": True, "regex": False}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrContains, SINGLE_COL, {"pattern": "zzzzz", "case": False, "regex": False}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
-    # String does dedupe if case correct; but doesn't otherwise, no regex
+    # String does canonicalize if case correct; but doesn't otherwise, no regex
     (StrContains, SINGLE_COL, {"pattern": "ol5 9pl", "case": True, "regex": False}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
     (StrContains, SINGLE_COL, {"pattern": "ol5 9pl", "case": False, "regex": False}, [1, 2, 3, 4, 5, 1, 7, 8, 1, 1, 11, 12, 13]),
-    # String does dedupe if case correct; but doesn't otherwise, with regex
+    # String does canonicalize if case correct; but doesn't otherwise, with regex
     (StrContains, SINGLE_COL, {"pattern": r"05\d{3}", "case": True, "regex": True}, [1, 2, 3, 3, 5, 6, 3, 8, 9, 10, 11, 12, 13]),
     (StrContains, SINGLE_COL, {"pattern": r"05\d{3}", "case": False, "regex": True}, [1, 2, 3, 3, 5, 6, 3, 8, 9, 10, 11, 12, 13]),
     #
@@ -150,18 +151,23 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize("deduper, columns, input, output", PARAMS)
-def test_dedupe_integrated(deduper, columns, input, output, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, input_params, expected_canonical_id", PARAMS)
+def test_canonicalize_matrix(strategy, columns, input_params, expected_canonical_id, dataframe, helpers):
 
-    df, spark, id_col = dataframe
+    df, spark_session, id = dataframe
 
-    if spark:
-        # i.e. Spark DataFrame -> Spark list[Row]
-        df = df.collect()
+    dg = Duped(df=df, spark_session=spark_session, id=id)
 
-    strategy = deduper(**input)
-    strategy.with_frame(wrap(df, id_col))
+    # single strategy item addition
+    dg.apply(strategy(**input_params))
+    dg.canonicalize(columns)
+    df1 = dg.df
 
-    df = strategy.dedupe(columns).unwrap()
+    assert helpers.get_column_as_list(df1, CANONICAL_ID) == expected_canonical_id
 
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == output
+    # dictionary strategy addition
+    dg.apply({columns: [strategy(**input_params)]})
+    dg.canonicalize()
+    df2 = dg.df
+
+    assert helpers.get_column_as_list(df2, CANONICAL_ID) == expected_canonical_id

@@ -1,9 +1,9 @@
 """Abstract base class for derived deduplication atrategies
 
 This module contains `BaseStrategy` which provides
-`canonicalize()`, which is at the core functionality of `dupegrouper` and is
+`propagate_canonical_id()`, which is at the core functionality of `dupegrouper` and is
 used for any deduplication that requires *grouping*. Additionally, the
-overrideable `dedupe()` is defined.
+overrideable `canonicalize()` is defined.
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ class BaseStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def canonicalize(self, columns: str, include_exact: bool = True) -> WrappedDataFrame:
+    def propagate_canonical_id(self, columns: str, include_exact: bool = True) -> WrappedDataFrame:
         """Assign new group ids according to duplicated instances of attribute.
 
         Array-like contents of the dataframe's attributes are collected as a
@@ -100,7 +100,7 @@ class BaseStrategy(ABC):
         """
         # `object` allows mixing np.nan with string-type data
         attrs = np.asarray(self.wrapped_df.get_col(columns), dtype=object)
-        groups = np.asarray(self.wrapped_df.get_col(CANONICAL_ID), dtype=object)
+        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID), dtype=object)
 
         if include_exact:
             attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
@@ -112,19 +112,19 @@ class BaseStrategy(ABC):
             unique_attrs, unique_indices_filtered = np.unique(filtered, return_index=True)
             unique_indices = np.where(mask)[0][unique_indices_filtered]
 
-        first_groups = groups[unique_indices]
-        attr_group_map = dict(zip(unique_attrs, first_groups))
+        first_canonicals = canonicals[unique_indices]
+        attr_canonical_map = dict(zip(unique_attrs, first_canonicals))
 
-        # iteratively: attrs -> value param; groups -> default param
-        new_groups: np.ndarray = np.vectorize(
-            lambda value, default: attr_group_map.get(value, default),
-        )(attrs, groups)
+        # iteratively: attrs -> value param; canonicals -> default param
+        new_canonicals: np.ndarray = np.vectorize(
+            lambda value, default: attr_canonical_map.get(value, default),
+        )(attrs, canonicals)
 
-        return self.wrapped_df.put_col(CANONICAL_ID, new_groups)
+        return self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
 
     @abstractmethod
-    def dedupe(self, columns: str | tuple[str]) -> WrappedDataFrame:
-        """Use `canonicalize` to implement deduplication logic
+    def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
+        """Use `propagate_canonical_id` to implement deduplication logic
 
         Args:
             columns: The name of the column attribute or attributes to
@@ -143,8 +143,8 @@ class BaseStrategy(ABC):
 class Exact(BaseStrategy):
 
     @override
-    def dedupe(self, columns: str, /) -> WrappedDataFrame:
-        return self.canonicalize(columns)
+    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
+        return self.propagate_canonical_id(columns)
 
 
 # BINARY DEDUPERS:
@@ -154,6 +154,7 @@ class BinaryDedupers(BaseStrategy):
     """TODO"""
 
     def __init__(self, pattern: str, case: bool = True):
+        super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
 
@@ -175,20 +176,20 @@ class BinaryDedupers(BaseStrategy):
         return match_map
 
     @override
-    def dedupe(self, columns: str, /) -> WrappedDataFrame:
+    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
 
         attr_array: np.ndarray = np.unique(self.wrapped_df.get_col(columns))
         match_map: dict[str, str] = self.get_matches(self._matches, attr_array)
         new_attr: SeriesLike = self.wrapped_df.map_dict(columns, match_map)
         self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-        self.canonicalize(TMP_ATTR_LABEL, include_exact=False)
+        self.propagate_canonical_id(TMP_ATTR_LABEL, include_exact=False)
         self.wrapped_df.drop_col(TMP_ATTR_LABEL)
 
         return self.wrapped_df
 
 
 class StrStartsWith(BinaryDedupers):
-    """Strings start with deduper.
+    """Strings start with canonicalizer.
 
     Defaults to case sensitive.
 
@@ -206,7 +207,7 @@ class StrStartsWith(BinaryDedupers):
 
 
 class StrEndsWith(BinaryDedupers):
-    """Strings start with deduper.
+    """Strings start with canonicalizer.
 
     Defaults to case sensitive.
 
@@ -224,7 +225,7 @@ class StrEndsWith(BinaryDedupers):
 
 
 class StrContains(BinaryDedupers):
-    """Strings contains deduper.
+    """Strings contains canonicalizer.
 
     Defaults to case sensitive. Supports literal substring or regex search.
     """
@@ -269,7 +270,7 @@ class ThresholdDedupers(BaseStrategy):
 
 class SingleColumn(ThresholdDedupers):
     @override
-    def dedupe(self, columns: str, /) -> WrappedDataFrame:
+    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
 
         attr: np.ndarray = np.asarray(self.wrapped_df.get_col(columns))
 
@@ -278,7 +279,7 @@ class SingleColumn(ThresholdDedupers):
             new_attr: SeriesLike = self.wrapped_df.map_dict(columns, indice_map)
             new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(columns))
             self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
-            self.canonicalize(TMP_ATTR_LABEL)
+            self.propagate_canonical_id(TMP_ATTR_LABEL)
             self.wrapped_df.drop_col(TMP_ATTR_LABEL)
 
         return self.wrapped_df
@@ -300,7 +301,7 @@ class Fuzzy(SingleColumn):
 
 
 class TfIdf(SingleColumn):
-    """TF-IDF deduper.
+    """TF-IDF canonicalizer.
 
     Note: high "top N" numbers at initialisation may cause spurious results.
     Use with care!
@@ -435,7 +436,7 @@ class CompoundColumn(ThresholdDedupers):
         return hashlib.sha256(value.tobytes()).hexdigest()
 
     @override
-    def dedupe(self, columns: typing.Iterable[str], /) -> WrappedDataFrame:
+    def canonicalize(self, columns: typing.Iterable[str], /) -> WrappedDataFrame:
         """TODO"""
 
         attrs = np.asarray(self.wrapped_df.get_cols(columns))
@@ -449,7 +450,7 @@ class CompoundColumn(ThresholdDedupers):
             new_attr: SeriesLike = self.wrapped_df.map_dict(HASH_ATTR_LABEL, indice_map)
             new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(HASH_ATTR_LABEL))
             self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
-            self.canonicalize(TMP_ATTR_LABEL)
+            self.propagate_canonical_id(TMP_ATTR_LABEL)
             self.wrapped_df.drop_col(TMP_ATTR_LABEL)
 
         self.wrapped_df.drop_col(HASH_ATTR_LABEL)
@@ -520,8 +521,8 @@ class Custom(BaseStrategy):
         self._kwargs = kwargs
 
     @override
-    def dedupe(self, attr=None) -> WrappedDataFrame:
-        """dedupe with custom defined callable
+    def canonicalize(self, attr=None) -> WrappedDataFrame:
+        """canonicalize with custom defined callable
 
         Implements deduplication using a function defined _outside_ of the
         scope of this library i.e. by the end user.
@@ -553,4 +554,4 @@ class Custom(BaseStrategy):
 
         self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
 
-        return self.canonicalize(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
+        return self.propagate_canonical_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)

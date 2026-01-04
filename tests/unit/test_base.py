@@ -169,7 +169,7 @@ DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy
         ),
     ],
     ids=[
-        "valid dedupe class",
+        "valid canonicalize class",
         "valid callable",
         "valid dict",
         "invalid class",
@@ -208,29 +208,29 @@ def test__strategy_manager_reset():
 
 
 ###############################
-# TEST _call_strategy_deduper #
+# TEST _call_strategy_canonicalizer #
 ###############################
 
 
-def test__call_strategy_deduper_deduplication_strategy(dupegrouper_mock, strategy_mock):
+def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, strategy_mock):
     attr = "address"
 
-    deduped_df_mock = Mock()
-    strategy_mock.with_frame.return_value.dedupe.return_value = deduped_df_mock
+    canonicalized_df_mock = Mock()
+    strategy_mock.with_frame.return_value.canonicalize.return_value = canonicalized_df_mock
 
     # call
 
-    result = dupegrouper_mock._call_strategy_deduper(strategy_mock, attr)
+    result = dupegrouper_mock._call_strategy_canonicalizer(strategy_mock, attr)
 
     # assert
 
     strategy_mock.with_frame.assert_called_once_with(dupegrouper_mock._df)
-    strategy_mock.with_frame.return_value.dedupe.assert_called_once_with(attr)
+    strategy_mock.with_frame.return_value.canonicalize.assert_called_once_with(attr)
 
-    assert result == deduped_df_mock
+    assert result == canonicalized_df_mock
 
 
-def test__call_strategy_deduper_tuple(dupegrouper_mock):
+def test__call_strategy_canonicalizer_tuple(dupegrouper_mock):
     attr = "address"
 
     mock_callable = Mock()
@@ -238,7 +238,7 @@ def test__call_strategy_deduper_tuple(dupegrouper_mock):
 
     mock_kwargs = {"tolerance": 0.8}
 
-    deduped_df_mock = Mock()
+    canonicalized_df_mock = Mock()
 
     with patch("dupegrouper.base.Custom") as Custom:
 
@@ -248,9 +248,9 @@ def test__call_strategy_deduper_tuple(dupegrouper_mock):
 
         # Ensure full method chain is mocked
         instance.with_frame.return_value = instance
-        instance.dedupe.return_value = deduped_df_mock
+        instance.canonicalize.return_value = canonicalized_df_mock
 
-        result = dupegrouper_mock._call_strategy_deduper(
+        result = dupegrouper_mock._call_strategy_canonicalizer(
             (mock_callable, mock_kwargs),  # tuple!
             attr,
         )
@@ -259,9 +259,9 @@ def test__call_strategy_deduper_tuple(dupegrouper_mock):
 
         Custom.assert_called_once_with(mock_callable, attr, **mock_kwargs)
         instance.with_frame.assert_called_once_with(dupegrouper_mock._df)
-        instance.with_frame.return_value.dedupe.assert_called_once_with()
+        instance.with_frame.return_value.canonicalize.assert_called_once_with()
 
-        assert result == deduped_df_mock
+        assert result == canonicalized_df_mock
 
 
 @pytest.mark.parametrize(
@@ -274,17 +274,17 @@ def test__call_strategy_deduper_tuple(dupegrouper_mock):
     ],
     ids=["invalid int", "invalid class", "invalid list", "invalid dict"],
 )
-def test__call_strategy_deduper_raises(input, type, dupegrouper_mock):
+def test__call_strategy_canonicalizer_raises(input, type, dupegrouper_mock):
     with pytest.raises(NotImplementedError, match=f"Unsupported strategy: {type}"):
-        dupegrouper_mock._call_strategy_deduper(input, "address")
+        dupegrouper_mock._call_strategy_canonicalizer(input, "address")
 
 
 ################
-# TEST _dedupe #
+# TEST _canonicalize #
 ################
 
 
-def test__dedupe_str_attr(dupegrouper_mock, strategy_mock):
+def test__canonicalize_str_attr(dupegrouper_mock, strategy_mock):
     attr = "address"
 
     strategy_collection = {
@@ -295,30 +295,30 @@ def test__dedupe_str_attr(dupegrouper_mock, strategy_mock):
         ]
     }
 
-    with patch.object(dupegrouper_mock, "_call_strategy_deduper") as call_deduper:
+    with patch.object(dupegrouper_mock, "_call_strategy_canonicalizer") as call_canonicalizer:
 
         df1 = (Mock(),)  # i.e. after first
         df2 = (Mock(),)  # ...
         df3 = (Mock(),)  # after third
 
-        call_deduper.side_effect = [
+        call_canonicalizer.side_effect = [
             df1,
             df2,
             df3,
         ]
 
-        dupegrouper_mock._dedupe(attr, strategy_collection)
+        dupegrouper_mock._canonicalize(attr, strategy_collection)
 
-        assert call_deduper.call_count == 3
+        assert call_canonicalizer.call_count == 3
 
-        call_deduper.assert_any_call(strategy_mock, attr)
-        call_deduper.assert_any_call(strategy_mock, attr)
-        call_deduper.assert_any_call(strategy_mock, attr)
+        call_canonicalizer.assert_any_call(strategy_mock, attr)
+        call_canonicalizer.assert_any_call(strategy_mock, attr)
+        call_canonicalizer.assert_any_call(strategy_mock, attr)
 
         assert dupegrouper_mock._df == df3
 
 
-def test__dedupe_nonetype_attr(dupegrouper_mock, strategy_mock):
+def test__canonicalize_nonetype_attr(dupegrouper_mock, strategy_mock):
 
     attr = None  # Important!
 
@@ -327,23 +327,23 @@ def test__dedupe_nonetype_attr(dupegrouper_mock, strategy_mock):
         "attr2": [strategy_mock, strategy_mock],
     }
 
-    with patch.object(dupegrouper_mock, "_call_strategy_deduper") as call_deduper:
+    with patch.object(dupegrouper_mock, "_call_strategy_canonicalizer") as call_canonicalizer:
 
         df1 = (Mock(),)  # i.e. after first
         df2 = (Mock(),)  # ...
         df3 = (Mock(),)  # ...
-        df4 = (Mock(),)  # after fourth dedupe
+        df4 = (Mock(),)  # after fourth canonicalize
 
-        call_deduper.side_effect = [df1, df2, df3, df4]
+        call_canonicalizer.side_effect = [df1, df2, df3, df4]
 
-        dupegrouper_mock._dedupe(attr, strategy_collection)
+        dupegrouper_mock._canonicalize(attr, strategy_collection)
 
-        assert call_deduper.call_count == 4
+        assert call_canonicalizer.call_count == 4
 
-        call_deduper.assert_any_call(strategy_mock, "attr1")
-        call_deduper.assert_any_call(strategy_mock, "attr1")
-        call_deduper.assert_any_call(strategy_mock, "attr2")
-        call_deduper.assert_any_call(strategy_mock, "attr2")
+        call_canonicalizer.assert_any_call(strategy_mock, "attr1")
+        call_canonicalizer.assert_any_call(strategy_mock, "attr1")
+        call_canonicalizer.assert_any_call(strategy_mock, "attr2")
+        call_canonicalizer.assert_any_call(strategy_mock, "attr2")
 
         assert dupegrouper_mock._df == df4
 
@@ -358,9 +358,9 @@ def test__dedupe_nonetype_attr(dupegrouper_mock, strategy_mock):
     ],
     ids=["invalid int", "invalid list", "invalid dict", "invalid float"],
 )
-def test__dedupe_raises(attr_input, type, dupegrouper_mock):
+def test__canonicalize_raises(attr_input, type, dupegrouper_mock):
     with pytest.raises(NotImplementedError, match=f"Unsupported attribute type: {type}"):
-        dupegrouper_mock._dedupe(attr_input, {})  # any dict
+        dupegrouper_mock._canonicalize(attr_input, {})  # any dict
 
 
 #####################
@@ -421,7 +421,7 @@ def test_apply_raises(strategy, type, dupegrouper_mock):
 
 
 ###########################
-# TEST _dedupe_spark #
+# TEST _canonicalize_spark #
 ###########################
 
 
@@ -454,7 +454,7 @@ def mocked_spark_dupegrouper():
         yield instance
 
 
-def test_dedupe_spark(mocked_spark_dupegrouper, strategy_mock):
+def test_canonicalize_spark(mocked_spark_dupegrouper, strategy_mock):
 
     dg = mocked_spark_dupegrouper
 
@@ -473,7 +473,7 @@ def test_dedupe_spark(mocked_spark_dupegrouper, strategy_mock):
             mockwrapped_result = Mock()
             mockwrapped_df.return_value = mockwrapped_result
 
-            dg._dedupe_spark(attr, strategies)
+            dg._canonicalize_spark(attr, strategies)
 
             # Assertions
             dg._mock_rdd.mapPartitions.assert_called_once()
@@ -505,7 +505,7 @@ def test__process_partition_empty_iter(strategy_mock):
 
 
 @patch("dupegrouper.base.Duped")
-def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
+def test__process_partition_calls_canonicalize(dupegrouper_mock, partition):
     mock_instance = Mock()
     mock_instance.df = [Row(id=1, canonical_id=0), Row(id=2, canonical_id=0)]
     dupegrouper_mock.return_value = mock_instance
@@ -518,7 +518,7 @@ def test__process_partition_calls_dedupe(dupegrouper_mock, partition):
 
     dupegrouper_mock.assert_called_once()
     mock_instance.apply.assert_called_once_with(strategies)
-    mock_instance.dedupe.assert_called_once_with("address")
+    mock_instance.canonicalize.assert_called_once_with("address")
     assert result == mock_instance.df
 
 
@@ -540,7 +540,7 @@ def test__process_partitions_reinstantiated(dupegrouper_mock, partition):
 
 
 #####################
-# TEST dedupe #
+# TEST canonicalize #
 #####################
 
 
@@ -555,8 +555,8 @@ def dupgrouper_context(request):
 
             strategy_manager.get.return_value = {"address": [Mock()]}
             strategy_manager.reset.return_value = Mock()
-            dg._dedupe_spark = Mock()
-            dg._dedupe = Mock()
+            dg._canonicalize_spark = Mock()
+            dg._canonicalize = Mock()
 
             yield {
                 "dg": dg,
@@ -576,20 +576,20 @@ def dupgrouper_context(request):
     indirect=True,
     ids=["pandas context", "polars context", "spark dataframe context", "spark list rows context"],
 )
-def test_dedupe(dupgrouper_context):
+def test_canonicalize(dupgrouper_context):
 
     dg = dupgrouper_context["dg"]
     strategy = dupgrouper_context["strategy_manager"]
     is_spark = dupgrouper_context["is_spark"]
 
-    dg.dedupe("address")
+    dg.canonicalize("address")
 
     if is_spark:
-        dg._dedupe_spark.assert_called_once_with("address", strategy.get.return_value)
-        dg._dedupe.assert_not_called()
+        dg._canonicalize_spark.assert_called_once_with("address", strategy.get.return_value)
+        dg._canonicalize.assert_not_called()
     else:
-        dg._dedupe.assert_called_once_with("address", strategy.get.return_value)
-        dg._dedupe_spark.assert_not_called()
+        dg._canonicalize.assert_called_once_with("address", strategy.get.return_value)
+        dg._canonicalize_spark.assert_not_called()
     strategy.reset.assert_called_once()
 
 
@@ -599,15 +599,15 @@ def test_dedupe(dupgrouper_context):
 
 
 def patch_helper_reset(grouper: Duped):
-    with patch.object(grouper, "_dedupe") as mock_dedupe, patch.object(
+    with patch.object(grouper, "_canonicalize") as mock_canonicalize, patch.object(
         grouper._strategy_manager, "reset"
     ) as mock_reset:
 
-        mock_dedupe.side_effect = mock_reset
+        mock_canonicalize.side_effect = mock_reset
 
-        grouper.dedupe("address")
+        grouper.canonicalize("address")
 
-        mock_dedupe.assert_called_once_with("address", ANY)
+        mock_canonicalize.assert_called_once_with("address", ANY)
 
         grouper._strategy_manager = _StrategyManager()
 
