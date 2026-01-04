@@ -68,7 +68,7 @@ class Duped:
         self._id = id
 
     @singledispatchmethod
-    def _call_strategy_deduper(
+    def _call_strategy_canonicalizer(
         self,
         strategy: BaseStrategy | tuple[typing.Callable, typing.Any],
         attr: str,
@@ -95,17 +95,17 @@ class Duped:
 
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
-    @_call_strategy_deduper.register(BaseStrategy)
+    @_call_strategy_canonicalizer.register(BaseStrategy)
     def _(self, strategy, attr) -> WrappedDataFrame:
-        return strategy.with_frame(self._df).dedupe(attr)
+        return strategy.with_frame(self._df).canonicalize(attr)
 
-    @_call_strategy_deduper.register(tuple)
+    @_call_strategy_canonicalizer.register(tuple)
     def _(self, strategy: tuple[typing.Callable, typing.Any], attr) -> WrappedDataFrame:
         func, kwargs = strategy
-        return Custom(func, attr, **kwargs).with_frame(self._df).dedupe()
+        return Custom(func, attr, **kwargs).with_frame(self._df).canonicalize()
 
     @singledispatchmethod
-    def _dedupe(
+    def _canonicalize(
         self,
         attr: str | None,
         strategies: StrategyMapCollection,
@@ -113,7 +113,7 @@ class Duped:
         """Dispatch the appropriate deduplication logic.
 
         If strategies have been added individually, they are stored under a
-        "default" key and retrived as such when the public `.dedupe` method is
+        "default" key and retrived as such when the public `.canonicalize` method is
         called _with_ the attribute label. In the case of having added
         strategies in one go with a direct dict (mapping) object, the attribute
         label is first extracted from strategy collection dictionary keys.
@@ -133,19 +133,19 @@ class Duped:
         del strategies  # Unused
         raise NotImplementedError(f"Unsupported attribute type: {type(attr)}")
 
-    @_dedupe.register(str | tuple)
+    @_canonicalize.register(str | tuple)
     def _(self, attr, strategies):
         for strategy in strategies["default"]:
-            self._df = self._call_strategy_deduper(strategy, attr)
+            self._df = self._call_strategy_canonicalizer(strategy, attr)
 
-    @_dedupe.register(NoneType)
+    @_canonicalize.register(NoneType)
     def _(self, attr, strategies):
         del attr  # Unused
         for attr, strategies in strategies.items():
             for strategy in strategies:
-                self._df = self._call_strategy_deduper(strategy, attr)
+                self._df = self._call_strategy_canonicalizer(strategy, attr)
 
-    def _dedupe_spark(self, attr: str | None, strategies: StrategyMapCollection):
+    def _canonicalize_spark(self, attr: str | None, strategies: StrategyMapCollection):
         """Spark specific deduplication helper
 
         Maps dataframe partitions to be processed via the RDD API yielding low-
@@ -160,7 +160,7 @@ class Duped:
         id = typing.cast(str, self._id)
         id_type = typing.cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
 
-        deduped_rdd = self._df.rdd.mapPartitions(
+        canonicalized_rdd = self._df.rdd.mapPartitions(
             lambda partition_iter: _process_partition(partition_iter, strategies, id, attr)
         )
 
@@ -170,7 +170,7 @@ class Duped:
             schema = StructType(self._df.schema.fields + [StructField(CANONICAL_ID, id_type, True)])
 
         self._df = WrappedSparkDataFrame(
-            typing.cast(SparkSession, self._spark_session).createDataFrame(deduped_rdd, schema=schema), id
+            typing.cast(SparkSession, self._spark_session).createDataFrame(canonicalized_rdd, schema=schema), id
         )
 
     # PUBLIC API:
@@ -206,8 +206,8 @@ class Duped:
             for strat in strat_list:
                 self._strategy_manager.add(attr, strat)
 
-    def dedupe(self, attr: str | None = None):
-        """dedupe, and group, the data based on the provided attribute
+    def canonicalize(self, attr: str | None = None):
+        """canonicalize, and group, the data based on the provided attribute
 
         Args:
             attr: The attribute to deduplicate. If strategies have been added
@@ -217,9 +217,9 @@ class Duped:
         strategies = self._strategy_manager.get()
 
         if isinstance(self._df, WrappedSparkDataFrame):
-            self._dedupe_spark(attr, strategies)
+            self._canonicalize_spark(attr, strategies)
         else:
-            self._dedupe(attr, strategies)
+            self._canonicalize(attr, strategies)
 
         self._strategy_manager.reset()
 
@@ -400,6 +400,6 @@ def _process_partition(
     # Core API reused per partition, per worker node
     dg = Duped(rows, id=id)
     dg.apply(strategies)
-    dg.dedupe(attr)
+    dg.canonicalize(attr)
 
     return iter(dg.df)  # type: ignore[arg-type]

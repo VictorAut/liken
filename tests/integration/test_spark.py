@@ -25,6 +25,6 @@ def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, helpers
     }
     dg = Duped(df_spark, spark_session=spark, id="id")
     dg.apply(strategies)
-    dg.dedupe()
+    dg.canonicalize()
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_ids

@@ -17,6 +17,7 @@ Deduplicating data is a hard task — validating approaches takes time, can requ
 
 ### Ready-to-use deduplication strategies
 **dupegrouper** currently offers the following deduplication strategies:
+
 | single column | compound column|
 |:------------|-------------|
 | Exact match       | Jaccard    |
@@ -59,7 +60,7 @@ dg = dupegrouper.Duped(df) # input dataframe
 
 dg.apply(dupegrouper.strategies.Exact())
 
-dg.dedupe("address")
+dg.canonicalize("address")
 
 dg.df # retrieve dataframe
 ```
@@ -84,7 +85,7 @@ dg = dupegrouper.Duped(df)
 dg.apply(dupegrouper.strategies.Exact())
 dg.apply(dupegrouper.strategies.Fuzzy(tolerance=0.3))
 
-dg.dedupe("address")
+dg.canonicalize("address")
 ```
 
 Or, you can add a map of strategies. In this case, strategies are executed in their defined order, for each map key. The below implementation will produce the same as above.
@@ -104,14 +105,14 @@ dg.apply({
 print(dg.strategies)
 # {'address': ('Exact', 'Fuzzy', 'TfIdf')}
 
-dg.dedupe() # No Argument!
+dg.canonicalize() # No Argument!
 ```
-A call of `dedupe()` will reset the strategies:
+A call of `canonicalize()` will reset the strategies:
 ```bash
 ...
 print(dg.strategies)
 # {'address': ('Exact', 'Fuzzy', 'TfIdf')}
-dg.dedupe()
+dg.canonicalize()
 print(dg.strategies)
 # None
 ```
@@ -148,12 +149,12 @@ dg.apply((my_func, {"match_str": "london"}))
 
 print(dg.strategies) # returns ("my_func",)
 
-dg.dedupe("address")
+dg.canonicalize("address")
 ```
 
 
 > [!WARNING]
-> In the current implementation, any custom callable will also *always dedupe exact matches!*
+> In the current implementation, any custom callable will also *always canonicalize exact matches!*
 
 ## Creating a Comprehensive Strategy
 
@@ -182,7 +183,7 @@ strategies = {
 
 dg.apply(strategies)
 
-dg.dedupe()
+dg.canonicalize()
 
 df = dg.df
 ```
@@ -198,7 +199,7 @@ The above problem is typically dealt with the use of a "blocking key" which is t
 ## Extending the API for Custom Implementations
 It's recommended that for simple custom implementations you use the approach discussed for custom functions. (see [*Custom Strategies*](#custom-strategies)).
 
-However, you can derive directly from the abstract base class `dupegrouper.strategies.BaseStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#BaseStrategy). This will expose a `dedupe()` method, ready for direct use within an instance of `Duped`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
+However, you can derive directly from the abstract base class `dupegrouper.strategies.BaseStrategy`, and thus make direct use of the efficient, core deduplication methods implemented in this library, as described in it's [API](./dupegrouper/strategy.html#BaseStrategy). This will expose a `canonicalize()` method, ready for direct use within an instance of `Duped`, much the same way that other `dupegrouper.strategies` are passed in as strategies.
 
 # About
 
