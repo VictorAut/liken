@@ -164,7 +164,7 @@ import numpy as np
 import pytest
 
 from dupegrouper.base import wrap
-from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import Fuzzy
 
 
@@ -225,7 +225,7 @@ import pytest
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 
 from dupegrouper.base import wrap
-from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import TfIdf
 
 
@@ -296,7 +296,7 @@ import numpy as np
 import pytest
 
 from dupegrouper.base import wrap
-from dupegrouper.definitions import TMP_ATTR_LABEL, CANONICAL_ID
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import (
     StrStartsWith,
     StrEndsWith,

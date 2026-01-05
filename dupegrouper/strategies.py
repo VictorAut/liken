@@ -8,14 +8,15 @@ overrideable `canonicalize()` is defined.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from collections import defaultdict
 import functools
-import hashlib
 import logging
 import re
 import typing
 from typing_extensions import override
 
 from datasketch import MinHash, MinHashLSH
+from networkx.utils.union_find import UnionFind
 import numpy as np
 from numpy.linalg import norm
 from rapidfuzz import fuzz
@@ -25,8 +26,6 @@ from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
 from dupegrouper.definitions import (
     CANONICAL_ID,
-    HASH_ATTR_LABEL,
-    TMP_ATTR_LABEL,
     SeriesLike,
 )
 from dupegrouper.dataframe import WrappedDataFrame
@@ -79,103 +78,84 @@ class BaseStrategy(ABC):
         self.rule = rule
         return self
 
-    def propagate_canonical_id(
-        self,
-        columns: str,
-        include_exact: bool = True,
-    ) -> WrappedDataFrame:
-        """Assign new group ids according to duplicated instances of attribute.
+    @abstractmethod
+    def _get_components(self, columns: str | tuple[str]) -> dict[int, list[int]]:
+        """TODO"""
+        pass
 
-        Array-like contents of the dataframe's attributes are collected as a
-        numpy array, along with the group id. unique instances are found, and
-        the *first* group id of that attribute is identified. This allows to
-        then assign this "first" group id to all subsequent instances of a
-        given unique attribute thus "flooring" the group ids.
+    def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
 
-        This implementation is akin to
+        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID))
 
-            df.groupby(attr).transform("first").fill_null("canonical_id")
+        n2 = len(canonicals)
 
-        Where the null backfill is implemented to handle instances where data
-        in the attribute `attr` is incomplete — which happens in instances of
-        iterative application of this function, or, when the function is
-        applied to an attribute `attr` that contains only matches, i.e., a
-        partial map of matches.
+        components: dict[int, list[int]] = self._get_components(columns)
 
-        Args:
-            attr: the dataframe label of the attribute
-            include_exact: if True also exact deduplicates.
-
-        Returns:
-            wrapped_df; i.e. an instance "WrappedDataFrame" i.e. container
-            of data and linked dataframe methods; ready for further downstream
-            processing.
-        """
-        # `object` allows mixing np.nan with string-type data
-        attrs = np.asarray(self.wrapped_df.get_col(columns), dtype=object)
-        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID), dtype=object)
-
-        if include_exact:
-            attrs = np.array([np.nan if x is None else x for x in attrs])  # handle full None lists
-            unique_attrs, unique_indices = np.unique(attrs, return_index=True)
-
+        # 3) Choose representative per component
+        rep_index: dict[int, int] = {}
+        for members in components.values():
             if self.rule == "first":
-                unique_attrs, unique_indices = np.unique(attrs, return_index=True)
-
+                rep = min(members)
             elif self.rule == "last":
-                rev_attrs = attrs[::-1]
-                _, rev_indices = np.unique(rev_attrs, return_index=True)
-                unique_indices = len(attrs) - 1 - rev_indices
-                unique_attrs = attrs[unique_indices]
-        else:
-            # remove null types
-            mask = np.array([(x is not None) and not (isinstance(x, float) and np.isnan(x)) for x in attrs])
-            filtered = attrs[mask]
+                rep = max(members)
 
-            if self.rule == "first":
-                unique_attrs, unique_indices_filtered = np.unique(filtered, return_index=True)
+            for i in members:
+                rep_index[i] = rep
 
-            elif self.rule == "last":
-                rev_attrs = filtered[::-1]
-                _, rev_indices = np.unique(rev_attrs, return_index=True)
-                unique_indices_filtered = len(filtered) - 1 - rev_indices
-                unique_attrs = filtered[unique_indices_filtered]
-
-            unique_indices = np.where(mask)[0][unique_indices_filtered]
-
-        first_canonicals = canonicals[unique_indices]
-        attr_canonical_map = dict(zip(unique_attrs, first_canonicals))
-
-        # iteratively: attrs -> value param; canonicals -> default param
-        new_canonicals: np.ndarray = np.vectorize(
-            lambda value, default: attr_canonical_map.get(value, default),
-        )(attrs, canonicals)
+        # 4) Propagate canonical IDs once
+        new_canonicals = np.array(
+            [int(canonicals[rep_index[i]]) for i in range(n2)],
+            dtype=object,
+        )
 
         return self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
 
-    @abstractmethod
-    def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
-        """Use `propagate_canonical_id` to implement deduplication logic
 
-        Args:
-            columns: The name of the column attribute or attributes to
-                deduplicate. If declared as a tuple, applies to the compound
-                combination of those columns
+class ColumnArrayMixin:
+    def get_array(self, columns):
+        if isinstance(columns, str):
+            return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
+        elif isinstance(columns, tuple):
+            return np.asarray(self.wrapped_df.get_cols(columns), dtype=object)
+        else:
+            raise TypeError("`columns` must be str or tuple[str]")
 
-        Returns:
-            A deduplicated instance of WrappedDataFrame
-        """
-        pass  # pragma: no cover
+
+class SingleColumnValidationMixin:
+
+    @staticmethod
+    def validate(columns: typing.Any):
+        if not isinstance(columns, str):
+            raise ValueError("For single column strategies, `columns` must be defined as a string")
+
+
+class CompoundColumnValidationMixin:
+
+    @staticmethod
+    def validate(columns: typing.Any):
+        if not isinstance(columns, tuple):
+            raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
 
 
 # EXACT DEDUPER:
 
 
-class Exact(BaseStrategy):
+class Exact(BaseStrategy, ColumnArrayMixin):
 
     @override
-    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
-        return self.propagate_canonical_id(columns)
+    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
+        array = self.get_array(columns)
+
+        if isinstance(columns, str):
+            key_fn = lambda v: v
+        else:
+            key_fn = lambda v: tuple(v.tolist())
+
+        components = defaultdict(list)
+        for i, v in enumerate(array):
+            components[key_fn(v)].append(i)
+
+        return components
 
 
 # BINARY DEDUPERS:
@@ -193,33 +173,34 @@ class BinaryDedupers(BaseStrategy):
         del value  # Unused
         pass
 
-    @staticmethod
-    def get_matches(
-        match_fn: typing.Callable[[str], bool],
-        attr: np.ndarray,
-    ) -> dict[str, str]:
-        match_map = {}
-        for key in attr:
-            for value in attr:
-                if match_fn(key) and match_fn(value):
-                    match_map[key] = value
-                    break
-        return match_map
-
     @override
-    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
+    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
 
-        attr_array: np.ndarray = np.unique(self.wrapped_df.get_col(columns))
-        match_map: dict[str, str] = self.get_matches(self._matches, attr_array)
-        new_attr: SeriesLike = self.wrapped_df.map_dict(columns, match_map)
-        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-        self.propagate_canonical_id(TMP_ATTR_LABEL, include_exact=False)
-        self.wrapped_df.drop_col(TMP_ATTR_LABEL)
+        self.validate(columns)
+        array = self.get_array(columns)
 
-        return self.wrapped_df
+        n = len(array)
+        uf = UnionFind(range(n))
+
+        for i in range(n):
+            if not self._matches(array[i]):
+                continue
+            for j in range(i + 1, n):
+                if self._matches(array[j]):
+                    uf.union(i, j)
+
+        components = defaultdict(list)
+        for i in range(n):
+            components[uf[i]].append(i)
+
+        return components
 
 
-class StrStartsWith(BinaryDedupers):
+class StrStartsWith(
+    BinaryDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
     """Strings start with canonicalizer.
 
     Defaults to case sensitive.
@@ -237,7 +218,11 @@ class StrStartsWith(BinaryDedupers):
         )
 
 
-class StrEndsWith(BinaryDedupers):
+class StrEndsWith(
+    BinaryDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
     """Strings start with canonicalizer.
 
     Defaults to case sensitive.
@@ -255,7 +240,11 @@ class StrEndsWith(BinaryDedupers):
         )
 
 
-class StrContains(BinaryDedupers):
+class StrContains(
+    BinaryDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
     """Strings contains canonicalizer.
 
     Defaults to case sensitive. Supports literal substring or regex search.
@@ -291,101 +280,57 @@ class ThresholdDedupers(BaseStrategy):
         super().__init__(threshold=threshold)
         self._threshold = threshold
 
-    def _gen_similarity_indices(self, attr) -> typing.Iterator[tuple[int, int]]:
-        del attr  # Unused
+        if not (0 <= threshold < 1):
+            raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
+
+    @abstractmethod
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+        del array  # Unused
         pass
 
-
-class UnionFind:
-    def __init__(self, n: int):
-        self.parent = list(range(n))
-
-    def find(self, x: int) -> int:
-        if self.parent[x] != x:
-            self.parent[x] = self.find(self.parent[x])
-        return self.parent[x]
-
-    def union(self, x: int, y: int) -> None:
-        rx, ry = self.find(x), self.find(y)
-        if rx != ry:
-            self.parent[ry] = rx
-
-
-# SINGLE COLUMN:
-
-
-class SingleColumn(ThresholdDedupers):
-    # @override
-    # def canonicalize(self, columns: str, /) -> WrappedDataFrame:
-
-    #     attr: np.ndarray = np.asarray(self.wrapped_df.get_col(columns))
-
-    #     for idx, idy in self._gen_similarity_indices(attr):
-    #         indice_map: dict[str, str] = {attr[idx]: attr[idy]}
-    #         new_attr: SeriesLike = self.wrapped_df.map_dict(columns, indice_map)
-    #         new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(columns))
-    #         self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
-    #         self.propagate_canonical_id(TMP_ATTR_LABEL)
-    #         self.wrapped_df.drop_col(TMP_ATTR_LABEL)
-
-    #     return self.wrapped_df
     @override
-    def canonicalize(self, columns: str, /) -> WrappedDataFrame:
+    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
 
-        attr = np.asarray(self.wrapped_df.get_col(columns))
-        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID))
+        self.validate(columns)
+        array = self.get_array(columns)
 
-        n = len(attr)
-        uf = UnionFind(n)
+        n = len(array)
+        uf = UnionFind(range(n))
 
-        # 1) Build connected components
-        for i, j in self._gen_similarity_indices(attr):
+        for i, j in self._gen_similarity_indices(array):
             uf.union(i, j)
 
-        # 2) Collect components
-        components: dict[int, list[int]] = {}
+        components = defaultdict(list)
         for i in range(n):
-            root = uf.find(i)
-            components.setdefault(root, []).append(i)
+            components[uf[i]].append(i)
 
-        # 3) Choose representative per component
-        rep_index: dict[int, int] = {}
-        for members in components.values():
-            if self.rule == "first":
-                rep = min(members)
-            elif self.rule == "last":
-                rep = max(members)
-            else:
-                raise ValueError(f"Unknown rule: {self.rule}")
-
-            for i in members:
-                rep_index[i] = rep
-
-        # 4) Propagate canonical IDs once
-        new_canonicals = np.array(
-            [canonicals[rep_index[i]] for i in range(n)],
-            dtype=object,
-        )
-
-        return self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
+        return components
 
 
-class Fuzzy(SingleColumn):
+class Fuzzy(
+    ThresholdDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
 
     @staticmethod
     @functools.cache
     def _fuzz_ratio(s1, s2) -> float:
         return fuzz.ratio(s1, s2) / 100
 
-    def _gen_similarity_indices(self, attr) -> typing.Iterator[tuple[int, int]]:
-        n = len(attr)
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+        n = len(array)
         for i in range(n):
             for j in range(i + 1, n):
-                if self._fuzz_ratio(attr[i], attr[j]) > self._threshold:
+                if self._fuzz_ratio(array[i], array[j]) > self._threshold:
                     yield i, j
 
 
-class TfIdf(SingleColumn):
+class TfIdf(
+    ThresholdDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
     """TF-IDF canonicalizer.
 
     Note: high "top N" numbers at initialisation may cause spurious results.
@@ -414,11 +359,7 @@ class TfIdf(SingleColumn):
         self._kwargs = kwargs
 
     def _vectorize(self) -> TfidfVectorizer:
-
-        if isinstance(self._ngram, int):
-            ngram_range = (self._ngram, self._ngram)
-        else:
-            ngram_range = self._ngram
+        ngram_range = (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
 
         return TfidfVectorizer(
             analyzer="char",
@@ -439,25 +380,26 @@ class TfIdf(SingleColumn):
             sort=True,
         )
 
-    def _gen_similarity_indices(self, attr) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         """Extract arrays based on similarity scores
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
         loads up results into a tuple of arrays"""
-        sparse = self._get_sparse_matrix(attr)
+        sparse = self._get_sparse_matrix(array)
 
         sparse_coo = sparse.tocoo()
 
-        # Handle floating point precision errors
-        mask = ~np.isclose(sparse_coo.data, 1.0)
-
-        rows, cols = sparse_coo.row[mask], sparse_coo.col[mask]
+        rows, cols = sparse_coo.row, sparse_coo.col
 
         for i in range(len(rows)):
             yield rows[i], cols[i]
 
 
-class Lsh(SingleColumn):
+class Lsh(
+    ThresholdDedupers,
+    ColumnArrayMixin,
+    SingleColumnValidationMixin,
+):
     """TODO"""
 
     def __init__(
@@ -469,8 +411,6 @@ class Lsh(SingleColumn):
         super().__init__(
             threshold=threshold,
         )
-        if not (0 < threshold < 1):
-            raise ValueError("LSH threshold must be in (0, 1)")
         self._ngram = ngram
         self._threshold = threshold
         self._num_perm = num_perm
@@ -479,9 +419,9 @@ class Lsh(SingleColumn):
         for i in range(len(text) - self._ngram + 1):
             yield text[i : i + self._ngram]
 
-    def _build_minhashes(self, attr) -> list[MinHash]:
+    def _build_minhashes(self, array: np.ndarray) -> list[MinHash]:
         minhashes: list[MinHash] = []
-        for value in attr:
+        for value in array:
             m = MinHash(num_perm=self._num_perm)
             for token in self._gen_token(value):
                 m.update(token.encode("utf8"))
@@ -499,9 +439,9 @@ class Lsh(SingleColumn):
 
         return lsh
 
-    def _gen_similarity_indices(self, attr) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
 
-        minhashes: list[MinHash] = self._build_minhashes(attr)
+        minhashes: list[MinHash] = self._build_minhashes(array)
         lsh: MinHashLSH = self._lsh(minhashes)
 
         for idx, minhash in enumerate(minhashes):
@@ -513,41 +453,16 @@ class Lsh(SingleColumn):
 # COMPOUND COLUMN:
 
 
-class CompoundColumn(ThresholdDedupers):
+class Jaccard(
+    ThresholdDedupers,
+    ColumnArrayMixin,
+    CompoundColumnValidationMixin,
+):
 
-    @staticmethod
-    def _hash(value: typing.Any) -> str:
-        """deterministic hash for reproducability; order sensitive"""
-        return hashlib.sha256(value.tobytes()).hexdigest()
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+        sets = [set(row) for row in array]
 
-    @override
-    def canonicalize(self, columns: typing.Iterable[str], /) -> WrappedDataFrame:
-        """TODO"""
-
-        attrs = np.asarray(self.wrapped_df.get_cols(columns))
-
-        hash_attrs: SeriesLike = [self._hash(i) for i in attrs]
-
-        self.wrapped_df.put_col(HASH_ATTR_LABEL, hash_attrs)
-
-        for idx, idy in self._gen_similarity_indices(attrs):
-            indice_map: dict[str, str] = {hash_attrs[idx]: hash_attrs[idy]}
-            new_attr: SeriesLike = self.wrapped_df.map_dict(HASH_ATTR_LABEL, indice_map)
-            new_attr_filled: SeriesLike = self.wrapped_df.fill_na(new_attr, self.wrapped_df.get_col(HASH_ATTR_LABEL))
-            self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr_filled)
-            self.propagate_canonical_id(TMP_ATTR_LABEL)
-            self.wrapped_df.drop_col(TMP_ATTR_LABEL)
-
-        self.wrapped_df.drop_col(HASH_ATTR_LABEL)
-        return self.wrapped_df
-
-
-class Jaccard(CompoundColumn):
-
-    def _gen_similarity_indices(self, attrs: np.ndarray) -> typing.Iterator[tuple[int, int]]:
-        sets = [set(row) for row in attrs]
-
-        n = len(attrs)
+        n = len(array)
         for idx in range(n):
             for idy in range(idx + 1, n):
                 intersection = sets[idx] & sets[idy]
@@ -564,18 +479,22 @@ class Jaccard(CompoundColumn):
                     yield idx, idy
 
 
-class Cosine(CompoundColumn):
+class Cosine(
+    ThresholdDedupers,
+    ColumnArrayMixin,
+    CompoundColumnValidationMixin,
+):
 
-    def _gen_similarity_indices(self, attrs: np.ndarray) -> typing.Iterator[tuple[int, int]]:
-        n = len(attrs)
+    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+        n = len(array)
         for idx in range(n):
             for idy in range(idx + 1, n):
-                product = np.dot(attrs[idx], attrs[idy])
+                product = np.dot(array[idx], array[idy])
 
                 if not product:
                     continue  # no match
 
-                norms = norm(attrs[idx]) * norm(attrs[idy])
+                norms = norm(array[idx]) * norm(array[idy])
 
                 if not norms:
                     continue  # zero div: guardrail
