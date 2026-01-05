@@ -79,19 +79,35 @@ class BaseStrategy(ABC):
         return self
 
     @abstractmethod
-    def _get_components(self, columns: str | tuple[str]) -> dict[int, list[int]]:
-        """TODO"""
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+        del array  # Unused
         pass
+
+    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
+
+        self.validate(columns)
+        array = self.get_array(columns)
+
+        n = len(array)
+        uf = UnionFind(range(n))
+
+        for i, j in self._gen_similarity_pairs(array):
+            uf.union(i, j)
+
+        components = defaultdict(list)
+        for i in range(n):
+            components[uf[i]].append(i)
+
+        return components
 
     def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
 
         canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID))
 
-        n2 = len(canonicals)
+        n2 = len(canonicals)  # TODO
 
         components: dict[int, list[int]] = self._get_components(columns)
 
-        # 3) Choose representative per component
         rep_index: dict[int, int] = {}
         for members in components.values():
             if self.rule == "first":
@@ -102,7 +118,6 @@ class BaseStrategy(ABC):
             for i in members:
                 rep_index[i] = rep
 
-        # 4) Propagate canonical IDs once
         new_canonicals = np.array(
             [int(canonicals[rep_index[i]]) for i in range(n2)],
             dtype=object,
@@ -142,6 +157,10 @@ class CompoundColumnValidationMixin:
 
 class Exact(BaseStrategy, ColumnArrayMixin):
 
+    def _gen_similarity_pairs(self, array):
+        del array  # Unused
+        pass
+
     @override
     def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
         array = self.get_array(columns)
@@ -174,26 +193,14 @@ class BinaryDedupers(BaseStrategy):
         pass
 
     @override
-    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
-
-        self.validate(columns)
-        array = self.get_array(columns)
-
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         n = len(array)
-        uf = UnionFind(range(n))
-
         for i in range(n):
             if not self._matches(array[i]):
                 continue
             for j in range(i + 1, n):
                 if self._matches(array[j]):
-                    uf.union(i, j)
-
-        components = defaultdict(list)
-        for i in range(n):
-            components[uf[i]].append(i)
-
-        return components
+                    yield i, j
 
 
 class StrStartsWith(
@@ -209,7 +216,9 @@ class StrStartsWith(
     """
 
     @override
-    def _matches(self, value: str) -> bool:
+    def _matches(self, value: str | None) -> bool:
+        if value is None:
+            return False
         return (
             value.startswith(self._pattern)
             #
@@ -231,7 +240,9 @@ class StrEndsWith(
     """
 
     @override
-    def _matches(self, value: str) -> bool:
+    def _matches(self, value: str | None) -> bool:
+        if value is None:
+            return False
         return (
             value.endswith(self._pattern)
             #
@@ -283,29 +294,6 @@ class ThresholdDedupers(BaseStrategy):
         if not (0 <= threshold < 1):
             raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
 
-    @abstractmethod
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
-        del array  # Unused
-        pass
-
-    @override
-    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
-
-        self.validate(columns)
-        array = self.get_array(columns)
-
-        n = len(array)
-        uf = UnionFind(range(n))
-
-        for i, j in self._gen_similarity_indices(array):
-            uf.union(i, j)
-
-        components = defaultdict(list)
-        for i in range(n):
-            components[uf[i]].append(i)
-
-        return components
-
 
 class Fuzzy(
     ThresholdDedupers,
@@ -318,7 +306,7 @@ class Fuzzy(
     def _fuzz_ratio(s1, s2) -> float:
         return fuzz.ratio(s1, s2) / 100
 
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         n = len(array)
         for i in range(n):
             for j in range(i + 1, n):
@@ -380,7 +368,7 @@ class TfIdf(
             sort=True,
         )
 
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         """Extract arrays based on similarity scores
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
@@ -439,7 +427,7 @@ class Lsh(
 
         return lsh
 
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
 
         minhashes: list[MinHash] = self._build_minhashes(array)
         lsh: MinHashLSH = self._lsh(minhashes)
@@ -459,7 +447,7 @@ class Jaccard(
     CompoundColumnValidationMixin,
 ):
 
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         sets = [set(row) for row in array]
 
         n = len(array)
@@ -485,7 +473,7 @@ class Cosine(
     CompoundColumnValidationMixin,
 ):
 
-    def _gen_similarity_indices(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         n = len(array)
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -506,56 +494,41 @@ class Cosine(
 # CUSTOM:
 
 
-class Custom(BaseStrategy):
+class Custom(ThresholdDedupers, ColumnArrayMixin):
 
     def __init__(
         self,
-        func: typing.Callable[..., dict[_T, _T]],
-        attr: str,
+        columns: str | tuple[str],
+        pair_fn: typing.Callable[..., typing.Iterable[tuple[int, int]]],
         /,
         **kwargs,
     ):
-        super().__init__(
-            func,
-            attr,
-            **kwargs,
-        )
-        self._func = func
-        self._attr = attr
+        super().__init__(**kwargs)
+        self._pair_fn = pair_fn
+        self._columns = columns
+        self._array = self.get_array(columns)
         self._kwargs = kwargs
 
+    @override  # As no validation mixin provided
+    def validate(self, columns):
+        del columns  # Unused
+        pass
+
     @override
-    def canonicalize(self, attr=None) -> WrappedDataFrame:
-        """canonicalize with custom defined callable
+    def _gen_similarity_pairs(self, array) -> tuple[int, int] | typing.Iterator[tuple[int, int]]:
+        del array  # Unused: overriden with init arg
+        yield from self._pair_fn(self._array, **self._kwargs)
 
-        Implements deduplication using a function defined _outside_ of the
-        scope of this library i.e. by the end user.
 
-        The function signature must be of the following style:
-
-        `my_func(df, attr, /, **kwargs)`
-
-        Where `df` is the dataframe, `attr` is a string identifying the label
-        of the dataframe attribute requiring deduplication and kwargs are any
-        number of additional keyword arguments taken by the function
-
-        `df` and `attr`, must be *positional* arguments in the correct order!
-        """
-        del attr  # Unused
-        logger.debug(
-            f'Deduping attribute "{self._attr}" with {self._func.__name__}'
-            f'({", ".join(f"{k}={v}" for k, v in self._kwargs.items())})'
-        )
-
-        new_attr: SeriesLike = self.wrapped_df.map_dict(
-            self._attr,
-            self._func(
-                self.wrapped_df,
-                self._attr,
-                **self._kwargs,
-            ),
-        )
-
-        self.wrapped_df.put_col(TMP_ATTR_LABEL, new_attr)
-
-        return self.propagate_canonical_id(TMP_ATTR_LABEL).drop_col(TMP_ATTR_LABEL)
+# TODO: unit test with this
+def strings_same_len(array: typing.Iterable, min_len: int = 3):
+    n = len(array)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if (
+                len(array[i]) >= min_len
+                and len(array[j]) >= min_len
+                #
+                and len(array[i]) == len(array[j])
+            ):
+                yield i, j
