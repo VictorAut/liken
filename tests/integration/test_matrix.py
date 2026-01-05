@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from dupegrouper import Duped
-from dupegrouper.base import wrap
 from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.strategies import (
     Cosine,
