@@ -57,24 +57,6 @@ class WrappedDataFrame(ABC):
         """Return columns dataframe-like of data"""
         pass  # pragma: no cover
 
-    @abstractmethod
-    def map_dict(self, column: str, mapping: dict) -> SeriesLike:
-        """Return a column array-like of data mapped with `mapping`"""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    def drop_col(self, column: str) -> typing.Self:
-        """delete a column with array-like data
-
-        No return: `_df` is updated
-        """
-        pass  # pragma: no cover
-
-    @staticmethod
-    @abstractmethod
-    def fill_na(series, array) -> SeriesLike:
-        """Return a column array-like of data null-filled with `array`"""
-        pass  # pragma: no cover
 
     # THIN TRANSPARENCY DELEGATION
 
@@ -109,20 +91,6 @@ class WrappedPandasDataFrame(WrappedDataFrame):
     def get_cols(self, columns: typing.Iterable[str]) -> pd.DataFrame:
         return self._df[list(columns)]
 
-    @override
-    def map_dict(self, column: str, mapping: dict) -> pd.Series:
-        return self.get_col(column).map(mapping)
-
-    @override
-    def drop_col(self, column: str) -> typing.Self:
-        self._df = self._df.drop(columns=column)
-        return self
-
-    @staticmethod
-    @override
-    def fill_na(series: pd.Series, array: pd.Series) -> pd.Series:
-        return series.fillna(array)
-
 
 class WrappedPolarsDataFrame(WrappedDataFrame):
 
@@ -152,20 +120,6 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
     def get_cols(self, columns: typing.Iterable[str]) -> pl.DataFrame:
         return self._df.select(columns)
 
-    @override
-    def map_dict(self, column: str, mapping: dict) -> pl.Series:
-        return self.get_col(column).replace_strict(mapping, default=None)
-
-    @override
-    def drop_col(self, column: str) -> typing.Self:
-        self._df = self._df.drop(column)
-        return self
-
-    @staticmethod
-    @override
-    def fill_na(series: pl.Series, array: pl.Series) -> pl.Series:
-        return series.fill_null(array)
-
 
 class WrappedSparkDataFrame(WrappedDataFrame):
 
@@ -191,18 +145,6 @@ class WrappedSparkDataFrame(WrappedDataFrame):
 
     @override
     def get_cols(self):
-        raise NotImplementedError(self.not_implemented)
-
-    @override
-    def map_dict(self):
-        raise NotImplementedError(self.not_implemented)
-
-    @override
-    def drop_col(self):
-        raise NotImplementedError(self.not_implemented)
-
-    @override
-    def fill_na(self):
         raise NotImplementedError(self.not_implemented)
 
 
@@ -237,20 +179,6 @@ class WrappedSparkRows(WrappedDataFrame):
     @override
     def get_cols(self, columns: typing.Iterable[str]) -> list[list[typing.Any]]:
         return [[row[c] for c in columns] for row in self._df]
-
-    @override
-    def map_dict(self, column: str, mapping: dict) -> list[typing.Any]:
-        return [mapping.get(row[column]) for row in self._df]
-
-    @override
-    def drop_col(self, column: str) -> typing.Self:
-        self._df = [Row(**{k: v for k, v in row.asDict().items() if k != column}) for row in self._df]
-        return self
-
-    @staticmethod
-    @override
-    def fill_na(series: list, array: list) -> list:
-        return [i[-1] if not i[0] else i[0] for i in zip(series, array)]
 
 
 # WRAP DATAFRAME DISPATCHER:

@@ -119,7 +119,7 @@ def martial_status():
 def number_children():
     return [
         1,
-        0,
+        1,
         2,
         0,
         0,

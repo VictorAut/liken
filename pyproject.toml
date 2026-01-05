@@ -14,12 +14,14 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 repository = "https://github.com/VictorAut/dupegrouper/"
 documentation = "https://victorautonell-oiry.me/dupegrouper/dupegrouper.html"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.11,<3.14"
 pandas = "^2.2.3"
 polars = "^1.24.0"
 rapidfuzz = "^3.12.2"
@@ -29,6 +31,7 @@ multipledispatch = "^1.0.0"
 typing-extensions = "^4.13.0"
 pyspark = "^3.5.5"
 datasketch = "^1.8.0"
+networkx = "^3.6.1"
 
 
 [tool.poetry.group.dev.dependencies]

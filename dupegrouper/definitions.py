@@ -28,10 +28,6 @@ if typing.TYPE_CHECKING:
 # the canonical_id label in the dataframe
 CANONICAL_ID: typing.Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
-# ethereal labels during deduplication
-TMP_ATTR_LABEL: typing.Final[str] = os.environ.get("TMP_ATTR_LABEL", "_tmp_attr_label")
-HASH_ATTR_LABEL: typing.Final[str] = os.environ.get("HASH_ATTR_LABEL", "_tmp_hash_label")
-
 
 # TYPES:
 
