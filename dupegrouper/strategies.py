@@ -24,10 +24,7 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
-from dupegrouper.definitions import (
-    CANONICAL_ID,
-    SeriesLike,
-)
+from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.dataframe import WrappedDataFrame
 
 
@@ -35,12 +32,6 @@ from dupegrouper.dataframe import WrappedDataFrame
 
 
 logger = logging.getLogger(__name__)
-
-
-# TYPES:
-
-
-_T = typing.TypeVar("_T")
 
 
 # BASE STRATEGY:
@@ -78,19 +69,17 @@ class BaseStrategy(ABC):
         self.rule = rule
         return self
 
-    @abstractmethod
     def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         del array  # Unused
-        pass
+        raise NotImplementedError
 
     def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
-
         self.validate(columns)
         array = self.get_array(columns)
 
         n = len(array)
-        uf = UnionFind(range(n))
 
+        uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
 
@@ -101,12 +90,10 @@ class BaseStrategy(ABC):
         return components
 
     def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
-
-        canonicals = np.asarray(self.wrapped_df.get_col(CANONICAL_ID))
-
-        n2 = len(canonicals)  # TODO
-
+        canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
+
+        n = len(canonicals)
 
         rep_index: dict[int, int] = {}
         for members in components.values():
@@ -119,7 +106,7 @@ class BaseStrategy(ABC):
                 rep_index[i] = rep
 
         new_canonicals = np.array(
-            [int(canonicals[rep_index[i]]) for i in range(n2)],
+            [int(canonicals[rep_index[i]]) for i in range(n)],
             dtype=object,
         )
 
@@ -137,7 +124,6 @@ class ColumnArrayMixin:
 
 
 class SingleColumnValidationMixin:
-
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, str):
@@ -145,7 +131,6 @@ class SingleColumnValidationMixin:
 
 
 class CompoundColumnValidationMixin:
-
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, tuple):
@@ -156,11 +141,6 @@ class CompoundColumnValidationMixin:
 
 
 class Exact(BaseStrategy, ColumnArrayMixin):
-
-    def _gen_similarity_pairs(self, array):
-        del array  # Unused
-        pass
-
     @override
     def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
         array = self.get_array(columns)
