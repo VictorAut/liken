@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-import polars as pl
 import pytest
 
 from dupegrouper.definitions import CANONICAL_ID
 from dupegrouper.dataframe import (
     WrappedSparkDataFrame,
-    WrappedPandasDataFrame,
-    WrappedPolarsDataFrame,
 )
 
 

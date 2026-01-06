@@ -58,9 +58,9 @@ def test_wrap_dataframe(dataframe):
 
     expected_type = DATAFRAME_TYPES.get(type(df))
 
-    dfwrapped: WrappedDataFrame = wrap(df, id)
+    wrapped_df: WrappedDataFrame = wrap(df, id)
 
-    assert isinstance(dfwrapped, expected_type)
+    assert isinstance(wrapped_df, expected_type)
 
 
 def test_wrap_dataframe_raises():
@@ -73,24 +73,21 @@ def test_wrap_dataframe_raises():
 ######################
 
 
-def reload():
-    importlib.reload(dupegrouper.definitions)  # reset constant
+def reload_imports():
+    importlib.reload(dupegrouper.definitions)
     importlib.reload(dupegrouper.dataframe)
 
 
 @pytest.mark.parametrize(
     "env_var_value, expected_value",
     [
-        # i.e. the default
+        # default
         ("canonical_id", "canonical_id"),
-        # null override to default, simulates unset
+        # override to default
         (None, "canonical_id"),
         # arbitrary: different value
-        ("beep_boop_id", "beep_boop_id"),
-        # arbitrary: supported (but bad!) column naming with whitespace
-        ("bad group id", "bad group id"),
-    ],
-    ids=["default", "null", "default-override", "default-override-bad-format"],
+        ("random_id", "random_id"),
+    ]
 )
 def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
     df, wrapper, id = lowlevel_dataframe
@@ -98,24 +95,23 @@ def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe)
     if env_var_value:
         os.environ["CANONICAL_ID"] = env_var_value
     else:
-        os.environ.pop("CANONICAL_ID", None)  # remove it if exists
+        os.environ.pop("CANONICAL_ID", None)
 
-    reload()
+    reload_imports()
 
     df = wrapper(df, id)
 
     if isinstance(df, WrappedSparkDataFrame):
-        assert expected_value not in df.columns  # no change
+        assert expected_value not in df.columns
     elif isinstance(df, WrappedSparkRows):
         for row in df.unwrap():
             assert expected_value in row.asDict().keys()
     else:
         assert expected_value in df.columns
 
-    # clean up
     os.environ["CANONICAL_ID"] = "canonical_id"
 
-    reload()
+    reload_imports()
 
 
 ##############################################

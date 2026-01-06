@@ -7,7 +7,7 @@ overrideable `canonicalize()` is defined.
 """
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import defaultdict
 import functools
 import logging
@@ -38,7 +38,11 @@ logger = logging.getLogger(__name__)
 
 
 class BaseStrategy(ABC):
-    """Defines a deduplication strategy."""
+    """
+    @private
+
+    Defines a deduplication strategy.
+    """
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -114,6 +118,10 @@ class BaseStrategy(ABC):
 
 
 class ColumnArrayMixin:
+    """
+    @private
+    TODO
+    """
     def get_array(self, columns):
         if isinstance(columns, str):
             return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
@@ -124,6 +132,10 @@ class ColumnArrayMixin:
 
 
 class SingleColumnValidationMixin:
+    """
+    @private
+    TODO
+    """
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, str):
@@ -131,6 +143,10 @@ class SingleColumnValidationMixin:
 
 
 class CompoundColumnValidationMixin:
+    """
+    @private
+    TODO
+    """
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, tuple):
@@ -141,14 +157,25 @@ class CompoundColumnValidationMixin:
 
 
 class Exact(BaseStrategy, ColumnArrayMixin):
+    """
+    @private
+    TODO
+    """
+    @staticmethod
+    def as_is(value):
+        return value
+    @staticmethod
+    def to_tuple(value):
+        return tuple(value.tolist())
+    
     @override
     def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
         array = self.get_array(columns)
 
         if isinstance(columns, str):
-            key_fn = lambda v: v
+            key_fn = self.as_is
         else:
-            key_fn = lambda v: tuple(v.tolist())
+            key_fn = self.to_tuple
 
         components = defaultdict(list)
         for i, v in enumerate(array):
@@ -160,9 +187,12 @@ class Exact(BaseStrategy, ColumnArrayMixin):
 # BINARY DEDUPERS:
 
 
+# TODO: Eventually make `StrMethods` which inherits from `BinaryDedupers`
 class BinaryDedupers(BaseStrategy):
-    """TODO"""
-
+    """
+    @private
+    TODO
+    """
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
@@ -188,7 +218,9 @@ class StrStartsWith(
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-    """Strings start with canonicalizer.
+    """
+    @private
+    Strings start with canonicalizer.
 
     Defaults to case sensitive.
 
@@ -212,7 +244,9 @@ class StrEndsWith(
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-    """Strings start with canonicalizer.
+    """
+    @private
+    Strings start with canonicalizer.
 
     Defaults to case sensitive.
 
@@ -236,7 +270,9 @@ class StrContains(
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-    """Strings contains canonicalizer.
+    """
+    @private
+    Strings contains canonicalizer.
 
     Defaults to case sensitive. Supports literal substring or regex search.
     """
@@ -267,6 +303,10 @@ class StrContains(
 
 
 class ThresholdDedupers(BaseStrategy):
+    """
+    @private
+    TODO
+    """
     def __init__(self, threshold: float = 0.95):
         super().__init__(threshold=threshold)
         self._threshold = threshold
@@ -280,7 +320,10 @@ class Fuzzy(
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-
+    """
+    @private
+    TODO
+    """
     @staticmethod
     @functools.cache
     def _fuzz_ratio(s1, s2) -> float:
@@ -299,7 +342,9 @@ class TfIdf(
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-    """TF-IDF canonicalizer.
+    """
+    @private
+    TF-IDF canonicalizer.
 
     Note: high "top N" numbers at initialisation may cause spurious results.
     Use with care!
@@ -363,13 +408,15 @@ class TfIdf(
             yield rows[i], cols[i]
 
 
-class Lsh(
+class LSH(
     ThresholdDedupers,
     ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
-    """TODO"""
-
+    """
+    @private
+    TODO
+    """
     def __init__(
         self,
         ngram: int = 3,
@@ -426,7 +473,10 @@ class Jaccard(
     ColumnArrayMixin,
     CompoundColumnValidationMixin,
 ):
-
+    """
+    @private
+    TODO
+    """
     def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         sets = [set(row) for row in array]
 
@@ -452,7 +502,10 @@ class Cosine(
     ColumnArrayMixin,
     CompoundColumnValidationMixin,
 ):
-
+    """
+    @private
+    TODO
+    """
     def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         n = len(array)
         for idx in range(n):
@@ -475,7 +528,10 @@ class Cosine(
 
 
 class Custom(ThresholdDedupers, ColumnArrayMixin):
-
+    """
+    @private
+    TODO
+    """
     def __init__(
         self,
         columns: str | tuple[str],
@@ -500,15 +556,22 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
         yield from self._pair_fn(self._array, **self._kwargs)
 
 
-# TODO: unit test with this
-def strings_same_len(array: typing.Iterable, min_len: int = 3):
-    n = len(array)
-    for i in range(n):
-        for j in range(i + 1, n):
-            if (
-                len(array[i]) >= min_len
-                and len(array[j]) >= min_len
-                #
-                and len(array[i]) == len(array[j])
-            ):
-                yield i, j
+
+# PUBLIC:
+
+
+def exact() -> Exact:
+    """TODO"""
+    return Exact()
+
+def str_starts_with(pattern: str, case: bool) -> StrStartsWith:
+    """TEST TEST TEST"""
+    return StrStartsWith(pattern=pattern, case=case)
+
+def str_ends_with(pattern: str, case: bool) -> StrEndsWith:
+    """TEST TEST TEST"""
+    return StrEndsWith(pattern=pattern, case=case)
+
+def str_contains(pattern: str, case: bool, regex: bool) -> StrContains:
+    """TEST TEST TEST"""
+    return StrEndsWith(pattern=pattern, case=case, regex=regex)
