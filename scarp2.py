@@ -1,18 +1,6 @@
-from unittest.mock import Mock, patch
 
 import pandas as pd
-import polars as pl
-from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
-import pytest
 
-from dupegrouper.base import Duped, BaseStrategy
-from dupegrouper.definitions import DataFrameLike
-from dupegrouper.dataframe import (
-    WrappedPandasDataFrame,
-    WrappedPolarsDataFrame,
-    WrappedSparkDataFrame,
-    WrappedSparkRows,
-)
 
 
 def id():

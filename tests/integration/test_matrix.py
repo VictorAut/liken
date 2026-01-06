@@ -1,6 +1,7 @@
 """Narrow integration tests for specific behaviour of individual stratgies"""
 
 from __future__ import annotations
+import typing
 
 import pytest
 
@@ -11,12 +12,15 @@ from dupegrouper.strategies import (
     Exact,
     Fuzzy,
     Jaccard,
-    Lsh,
+    LSH,
     StrStartsWith,
     StrEndsWith,
     StrContains,
     TfIdf,
 )
+
+
+# CONSTANTS:
 
 
 SINGLE_COL = "address"
@@ -33,6 +37,23 @@ NUMERICAL_COMPOUND_COL = (
     "property_sea_level_elevation_m",
     "property_num_rooms",
 )
+
+
+# CUSTOM CALLABLE:
+
+
+def strings_same_len(array: typing.Iterable, min_len: int = 3):
+    n = len(array)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if (
+                len(array[i]) >= min_len
+                and len(array[j]) >= min_len
+                #
+                and len(array[i]) == len(array[j])
+            ):
+                yield i, j
+
 
 # fmt: off
 

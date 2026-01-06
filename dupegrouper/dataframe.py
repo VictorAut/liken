@@ -1,4 +1,7 @@
-"""ABC for wrapped dataframe interfaces"""
+"""
+@private
+ABC for wrapped dataframe interfaces
+"""
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
@@ -125,7 +128,7 @@ class WrappedSparkDataFrame(WrappedDataFrame):
 
     not_implemented = "Spark DataFrame methods are available per partition only, i.e. for lists of `pyspark.sql.Row`"
 
-    def __init__(self, df: DataFrame, id: str | None):
+    def __init__(self, df: SparkDataFrame, id: str | None):
         super().__init__(df)
         del id  # Not implemented, input param there for API consistency
 
