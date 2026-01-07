@@ -24,7 +24,7 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
-from dupegrouper.constants import CANONICAL_ID
+from dupegrouper.types import CANONICAL_ID
 from dupegrouper.dataframe import WrappedDataFrame
 
 
@@ -120,8 +120,8 @@ class BaseStrategy(ABC):
 class ColumnArrayMixin:
     """
     @private
-    TODO
     """
+
     def get_array(self, columns):
         if isinstance(columns, str):
             return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
@@ -134,8 +134,8 @@ class ColumnArrayMixin:
 class SingleColumnValidationMixin:
     """
     @private
-    TODO
     """
+
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, str):
@@ -145,8 +145,8 @@ class SingleColumnValidationMixin:
 class CompoundColumnValidationMixin:
     """
     @private
-    TODO
     """
+
     @staticmethod
     def validate(columns: typing.Any):
         if not isinstance(columns, tuple):
@@ -159,15 +159,16 @@ class CompoundColumnValidationMixin:
 class Exact(BaseStrategy, ColumnArrayMixin):
     """
     @private
-    TODO
     """
+
     @staticmethod
     def as_is(value):
         return value
+
     @staticmethod
     def to_tuple(value):
         return tuple(value.tolist())
-    
+
     @override
     def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
         array = self.get_array(columns)
@@ -191,8 +192,8 @@ class Exact(BaseStrategy, ColumnArrayMixin):
 class BinaryDedupers(BaseStrategy):
     """
     @private
-    TODO
     """
+
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
@@ -305,8 +306,8 @@ class StrContains(
 class ThresholdDedupers(BaseStrategy):
     """
     @private
-    TODO
     """
+
     def __init__(self, threshold: float = 0.95):
         super().__init__(threshold=threshold)
         self._threshold = threshold
@@ -322,8 +323,8 @@ class Fuzzy(
 ):
     """
     @private
-    TODO
     """
+
     @staticmethod
     @functools.cache
     def _fuzz_ratio(s1, s2) -> float:
@@ -415,8 +416,8 @@ class LSH(
 ):
     """
     @private
-    TODO
     """
+
     def __init__(
         self,
         ngram: int = 3,
@@ -475,8 +476,8 @@ class Jaccard(
 ):
     """
     @private
-    TODO
     """
+
     def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         sets = [set(row) for row in array]
 
@@ -504,8 +505,8 @@ class Cosine(
 ):
     """
     @private
-    TODO
     """
+
     def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
         n = len(array)
         for idx in range(n):
@@ -524,39 +525,6 @@ class Cosine(
                     yield idx, idy
 
 
-# CUSTOM:
-
-
-class Custom(ThresholdDedupers, ColumnArrayMixin):
-    """
-    @private
-    TODO
-    """
-    def __init__(
-        self,
-        columns: str | tuple[str],
-        pair_fn: typing.Callable[..., typing.Iterable[tuple[int, int]]],
-        /,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self._pair_fn = pair_fn
-        self._columns = columns
-        self._array = self.get_array(columns)
-        self._kwargs = kwargs
-
-    @override  # As no validation mixin provided
-    def validate(self, columns):
-        del columns  # Unused
-        pass
-
-    @override
-    def _gen_similarity_pairs(self, array) -> tuple[int, int] | typing.Iterator[tuple[int, int]]:
-        del array  # Unused: overriden with init arg
-        yield from self._pair_fn(self._array, **self._kwargs)
-
-
-
 # PUBLIC:
 
 
@@ -564,14 +532,40 @@ def exact() -> Exact:
     """TODO"""
     return Exact()
 
-def str_starts_with(pattern: str, case: bool) -> StrStartsWith:
-    """TEST TEST TEST"""
+
+def str_startswith(pattern: str, case: bool = True) -> StrStartsWith:
+    """TODO"""
     return StrStartsWith(pattern=pattern, case=case)
 
-def str_ends_with(pattern: str, case: bool) -> StrEndsWith:
-    """TEST TEST TEST"""
+
+def str_endswith(pattern: str, case: bool = True) -> StrEndsWith:
+    """TODO"""
     return StrEndsWith(pattern=pattern, case=case)
 
-def str_contains(pattern: str, case: bool, regex: bool) -> StrContains:
-    """TEST TEST TEST"""
-    return StrEndsWith(pattern=pattern, case=case, regex=regex)
+
+def str_contains(pattern: str, case: bool = True, regex: bool = False) -> StrContains:
+    """TODO"""
+    return StrContains(pattern=pattern, case=case, regex=regex)
+
+
+def fuzzy(threshold: float = 0.95) -> Fuzzy:
+    """TODO"""
+    return Fuzzy(threshold=threshold)
+
+
+def tfidf(threshold: float = 0.95, ngram: int | tuple[int, int] = 3, topn: int = 2) -> TfIdf:
+    """TODO"""
+    return TfIdf(threshold=threshold, ngram=ngram, topn=topn)
+
+
+def lsh(threshold: float = 0.95, ngram: int | tuple[int, int] = 3, num_perm: int = 128) -> LSH:
+    """TODO"""
+    return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
+
+def jaccard(threshold: float = 0.95) -> Jaccard:
+    """TODO"""
+    return Jaccard(threshold=threshold)
+
+def cosine(threshold: float = 0.95) -> Cosine:
+    """TODO"""
+    return Cosine(threshold=threshold)
