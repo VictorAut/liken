@@ -6,13 +6,13 @@ from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
 import pytest
 
 from dupegrouper.base import Duped, BaseStrategy
-from dupegrouper.constants import DataFrameLike
 from dupegrouper.dataframe import (
     WrappedPandasDataFrame,
     WrappedPolarsDataFrame,
     WrappedSparkDataFrame,
     WrappedSparkRows,
 )
+from dupegrouper.types import DataFrameLike
 
 
 @pytest.fixture(scope="session")

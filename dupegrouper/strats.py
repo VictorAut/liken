@@ -8,12 +8,13 @@ overrideable `canonicalize()` is defined.
 
 from __future__ import annotations
 from abc import ABC
+from collections.abc import Iterator
 from collections import defaultdict
-import functools
+from functools import cache
 import logging
 import re
-import typing
 from typing_extensions import override
+from typing import Any, final, Literal, Self
 
 from datasketch import MinHash, MinHashLSH
 from networkx.utils.union_find import UnionFind
@@ -24,8 +25,9 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
-from dupegrouper.types import CANONICAL_ID
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import WrappedDataFrame
+from dupegrouper.types import Columns, Rule, SimilarPairIndices
 
 
 # LOGGER:
@@ -48,10 +50,10 @@ class BaseStrategy(ABC):
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def reinstantiate(self):
+    def reinstantiate(self) -> Self:
         return self.__class__(*self._init_args, **self._init_kwargs)
 
-    def bind_frame(self, wrapped_df: WrappedDataFrame) -> typing.Self:
+    def bind_frame(self, wrapped_df: WrappedDataFrame) -> Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -64,20 +66,17 @@ class BaseStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def bind_rule(
-        self,
-        rule: typing.Literal["first", "last"] = "first",
-    ) -> typing.Self:
+    def bind_rule(self, rule: Rule = "first") -> Self:
         if rule not in ("first", "last"):
             raise ValueError("Rule must be one of 'first' or 'last'")
         self.rule = rule
         return self
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
-    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
+    def _get_components(self, columns: Columns) -> dict[object, list[int]]:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -93,7 +92,7 @@ class BaseStrategy(ABC):
 
         return components
 
-    def canonicalize(self, columns: str | tuple[str]) -> WrappedDataFrame:
+    def canonicalize(self, columns: Columns) -> WrappedDataFrame:
         canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
 
@@ -121,8 +120,9 @@ class ColumnArrayMixin:
     """
     @private
     """
+    wrapped_df: WrappedDataFrame
 
-    def get_array(self, columns):
+    def get_array(self, columns: Columns) -> np.ndarray:
         if isinstance(columns, str):
             return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
         elif isinstance(columns, tuple):
@@ -137,7 +137,7 @@ class SingleColumnValidationMixin:
     """
 
     @staticmethod
-    def validate(columns: typing.Any):
+    def validate(columns: Any) -> None:
         if not isinstance(columns, str):
             raise ValueError("For single column strategies, `columns` must be defined as a string")
 
@@ -148,7 +148,7 @@ class CompoundColumnValidationMixin:
     """
 
     @staticmethod
-    def validate(columns: typing.Any):
+    def validate(columns: Any) -> None:
         if not isinstance(columns, tuple):
             raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
 
@@ -156,6 +156,7 @@ class CompoundColumnValidationMixin:
 # EXACT DEDUPER:
 
 
+@final
 class Exact(BaseStrategy, ColumnArrayMixin):
     """
     @private
@@ -170,7 +171,7 @@ class Exact(BaseStrategy, ColumnArrayMixin):
         return tuple(value.tolist())
 
     @override
-    def _get_components(self, columns: str | tuple[str]) -> dict[object, list[int]]:
+    def _get_components(self, columns: Columns) -> dict[object, list[int]]:
         array = self.get_array(columns)
 
         if isinstance(columns, str):
@@ -189,6 +190,7 @@ class Exact(BaseStrategy, ColumnArrayMixin):
 
 
 # TODO: Eventually make `StrMethods` which inherits from `BinaryDedupers`
+@final
 class BinaryDedupers(BaseStrategy):
     """
     @private
@@ -204,7 +206,7 @@ class BinaryDedupers(BaseStrategy):
         pass
 
     @override
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         n = len(array)
         for i in range(n):
             if not self._matches(array[i]):
@@ -214,6 +216,7 @@ class BinaryDedupers(BaseStrategy):
                     yield i, j
 
 
+@final
 class StrStartsWith(
     BinaryDedupers,
     ColumnArrayMixin,
@@ -240,6 +243,7 @@ class StrStartsWith(
         )
 
 
+@final
 class StrEndsWith(
     BinaryDedupers,
     ColumnArrayMixin,
@@ -266,6 +270,7 @@ class StrEndsWith(
         )
 
 
+@final
 class StrContains(
     BinaryDedupers,
     ColumnArrayMixin,
@@ -303,6 +308,7 @@ class StrContains(
 # THRESHOLD DEDUPERS:
 
 
+@final
 class ThresholdDedupers(BaseStrategy):
     """
     @private
@@ -316,6 +322,7 @@ class ThresholdDedupers(BaseStrategy):
             raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
 
 
+@final
 class Fuzzy(
     ThresholdDedupers,
     ColumnArrayMixin,
@@ -326,11 +333,11 @@ class Fuzzy(
     """
 
     @staticmethod
-    @functools.cache
+    @cache
     def _fuzz_ratio(s1, s2) -> float:
         return fuzz.ratio(s1, s2) / 100
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         n = len(array)
         for i in range(n):
             for j in range(i + 1, n):
@@ -338,6 +345,7 @@ class Fuzzy(
                     yield i, j
 
 
+@final
 class TfIdf(
     ThresholdDedupers,
     ColumnArrayMixin,
@@ -394,7 +402,7 @@ class TfIdf(
             sort=True,
         )
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         """Extract arrays based on similarity scores
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
@@ -409,6 +417,7 @@ class TfIdf(
             yield rows[i], cols[i]
 
 
+@final
 class LSH(
     ThresholdDedupers,
     ColumnArrayMixin,
@@ -431,7 +440,7 @@ class LSH(
         self._threshold = threshold
         self._num_perm = num_perm
 
-    def _gen_token(self, text) -> typing.Iterator:
+    def _gen_token(self, text) -> Iterator:
         for i in range(len(text) - self._ngram + 1):
             yield text[i : i + self._ngram]
 
@@ -455,7 +464,7 @@ class LSH(
 
         return lsh
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
 
         minhashes: list[MinHash] = self._build_minhashes(array)
         lsh: MinHashLSH = self._lsh(minhashes)
@@ -469,6 +478,7 @@ class LSH(
 # COMPOUND COLUMN:
 
 
+@final
 class Jaccard(
     ThresholdDedupers,
     ColumnArrayMixin,
@@ -478,7 +488,7 @@ class Jaccard(
     @private
     """
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         sets = [set(row) for row in array]
 
         n = len(array)
@@ -498,6 +508,7 @@ class Jaccard(
                     yield idx, idy
 
 
+@final
 class Cosine(
     ThresholdDedupers,
     ColumnArrayMixin,
@@ -507,7 +518,7 @@ class Cosine(
     @private
     """
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> typing.Iterator[tuple[int, int]]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         n = len(array)
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -528,44 +539,58 @@ class Cosine(
 # PUBLIC:
 
 
-def exact() -> Exact:
+def exact() -> BaseStrategy:
     """TODO"""
     return Exact()
 
 
-def str_startswith(pattern: str, case: bool = True) -> StrStartsWith:
+def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     """TODO"""
     return StrStartsWith(pattern=pattern, case=case)
 
 
-def str_endswith(pattern: str, case: bool = True) -> StrEndsWith:
+def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
     """TODO"""
     return StrEndsWith(pattern=pattern, case=case)
 
 
-def str_contains(pattern: str, case: bool = True, regex: bool = False) -> StrContains:
+def str_contains(
+    pattern: str,
+    case: bool = True,
+    regex: bool = False,
+) -> BaseStrategy:
     """TODO"""
     return StrContains(pattern=pattern, case=case, regex=regex)
 
 
-def fuzzy(threshold: float = 0.95) -> Fuzzy:
+def fuzzy(threshold: float = 0.95) -> BaseStrategy:
     """TODO"""
     return Fuzzy(threshold=threshold)
 
 
-def tfidf(threshold: float = 0.95, ngram: int | tuple[int, int] = 3, topn: int = 2) -> TfIdf:
+def tfidf(
+    threshold: float = 0.95,
+    ngram: int | tuple[int, int] = 3,
+    topn: int = 2,
+) -> BaseStrategy:
     """TODO"""
     return TfIdf(threshold=threshold, ngram=ngram, topn=topn)
 
 
-def lsh(threshold: float = 0.95, ngram: int | tuple[int, int] = 3, num_perm: int = 128) -> LSH:
+def lsh(
+    threshold: float = 0.95,
+    ngram: int = 3,
+    num_perm: int = 128,
+) -> BaseStrategy:
     """TODO"""
     return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
 
-def jaccard(threshold: float = 0.95) -> Jaccard:
+
+def jaccard(threshold: float = 0.95) -> BaseStrategy:
     """TODO"""
     return Jaccard(threshold=threshold)
 
-def cosine(threshold: float = 0.95) -> Cosine:
+
+def cosine(threshold: float = 0.95) -> BaseStrategy:
     """TODO"""
     return Cosine(threshold=threshold)

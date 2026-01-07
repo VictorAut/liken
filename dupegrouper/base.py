@@ -5,16 +5,13 @@ functionality provided by dupegrouper.
 """
 
 from __future__ import annotations
-import collections
+from collections.abc import Iterator
+from collections import defaultdict
 from functools import singledispatchmethod
 import inspect
 import logging
-
-try:
-    from types import NoneType
-except ImportError:  # pragma: no cover
-    NoneType = type(None)  # type: ignore
-import typing
+from types import NoneType
+from typing import cast, Literal
 
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
@@ -25,8 +22,8 @@ from dupegrouper.dataframe import (
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
-from dupegrouper.strats import BaseStrategy, Custom
-from dupegrouper.types import StrategyMapCollection, DataFrameLike
+from dupegrouper.strats import BaseStrategy
+from dupegrouper.types import DataFrameLike, StrategyMapCollection, Rule
 
 
 
@@ -58,18 +55,17 @@ class Duped:
         df: DataFrameLike,
         spark_session: SparkSession | None = None,
         id: str | None = None,
-        canonicalization_rule: typing.Literal["first", "last"] = "first",
+        canonicalization_rule: Rule = "first",
     ):
         self._df: WrappedDataFrame = wrap(df, id)
-        self._strategy_manager = _StrategyManager()
+        self._strategy_manager = StrategyManager()
         self._spark_session = spark_session
         self._id = id
         self._canonicalization_rule = canonicalization_rule
 
-    @singledispatchmethod
     def _call_strategy_canonicalizer(
         self,
-        strategy: BaseStrategy | tuple[typing.Callable, typing.Any],
+        strategy: BaseStrategy,
         attr: str,
     ):
         """Dispatch the appropriate strategy deduplication method.
@@ -90,29 +86,12 @@ class Duped:
         Raises:
             NotImplementedError.
         """
-        del attr  # Unused
-
-        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
-
-    @_call_strategy_canonicalizer.register(BaseStrategy)
-    def _(self, strategy, attr) -> WrappedDataFrame:
         return (
             strategy
             #
             .bind_frame(self._df)
             .bind_rule(self._canonicalization_rule)
             .canonicalize(attr)
-        )
-
-    @_call_strategy_canonicalizer.register(tuple)
-    def _(self, strategy: tuple[typing.Callable, typing.Any], attr) -> WrappedDataFrame:
-        func, kwargs = strategy
-        return (
-            Custom(func, attr, **kwargs)
-            #
-            .bind_frame(self._df)
-            .bind_rule(self._canonicalization_rule)
-            .canonicalize()
         )
 
     @singledispatchmethod
@@ -168,9 +147,9 @@ class Duped:
         Retuns:
             Instance's _df attribute is updated
         """
-        id = typing.cast(str, self._id)
-        rule = typing.cast(str, self._canonicalization_rule)
-        id_type = typing.cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
+        id = cast(str, self._id)
+        rule = cast(str, self._canonicalization_rule)
+        id_type = cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
 
         canonicalized_rdd = self._df.rdd.mapPartitions(
             lambda partition_iter: _process_partition(
@@ -188,25 +167,22 @@ class Duped:
             schema = StructType(self._df.schema.fields + [StructField(CANONICAL_ID, id_type, True)])
 
         self._df = WrappedSparkDataFrame(
-            typing.cast(SparkSession, self._spark_session).createDataFrame(canonicalized_rdd, schema=schema), id
+            cast(SparkSession, self._spark_session).createDataFrame(canonicalized_rdd, schema=schema), id
         )
 
     # PUBLIC API:
 
     @singledispatchmethod
-    def apply(self, strategy: BaseStrategy | tuple | StrategyMapCollection):
+    def apply(self, strategy: BaseStrategy | StrategyMapCollection):
         """
         Add a strategy to the strategy manager.
 
-        Instances of `BaseStrategy` or tuple are added to the
+        Instances of `BaseStrategy` are added to the
         "default" key. Mapping objects update the manager directly
 
         Args:
-            strategy: A deduplication strategy, tuple, or strategy collection
+            strategy: A deduplication strategy or strategy collection
                 (mapping) to add.
-
-        Returns:
-            self is updated
 
         Raises:
             NotImplementedError
@@ -214,7 +190,6 @@ class Duped:
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
     @apply.register(BaseStrategy)
-    @apply.register(tuple)
     def _(self, strategy):
         self._strategy_manager.add("default", strategy)
 
@@ -278,7 +253,7 @@ class Duped:
 # STRATEGY MANAGER:
 
 
-class _StrategyManager:
+class StrategyManager:
     """
     Manage and validate collection(s) of deduplication strategies.
 
@@ -286,13 +261,12 @@ class _StrategyManager:
     attribute names, and values are lists of strategies. Validation is provided
     upon addition allowing only the following stratgies types:
         - `BaseStrategy`
-        - a tuple, typed as tuple[callable, dict[str, str]]
     A public property exposes stratgies upon successul addition and validation.
     A `StrategyTypeError` is thrown, otherwise.
     """
 
     def __init__(self) -> None:
-        self._strategies: StrategyMapCollection = collections.defaultdict(list)
+        self._strategies: StrategyMapCollection = defaultdict(list)
 
     def add(
         self,
@@ -340,15 +314,10 @@ class _StrategyManager:
 
         A valid strategy is one of the following:
             - A `BaseStrategy` instance.
-            - A tuple where the first element is a callable and the second
-                element is a dictionary.
             - A dictionary where each item is a valid strategy.
         """
         if isinstance(strategy, BaseStrategy):
             return True
-        if isinstance(strategy, tuple) and len(strategy) == 2:
-            func, kwargs = strategy
-            return callable(func) and isinstance(kwargs, dict)
         return False
 
     def reset(self):
@@ -363,30 +332,24 @@ class StrategyTypeError(Exception):
     """Strategy type not valid errors"""
 
     def __init__(self, strategy: BaseStrategy | tuple):
-        base_msg = "Input is not valid"  # i.e. default
-        context = ""
+        msg = "Input is not valid."  # i.e. default
         if inspect.isclass(strategy):
-            base_msg = "Input class is not valid: must be an instance of `BaseStrategy`"
-            context = f"not: {type(strategy())}"
-        if isinstance(strategy, tuple):
-            base_msg = "Input tuple is not valid: must be a length 2 [callable, dict]"
-            context = f"not: {strategy}"
+            msg += f"class must be an instance of `BaseStrategy` not: {type(strategy())}"
         if isinstance(strategy, dict):
-            base_msg = "Input dict is not valid: items must be a list of `BaseStrategy` or tuples"
-            context = ""
-        super().__init__(base_msg + context)
+            msg += "dict items must be a list of `BaseStrategy` or tuples"
+        super().__init__(msg)
 
 
 # PARTITION PROCESSING:
 
 
 def _process_partition(
-    partition_iter: typing.Iterator[Row],
+    partition_iter: Iterator[Row],
     strategies: StrategyMapCollection,
     id: str,
     attr: str | None,
-    canonicalization_rule: typing.Literal["first", "last"] = "first",
-) -> typing.Iterator[Row]:
+    canonicalization_rule: Rule = "first",
+) -> Iterator[Row]:
     """process a spark dataframe partition i.e. a list[Row]
 
     This function is functionality mapped to a worker node. For clean

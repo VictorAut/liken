@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-import typing
+from typing import Final
 
 from pyspark.sql.types import (
     StringType,
@@ -19,10 +19,10 @@ from pyspark.sql.types import (
 
 
 # Default canonical_id label in the dataframe
-CANONICAL_ID: typing.Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
+CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
 # Pyspark sql conversion types
-PYSPARK_TYPES = {
+PYSPARK_TYPES: Final[dict] = {
     "string": StringType(),
     "int": IntegerType(),
     "bigint": LongType(),
@@ -31,5 +31,4 @@ PYSPARK_TYPES = {
     "boolean": BooleanType(),
     "timestamp": TimestampType(),
     "date": DateType(),
-    # ...
 }
