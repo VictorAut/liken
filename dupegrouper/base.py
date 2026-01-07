@@ -19,18 +19,15 @@ import typing
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
 
-from dupegrouper.definitions import (
-    StrategyMapCollection,
-    DataFrameLike,
-    CANONICAL_ID,
-    PYSPARK_TYPES,
-)
-from dupegrouper.strategies import BaseStrategy, Custom
+from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
 from dupegrouper.dataframe import (
     wrap,
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
+from dupegrouper.strategies import BaseStrategy, Custom
+from dupegrouper.types import StrategyMapCollection, DataFrameLike
+
 
 
 # LOGGER:

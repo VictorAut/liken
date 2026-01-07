@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
 import pytest
 
 from dupegrouper.base import Duped, BaseStrategy
-from dupegrouper.definitions import DataFrameLike
+from dupegrouper.constants import DataFrameLike
 from dupegrouper.dataframe import (
     WrappedPandasDataFrame,
     WrappedPolarsDataFrame,

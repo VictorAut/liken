@@ -24,7 +24,7 @@ from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
-from dupegrouper.definitions import CANONICAL_ID
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import WrappedDataFrame
 
 

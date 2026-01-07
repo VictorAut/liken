@@ -17,7 +17,8 @@ from pyspark.sql import (
     Row,
 )
 
-from dupegrouper.definitions import CANONICAL_ID, DataFrameLike, SeriesLike
+from dupegrouper.constants import CANONICAL_ID
+from dupegrouper.types import DataFrameLike, SeriesLike
 
 
 class WrappedDataFrame(ABC):
