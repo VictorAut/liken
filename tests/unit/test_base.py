@@ -19,7 +19,7 @@ from dupegrouper.base import (
     _process_partition,
 )
 
-import dupegrouper.definitions
+import dupegrouper.constants
 from dupegrouper.strategies import Exact, Fuzzy
 from dupegrouper.dataframe import (
     WrappedDataFrame,
@@ -74,7 +74,7 @@ def test_wrap_dataframe_raises():
 
 
 def reload_imports():
-    importlib.reload(dupegrouper.definitions)
+    importlib.reload(dupegrouper.constants)
     importlib.reload(dupegrouper.dataframe)
 
 

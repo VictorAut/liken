@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from dupegrouper.definitions import CANONICAL_ID
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import (
     WrappedSparkDataFrame,
 )

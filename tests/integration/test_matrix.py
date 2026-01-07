@@ -6,7 +6,7 @@ import typing
 import pytest
 
 from dupegrouper import Duped
-from dupegrouper.definitions import CANONICAL_ID
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.strategies import (
     Cosine,
     Exact,
