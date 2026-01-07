@@ -5,9 +5,10 @@ ABC for wrapped dataframe interfaces
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from functools import singledispatch
 from typing_extensions import override
-import typing
+from typing import Any, final, Self
 
 import numpy as np
 import pandas as pd
@@ -44,7 +45,7 @@ class WrappedDataFrame(ABC):
     # DATAFRAME `LIBRARY` WRAPPERS:
 
     @abstractmethod
-    def put_col(self, column: str, array) -> typing.Self:
+    def put_col(self, column: str, array) -> Self:
         """assign i.e. write a column with array-like data
 
         No return; `_df` is updated
@@ -57,17 +58,18 @@ class WrappedDataFrame(ABC):
         pass  # pragma: no cover
 
     @abstractmethod
-    def get_cols(self, columns: typing.Iterable[str]) -> DataFrameLike:
+    def get_cols(self, columns: Iterable[str]) -> DataFrameLike:
         """Return columns dataframe-like of data"""
         pass  # pragma: no cover
 
 
     # THIN TRANSPARENCY DELEGATION
 
-    def __getattr__(self, name: str) -> typing.Any:
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._df, name)
 
 
+@final
 class WrappedPandasDataFrame(WrappedDataFrame):
 
     def __init__(self, df: pd.DataFrame, id: str | None):
@@ -83,7 +85,7 @@ class WrappedPandasDataFrame(WrappedDataFrame):
     # PANDAS API WRAPPERS:
 
     @override
-    def put_col(self, column: str, array) -> typing.Self:
+    def put_col(self, column: str, array) -> Self:
         self._df = self._df.assign(**{column: array})
         return self
 
@@ -92,10 +94,11 @@ class WrappedPandasDataFrame(WrappedDataFrame):
         return self._df[column]
 
     @override
-    def get_cols(self, columns: typing.Iterable[str]) -> pd.DataFrame:
+    def get_cols(self, columns: Iterable[str]) -> pd.DataFrame:
         return self._df[list(columns)]
 
 
+@final
 class WrappedPolarsDataFrame(WrappedDataFrame):
 
     def __init__(self, df: pl.DataFrame, id: str | None):
@@ -111,7 +114,7 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
     # POLARS API WRAPPERS:
 
     @override
-    def put_col(self, column: str, array) -> typing.Self:
+    def put_col(self, column: str, array) -> Self:
         array = pl.Series(array)  # important; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
         return self
@@ -121,10 +124,11 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
         return self._df.get_column(column)
 
     @override
-    def get_cols(self, columns: typing.Iterable[str]) -> pl.DataFrame:
+    def get_cols(self, columns: Iterable[str]) -> pl.DataFrame:
         return self._df.select(columns)
 
 
+@final
 class WrappedSparkDataFrame(WrappedDataFrame):
 
     not_implemented = "Spark DataFrame methods are available per partition only, i.e. for lists of `pyspark.sql.Row`"
@@ -152,6 +156,7 @@ class WrappedSparkDataFrame(WrappedDataFrame):
         raise NotImplementedError(self.not_implemented)
 
 
+@final
 class WrappedSparkRows(WrappedDataFrame):
     """Lower level DataFrame wrapper per partition i.e. list of Rows
 
@@ -171,17 +176,17 @@ class WrappedSparkRows(WrappedDataFrame):
     # SPARK API WRAPPERS:
 
     @override
-    def put_col(self, column: str, array) -> typing.Self:
+    def put_col(self, column: str, array) -> Self:
         array = [i.item() if isinstance(i, np.generic) else i for i in array]
         self._df = [Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
     @override
-    def get_col(self, column: str) -> list[typing.Any]:
+    def get_col(self, column: str) -> list[Any]:
         return [row[column] for row in self._df]
 
     @override
-    def get_cols(self, columns: typing.Iterable[str]) -> list[list[typing.Any]]:
+    def get_cols(self, columns: Iterable[str]) -> list[list[Any]]:
         return [[row[c] for c in columns] for row in self._df]
 
 

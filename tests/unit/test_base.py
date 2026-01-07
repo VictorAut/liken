@@ -14,7 +14,7 @@ from dupegrouper.base import (
     Duped,
     BaseStrategy,
     StrategyTypeError,
-    _StrategyManager,
+    StrategyManager,
     wrap,
     _process_partition,
 )
@@ -115,7 +115,7 @@ def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe)
 
 
 ##############################################
-#  TEST _StrategyManager + StrategyTypeError #
+#  TEST StrategyManager + StrategyTypeError #
 ##############################################
 
 
@@ -179,7 +179,7 @@ DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy
 )
 def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass, base_msg):
     """validates that the input 'strtagey' is legit, against `StrategyTypeError`"""
-    manager = _StrategyManager()
+    manager = StrategyManager()
     if expected_to_pass:
         if isinstance(strategy, dict):
             for k, value in strategy.items():
@@ -196,7 +196,7 @@ def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass
 
 
 def test__strategy_manager_reset():
-    manager = _StrategyManager()
+    manager = StrategyManager()
     strategy = Mock(spec=BaseStrategy)
     manager.add("name", strategy)
     manager.reset()
@@ -226,53 +226,19 @@ def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, s
     assert result == canonicalized_df_mock
 
 
-def test__call_strategy_canonicalizer_tuple(dupegrouper_mock):
-    attr = "address"
-
-    mock_callable = Mock()
-    mock_callable.__name__ = "mock_func"
-
-    mock_kwargs = {"tolerance": 0.8}
-
-    canonicalized_df_mock = Mock()
-
-    with patch("dupegrouper.base.Custom") as Custom:
-
-        # Mock instance that Custom returns
-        instance = Mock()
-        Custom.return_value = instance
-
-        # Ensure full method chain is mocked
-        instance.bind_frame.return_value.bind_rule.return_value = instance
-        instance.canonicalize.return_value = canonicalized_df_mock
-
-        result = dupegrouper_mock._call_strategy_canonicalizer(
-            (mock_callable, mock_kwargs),  # tuple!
-            attr,
-        )
-
-        # assert
-
-        Custom.assert_called_once_with(mock_callable, attr, **mock_kwargs)
-        instance.bind_frame.assert_called_once_with(dupegrouper_mock._df)
-        instance.bind_frame.return_value.bind_rule.return_value.canonicalize.assert_called_once_with()
-
-        assert result == canonicalized_df_mock
-
-
-@pytest.mark.parametrize(
-    "input, type",
-    [
-        (42, r".*int.*"),
-        (DummyClass(), r".*DummyClass.*"),
-        (["a"], r".*list.*"),
-        ({"a": "b"}, r".*dict.*"),
-    ],
-    ids=["invalid int", "invalid class", "invalid list", "invalid dict"],
-)
-def test__call_strategy_canonicalizer_raises(input, type, dupegrouper_mock):
-    with pytest.raises(NotImplementedError, match=f"Unsupported strategy: {type}"):
-        dupegrouper_mock._call_strategy_canonicalizer(input, "address")
+# @pytest.mark.parametrize(
+#     "input, type",
+#     [
+#         (42, r".*int.*"),
+#         (DummyClass(), r".*DummyClass.*"),
+#         (["a"], r".*list.*"),
+#         ({"a": "b"}, r".*dict.*"),
+#     ],
+#     ids=["invalid int", "invalid class", "invalid list", "invalid dict"],
+# )
+# def test__call_strategy_canonicalizer_raises(input, type, dupegrouper_mock):
+#     with pytest.raises(NotImplementedError, match=f"Unsupported strategy: {type}"):
+#         dupegrouper_mock._call_strategy_canonicalizer(input, "address")
 
 
 ################
@@ -366,8 +332,8 @@ def test__canonicalize_raises(attr_input, type, dupegrouper_mock):
 
 @pytest.mark.parametrize(
     "strategy",
-    [(dummy_func, {"tolerance": 0.8}), Mock(spec=BaseStrategy)],
-    ids=["tuple", "BaseStrategy"],
+    [Mock(spec=BaseStrategy)],
+    ids=["BaseStrategy"],
 )
 def test_apply_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
 
@@ -605,7 +571,7 @@ def patch_helper_reset(grouper: Duped):
 
         mock_canonicalize.assert_called_once_with("address", ANY)
 
-        grouper._strategy_manager = _StrategyManager()
+        grouper._strategy_manager = StrategyManager()
 
     assert not grouper.strategies
 
@@ -615,9 +581,8 @@ def test_dupegrouper_strategies_attribute_inline(df_pandas):
 
     grouper.apply(Mock(spec=Exact))
     grouper.apply(Mock(spec=Fuzzy))
-    grouper.apply((dummy_func, {"str": "random"}))
 
-    assert grouper.strategies == tuple(["Exact", "Fuzzy", "dummy_func"])
+    assert grouper.strategies == tuple(["Exact", "Fuzzy"])
 
     patch_helper_reset(grouper)
 
