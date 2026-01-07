@@ -1,9 +1,18 @@
 from collections.abc import Iterable, Iterator
 from typing_extensions import override
-from typing import Callable
+from typing import Callable, TypeAlias
 
 from dupegrouper.strats import ThresholdDedupers, ColumnArrayMixin
 from dupegrouper.types import ArrayLike, SimilarPairIndices
+
+
+PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
+
+
+# REGISTRY:
+
+
+plugin_registry: dict[str, PairGenerator] = {}
 
 
 # CUSTOM:
@@ -16,7 +25,7 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
 
     def __init__(
         self,
-        pair_fn: Callable[[ArrayLike], Iterable[SimilarPairIndices]],
+        pair_fn: PairGenerator,
         /,
         **kwargs,
     ):
@@ -38,5 +47,12 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
 
 def register(f: Callable):
     def wrapper(**kwargs):
+        plugin_registry[f.__name__] = f
         return Custom(f, **kwargs)
     return wrapper
+
+def get_plugins():
+    result = {}
+    for name, fn in plugin_registry.items():
+        result[name] = (lambda _fn=fn, **kwargs: Custom(_fn, **kwargs))
+    return result
