@@ -20,7 +20,7 @@ from dupegrouper.base import (
 )
 
 import dupegrouper.constants
-from dupegrouper.strategies import Exact, Fuzzy
+from dupegrouper.strats import Exact, Fuzzy
 from dupegrouper.dataframe import (
     WrappedDataFrame,
     WrappedPandasDataFrame,

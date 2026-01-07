@@ -6,7 +6,7 @@ import polars as pl
 from pyspark.sql import DataFrame as SparkDataFrame, Row
 
 if typing.TYPE_CHECKING:
-    from dupegrouper.strategies import BaseStrategy  # pragma: no cover
+    from dupegrouper.strats import BaseStrategy  # pragma: no cover
 
 
 # TYPES:
