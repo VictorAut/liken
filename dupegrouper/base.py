@@ -25,7 +25,7 @@ from dupegrouper.dataframe import (
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
-from dupegrouper.strategies import BaseStrategy, Custom
+from dupegrouper.strats import BaseStrategy, Custom
 from dupegrouper.types import StrategyMapCollection, DataFrameLike
 
 

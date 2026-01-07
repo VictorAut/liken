@@ -8,7 +8,7 @@ import pytest
 
 from dupegrouper.base import wrap
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strategies import BaseStrategy, ThresholdDedupers
+from dupegrouper.strats import BaseStrategy, ThresholdDedupers
 from dupegrouper.dataframe import WrappedDataFrame
 
 @pytest.fixture

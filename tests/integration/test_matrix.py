@@ -7,7 +7,7 @@ import pytest
 
 from dupegrouper import Duped
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strategies import (
+from dupegrouper.strats import (
     Cosine,
     Exact,
     Fuzzy,

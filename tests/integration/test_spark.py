@@ -4,7 +4,7 @@ import pytest
 
 from dupegrouper.base import Duped
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strategies import Exact
+from dupegrouper.strats import Exact
 
 
 @pytest.mark.parametrize(

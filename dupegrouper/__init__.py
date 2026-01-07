@@ -4,11 +4,11 @@
 
 from dupegrouper.base import Duped
 from dupegrouper import dataframe
-from dupegrouper import strategies
+from dupegrouper import strats
 
 
 __all__ = [
     "Duped",
     "dataframe",
-    "strategies",
+    "strats",
 ]
