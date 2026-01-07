@@ -25,6 +25,9 @@ from dupegrouper.dataframe import (
 from dupegrouper.strats import BaseStrategy
 from dupegrouper.types import DataFrameLike, StrategyMapCollection, Rule
 
+from dupegrouper.custom import plugin_registry
+
+print(plugin_registry)
 
 
 # LOGGER:
