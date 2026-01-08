@@ -3,7 +3,7 @@ from functools import wraps
 from typing_extensions import override
 from typing import Callable, TypeAlias
 
-from dupegrouper.strats import ThresholdDedupers, ColumnArrayMixin
+from dupegrouper.strats_library import ThresholdDedupers, ColumnArrayMixin
 from dupegrouper.types import ArrayLike, SimilarPairIndices
 
 

@@ -15,17 +15,21 @@ from typing import cast
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
 
-from dupegrouper.constants import CANONICAL_ID, DEFAULT_STRAT_KEY, PYSPARK_TYPES
+from dupegrouper.constants import (
+    CANONICAL_ID,
+    DEFAULT_STRAT_KEY,
+    PYSPARK_TYPES,
+)
 from dupegrouper.dataframe import (
     wrap,
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
-from dupegrouper.strats import BaseStrategy
+from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.types import (
     Columns,
     DataFrameLike,
-    StrategyMapCollection,
+    StratsConfig,
     Rule,
 )
 
@@ -101,7 +105,7 @@ class Duped:
     def _canonicalize(
         self,
         columns: Columns | None,
-        strategies: StrategyMapCollection,
+        strategies: StratsConfig,
     ):
         """Dispatch the appropriate deduplication logic.
 
@@ -138,7 +142,7 @@ class Duped:
             for strategy in strategies:
                 self._df = self._call_strategy_canonicalizer(strategy, columns)
 
-    def _canonicalize_spark(self, attr: str | None, strategies: StrategyMapCollection):
+    def _canonicalize_spark(self, attr: str | None, strategies: StratsConfig):
         """Spark specific deduplication helper
 
         Maps dataframe partitions to be processed via the RDD API yielding low-
@@ -175,8 +179,7 @@ class Duped:
 
     # PUBLIC API:
 
-
-    def apply(self, strategy: BaseStrategy | StrategyMapCollection) -> None:
+    def apply(self, strategy: BaseStrategy | StratsConfig) -> None:
         self._strategy_manager.apply(strategy)
 
     def canonicalize(self, columns: Columns | None = None) -> None:
@@ -209,7 +212,6 @@ class Duped:
             The stored strategies, formatted
         """
         return self._strategy_manager.pretty_get()
-        
 
     @property
     def df(self) -> DataFrameLike:
@@ -232,16 +234,14 @@ class StrategyManager:
     """
 
     def __init__(self) -> None:
-        self._strategies: StrategyMapCollection = defaultdict(list)
+        self._strategies: StratsConfig = defaultdict(list)
 
     def apply(self, strategy: BaseStrategy | dict) -> None:
         if isinstance(strategy, BaseStrategy):
             self.add(DEFAULT_STRAT_KEY, strategy)
             return
         if isinstance(strategy, dict):
-            for columns, strat_list in strategy.items():
-                for strat in strat_list:
-                    self.add(columns, strat)
+            self._strategies = StratsConfig(strategy)
             return
         raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
@@ -264,24 +264,24 @@ class StrategyManager:
             raise StrategyTypeError(strategy)
         self._strategies[columns].append(strategy)
 
-    def get(self) -> StrategyMapCollection:
+    def get(self) -> StratsConfig:
         return self._strategies
-    
-    def pretty_get(self):
+
+    def pretty_get(self)-> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
         """pretty get"""
         strategies = self.get()
         if not strategies:
             return None
 
-        def parse(values):
+        def _parse(values):
             return tuple(type(vx).__name__ for vx in values)
 
         if set(strategies) == {DEFAULT_STRAT_KEY}:
-            return tuple(parse(strategies[DEFAULT_STRAT_KEY]))
-        return {key: parse(values) for key, values in strategies.items()}
+            return tuple(_parse(strategies[DEFAULT_STRAT_KEY]))
+        return {key: _parse(values) for key, values in strategies.items()}
 
     def reset(self):
-        """Reset strategy collection to empty default dictionary"""
+        """Reset strategy collection to empty defaultdict"""
         self._strategies.clear()
 
 
@@ -298,7 +298,7 @@ class StrategyTypeError(TypeError):
 
 def _process_partition(
     partition_iter: Iterator[Row],
-    strategies: StrategyMapCollection,
+    strategies: StratsConfig,
     id: str,
     attr: str | None,
     canonicalization_rule: Rule = "first",
