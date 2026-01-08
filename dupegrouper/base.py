@@ -8,26 +8,26 @@ from __future__ import annotations
 from collections.abc import Iterator
 from collections import defaultdict
 from functools import singledispatchmethod
-import inspect
 import logging
 from types import NoneType
-from typing import cast, Literal
+from typing import cast
 
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
 
-from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
+from dupegrouper.constants import CANONICAL_ID, DEFAULT_STRAT_KEY, PYSPARK_TYPES
 from dupegrouper.dataframe import (
     wrap,
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
 from dupegrouper.strats import BaseStrategy
-from dupegrouper.types import DataFrameLike, StrategyMapCollection, Rule
-
-from dupegrouper.custom import plugin_registry
-
-print(plugin_registry)
+from dupegrouper.types import (
+    Columns,
+    DataFrameLike,
+    StrategyMapCollection,
+    Rule,
+)
 
 
 # LOGGER:
@@ -69,7 +69,7 @@ class Duped:
     def _call_strategy_canonicalizer(
         self,
         strategy: BaseStrategy,
-        attr: str,
+        columns: Columns,
     ):
         """Dispatch the appropriate strategy deduplication method.
 
@@ -94,19 +94,19 @@ class Duped:
             #
             .bind_frame(self._df)
             .bind_rule(self._canonicalization_rule)
-            .canonicalize(attr)
+            .canonicalize(columns)
         )
 
     @singledispatchmethod
     def _canonicalize(
         self,
-        attr: str | None,
+        columns: Columns | None,
         strategies: StrategyMapCollection,
     ):
         """Dispatch the appropriate deduplication logic.
 
         If strategies have been added individually, they are stored under a
-        "default" key and retrived as such when the public `.canonicalize` method is
+        DEFAULT_STRAT_KEY key and retrived as such when the public `.canonicalize` method is
         called _with_ the attribute label. In the case of having added
         strategies in one go with a direct dict (mapping) object, the attribute
         label is first extracted from strategy collection dictionary keys.
@@ -124,19 +124,19 @@ class Duped:
             NotImplementedError.
         """
         del strategies  # Unused
-        raise NotImplementedError(f"Unsupported attribute type: {type(attr)}")
+        raise NotImplementedError(f"Unsupported attribute type: {type(columns)}")
 
     @_canonicalize.register(str | tuple)
-    def _(self, attr, strategies):
-        for strategy in strategies["default"]:
-            self._df = self._call_strategy_canonicalizer(strategy, attr)
+    def _(self, columns, strategies):
+        for strategy in strategies[DEFAULT_STRAT_KEY]:
+            self._df = self._call_strategy_canonicalizer(strategy, columns)
 
     @_canonicalize.register(NoneType)
-    def _(self, attr, strategies):
-        del attr  # Unused
-        for attr, strategies in strategies.items():
+    def _(self, columns, strategies):
+        del columns  # Unused
+        for columns, strategies in strategies.items():
             for strategy in strategies:
-                self._df = self._call_strategy_canonicalizer(strategy, attr)
+                self._df = self._call_strategy_canonicalizer(strategy, columns)
 
     def _canonicalize_spark(self, attr: str | None, strategies: StrategyMapCollection):
         """Spark specific deduplication helper
@@ -181,7 +181,7 @@ class Duped:
         Add a strategy to the strategy manager.
 
         Instances of `BaseStrategy` are added to the
-        "default" key. Mapping objects update the manager directly
+        DEFAULT_STRAT_KEY key. Mapping objects update the manager directly
 
         Args:
             strategy: A deduplication strategy or strategy collection
@@ -194,7 +194,7 @@ class Duped:
 
     @apply.register(BaseStrategy)
     def _(self, strategy):
-        self._strategy_manager.add("default", strategy)
+        self._strategy_manager.add(DEFAULT_STRAT_KEY, strategy)
 
     @apply.register(dict)
     def _(self, strategy: StrategyMapCollection):
@@ -202,20 +202,20 @@ class Duped:
             for strat in strat_list:
                 self._strategy_manager.add(attr, strat)
 
-    def canonicalize(self, attr: str | None = None):
+    def canonicalize(self, columns: Columns | None = None):
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
-            attr: The attribute to deduplicate. If strategies have been added
+            columns: The attribute to deduplicate. If strategies have been added
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
         strategies = self._strategy_manager.get()
 
         if isinstance(self._df, WrappedSparkDataFrame):
-            self._canonicalize_spark(attr, strategies)
+            self._canonicalize_spark(columns, strategies)
         else:
-            self._canonicalize(attr, strategies)
+            self._canonicalize(columns, strategies)
 
         self._strategy_manager.reset()
 
@@ -231,22 +231,8 @@ class Duped:
         Returns:
             The stored strategies, formatted
         """
-        strategies = self._strategy_manager.get()
-        if not strategies:
-            return None
-
-        def parse_strategies(dict_values):
-            return tuple(
-                [
-                    (vx[0].__name__ if isinstance(vx, tuple) else vx.__class__.__name__)
-                    #
-                    for vx in dict_values
-                ]
-            )
-
-        if "default" in strategies:
-            return tuple([parse_strategies(v) for _, v in strategies.items()])[0]
-        return {k: parse_strategies(v) for k, v in strategies.items()}
+        return self._strategy_manager.pretty_get()
+        
 
     @property
     def df(self) -> DataFrameLike:
@@ -273,74 +259,50 @@ class StrategyManager:
 
     def add(
         self,
-        attr_key: str,
-        strategy: BaseStrategy | tuple,
-    ):
-        """Adds a strategy to the collection under a specific attribute key.
-
-        Validates the strategy before adding it to the collection. If the
-        strategy is not valid, a `StrategyTypeError` is raised.
+        columns: Columns,
+        strategy: BaseStrategy,
+    ) -> None:
+        """Adds a strategy to the collection under a specific columns key.
 
         Args:
-            attr_key: The key representing the attribute the strategy applies
+            columns: The key representing the attribute the strategy applies
                 to.
-            strategy: The deduplication strategy or a tuple containing a
-                callable and its associated keyword arguments, as a mapping
+            strategy: The deduplication strategy as a mapping
 
         Raises:
-            StrategyTypeError: If the strategy is not valid according to
-            validation rules.
+            StrategyTypeError for an invalid strat
         """
-        if self.validate(strategy):
-            self._strategies[attr_key].append(strategy)  # type: ignore[attr-defined]
-            return
-        raise StrategyTypeError(strategy)
+        if not isinstance(strategy, BaseStrategy):
+            raise StrategyTypeError(strategy)
+        self._strategies[columns].append(strategy)
 
     def get(self) -> StrategyMapCollection:
         return self._strategies
+    
+    def pretty_get(self):
+        """pretty get"""
+        strategies = self.get()
+        if not strategies:
+            return None
 
-    def validate(self, strategy) -> bool:
-        """
-        Validates a strategy
+        def parse(values):
+            return tuple(type(vx).__name__ for vx in values)
 
-        The strategy to validate. Can be a `BaseStrategy`, a tuple, or
-        a dict of the aforementioned strategies types i.e.
-        dict[str, BaseStrategy | tuple]. As such the function checks
-        such dict instances via recursion.
-
-        Args:
-            strategy: The strategy to validate. `BaseStrategy`, tuple,
-            or a dict of such
-
-        Returns:
-            bool: strategy is | isn't valid
-
-        A valid strategy is one of the following:
-            - A `BaseStrategy` instance.
-            - A dictionary where each item is a valid strategy.
-        """
-        if isinstance(strategy, BaseStrategy):
-            return True
-        return False
+        if set(strategies) == {DEFAULT_STRAT_KEY}:
+            return tuple(parse(strategies[DEFAULT_STRAT_KEY]))
+        return {key: parse(values) for key, values in strategies.items()}
 
     def reset(self):
         """Reset strategy collection to empty default dictionary"""
-        self.__init__()
+        self._strategies.clear()
 
 
 # EXCEPTION CLASS
 
 
-class StrategyTypeError(Exception):
-    """Strategy type not valid errors"""
-
-    def __init__(self, strategy: BaseStrategy | tuple):
-        msg = "Input is not valid."  # i.e. default
-        if inspect.isclass(strategy):
-            msg += f"class must be an instance of `BaseStrategy` not: {type(strategy())}"
-        if isinstance(strategy, dict):
-            msg += "dict items must be a list of `BaseStrategy` or tuples"
-        super().__init__(msg)
+class StrategyTypeError(TypeError):
+    def __init__(self, strategy: object):
+        super().__init__(f"Expected `BaseStrategy` instance, got {type(strategy).__name__}")
 
 
 # PARTITION PROCESSING:

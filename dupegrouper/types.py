@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 StrategyMapCollection: TypeAlias = defaultdict[
     str,
-    list["BaseStrategy | tuple[Callable, dict[str, str]]"],
+    list["BaseStrategy"],
 ]
 
 DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame | SparkDataFrame | list[Row]"
