@@ -20,6 +20,7 @@ from dupegrouper.base import (
 )
 
 import dupegrouper.constants
+from dupegrouper.constants import DEFAULT_STRAT_KEY
 from dupegrouper.strats import Exact, Fuzzy
 from dupegrouper.dataframe import (
     WrappedDataFrame,
@@ -130,12 +131,10 @@ DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy
     [
         # correct base inputs
         (Mock(spec=BaseStrategy), True, None),
-        ((lambda x: x, {"key": "value"}), True, None),
         (
             {
                 "address": [
                     Mock(spec=BaseStrategy),
-                    (lambda x: x, {"key": "value"}),
                 ],
                 "email": [
                     Mock(spec=BaseStrategy),
@@ -166,7 +165,6 @@ DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy
     ],
     ids=[
         "valid canonicalize class",
-        "valid callable",
         "valid dict",
         "invalid class",
         "invalid callable not in tuple",
@@ -187,11 +185,11 @@ def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass
                     manager.add(k, v)
                     assert (k in manager.get()) is expected_to_pass
         else:
-            manager.add("default", strategy)
-            assert ("default" in manager.get()) is expected_to_pass
+            manager.add(DEFAULT_STRAT_KEY, strategy)
+            assert (DEFAULT_STRAT_KEY in manager.get()) is expected_to_pass
     else:
         with pytest.raises(StrategyTypeError) as e:
-            manager.add("default", strategy)
+            manager.add(DEFAULT_STRAT_KEY, strategy)
             assert base_msg in str(e)
 
 
@@ -250,7 +248,7 @@ def test__canonicalize_str_attr(dupegrouper_mock, strategy_mock):
     attr = "address"
 
     strategy_collection = {
-        "default": [
+        DEFAULT_STRAT_KEY: [
             strategy_mock,
             strategy_mock,
             strategy_mock,
@@ -345,7 +343,7 @@ def test_apply_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
 
             assert add.call_count == 1
 
-            add.assert_any_call("default", strategy)
+            add.assert_any_call(DEFAULT_STRAT_KEY, strategy)
 
 
 def test_apply_dict(dupegrouper_mock, strategy_mock):
@@ -579,10 +577,10 @@ def patch_helper_reset(grouper: Duped):
 def test_dupegrouper_strategies_attribute_inline(df_pandas):
     grouper = Duped(df_pandas)
 
-    grouper.apply(Mock(spec=Exact))
-    grouper.apply(Mock(spec=Fuzzy))
+    grouper.apply(Exact())
+    grouper.apply(Fuzzy())
 
-    assert grouper.strategies == tuple(["Exact", "Fuzzy"])
+    assert grouper.strategies == ("Exact", "Fuzzy")
 
     patch_helper_reset(grouper)
 
@@ -593,16 +591,15 @@ def test_dupegrouper_strategies_attribute_dict(df_pandas):
     grouper.apply(
         {
             "address": [
-                Mock(spec=Exact),
-                (dummy_func, {"key": "value"}),
+                Exact(),
             ],
             "email": [
-                Mock(spec=Exact),
-                Mock(spec=Fuzzy),
+                Exact(),
+                Fuzzy()
             ],
         }
     )
 
-    assert grouper.strategies == dict({"address": ("Exact", "dummy_func"), "email": ("Exact", "Fuzzy")})
+    assert grouper.strategies == dict({"address": ("Exact",), "email": ("Exact", "Fuzzy")})
 
     patch_helper_reset(grouper)
