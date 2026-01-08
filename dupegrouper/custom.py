@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
 from functools import wraps
 from typing_extensions import override
-from typing import Callable, TypeAlias
+from typing import Callable, TypeAlias, final
 
 from dupegrouper.strats_library import ThresholdDedupers, ColumnArrayMixin
 from dupegrouper.types import ArrayLike, SimilarPairIndices
@@ -13,6 +13,7 @@ PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
 # CUSTOM:
 
 
+@final
 class Custom(ThresholdDedupers, ColumnArrayMixin):
     """
     @private

@@ -52,10 +52,7 @@ class BaseStrategy(ABC):
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def reinstantiate(self) -> Self:
-        return self.__class__(*self._init_args, **self._init_kwargs)
-
-    def bind_frame(self, wrapped_df: WrappedDataFrame) -> Self:
+    def set_frame(self, wrapped_df: WrappedDataFrame) -> Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -68,7 +65,7 @@ class BaseStrategy(ABC):
         self.wrapped_df: WrappedDataFrame = wrapped_df
         return self
 
-    def bind_rule(self, rule: Rule = "first") -> Self:
+    def set_rule(self, rule: Rule = "first") -> Self:
         if rule not in ("first", "last"):
             raise ValueError("Rule must be one of 'first' or 'last'")
         self.rule = rule

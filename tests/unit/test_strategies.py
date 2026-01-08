@@ -82,31 +82,31 @@ def test_reinstantiate():
     assert instance._init_kwargs == instance_reinstantiated._init_kwargs == dummy_kwargs
 
 
-def test_bind_frame(dataframe):
+def test_set_frame(dataframe):
 
     df, _, _ = dataframe
 
     strategy = BaseStrategy()
-    strategy.bind_frame(wrap(df))
+    strategy.set_frame(wrap(df))
 
     assert isinstance(strategy.wrapped_df, WrappedDataFrame)
 
-def test_bind_rule():
+def test_set_rule():
 
     strategy = BaseStrategy()
-    strategy.bind_rule("first")
+    strategy.set_rule("first")
 
     assert strategy.rule == "first"
 
     with pytest.raises(ValueError):
-        strategy.bind_rule("random")
+        strategy.set_rule("random")
     
 
 
 # def test_custom_canonicalize(df_pandas):
 
 #     canonicalizer = Custom(my_func, "address", match_str="navarra")
-#     canonicalizer.bind_frame(wrap(df_pandas)).bind_rule("first")
+#     canonicalizer.set_frame(wrap(df_pandas)).set_rule("first")
 
 #     updatedwrapped_df = canonicalizer.canonicalize()
 #     updated_df = updatedwrapped_df.unwrap()

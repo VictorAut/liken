@@ -13,7 +13,7 @@ import pytest
 from dupegrouper.base import (
     Duped,
     BaseStrategy,
-    StrategyTypeError,
+    StrategyConfigTypeError,
     StrategyManager,
     wrap,
     _process_partition,
@@ -116,7 +116,7 @@ def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe)
 
 
 ##############################################
-#  TEST StrategyManager + StrategyTypeError #
+#  TEST StrategyManager + StrategyConfigTypeError #
 ##############################################
 
 
@@ -176,7 +176,7 @@ DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy
     ],
 )
 def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass, base_msg):
-    """validates that the input 'strtagey' is legit, against `StrategyTypeError`"""
+    """validates that the input 'strtagey' is legit, against `StrategyConfigTypeError`"""
     manager = StrategyManager()
     if expected_to_pass:
         if isinstance(strategy, dict):
@@ -188,7 +188,7 @@ def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass
             manager.add(DEFAULT_STRAT_KEY, strategy)
             assert (DEFAULT_STRAT_KEY in manager.get()) is expected_to_pass
     else:
-        with pytest.raises(StrategyTypeError) as e:
+        with pytest.raises(StrategyConfigTypeError) as e:
             manager.add(DEFAULT_STRAT_KEY, strategy)
             assert base_msg in str(e)
 
@@ -210,7 +210,7 @@ def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, s
     attr = "address"
 
     canonicalized_df_mock = Mock()
-    strategy_mock.bind_frame.return_value.bind_rule.return_value.canonicalize.return_value = canonicalized_df_mock
+    strategy_mock.set_frame.return_value.set_rule.return_value.canonicalize.return_value = canonicalized_df_mock
 
     # call
 
@@ -218,8 +218,8 @@ def test__call_strategy_canonicalizer_deduplication_strategy(dupegrouper_mock, s
 
     # assert
 
-    strategy_mock.bind_frame.assert_called_once_with(dupegrouper_mock._df)
-    strategy_mock.bind_frame.return_value.bind_rule.return_value.canonicalize.assert_called_once_with(attr)
+    strategy_mock.set_frame.assert_called_once_with(dupegrouper_mock._df)
+    strategy_mock.set_frame.return_value.set_rule.return_value.canonicalize.assert_called_once_with(attr)
 
     assert result == canonicalized_df_mock
 
