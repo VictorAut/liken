@@ -41,7 +41,7 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
 
 
 def register(f: Callable):
-    # @wraps(f)
+    @wraps(f)
     def wrapper(**kwargs):
         return Custom(f, **kwargs)
     return wrapper

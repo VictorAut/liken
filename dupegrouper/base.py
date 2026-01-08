@@ -175,34 +175,11 @@ class Duped:
 
     # PUBLIC API:
 
-    @singledispatchmethod
-    def apply(self, strategy: BaseStrategy | StrategyMapCollection):
-        """
-        Add a strategy to the strategy manager.
 
-        Instances of `BaseStrategy` are added to the
-        DEFAULT_STRAT_KEY key. Mapping objects update the manager directly
+    def apply(self, strategy: BaseStrategy | StrategyMapCollection) -> None:
+        self._strategy_manager.apply(strategy)
 
-        Args:
-            strategy: A deduplication strategy or strategy collection
-                (mapping) to add.
-
-        Raises:
-            NotImplementedError
-        """
-        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
-
-    @apply.register(BaseStrategy)
-    def _(self, strategy):
-        self._strategy_manager.add(DEFAULT_STRAT_KEY, strategy)
-
-    @apply.register(dict)
-    def _(self, strategy: StrategyMapCollection):
-        for attr, strat_list in strategy.items():
-            for strat in strat_list:
-                self._strategy_manager.add(attr, strat)
-
-    def canonicalize(self, columns: Columns | None = None):
+    def canonicalize(self, columns: Columns | None = None) -> None:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
@@ -256,6 +233,17 @@ class StrategyManager:
 
     def __init__(self) -> None:
         self._strategies: StrategyMapCollection = defaultdict(list)
+
+    def apply(self, strategy: BaseStrategy | dict) -> None:
+        if isinstance(strategy, BaseStrategy):
+            self.add(DEFAULT_STRAT_KEY, strategy)
+            return
+        if isinstance(strategy, dict):
+            for columns, strat_list in strategy.items():
+                for strat in strat_list:
+                    self.add(columns, strat)
+            return
+        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
 
     def add(
         self,

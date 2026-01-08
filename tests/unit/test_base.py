@@ -328,22 +328,11 @@ def test__canonicalize_raises(attr_input, type, dupegrouper_mock):
 #####################
 
 
-@pytest.mark.parametrize(
-    "strategy",
-    [Mock(spec=BaseStrategy)],
-    ids=["BaseStrategy"],
-)
-def test_apply_deduplication_strategy_or_tuple(strategy, dupegrouper_mock):
-
+def test_apply_deduplication_strategy_or_tuple(strategy_mock, dupegrouper_mock):
     with patch.object(dupegrouper_mock, "_strategy_manager") as strategy_manager:
-
-        with patch.object(strategy_manager, "add") as add:
-
-            dupegrouper_mock.apply(strategy)
-
-            assert add.call_count == 1
-
-            add.assert_any_call(DEFAULT_STRAT_KEY, strategy)
+        with patch.object(strategy_manager, "apply") as apply:           
+            dupegrouper_mock.apply(strategy_mock)
+            assert apply.call_count == 1
 
 
 def test_apply_dict(dupegrouper_mock, strategy_mock):
@@ -354,17 +343,9 @@ def test_apply_dict(dupegrouper_mock, strategy_mock):
     }
 
     with patch.object(dupegrouper_mock, "_strategy_manager") as strategy_manager:
-
-        with patch.object(strategy_manager, "add") as add:
-
+        with patch.object(strategy_manager, "apply") as apply:           
             dupegrouper_mock.apply(strategy)
-
-            assert add.call_count == 4
-
-            add.assert_any_call("attr1", strategy_mock)
-            add.assert_any_call("attr1", strategy_mock)
-            add.assert_any_call("attr2", strategy_mock)
-            add.assert_any_call("attr2", strategy_mock)
+            assert apply.call_count == 1
 
 
 @pytest.mark.parametrize(
