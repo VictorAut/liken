@@ -1,6 +1,6 @@
 from __future__ import annotations
-from collections import defaultdict
-from typing import Any, Callable, Literal, TypeAlias, TYPE_CHECKING
+from collections import defaultdict, UserDict
+from typing import Any, Literal, TypeAlias, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,25 @@ StrategyMapCollection: TypeAlias = defaultdict[
     str,
     list["BaseStrategy"],
 ]
+
+class StrNumberDict(UserDict):
+    def __setitem__(self, key, value):
+        if not isinstance(key, (str, tuple)):
+            raise TypeError(
+                f'Invalid type for dictionary key: '
+                f'expected "str" of "tuple", got "{type(key).__name__}"'
+            )
+        if not isinstance(key, list | tuple): # TODO: iterable?
+            raise TypeError(
+                f'Invalid type for dictionary value: '
+                f'expected "Iterable", got "{type(value).__name__}"'
+            )
+        if not all(isinstance(instance, BaseStrategy) for instance in value):
+            raise TypeError(
+                f'Invalid type for dictionary value: '
+                f'expected "Number", got "{type(value).__name__}"'
+            )
+        super().__setitem__(key, value)
 
 DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame | SparkDataFrame | list[Row]"
 
