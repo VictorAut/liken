@@ -6,7 +6,6 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 from collections.abc import Iterator
-from collections import defaultdict
 from functools import singledispatchmethod
 import logging
 from types import NoneType
@@ -25,11 +24,12 @@ from dupegrouper.dataframe import (
     WrappedDataFrame,
     WrappedSparkDataFrame,
 )
+from dupegrouper.executors import LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
+from dupegrouper.strats_manager import StrategyManager, StratsConfig
 from dupegrouper.types import (
     Columns,
     DataFrameLike,
-    StratsConfig,
     Rule,
 )
 
@@ -65,122 +65,24 @@ class Duped:
         canonicalization_rule: Rule = "first",
     ):
         self._df: WrappedDataFrame = wrap(df, id)
-        self._strategy_manager = StrategyManager()
+        self._sm = StrategyManager()
         self._spark_session = spark_session
         self._id = id
         self._canonicalization_rule = canonicalization_rule
-
-    def _call_strategy_canonicalizer(
-        self,
-        strategy: BaseStrategy,
-        columns: Columns,
-    ):
-        """Dispatch the appropriate strategy deduplication method.
-
-        If the strategy is an instance of a dupegrouper `BaseStrategy`
-        the strategy will have been added as such, with it's parameters. In the
-        case of a custom implementation of a Callable, passed as a tuple, we
-        pass this *directly* to the `Custom` class and initialise that.
-
-        Args:
-            strategy: A `dupegrouper` deduplication strategy or a tuple
-                containing a (customer) callable and its parameters.
-            attr: The attribute used for deduplication.
-
-        Returns:
-            A deduplicated dataframe
-
-        Raises:
-            NotImplementedError.
-        """
-        return (
-            strategy
-            #
-            .bind_frame(self._df)
-            .bind_rule(self._canonicalization_rule)
-            .canonicalize(columns)
-        )
-
-    @singledispatchmethod
-    def _canonicalize(
-        self,
-        columns: Columns | None,
-        strategies: StratsConfig,
-    ):
-        """Dispatch the appropriate deduplication logic.
-
-        If strategies have been added individually, they are stored under a
-        DEFAULT_STRAT_KEY key and retrived as such when the public `.canonicalize` method is
-        called _with_ the attribute label. In the case of having added
-        strategies in one go with a direct dict (mapping) object, the attribute
-        label is first extracted from strategy collection dictionary keys.
-        Upon completing deduplication the strategy collection is wiped for
-        (any) subsequent deduplication.
-
-        Args:
-            attr: The attribute used for deduplication; or None in the case
-                of strategies being a mapping object
-
-        Returns:
-            None; internal `_df` attribute is updated.
-
-        Raises:
-            NotImplementedError.
-        """
-        del strategies  # Unused
-        raise NotImplementedError(f"Unsupported attribute type: {type(columns)}")
-
-    @_canonicalize.register(str | tuple)
-    def _(self, columns, strategies):
-        for strategy in strategies[DEFAULT_STRAT_KEY]:
-            self._df = self._call_strategy_canonicalizer(strategy, columns)
-
-    @_canonicalize.register(NoneType)
-    def _(self, columns, strategies):
-        del columns  # Unused
-        for columns, strategies in strategies.items():
-            for strategy in strategies:
-                self._df = self._call_strategy_canonicalizer(strategy, columns)
-
-    def _canonicalize_spark(self, attr: str | None, strategies: StratsConfig):
-        """Spark specific deduplication helper
-
-        Maps dataframe partitions to be processed via the RDD API yielding low-
-        level list[Rows], which are then post-processed back to a dataframe.
-
-        Args:
-            attr: The attribute to deduplicate.
-            strategies: the collection of strategies
-        Retuns:
-            Instance's _df attribute is updated
-        """
-        id = cast(str, self._id)
-        rule = cast(str, self._canonicalization_rule)
-        id_type = cast(DataType, PYSPARK_TYPES.get(dict(self._df.dtypes).get(id)))  # type: ignore
-
-        canonicalized_rdd = self._df.rdd.mapPartitions(
-            lambda partition_iter: _process_partition(
-                partition_iter,
-                strategies,
-                id,
-                attr,
-                rule,
+        # TODO: validate that if ._df is spark then need a spark session.
+        if isinstance(self._df, WrappedSparkDataFrame):
+            self._executor = SparkExecutor(
+                canonicalization_rule=canonicalization_rule,
+                spark_session=spark_session,
+                id=id,
             )
-        )
-
-        if CANONICAL_ID in self._df.columns:
-            schema = StructType(self._df.schema.fields)
         else:
-            schema = StructType(self._df.schema.fields + [StructField(CANONICAL_ID, id_type, True)])
+            self._executor = LocalExecutor(
+                canonicalization_rule=canonicalization_rule,
+            )
 
-        self._df = WrappedSparkDataFrame(
-            cast(SparkSession, self._spark_session).createDataFrame(canonicalized_rdd, schema=schema), id
-        )
-
-    # PUBLIC API:
-
-    def apply(self, strategy: BaseStrategy | StratsConfig) -> None:
-        self._strategy_manager.apply(strategy)
+    def apply(self, strategy: BaseStrategy | dict) -> None:
+        self._sm.apply(strategy)
 
     def canonicalize(self, columns: Columns | None = None) -> None:
         """canonicalize, and group, the data based on the provided attribute
@@ -190,14 +92,11 @@ class Duped:
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
-        strategies = self._strategy_manager.get()
+        strategies = self._sm.get()
 
-        if isinstance(self._df, WrappedSparkDataFrame):
-            self._canonicalize_spark(columns, strategies)
-        else:
-            self._canonicalize(columns, strategies)
+        self._df = self._executor.canonicalize(self._df, columns, strategies)
 
-        self._strategy_manager.reset()
+        self._sm.reset()
 
     @property
     def strategies(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
@@ -211,130 +110,8 @@ class Duped:
         Returns:
             The stored strategies, formatted
         """
-        return self._strategy_manager.pretty_get()
+        return self._sm.pretty_get()
 
     @property
     def df(self) -> DataFrameLike:
         return self._df.unwrap()
-
-
-# STRATEGY MANAGER:
-
-
-class StrategyManager:
-    """
-    Manage and validate collection(s) of deduplication strategies.
-
-    Strategies are collected into a dictionary-like collection where keys are
-    attribute names, and values are lists of strategies. Validation is provided
-    upon addition allowing only the following stratgies types:
-        - `BaseStrategy`
-    A public property exposes stratgies upon successul addition and validation.
-    A `StrategyTypeError` is thrown, otherwise.
-    """
-
-    def __init__(self) -> None:
-        self._strategies: StratsConfig = defaultdict(list)
-
-    def apply(self, strategy: BaseStrategy | dict) -> None:
-        if isinstance(strategy, BaseStrategy):
-            self.add(DEFAULT_STRAT_KEY, strategy)
-            return
-        if isinstance(strategy, dict):
-            self._strategies = StratsConfig(strategy)
-            return
-        raise NotImplementedError(f"Unsupported strategy: {type(strategy)}")
-
-    def add(
-        self,
-        columns: Columns,
-        strategy: BaseStrategy,
-    ) -> None:
-        """Adds a strategy to the collection under a specific columns key.
-
-        Args:
-            columns: The key representing the attribute the strategy applies
-                to.
-            strategy: The deduplication strategy as a mapping
-
-        Raises:
-            StrategyTypeError for an invalid strat
-        """
-        if not isinstance(strategy, BaseStrategy):
-            raise StrategyTypeError(strategy)
-        self._strategies[columns].append(strategy)
-
-    def get(self) -> StratsConfig:
-        return self._strategies
-
-    def pretty_get(self)-> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
-        """pretty get"""
-        strategies = self.get()
-        if not strategies:
-            return None
-
-        def _parse(values):
-            return tuple(type(vx).__name__ for vx in values)
-
-        if set(strategies) == {DEFAULT_STRAT_KEY}:
-            return tuple(_parse(strategies[DEFAULT_STRAT_KEY]))
-        return {key: _parse(values) for key, values in strategies.items()}
-
-    def reset(self):
-        """Reset strategy collection to empty defaultdict"""
-        self._strategies.clear()
-
-
-# EXCEPTION CLASS
-
-
-class StrategyTypeError(TypeError):
-    def __init__(self, strategy: object):
-        super().__init__(f"Expected `BaseStrategy` instance, got {type(strategy).__name__}")
-
-
-# PARTITION PROCESSING:
-
-
-def _process_partition(
-    partition_iter: Iterator[Row],
-    strategies: StratsConfig,
-    id: str,
-    attr: str | None,
-    canonicalization_rule: Rule = "first",
-) -> Iterator[Row]:
-    """process a spark dataframe partition i.e. a list[Row]
-
-    This function is functionality mapped to a worker node. For clean
-    separation from the driver, strategies are re-instantiated and the main
-    dupegrouper API is executed *per* worker node.
-
-    Args:
-        paritition_iter: a partition
-        strategies: the collection of strategies
-        id: the unique identified of the dataset a.k.a "business key"
-        attr: the attribute on which to deduplicate
-
-    Returns:
-        A list[Row], deduplicated
-    """
-    # handle empty partitions
-    rows = list(partition_iter)
-    if not rows:
-        return iter([])
-
-    # re-instantiate strategies based on driver's
-    reinstantiated_strategies = {}
-    for key, values in strategies.items():
-        reinstantiated_strategies[key] = [
-            v if isinstance(v, tuple) else v.reinstantiate()
-            #
-            for v in values
-        ]
-
-    # Core API reused per partition, per worker node
-    dg = Duped(rows, id=id, canonicalization_rule=canonicalization_rule)
-    dg.apply(strategies)
-    dg.canonicalize(attr)
-
-    return iter(dg.df)  # type: ignore[arg-type]
