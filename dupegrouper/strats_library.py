@@ -14,7 +14,7 @@ from functools import cache
 import logging
 import re
 from typing_extensions import override
-from typing import Any, final, Literal, Self
+from typing import Any, final, Self, TYPE_CHECKING
 
 from datasketch import MinHash, MinHashLSH
 from networkx.utils.union_find import UnionFind
@@ -26,9 +26,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 from sparse_dot_topn import sp_matmul_topn  # type: ignore
 
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.dataframe import WrappedDataFrame
-from dupegrouper.types import Columns, Rule, SimilarPairIndices
 
+if TYPE_CHECKING:
+    from dupegrouper.dataframe import WrappedDataFrame  # pragma: no cover
+    from dupegrouper.types import Columns, Rule, SimilarPairIndices
+    
 
 # LOGGER:
 

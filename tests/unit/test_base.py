@@ -21,7 +21,7 @@ from dupegrouper.base import (
 
 import dupegrouper.constants
 from dupegrouper.constants import DEFAULT_STRAT_KEY
-from dupegrouper.strats import Exact, Fuzzy
+from dupegrouper.strats_library import Exact, Fuzzy
 from dupegrouper.dataframe import (
     WrappedDataFrame,
     WrappedPandasDataFrame,
