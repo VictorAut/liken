@@ -42,7 +42,7 @@ class WrappedDataFrame(ABC):
         """Return a dataframe with a group id column"""
         pass  # pragma: no cover
 
-    # DATAFRAME `LIBRARY` WRAPPERS:
+    # DATAFRAME WRAPPERS:
 
     @abstractmethod
     def put_col(self, column: str, array) -> Self:
@@ -63,7 +63,7 @@ class WrappedDataFrame(ABC):
         pass  # pragma: no cover
 
 
-    # THIN TRANSPARENCY DELEGATION
+    # delegation
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._df, name)

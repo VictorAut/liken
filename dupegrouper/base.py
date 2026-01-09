@@ -6,7 +6,11 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 import logging
+from typing import overload
 
+import pandas as pd
+import polars as pl
+import pyspark.sql as spark
 from pyspark.sql import SparkSession
 from dupegrouper.dataframe import (
     wrap,
@@ -46,16 +50,40 @@ class Duped:
     starting at 1 to the length of the dataframe provided.
     """
 
+    @overload
+    def __init__(
+        self,
+        df: pd.DataFrame | pl.DataFrame,
+        /,
+        *,
+        spark_session: None = None,
+        id: str | None = None,
+        keep: Rule = "first",
+    ): ...
+
+    @overload
+    def __init__(
+        self,
+        df: spark.DataFrame,
+        /,
+        *,
+        spark_session: SparkSession,
+        id: str,
+        keep: Rule = "first",
+    ): ...
+
     def __init__(
         self,
         df: DataFrameLike,
+        /,
+        *,
         spark_session: SparkSession | None = None,
         id: str | None = None,
         keep: Rule = "first",
     ):
         self._df: WrappedDataFrame = wrap(df, id)
         self._sm = StrategyManager()
-        # TODO: validate that if ._df is spark then need a spark session.
+
         if isinstance(self._df, WrappedSparkDataFrame):
             self._executor = SparkExecutor(
                 keep=keep,
