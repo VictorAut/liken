@@ -5,20 +5,9 @@ functionality provided by dupegrouper.
 """
 
 from __future__ import annotations
-from collections.abc import Iterator
-from functools import singledispatchmethod
 import logging
-from types import NoneType
-from typing import cast
 
-from pyspark.sql import SparkSession, Row
-from pyspark.sql.types import StructField, StructType, DataType
-
-from dupegrouper.constants import (
-    CANONICAL_ID,
-    DEFAULT_STRAT_KEY,
-    PYSPARK_TYPES,
-)
+from pyspark.sql import SparkSession
 from dupegrouper.dataframe import (
     wrap,
     WrappedDataFrame,
@@ -26,7 +15,7 @@ from dupegrouper.dataframe import (
 )
 from dupegrouper.executors import LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StrategyManager, StratsConfig
+from dupegrouper.strats_manager import StrategyManager
 from dupegrouper.types import (
     Columns,
     DataFrameLike,
@@ -37,7 +26,7 @@ from dupegrouper.types import (
 # LOGGER:
 
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # BASE:
@@ -66,9 +55,6 @@ class Duped:
     ):
         self._df: WrappedDataFrame = wrap(df, id)
         self._sm = StrategyManager()
-        self._spark_session = spark_session
-        self._id = id
-        self._canonicalization_rule = canonicalization_rule
         # TODO: validate that if ._df is spark then need a spark session.
         if isinstance(self._df, WrappedSparkDataFrame):
             self._executor = SparkExecutor(
