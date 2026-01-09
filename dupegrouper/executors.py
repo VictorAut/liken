@@ -1,17 +1,24 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import cast, final, TYPE_CHECKING
+from typing import final, TYPE_CHECKING, TypeVar
 
 from pyspark.sql import SparkSession, Row
-from pyspark.sql.types import StructField, StructType, DataType
+from pyspark.sql.types import StructField, StructType
 
 from dupegrouper.constants import (
     CANONICAL_ID,
     DEFAULT_STRAT_KEY,
     PYSPARK_TYPES,
 )
-from dupegrouper.dataframe import WrappedSparkDataFrame
+from dupegrouper.dataframe import (
+    WrappedDataFrame,
+    WrappedPandasDataFrame,
+    WrappedPolarsDataFrame,
+    WrappedSparkDataFrame,
+    WrappedSparkRows,
+)
+from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StratsConfig
 from dupegrouper.types import Columns, Rule
 
@@ -19,7 +26,8 @@ if TYPE_CHECKING:
     from dupegrouper.base import Duped
 
 
-# EXECUTORS:
+
+LocalDF = TypeVar("LocalDF", WrappedPandasDataFrame, WrappedPolarsDataFrame)
 
 
 class Executor(ABC):
@@ -27,6 +35,7 @@ class Executor(ABC):
     @abstractmethod
     def canonicalize(
         self,
+        df: WrappedDataFrame,
         columns: Columns | None,
         strategies: StratsConfig,
     ) -> None:
@@ -36,50 +45,52 @@ class Executor(ABC):
 @final
 class LocalExecutor(Executor):
 
-    def __init__(self, canonicalization_rule: Rule):
-        self._canonicalization_rule = canonicalization_rule
+    def __init__(self, keep: Rule):
+        self._keep = keep
 
     def canonicalize(
         self,
-        df,
+        df: LocalDF,
         columns: Columns | None,
-        strategies: StratsConfig,
+        strats: StratsConfig,
     ) -> None:
         if not columns:
-            for col, strategies in strategies.items():
-                for strategy in strategies:
-                    df = (
-                        strategy
-                        #
-                        .set_frame(df)
-                        .set_rule(self._canonicalization_rule)
-                        .canonicalize(col)
-                    )
+            for col, iter_strats in strats.items():
+                for strat in iter_strats:
+                    df = self._call_strat(strat, df, col)
             return df
 
         # For inline calls e.g.`.canonicalize("address")`
-        for strategy in strategies[DEFAULT_STRAT_KEY]:
-            df = (
-                strategy
+        for strat in strats[DEFAULT_STRAT_KEY]:
+            df = self._call_strat(strat, df, columns)
+        return df
+
+    def _call_strat(
+        self,
+        strat: BaseStrategy,
+        df: LocalDF,
+        columns: Columns,
+    ) -> LocalDF:
+        return (
+                strat
                 #
                 .set_frame(df)
-                .set_rule(self._canonicalization_rule)
+                .set_rule(self._keep)
                 .canonicalize(columns)
             )
-        return df
 
 
 @final
 class SparkExecutor(Executor):
 
-    def __init__(self, canonicalization_rule: Rule, spark_session: SparkSession, id):
-        self._canonicalization_rule = canonicalization_rule
+    def __init__(self, keep: Rule, spark_session: SparkSession, id):
+        self._keep = keep
         self._spark_session = spark_session
         self._id = id
 
     def canonicalize(
         self,
-        df,
+        df: WrappedSparkDataFrame,
         columns: Columns | None,
         strategies: StratsConfig,
     ) -> None:
@@ -99,7 +110,7 @@ class SparkExecutor(Executor):
 
         # IMPORTANT: Use local variables, not references to self
         id = self._id
-        canonicalization_rule = self._canonicalization_rule
+        keep = self._keep
         process_partition = self._process_partition
 
         # IMPORTANT: Do not pass any references to self
@@ -110,7 +121,7 @@ class SparkExecutor(Executor):
                 strategies=strategies,
                 id=id,
                 columns=columns,
-                canonicalization_rule=canonicalization_rule,
+                keep=keep,
             )
         )
 
@@ -122,14 +133,12 @@ class SparkExecutor(Executor):
         )
         return df
 
-    def _get_schema(self, df):
-        if CANONICAL_ID in df.columns:
-            fields = df.schema.fields
-        else:
+    def _get_schema(self, df: WrappedSparkDataFrame) -> StructType:
+        fields = df.schema.fields
+        if CANONICAL_ID not in df.columns:
             id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(self._id))
-            fields = df.schema.fields + [StructField(CANONICAL_ID, id_type, True)]
-        schema = StructType(fields)
-        return schema
+            fields += [StructField(CANONICAL_ID, id_type, True)]
+        return StructType(fields)
 
     @staticmethod
     def _process_partition(
@@ -138,7 +147,7 @@ class SparkExecutor(Executor):
         strategies: StratsConfig,
         id: str,
         columns: Columns | None,
-        canonicalization_rule: Rule = "first",
+        keep: Rule = "first",
     ) -> Iterator[Row]:
         """process a spark dataframe partition i.e. a list[Row]
 
@@ -156,12 +165,12 @@ class SparkExecutor(Executor):
             A list[Row], deduplicated
         """
         # handle empty partitions
-        rows = list(partition)
+        rows: WrappedSparkRows = list(partition)
         if not rows:
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows, id=id, canonicalization_rule=canonicalization_rule)
+        dp = factory(rows, id=id, keep=keep)
         dp.apply(strategies)
         dp.canonicalize(columns)
 

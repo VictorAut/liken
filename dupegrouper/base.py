@@ -51,21 +51,19 @@ class Duped:
         df: DataFrameLike,
         spark_session: SparkSession | None = None,
         id: str | None = None,
-        canonicalization_rule: Rule = "first",
+        keep: Rule = "first",
     ):
         self._df: WrappedDataFrame = wrap(df, id)
         self._sm = StrategyManager()
         # TODO: validate that if ._df is spark then need a spark session.
         if isinstance(self._df, WrappedSparkDataFrame):
             self._executor = SparkExecutor(
-                canonicalization_rule=canonicalization_rule,
+                keep=keep,
                 spark_session=spark_session,
                 id=id,
             )
         else:
-            self._executor = LocalExecutor(
-                canonicalization_rule=canonicalization_rule,
-            )
+            self._executor = LocalExecutor(keep=keep)
 
     def apply(self, strategy: BaseStrategy | dict) -> None:
         self._sm.apply(strategy)
