@@ -220,7 +220,7 @@ def test_canonicalize_matrix(strategy, rule, columns, input_params, expected_can
 
     df, spark_session, id = dataframe
 
-    dg = Duped(df=df, spark_session=spark_session, id=id, keep=rule)
+    dg = Duped(df, spark_session=spark_session, id=id, keep=rule)
 
     # single strategy item addition
     dg.apply(strategy(**input_params))
