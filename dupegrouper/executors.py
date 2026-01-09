@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import cast, final
+from typing import cast, final, TYPE_CHECKING
 
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructField, StructType, DataType
@@ -14,6 +14,12 @@ from dupegrouper.constants import (
 from dupegrouper.dataframe import WrappedSparkDataFrame
 from dupegrouper.strats_manager import StratsConfig
 from dupegrouper.types import Columns, Rule
+
+if TYPE_CHECKING:
+    from dupegrouper.base import Duped
+
+
+# EXECUTORS:
 
 
 class Executor(ABC):
@@ -42,23 +48,25 @@ class LocalExecutor(Executor):
         if not columns:
             for col, strategies in strategies.items():
                 for strategy in strategies:
-                    return (
+                    df = (
                         strategy
                         #
                         .set_frame(df)
                         .set_rule(self._canonicalization_rule)
                         .canonicalize(col)
                     )
+            return df
 
         # For inline calls e.g.`.canonicalize("address")`
         for strategy in strategies[DEFAULT_STRAT_KEY]:
-            return (
+            df = (
                 strategy
                 #
                 .set_frame(df)
                 .set_rule(self._canonicalization_rule)
                 .canonicalize(columns)
             )
+        return df
 
 
 @final
@@ -86,15 +94,18 @@ class SparkExecutor(Executor):
         Retuns:
             Instance's _df attribute is updated
         """
-        id = cast(str, self._id)
-        canonicalization_rule = cast(str, self._canonicalization_rule)
-        id_type = cast(DataType, PYSPARK_TYPES.get(dict(df.dtypes).get(id)))  # type: ignore
 
         from dupegrouper.base import Duped
 
+        # IMPORTANT: Use local variables, not references to self
+        id = self._id
+        canonicalization_rule = self._canonicalization_rule
+        process_partition = self._process_partition
+
+        # IMPORTANT: Do not pass any references to self
         canonicalized_rdd = df.rdd.mapPartitions(
-            lambda partition: _process_partition(
-                factory = Duped,
+            lambda partition: process_partition(
+                factory=Duped,
                 partition=partition,
                 strategies=strategies,
                 id=id,
@@ -103,51 +114,55 @@ class SparkExecutor(Executor):
             )
         )
 
-        if CANONICAL_ID in df.columns:
-            schema = StructType(df.schema.fields)
-        else:
-            schema = StructType(df.schema.fields + [StructField(CANONICAL_ID, id_type, True)])
+        schema = self._get_schema(df)
 
         df = WrappedSparkDataFrame(
-            cast(SparkSession, self._spark_session).createDataFrame(canonicalized_rdd, schema=schema), id
+            self._spark_session.createDataFrame(canonicalized_rdd, schema=schema),
+            id,
         )
         return df
 
+    def _get_schema(self, df):
+        if CANONICAL_ID in df.columns:
+            fields = df.schema.fields
+        else:
+            id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(self._id))
+            fields = df.schema.fields + [StructField(CANONICAL_ID, id_type, True)]
+        schema = StructType(fields)
+        return schema
 
+    @staticmethod
+    def _process_partition(
+        factory: Duped,
+        partition: Iterator[Row],
+        strategies: StratsConfig,
+        id: str,
+        columns: Columns | None,
+        canonicalization_rule: Rule = "first",
+    ) -> Iterator[Row]:
+        """process a spark dataframe partition i.e. a list[Row]
 
-# This has to be it's own function, can't be a method of SparkExecutor
-def _process_partition(
-    factory,
-    partition: Iterator[Row],
-    strategies: StratsConfig,
-    id: str,
-    columns: str | None,
-    canonicalization_rule: Rule = "first",
-) -> Iterator[Row]:
-    """process a spark dataframe partition i.e. a list[Row]
+        This function is functionality mapped to a worker node. For clean
+        separation from the driver, strategies are re-instantiated and the main
+        dupegrouper API is executed *per* worker node.
 
-    This function is functionality mapped to a worker node. For clean
-    separation from the driver, strategies are re-instantiated and the main
-    dupegrouper API is executed *per* worker node.
+        Args:
+            paritition_iter: a partition
+            strategies: the collection of strategies
+            id: the unique identified of the dataset a.k.a "business key"
+            columns: the attribute on which to deduplicate
 
-    Args:
-        paritition_iter: a partition
-        strategies: the collection of strategies
-        id: the unique identified of the dataset a.k.a "business key"
-        columns: the attribute on which to deduplicate
+        Returns:
+            A list[Row], deduplicated
+        """
+        # handle empty partitions
+        rows = list(partition)
+        if not rows:
+            return iter([])
 
-    Returns:
-        A list[Row], deduplicated
-    """
-    # handle empty partitions
-    rows = list(partition)
-    if not rows:
-        return iter([])
+        # Core API reused per partition, per worker node
+        dp = factory(rows, id=id, canonicalization_rule=canonicalization_rule)
+        dp.apply(strategies)
+        dp.canonicalize(columns)
 
-    # Core API reused per partition, per worker node
-    dp = factory(rows, id=id, canonicalization_rule=canonicalization_rule)
-    print(dp.df)
-    dp.apply(strategies)
-    dp.canonicalize(columns)
-
-    return iter(dp.df)  # type: ignore[arg-type]
+        return iter(dp.df)  # type: ignore[arg-type]
