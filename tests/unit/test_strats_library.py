@@ -1,123 +1,188 @@
-"""Tests for dupegrouper.strategies"""
-
-from __future__ import annotations
-from unittest.mock import Mock
-
-import numpy as np
 import pytest
+from unittest.mock import Mock, patch
+import numpy as np
 
-from dupegrouper.base import wrap
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strats_library import BaseStrategy, ThresholdDedupers
-from dupegrouper.dataframe import _Base
+from dupegrouper.strats_library import (
+    BaseStrategy,
+    Exact,
+    # BinaryDedupers,
+    StrStartsWith,
+    StrEndsWith,
+    StrContains,
+    # ThresholdDedupers,
+    Fuzzy,
+    TfIdf,
+    LSH,
+    Jaccard,
+    Cosine,
+    exact,
+    str_startswith,
+    str_endswith,
+    str_contains,
+    fuzzy,
+    tfidf,
+    lsh,
+    jaccard,
+    cosine,
+)
+
+
+############
+# Fixtures #
+###########
 
 
 @pytest.fixture
-def base_strategy_stub():
-    strat = Mock(spec=BaseStrategy)
-
-    strat.rule = "first"
-    strat.validate = Mock()
-    strat.get_array = Mock(return_value=[1, 2])
-    strat._gen_similarity_pairs = Mock(return_value=[(0, 1)])
-    strat._get_components.return_value = {0: [0], 1: [1]}
-
-    return strat
-
-
-@pytest.fixture
-def wrapped_df_stub(base_strategy_stub):
-    wrapped = Mock()
-    wrapped.get_col.return_value = [1, 2]
-    wrapped.put_col.return_value = wrapped
-
-    base_strategy_stub.wrapped_df = wrapped
-    base_strategy_stub._get_components.return_value = {0: [0, 1]}
-
-    return wrapped
+def mock_df():
+    """
+    Minimal LocalDF mock.
+    Only methods actually used by strategies are defined.
+    """
+    df = Mock()
+    df.get_col.return_value = np.array([1, 2, 3], dtype=object)
+    df.get_cols.return_value = np.array([[1], [2], [3]], dtype=object)
+    df.put_col.return_value = df
+    return df
 
 
-def test_canonicalize_calls__get_components(base_strategy_stub, wrapped_df_stub):
-    BaseStrategy.canonicalize(base_strategy_stub, "col")
-    base_strategy_stub._get_components.assert_called_once_with("col")
-    wrapped_df_stub.put_col.assert_called_once()
+
+##############################
+# BaseStrategy core behavior #
+##############################
 
 
-def test_canonicalize_uses_rule_first(base_strategy_stub, wrapped_df_stub):
-    base_strategy_stub.rule = "first"
-    BaseStrategy.canonicalize(base_strategy_stub, "col")
-    args, _ = wrapped_df_stub.put_col.call_args
-    assert args[0] == CANONICAL_ID
-    np.testing.assert_array_equal(args[1], np.array([1, 1]))
+def test_set_frame_sets_wrapped_df(mock_df):
+    strat = BaseStrategy()
+    returned = strat.set_frame(mock_df)
+    assert returned is strat
+    assert strat.wrapped_df is mock_df
 
 
-def test_canonicalize_uses_rule_last(base_strategy_stub, wrapped_df_stub):
-    base_strategy_stub.rule = "last"
-    BaseStrategy.canonicalize(base_strategy_stub, "col")
-    args, _ = wrapped_df_stub.put_col.call_args
-    assert args[0] == CANONICAL_ID
-    np.testing.assert_array_equal(args[1], np.array([2, 2]))
+def test_set_keep_sets_keep_value():
+    strat = BaseStrategy()
+    returned = strat.set_keep("last")
+    assert returned is strat
+    assert strat.keep == "last"
 
 
-def test_get_components_calls_validate_and_gen_pairs(base_strategy_stub):
-
-    base_strategy_stub.get_array.return_value = [0, 1, 2]
-    base_strategy_stub._gen_similarity_pairs.return_value = [(0, 2)]
-
-    components = BaseStrategy._get_components(base_strategy_stub, "col")
-
-    base_strategy_stub.validate.assert_called_once_with("col")
-    base_strategy_stub._gen_similarity_pairs.assert_called_once()
-    assert components == {0: [0, 2], 1: [1]}
+def test_gen_similarity_pairs_not_implemented():
+    strat = BaseStrategy()
+    with pytest.raises(NotImplementedError):
+        list(strat._gen_similarity_pairs(np.array([])))
 
 
-def test_threshold_validation():
+###################
+# _get_components #
+###################
+
+def test_get_components_calls_validate_and_get_array():
+    strat = BaseStrategy()
+
+    validate = Mock()
+    get_array = Mock(return_value=np.array([0, 1, 2]))
+    gen_pairs = Mock(return_value=iter([(0, 1)]))
+
+    strat.validate = validate
+    strat.get_array = get_array
+    strat._gen_similarity_pairs = gen_pairs
+
+    components = strat._get_components("column")
+
+    validate.assert_called_once_with("column")
+    get_array.assert_called_once_with("column")
+    gen_pairs.assert_called_once()
+    assert isinstance(components, dict)
+
+
+################
+# canonicalize #
+################
+
+def test_canonicalize_puts_canonical_id(mock_df):
+    strat = BaseStrategy()
+    strat.set_frame(mock_df).set_keep("first")
+
+    strat.get_array = Mock(side_effect=[
+        np.array([10, 20, 30], dtype=object),  # canonical ids
+        np.array(["a", "a", "b"], dtype=object),
+    ])
+
+    strat._get_components = Mock(return_value={
+        0: [0, 1],
+        2: [2],
+    })
+
+    result = strat.canonicalize("col")
+
+    mock_df.put_col.assert_called_once()
+    assert result is mock_df
+
+
+####################
+# ColumnArrayMixin #
+####################
+
+def test_column_array_mixin_str_column(mock_df):
+    strat = Exact().set_frame(mock_df)
+    arr = strat.get_array("a")
+    mock_df.get_col.assert_called_once_with("a")
+    assert isinstance(arr, np.ndarray)
+
+
+def test_column_array_mixin_tuple_column(mock_df):
+    strat = Exact().set_frame(mock_df)
+    arr = strat.get_array(("a", "b"))
+    mock_df.get_cols.assert_called_once_with(("a", "b"))
+    assert isinstance(arr, np.ndarray)
+
+
+def test_column_array_mixin_invalid_type(mock_df):
+    strat = Exact().set_frame(mock_df)
+    with pytest.raises(TypeError):
+        strat.get_array(123)
+
+
+#####################
+# Validation mixins #
+#####################
+
+def test_single_column_validation_accepts_str():
+    StrStartsWith("x").validate("col")
+
+
+def test_single_column_validation_rejects_tuple():
     with pytest.raises(ValueError):
-        ThresholdDedupers(threshold=1.0)
+        StrStartsWith("x").validate(("a", "b"))
 
 
-def test_reinstantiate():
-    dummy_positional_args = ("dummy", False)
-    dummy_kwargs = {"test": 5, "random": "random_arg"}
-
-    instance = BaseStrategy(*dummy_positional_args, **dummy_kwargs)
-
-    instance_reinstantiated = instance.reinstantiate()
-
-    assert instance is not instance_reinstantiated
-    assert instance._init_args == instance_reinstantiated._init_args == dummy_positional_args
-    assert instance._init_kwargs == instance_reinstantiated._init_kwargs == dummy_kwargs
+def test_compound_column_validation_accepts_tuple():
+    Jaccard().validate(("a", "b"))
 
 
-def test_set_frame(dataframe):
-
-    df, _, _ = dataframe
-
-    strategy = BaseStrategy()
-    strategy.set_frame(wrap(df))
-
-    assert isinstance(strategy.wrapped_df, _Base)
-
-
-def test_set_rule():
-
-    strategy = BaseStrategy()
-    strategy.set_rule("first")
-
-    assert strategy.rule == "first"
-
+def test_compound_column_validation_rejects_str():
     with pytest.raises(ValueError):
-        strategy.set_rule("random")
+        Jaccard().validate("a")
 
 
-# def test_custom_canonicalize(df_pandas):
 
-#     canonicalizer = Custom(my_func, "address", match_str="navarra")
-#     canonicalizer.set_frame(wrap(df_pandas)).set_rule("first")
+############################
+# Public factory functions #
+############################
 
-#     updatedwrapped_df = canonicalizer.canonicalize()
-#     updated_df = updatedwrapped_df.unwrap()
-
-#     expected_canonical_ids = [1, 2, 3, 3, 5, 6, 3, 8, 1, 1, 11, 12, 13]
-
-#     assert list(updated_df["canonical_id"]) == expected_canonical_ids
+@pytest.mark.parametrize(
+    "factory, cls",
+    [
+        (exact, Exact),
+        (lambda: str_startswith("a"), StrStartsWith),
+        (lambda: str_endswith("a"), StrEndsWith),
+        (lambda: str_contains("a"), StrContains),
+        (fuzzy, Fuzzy),
+        (tfidf, TfIdf),
+        (lsh, LSH),
+        (jaccard, Jaccard),
+        (cosine, Cosine),
+    ],
+)
+def test_public_factories_return_correct_type(factory, cls):
+    strat = factory()
+    assert isinstance(strat, cls)

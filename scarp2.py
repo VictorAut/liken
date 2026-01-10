@@ -77,7 +77,7 @@ def birth_country():
     ]
 
 
-def martial_status():
+def marital_status():
     return [
         "married",
         "married",
@@ -228,7 +228,7 @@ a = pd.DataFrame(
         "email": email(),
         "account": account(),
         "birth_country": birth_country(),
-        "martial_status": martial_status(),
+        "marital_status": marital_status(),
         "number_children": number_children(),
         "property_type": property_type(),
         "property_height": property_height(),

@@ -5,6 +5,9 @@ from dupegrouper.constants import DEFAULT_STRAT_KEY
 from dupegrouper.strats_library import BaseStrategy
 
 
+# TODO: need to add validation that if there are already keys in dict we cannot add to DEFAULT_STRAT_KEY!
+
+
 # STRATS CONFIG:
 
 

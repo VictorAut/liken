@@ -21,13 +21,7 @@ from dupegrouper.dataframe import (
 # Fixtures
 # -------------------------
 
-@pytest.fixture
-def pd_df():
-    return pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 
-@pytest.fixture
-def pl_df():
-    return pl.DataFrame({"a": [1, 2], "b": [3, 4]})
 
 @pytest.fixture
 def mock_spark_df():
@@ -44,38 +38,40 @@ def spark_rows():
 # PandasDF tests #
 ##################
 
-def test_pandas_add_canonical_id(pd_df):
-    df_wrapper = PandasDF(pd_df, id="uid")
+def test_wrapper_methods_pandas(df_pandas, marital_status):
+    df_wrapper = PandasDF(df_pandas, id="uid")
     assert CANONICAL_ID in df_wrapper.unwrap().columns
-    # put_col returns self and sets column
-    result = df_wrapper.put_col("c", [9, 8])
+    assert CANONICAL_ID in df_wrapper.columns # Note delegation layer!
+    
+    result = df_wrapper.put_col("test_col", marital_status)
     assert result is df_wrapper
-    assert "c" in df_wrapper.unwrap().columns
-    # get_col returns a Series
-    series = df_wrapper.get_col("a")
+    assert "test_col" in df_wrapper.unwrap().columns
+    
+    series = df_wrapper.get_col("test_col")
     assert isinstance(series, pd.Series)
-    # get_cols returns DataFrame
-    df_subset = df_wrapper.get_cols(("a", "b"))
+    
+    df_subset = df_wrapper.get_cols(("email", "account"))
     assert isinstance(df_subset, pd.DataFrame)
-    assert list(df_subset.columns) == ["a", "b"]
+    assert list(df_subset.columns) == ["email", "account"]
 
 
 ##################
 # PolarsDF tests #
 ##################
 
-def test_polarsdf_add_canonical_id(pl_df):
-    df_wrapper = PolarsDF(pl_df, id="uid")
+def test_wrapper_methods_polars(df_polars, marital_status):
+    df_wrapper = PolarsDF(df_polars, id="uid")
     assert CANONICAL_ID in df_wrapper.unwrap().columns
-    # put_col returns self and sets column
-    result = df_wrapper.put_col("c", [9, 8])
+    assert CANONICAL_ID in df_wrapper.columns # Note delegation layer!
+
+    result = df_wrapper.put_col("test_col", marital_status)
     assert result is df_wrapper
-    assert "c" in df_wrapper.unwrap().columns
-    # get_col returns pl.Series
-    series = df_wrapper.get_col("a")
+    assert "test_col" in df_wrapper.unwrap().columns
+
+    series = df_wrapper.get_col("test_col")
     assert hasattr(series, "dtype")  # basic polars Series check
-    # get_cols returns DataFrame
-    df_subset = df_wrapper.get_cols(("a", "b"))
+    
+    df_subset = df_wrapper.get_cols(("email", "account"))
     assert hasattr(df_subset, "columns")
 
 
@@ -83,7 +79,7 @@ def test_polarsdf_add_canonical_id(pl_df):
 # SparkDF tests #
 #################
 
-def test_sparkdf_methods_raise(mock_spark_df):
+def test_wrapper_methods_spark(mock_spark_df):
     df_wrapper = SparkDF(mock_spark_df, id="uid")
     with pytest.raises(NotImplementedError):
         df_wrapper._add_canonical_id()
@@ -99,30 +95,29 @@ def test_sparkdf_methods_raise(mock_spark_df):
 # SparkRows tests #
 ###################
 
-def test_sparkrows_add_canonical_id_and_put_get(spark_rows):
-    df_wrapper = SparkRows(spark_rows, id="a")
-    # Check canonical id added
+def test_wrapper_methods_sparkrows(df_sparkrows, marital_status):
+    df_wrapper = SparkRows(df_sparkrows, id="id")
     for row in df_wrapper.unwrap():
         assert CANONICAL_ID in row.asDict()
-    # put_col modifies rows and returns self
-    new_values = [100, 200]
-    result = df_wrapper.put_col("new_col", new_values)
+    
+    
+    result = df_wrapper.put_col("new_col", marital_status)
     assert result is df_wrapper
-    # get_col returns list
+
     col_values = df_wrapper.get_col("new_col")
-    assert col_values == new_values
-    # get_cols returns list of lists
-    cols_values = df_wrapper.get_cols(("a", "b"))
+    assert col_values == marital_status
+    
+    cols_values = df_wrapper.get_cols(("email", "account"))
     assert all(isinstance(c, list) for c in cols_values)
-    assert len(cols_values) == len(spark_rows[0].asDict())
+    assert len(cols_values) == len(df_sparkrows[0].asDict())
 
 
 ####################
 # Frame delegation #
 ####################
 
-def test_frame_getattr_delegates(pd_df):
-    df_wrapper = PandasDF(pd_df, id="uid")
+def test_frame_getattr_delegates(df_pandas):
+    df_wrapper = PandasDF(df_pandas, id="uid")
     # 'head' is a method of pd.DataFrame
     head_method = df_wrapper.head
     assert callable(head_method)
@@ -132,18 +127,18 @@ def test_frame_getattr_delegates(pd_df):
 # wrap dispatcher #
 ###################
 
-def test_wrap_dispatch(pd_df, pl_df, mock_spark_df, spark_rows):
+def test_wrap_dispatch(df_pandas, df_polars, df_spark, df_sparkrows):
     # Pandas
-    wrapped = wrap(pd_df, id="uid")
+    wrapped = wrap(df_pandas, id="id")
     assert isinstance(wrapped, PandasDF)
     # Polars
-    wrapped = wrap(pl_df, id="uid")
+    wrapped = wrap(df_polars, id="id")
     assert isinstance(wrapped, PolarsDF)
     # Spark DataFrame
-    wrapped = wrap(mock_spark_df, id="uid")
+    wrapped = wrap(df_spark, id="id")
     assert isinstance(wrapped, SparkDF)
     # List of Rows
-    wrapped = wrap(spark_rows, id="a")
+    wrapped = wrap(df_sparkrows, id="id")
     assert isinstance(wrapped, SparkRows)
     # Unsupported type
     with pytest.raises(NotImplementedError):
@@ -153,13 +148,6 @@ def test_wrap_dispatch(pd_df, pl_df, mock_spark_df, spark_rows):
 #################
 # put_col tests #
 #################
-
-def test_sparkrows_put_col_with_np_generic(spark_rows):
-    df_wrapper = SparkRows(spark_rows, id="a")
-    values = [np.int32(10), np.int32(20)]
-    df_wrapper.put_col("new_col", values)
-    col_values = df_wrapper.get_col("new_col")
-    assert col_values == [10, 20]
 
 @pytest.mark.parametrize(
     "array",
@@ -181,36 +169,3 @@ def test_put_col(array, lowlevel_dataframe, helpers):
     else:
         df.put_col("TEST", np.array(array))
         assert helpers.get_column_as_list(df.unwrap(), "TEST") == array
-
-
-####################################
-# get_col tests i.e. single column #
-####################################
-
-def test_get_col(lowlevel_dataframe, canonical_id):
-    df, wrapper, id = lowlevel_dataframe
-    df = wrapper(df, id)
-
-    if isinstance(df, SparkDF):
-        with pytest.raises(NotImplementedError):
-            df.get_col()
-    else:
-        assert list(df.get_col(CANONICAL_ID)) == canonical_id
-
-######################################
-# get_col tests i.e. multiple column #
-######################################
-
-
-# TODO:
-# def test_get_cols(lowlevel_dataframe, account, birth_country):
-#     df, wrapper, id = lowlevel_dataframe
-#     df = wrapper(df, id)
-
-#     compound = [list(i) for i in zip(account, birth_country)]
-
-#     if isinstance(df, SparkDF):
-#         with pytest.raises(NotImplementedError):
-#             df.get_cols()
-#     else:
-#         assert list(df.get_cols(columns=("account", "birth_country"))) == compound

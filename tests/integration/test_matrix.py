@@ -27,7 +27,7 @@ SINGLE_COL = "address"
 CATEGORICAL_COMPOUND_COL = (
     "account",
     "birth_country",
-    "martial_status",
+    "marital_status",
     "number_children",
     "property_type",
 )
