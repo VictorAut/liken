@@ -13,7 +13,7 @@ from dupegrouper.constants import (
 from dupegrouper.dataframe import DF, LocalDF, SparkDF
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StratsConfig
-from dupegrouper.types import Columns, Rule
+from dupegrouper.types import Columns, Keep
 
 if TYPE_CHECKING:
     from dupegrouper.base import Duped
@@ -31,7 +31,7 @@ class Executor(Protocol[DF]):
 @final
 class LocalExecutor(Executor):
 
-    def __init__(self, keep: Rule):
+    def __init__(self, keep: Keep):
         self._keep = keep
 
     def canonicalize(
@@ -61,7 +61,7 @@ class LocalExecutor(Executor):
             strat
             #
             .set_frame(df)
-            .set_rule(self._keep)
+            .set_keep(self._keep)
             .canonicalize(columns)
         )
 
@@ -69,7 +69,7 @@ class LocalExecutor(Executor):
 @final
 class SparkExecutor(Executor):
 
-    def __init__(self, keep: Rule, spark_session: SparkSession, id):
+    def __init__(self, keep: Keep, spark_session: SparkSession, id):
         self._keep = keep
         self._spark_session = spark_session
         self._id = id
@@ -133,7 +133,7 @@ class SparkExecutor(Executor):
         strats: StratsConfig,
         id: str,
         columns: Columns | None,
-        keep: Rule = "first",
+        keep: Keep = "first",
     ) -> Iterator[Row]:
         """process a spark dataframe partition i.e. a list[Row]
 
