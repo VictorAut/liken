@@ -3,13 +3,30 @@
 """
 
 from dupegrouper.base import Duped
-from dupegrouper import dataframe
-from dupegrouper import strats_library
-from dupegrouper import custom
+from dupegrouper.custom import register
+from dupegrouper.strats_library import (
+    exact,
+    cosine,
+    fuzzy,
+    jaccard,
+    lsh,
+    tfidf,
+    str_contains,
+    str_endswith,
+    str_startswith,
+)
 
 
 __all__ = [
     "Duped",
-    "dataframe",
-    "strats_library",
+    "exact",
+    "cosine",
+    "fuzzy",
+    "jaccard",
+    "lsh",
+    "tfidf",
+    "str_contains",
+    "str_endswith",
+    "str_startswith",
+    "register",
 ]

@@ -5,7 +5,7 @@ import pytest
 
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import (
-    WrappedSparkDataFrame,
+    SparkDF,
 )
 
 
@@ -15,7 +15,7 @@ def test__add_canonical_id(lowlevel_dataframe, helpers):
 
     df = wrapper(df, id)
 
-    if isinstance(df, WrappedSparkDataFrame):
+    if isinstance(df, SparkDF):
         assert CANONICAL_ID not in df.unwrap().columns  # top level Spark Dataframe wrapper has NO implementations
     else:
         assert helpers.get_column_as_list(df.unwrap(), CANONICAL_ID) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -35,7 +35,7 @@ def test_put_col(array, lowlevel_dataframe, helpers):
 
     df = wrapper(df, id)
 
-    if isinstance(df, WrappedSparkDataFrame):
+    if isinstance(df, SparkDF):
         with pytest.raises(NotImplementedError, match=df.not_implemented):
             df.put_col()
     else:
@@ -48,7 +48,7 @@ def test_get_col(lowlevel_dataframe, canonical_id):
 
     df = wrapper(df, id)
 
-    if isinstance(df, WrappedSparkDataFrame):
+    if isinstance(df, SparkDF):
         with pytest.raises(NotImplementedError, match=df.not_implemented):
             df.get_col()
     else:

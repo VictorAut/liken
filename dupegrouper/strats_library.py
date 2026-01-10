@@ -22,15 +22,15 @@ import numpy as np
 from numpy.linalg import norm
 from rapidfuzz import fuzz
 from scipy.sparse import csr_matrix
-from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
-from sparse_dot_topn import sp_matmul_topn  # type: ignore
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sparse_dot_topn import sp_matmul_topn
 
 from dupegrouper.constants import CANONICAL_ID
 
 if TYPE_CHECKING:
-    from dupegrouper.dataframe import WrappedDataFrame  # pragma: no cover
+    from dupegrouper.dataframe import LocalDF
     from dupegrouper.types import Columns, Rule, SimilarPairIndices
-    
+
 
 # LOGGER:
 
@@ -52,7 +52,7 @@ class BaseStrategy(ABC):
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def set_frame(self, wrapped_df: WrappedDataFrame) -> Self:
+    def set_frame(self, wrapped_df: LocalDF) -> Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -62,7 +62,7 @@ class BaseStrategy(ABC):
         Returns:
             self: i.e. allow for further chaining
         """
-        self.wrapped_df: WrappedDataFrame = wrapped_df
+        self.wrapped_df: LocalDF = wrapped_df
         return self
 
     def set_rule(self, rule: Rule = "first") -> Self:
@@ -91,7 +91,7 @@ class BaseStrategy(ABC):
 
         return components
 
-    def canonicalize(self, columns: Columns) -> WrappedDataFrame:
+    def canonicalize(self, columns: Columns) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
 
@@ -119,7 +119,8 @@ class ColumnArrayMixin:
     """
     @private
     """
-    wrapped_df: WrappedDataFrame
+
+    wrapped_df: LocalDF
 
     def get_array(self, columns: Columns) -> np.ndarray:
         if isinstance(columns, str):
@@ -189,7 +190,6 @@ class Exact(BaseStrategy, ColumnArrayMixin):
 
 
 # TODO: Eventually make `StrMethods` which inherits from `BinaryDedupers`
-@final
 class BinaryDedupers(BaseStrategy):
     """
     @private
@@ -307,7 +307,6 @@ class StrContains(
 # THRESHOLD DEDUPERS:
 
 
-@final
 class ThresholdDedupers(BaseStrategy):
     """
     @private

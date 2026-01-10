@@ -23,11 +23,11 @@ import dupegrouper.constants
 from dupegrouper.constants import DEFAULT_STRAT_KEY
 from dupegrouper.strats_library import Exact, Fuzzy
 from dupegrouper.dataframe import (
-    WrappedDataFrame,
-    WrappedPandasDataFrame,
-    WrappedPolarsDataFrame,
-    WrappedSparkDataFrame,
-    WrappedSparkRows,
+    _Base,
+    PandasDF,
+    PolarsDF,
+    SparkDF,
+    SparkRows,
 )
 
 
@@ -47,10 +47,10 @@ def dummy_func():
 ###############
 
 DATAFRAME_TYPES = {
-    pd.DataFrame: WrappedPandasDataFrame,
-    pl.DataFrame: WrappedPolarsDataFrame,
-    SparkDataFrame: WrappedSparkDataFrame,
-    list[Row]: WrappedSparkRows,
+    pd.DataFrame: PandasDF,
+    pl.DataFrame: PolarsDF,
+    SparkDataFrame: SparkDF,
+    list[Row]: SparkRows,
 }
 
 
@@ -59,7 +59,7 @@ def test_wrap_dataframe(dataframe):
 
     expected_type = DATAFRAME_TYPES.get(type(df))
 
-    wrapped_df: WrappedDataFrame = wrap(df, id)
+    wrapped_df: _Base = wrap(df, id)
 
     assert isinstance(wrapped_df, expected_type)
 
@@ -88,7 +88,7 @@ def reload_imports():
         (None, "canonical_id"),
         # arbitrary: different value
         ("random_id", "random_id"),
-    ]
+    ],
 )
 def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe):
     df, wrapper, id = lowlevel_dataframe
@@ -102,9 +102,9 @@ def test_canonical_id_env_var(env_var_value, expected_value, lowlevel_dataframe)
 
     df = wrapper(df, id)
 
-    if isinstance(df, WrappedSparkDataFrame):
+    if isinstance(df, SparkDF):
         assert expected_value not in df.columns
-    elif isinstance(df, WrappedSparkRows):
+    elif isinstance(df, SparkRows):
         for row in df.unwrap():
             assert expected_value in row.asDict().keys()
     else:
@@ -330,7 +330,7 @@ def test__canonicalize_raises(attr_input, type, dupegrouper_mock):
 
 def test_apply_deduplication_strategy_or_tuple(strategy_mock, dupegrouper_mock):
     with patch.object(dupegrouper_mock, "_strategy_manager") as strategy_manager:
-        with patch.object(strategy_manager, "apply") as apply:           
+        with patch.object(strategy_manager, "apply") as apply:
             dupegrouper_mock.apply(strategy_mock)
             assert apply.call_count == 1
 
@@ -343,7 +343,7 @@ def test_apply_dict(dupegrouper_mock, strategy_mock):
     }
 
     with patch.object(dupegrouper_mock, "_strategy_manager") as strategy_manager:
-        with patch.object(strategy_manager, "apply") as apply:           
+        with patch.object(strategy_manager, "apply") as apply:
             dupegrouper_mock.apply(strategy)
             assert apply.call_count == 1
 
@@ -410,7 +410,7 @@ def test_canonicalize_spark(mocked_spark_dupegrouper, strategy_mock):
         "dupegrouper.base._process_partition",
         return_value=iter([Row(id="1", address="45th street", email="random@ghs.com", canonical_id=1)]),
     ):
-        with patch("dupegrouper.base.WrappedSparkDataFrame") as mockwrapped_df:
+        with patch("dupegrouper.base.SparkDF") as mockwrapped_df:
             mockwrapped_result = Mock()
             mockwrapped_df.return_value = mockwrapped_result
 
@@ -502,17 +502,17 @@ def dupgrouper_context(request):
             yield {
                 "dg": dg,
                 "strategy_manager": strategy_manager,
-                "is_spark": "WrappedSparkDataFrame" == dfwrapper.__name__,
+                "is_spark": "SparkDF" == dfwrapper.__name__,
             }
 
 
 @pytest.mark.parametrize(
     "dupgrouper_context",
     [
-        (pd.DataFrame, WrappedPandasDataFrame),
-        (pl.DataFrame, WrappedPolarsDataFrame),
-        (SparkDataFrame, WrappedSparkDataFrame),
-        (list[Row], WrappedSparkRows),
+        (pd.DataFrame, PandasDF),
+        (pl.DataFrame, PolarsDF),
+        (SparkDataFrame, SparkDF),
+        (list[Row], SparkRows),
     ],
     indirect=True,
     ids=["pandas context", "polars context", "spark dataframe context", "spark list rows context"],
@@ -574,10 +574,7 @@ def test_dupegrouper_strategies_attribute_dict(df_pandas):
             "address": [
                 Exact(),
             ],
-            "email": [
-                Exact(),
-                Fuzzy()
-            ],
+            "email": [Exact(), Fuzzy()],
         }
     )
 

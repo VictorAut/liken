@@ -7,27 +7,28 @@ from dupegrouper.strats_library import BaseStrategy
 
 # STRATS CONFIG:
 
+
 @final
 class StratsConfig(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise StrategyConfigTypeError(
-                f'Invalid type for strat dict key: '
-                f'expected "str" or "tuple", got "{type(key).__name__}"'
+                f"Invalid type for strat dict key: " f'expected "str" or "tuple", got "{type(key).__name__}"'
             )
         if not isinstance(value, list | tuple | BaseStrategy):
             raise StrategyConfigTypeError(
-                f'Invalid type for strat dict value: '
+                f"Invalid type for strat dict value: "
                 f'expected "list", "tuple" or "BaseStrategy", got {value} "{type(value).__name__}"'
             )
         for i, member in enumerate(value):
             if not isinstance(member, BaseStrategy):
-                    raise StrategyConfigTypeError(
-                        f'Invalid type for strat dict value member: '
-                        f'position {i} of value for key "{key}". '
-                        f'Expected "BaseStrategy", got "{type(member).__name__}"'
-                    )
+                raise StrategyConfigTypeError(
+                    f"Invalid type for strat dict value member: "
+                    f'position {i} of value for key "{key}". '
+                    f'Expected "BaseStrategy", got "{type(member).__name__}"'
+                )
         super().__setitem__(key, value)
+
 
 @final
 class StrategyManager:
@@ -47,7 +48,7 @@ class StrategyManager:
 
     def apply(self, strategy: BaseStrategy | dict | StratsConfig) -> None:
         if isinstance(strategy, BaseStrategy):
-            self._strats[DEFAULT_STRAT_KEY].append(strategy) 
+            self._strats[DEFAULT_STRAT_KEY].append(strategy)
             return
         if isinstance(strategy, dict | StratsConfig):
             self._strats = StratsConfig(strategy)
@@ -57,7 +58,7 @@ class StrategyManager:
     def get(self) -> StratsConfig:
         return self._strats
 
-    def pretty_get(self)-> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
+    def pretty_get(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
         """pretty get"""
         strategies = self.get()
         if not strategies:
@@ -73,7 +74,6 @@ class StrategyManager:
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
         self._strats.clear()
-
 
 
 # EXCEPTIONS:

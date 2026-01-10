@@ -9,7 +9,8 @@ import pytest
 from dupegrouper.base import wrap
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.strats_library import BaseStrategy, ThresholdDedupers
-from dupegrouper.dataframe import WrappedDataFrame
+from dupegrouper.dataframe import _Base
+
 
 @pytest.fixture
 def base_strategy_stub():
@@ -23,6 +24,7 @@ def base_strategy_stub():
 
     return strat
 
+
 @pytest.fixture
 def wrapped_df_stub(base_strategy_stub):
     wrapped = Mock()
@@ -34,6 +36,7 @@ def wrapped_df_stub(base_strategy_stub):
 
     return wrapped
 
+
 def test_canonicalize_calls__get_components(base_strategy_stub, wrapped_df_stub):
     BaseStrategy.canonicalize(base_strategy_stub, "col")
     base_strategy_stub._get_components.assert_called_once_with("col")
@@ -42,10 +45,11 @@ def test_canonicalize_calls__get_components(base_strategy_stub, wrapped_df_stub)
 
 def test_canonicalize_uses_rule_first(base_strategy_stub, wrapped_df_stub):
     base_strategy_stub.rule = "first"
-    BaseStrategy.canonicalize(base_strategy_stub, "col") 
+    BaseStrategy.canonicalize(base_strategy_stub, "col")
     args, _ = wrapped_df_stub.put_col.call_args
     assert args[0] == CANONICAL_ID
     np.testing.assert_array_equal(args[1], np.array([1, 1]))
+
 
 def test_canonicalize_uses_rule_last(base_strategy_stub, wrapped_df_stub):
     base_strategy_stub.rule = "last"
@@ -54,8 +58,9 @@ def test_canonicalize_uses_rule_last(base_strategy_stub, wrapped_df_stub):
     assert args[0] == CANONICAL_ID
     np.testing.assert_array_equal(args[1], np.array([2, 2]))
 
+
 def test_get_components_calls_validate_and_gen_pairs(base_strategy_stub):
-    
+
     base_strategy_stub.get_array.return_value = [0, 1, 2]
     base_strategy_stub._gen_similarity_pairs.return_value = [(0, 2)]
 
@@ -65,9 +70,11 @@ def test_get_components_calls_validate_and_gen_pairs(base_strategy_stub):
     base_strategy_stub._gen_similarity_pairs.assert_called_once()
     assert components == {0: [0, 2], 1: [1]}
 
+
 def test_threshold_validation():
     with pytest.raises(ValueError):
         ThresholdDedupers(threshold=1.0)
+
 
 def test_reinstantiate():
     dummy_positional_args = ("dummy", False)
@@ -89,7 +96,8 @@ def test_set_frame(dataframe):
     strategy = BaseStrategy()
     strategy.set_frame(wrap(df))
 
-    assert isinstance(strategy.wrapped_df, WrappedDataFrame)
+    assert isinstance(strategy.wrapped_df, _Base)
+
 
 def test_set_rule():
 
@@ -100,7 +108,6 @@ def test_set_rule():
 
     with pytest.raises(ValueError):
         strategy.set_rule("random")
-    
 
 
 # def test_custom_canonicalize(df_pandas):
