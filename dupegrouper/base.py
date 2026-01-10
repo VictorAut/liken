@@ -6,7 +6,7 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 import logging
-from typing import overload, Generic
+from typing import Literal, overload, Generic
 
 import pandas as pd
 import polars as pl
@@ -19,7 +19,7 @@ from dupegrouper.strats_manager import StrategyManager
 from dupegrouper.types import (
     Columns,
     DataFrameLike,
-    Rule,
+    Keep,
 )
 
 
@@ -56,7 +56,7 @@ class Duped(Generic[DF]):
         *,
         spark_session: None = None,
         id: str | None = None,
-        keep: Rule = "first",
+        keep: Keep = "first",
     ): ...
 
     @overload
@@ -67,7 +67,7 @@ class Duped(Generic[DF]):
         *,
         spark_session: SparkSession,
         id: str,
-        keep: Rule = "first",
+        keep: Keep = "first",
     ): ...
 
     def __init__(
@@ -77,9 +77,11 @@ class Duped(Generic[DF]):
         *,
         spark_session: SparkSession | None = None,
         id: str | None = None,
-        keep: Rule = "first",
+        keep: Keep = "first",
     ):
         self._sm = StrategyManager()
+
+        keep = _validate_keep_arg(keep)
 
         self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
@@ -131,9 +133,7 @@ class Duped(Generic[DF]):
 
 
 def _validate_spark_args(
-    spark_session: SparkSession | None = None,
-    id: str | None = None,
-    /
+    spark_session: SparkSession | None = None, id: str | None = None, /
 ) -> tuple[SparkSession, str]:
 
     if spark_session is None:
@@ -141,3 +141,9 @@ def _validate_spark_args(
     if id is None:
         raise ValueError("unique id label must be provided for a spark dataframe")
     return spark_session, id
+
+
+def _validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
+    if keep not in ("first", "last"):
+        raise ValueError("Keep must be one of 'first' or 'last'")
+    return keep

@@ -29,7 +29,7 @@ from dupegrouper.constants import CANONICAL_ID
 
 if TYPE_CHECKING:
     from dupegrouper.dataframe import LocalDF
-    from dupegrouper.types import Columns, Rule, SimilarPairIndices
+    from dupegrouper.types import Columns, Keep, SimilarPairIndices
 
 
 # LOGGER:
@@ -40,8 +40,21 @@ logger = logging.getLogger(__name__)
 
 # BASE STRATEGY:
 
+from typing import Protocol
 
-class BaseStrategy(ABC):
+
+class BaseProtocol(Protocol):
+    wrapped_df: LocalDF
+    keep: Keep
+    def set_frame(self, wrapped_df: LocalDF) -> Self: ...
+    def set_keep(self, wrapped_df: Keep) -> Self: ...
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
+    def _get_components(self, columns: Columns) -> dict[object, list[int]]: ...
+    def canonicalize(self, columns: Columns) -> LocalDF: ...
+    def get_array(self, columns: Columns) -> np.ndarray: ...
+    def validate(self, columns: Columns) -> None: ...
+
+class BaseStrategy():
     """
     @private
 
@@ -52,7 +65,7 @@ class BaseStrategy(ABC):
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def set_frame(self, wrapped_df: LocalDF) -> Self:
+    def set_frame(self: BaseProtocol, wrapped_df: LocalDF) -> BaseProtocol:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -65,17 +78,15 @@ class BaseStrategy(ABC):
         self.wrapped_df: LocalDF = wrapped_df
         return self
 
-    def set_rule(self, rule: Rule = "first") -> Self:
-        if rule not in ("first", "last"):
-            raise ValueError("Rule must be one of 'first' or 'last'")
-        self.rule = rule
+    def set_keep(self: BaseProtocol, keep: Keep = "first") -> BaseProtocol:
+        self.keep = keep
         return self
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self: BaseProtocol, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
-    def _get_components(self, columns: Columns) -> dict[object, list[int]]:
+    def _get_components(self: BaseProtocol, columns: Columns) -> dict[object, list[int]]:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -91,7 +102,7 @@ class BaseStrategy(ABC):
 
         return components
 
-    def canonicalize(self, columns: Columns) -> LocalDF:
+    def canonicalize(self: BaseProtocol, columns: Columns) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
 
@@ -99,9 +110,9 @@ class BaseStrategy(ABC):
 
         rep_index: dict[int, int] = {}
         for members in components.values():
-            if self.rule == "first":
+            if self.keep == "first":
                 rep = min(members)
-            elif self.rule == "last":
+            elif self.keep == "last":
                 rep = max(members)
 
             for i in members:

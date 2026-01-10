@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, create_autospec
 
 import pandas as pd
 import polars as pl
@@ -268,7 +268,12 @@ def spark():
     spark.stop()
 
 
-# raw data i.e. no "GROUP ID"
+@pytest.fixture
+def mock_spark_session():
+    return create_autospec(SparkSession)
+
+
+# raw data inputs
 
 
 @pytest.fixture(scope="session")
@@ -431,13 +436,13 @@ def lowlevel_dataframe(request, df_pandas, df_polars, df_spark):
 
 
 @pytest.fixture
-def dupegrouper_mock(dataframe):
+def duped_mock(dataframe):
     df, _, id = dataframe
 
     df_mock = Mock(spec=type(df))
 
     with patch("dupegrouper.base.wrap"):
-        instance = Duped(df_mock, id)
+        instance = Duped(df_mock, id=id)
         instance._df = Mock()
         yield instance
 

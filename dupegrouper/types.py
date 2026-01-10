@@ -11,5 +11,5 @@ DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame | spark.DataFrame | list
 SeriesLike: TypeAlias = "pd.Series | pl.Series | list[Any]"
 ArrayLike: TypeAlias = "np.ndarray | pd.Series | pl.Series | list[Any]"
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
-Rule: TypeAlias = Literal["first", "last"]  # Canonicalisation rule
+Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule
 SimilarPairIndices: TypeAlias = tuple[int, int]
