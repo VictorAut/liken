@@ -1,85 +1,188 @@
+from unittest.mock import Mock, patch
 
-##############################################
-#  TEST StrategyManager + StrategyConfigTypeError #
-##############################################
+import pytest
+
+from dupegrouper.strats_manager import (
+    StratsConfig,
+    StrategyManager,
+    StrategyConfigTypeError,
+)
+from dupegrouper.strats_library import BaseStrategy
+from dupegrouper.constants import DEFAULT_STRAT_KEY
 
 
-DEFAULT_ERROR_MSG = "Input is not valid"
-CLASS_ERROR_MSG = "Input class is not valid: must be an instance of `BaseStrategy`"
-TUPLE_ERROR_MSG = "Input tuple is not valid: must be a length 2 [callable, dict]"
-DICT_ERROR_MSG = "Input dict is not valid: items must be a list of `BaseStrategy` or tuples"
+###########
+# Helpers #
+###########
+
+
+class DummyStrategy(BaseStrategy):
+    pass
+
+
+@pytest.fixture
+def s1():
+    return DummyStrategy()
+
+
+@pytest.fixture
+def s2():
+    return DummyStrategy()
+
+
+@pytest.fixture
+def s3():
+    return DummyStrategy()
+
+
+#####################
+# StratsConfig tests
+#####################
 
 
 @pytest.mark.parametrize(
-    "strategy, expected_to_pass, base_msg",
+    "columns, strat",
     [
-        # correct base inputs
-        (Mock(spec=BaseStrategy), True, None),
-        (
-            {
-                "address": [
-                    Mock(spec=BaseStrategy),
-                ],
-                "email": [
-                    Mock(spec=BaseStrategy),
-                    Mock(spec=BaseStrategy),
-                ],
-            },
-            True,
-            None,
-        ),
-        # incorrect inputs
-        (DummyClass, False, CLASS_ERROR_MSG),
-        (lambda x: x, False, DEFAULT_ERROR_MSG),
-        ((lambda x: x, [1, 2, 3]), False, TUPLE_ERROR_MSG),
-        (("foo",), False, TUPLE_ERROR_MSG),
-        (["bar", "baz"], False, DEFAULT_ERROR_MSG),
-        ("foobar", False, DEFAULT_ERROR_MSG),
-        (
-            {
-                "address": [DummyClass()],
-                "email": [
-                    "random string",
-                    ("tuple too short",),
-                ],
-            },
-            False,
-            DICT_ERROR_MSG,
-        ),
-    ],
-    ids=[
-        "valid canonicalize class",
-        "valid dict",
-        "invalid class",
-        "invalid callable not in tuple",
-        "invalid callable positional args",
-        "invalid tuple",
-        "invalid list",
-        "invalid str",
-        "invalid dict",
+        ("address", [BaseStrategy()]),
+        ("address", (BaseStrategy(),)),
+        (("address", "email"), [BaseStrategy()]),
+        (("address", "email"), (BaseStrategy(),)),
     ],
 )
-def test__strategy_manager_validate_addition_strategy(strategy, expected_to_pass, base_msg):
-    """validates that the input 'strtagey' is legit, against `StrategyConfigTypeError`"""
-    manager = StrategyManager()
-    if expected_to_pass:
-        if isinstance(strategy, dict):
-            for k, value in strategy.items():
-                for v in value:
-                    manager.add(k, v)
-                    assert (k in manager.get()) is expected_to_pass
-        else:
-            manager.add(DEFAULT_STRAT_KEY, strategy)
-            assert (DEFAULT_STRAT_KEY in manager.get()) is expected_to_pass
-    else:
-        with pytest.raises(StrategyConfigTypeError) as e:
-            manager.add(DEFAULT_STRAT_KEY, strategy)
-            assert base_msg in str(e)
+def test_stratsconfig_accepts_inputs(columns, strat):
+    config = StratsConfig()
+    config[columns] = strat
+
+    assert columns in config
+    assert config[columns] == strat
 
 
-def test__strategy_manager_reset():
-    manager = StrategyManager()
-    strategy = Mock(spec=BaseStrategy)
-    manager.add("name", strategy)
-    manager.reset()
-    assert manager.get() == {}
+def test_stratsconfig_rejects_invalid_key_type(s1):
+    config = StratsConfig()
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict key"):
+        config[123] = [s1]
+
+
+def test_stratsconfig_rejects_invalid_value_type():
+    config = StratsConfig()
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict value"):
+        config["col"] = "not_a_strategy"
+
+
+def test_stratsconfig_rejects_invalid_member_in_value(s1, s2, s3):
+    config = StratsConfig()
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict value member"):
+        config["col"] = [s1, "bad", s2, s3]
+
+
+################
+# apply method #
+################
+
+
+def test_strategy_manager_apply_single_strategy_once(s1):
+    sm = StrategyManager()
+    sm.apply(s1)
+
+    strats = sm.get()
+    assert s1 in strats[DEFAULT_STRAT_KEY]
+
+
+def test_strategy_manager_apply_single_strategy_multiple(s1, s2, s3):
+    sm = StrategyManager()
+    sm.apply(s1)
+    sm.apply(s2)
+    sm.apply(s3)
+
+    strats = sm.get()
+    assert s1 in strats[DEFAULT_STRAT_KEY]
+    assert s2 in strats[DEFAULT_STRAT_KEY]
+    assert s3 in strats[DEFAULT_STRAT_KEY]
+
+
+def test_strategy_manager_apply_dict(s1, s2, s3):
+    sm = StrategyManager()
+    custom = {"a": [s1], "b": (s2, s3)}
+
+    sm.apply(custom)
+    result = sm.get()
+
+    assert result["a"] == [s1]
+    assert result["b"] == (s2, s3)
+
+
+def test_strategy_manager_apply_stratsconfig(s1, s2, s3):
+    sm = StrategyManager()
+    config = StratsConfig({"a": [s1], "b": (s2, s3)})
+
+    sm.apply(config)
+    result = sm.get()
+
+    assert result["a"] == [s1]
+    assert result["b"] == (s2, s3)
+
+
+def test_strategy_manager_apply_invalid_type():
+    sm = StrategyManager()
+    with pytest.raises(StrategyConfigTypeError):
+        sm.apply(123)
+
+
+#######
+# get #
+#######
+
+
+def test_strategy_manager_get_returns_config():
+    sm = StrategyManager()
+    result = sm.get()
+    assert isinstance(result, StratsConfig)
+
+
+##############
+# pretty_get #
+##############
+
+
+def test_pretty_get_single_default_key(s1, s2):
+    sm = StrategyManager()
+    sm.apply(s1)
+    sm.apply(s2)
+
+    pretty = sm.pretty_get()
+    assert pretty == ("DummyStrategy", "DummyStrategy")
+
+
+def test_pretty_get_multiple_keys(s1, s2, s3):
+    sm = StrategyManager()
+    sm.apply({"col_a": [s1, s3], "col_b": [s2]})
+
+    pretty = sm.pretty_get()
+    assert pretty == {
+        "col_a": ("DummyStrategy", "DummyStrategy"),
+        "col_b": ("DummyStrategy",),
+    }
+
+
+#########
+# reset #
+#########
+
+
+def test_strategy_manager_reset_clears_strats(s1):
+    sm = StrategyManager()
+    sm.apply(s1)
+
+    sm.reset()
+    assert sm.get() == {}
+    assert sm.pretty_get() is None
+
+
+###########################
+# StrategyConfigTypeError #
+###########################
+
+
+def test_strategy_config_type_error_is_type_error():
+    err = StrategyConfigTypeError("bad")
+    assert isinstance(err, TypeError)

@@ -97,7 +97,7 @@ def birth_country():
 
 
 @pytest.fixture(scope="session")
-def martial_status():
+def marital_status():
     return [
         "married",
         "married",
@@ -283,7 +283,7 @@ def df_pandas(
     email,
     account,
     birth_country,
-    martial_status,
+    marital_status,
     number_children,
     property_type,
     property_height,
@@ -298,7 +298,7 @@ def df_pandas(
             "email": email,
             "account": account,
             "birth_country": birth_country,
-            "martial_status": martial_status,
+            "marital_status": marital_status,
             "number_children": number_children,
             "property_type": property_type,
             "property_height": property_height,
@@ -316,7 +316,7 @@ def df_polars(
     email,
     account,
     birth_country,
-    martial_status,
+    marital_status,
     number_children,
     property_type,
     property_height,
@@ -331,7 +331,7 @@ def df_polars(
             "email": email,
             "account": account,
             "birth_country": birth_country,
-            "martial_status": martial_status,
+            "marital_status": marital_status,
             "number_children": number_children,
             "property_type": property_type,
             "property_height": property_height,
@@ -350,7 +350,7 @@ def df_spark(
     email,
     account,
     birth_country,
-    martial_status,
+    marital_status,
     number_children,
     property_type,
     property_height,
@@ -369,7 +369,7 @@ def df_spark(
                 email[i],
                 account[i],
                 birth_country[i],
-                martial_status[i],
+                marital_status[i],
                 number_children[i],
                 property_type[i],
                 property_height[i],
@@ -386,7 +386,7 @@ def df_spark(
             "email",
             "account",
             "birth_country",
-            "martial_status",
+            "marital_status",
             "number_children",
             "property_type",
             "property_height",
@@ -396,6 +396,11 @@ def df_spark(
             "blocking_key",
         ),
     ).repartition(1, "blocking_key")
+
+
+@pytest.fixture(scope="session")
+def df_sparkrows(df_spark):
+    return df_spark.collect()
 
 
 @pytest.fixture(params=["pandas", "polars", "spark"], scope="session")
