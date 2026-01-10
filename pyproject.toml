@@ -44,6 +44,7 @@ mypy = "^1.15.0"
 pandas-stubs = { version = "^2.2.3.250308", python = ">=3.10" }
 scipy-stubs = { version = "^1.15.2.1", python = ">=3.10" }
 pyinstrument = "^5.0.1"
+types-networkx = "^3.6.1.20251220"
 
 
 [tool.poetry.group.test.dependencies]

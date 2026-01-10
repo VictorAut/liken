@@ -6,18 +6,14 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 import logging
-from typing import overload
+from typing import overload, Generic
 
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
-from dupegrouper.dataframe import (
-    wrap,
-    WrappedDataFrame,
-    WrappedSparkDataFrame,
-)
-from dupegrouper.executors import LocalExecutor, SparkExecutor
+from dupegrouper.dataframe import DF, wrap
+from dupegrouper.executors import Executor, LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StrategyManager
 from dupegrouper.types import (
@@ -33,10 +29,12 @@ from dupegrouper.types import (
 logger = logging.getLogger(__name__)
 
 
-# BASE:
+# Duped:
 
 
-class Duped:
+class Duped(Generic[DF]):
+    _df: DF
+    _executor: Executor[DF]
     """Top-level entrypoint for grouping duplicates
 
     This class handles initialisation of a dataframe, dispatching appropriately
@@ -53,7 +51,7 @@ class Duped:
     @overload
     def __init__(
         self,
-        df: pd.DataFrame | pl.DataFrame,
+        df: pd.DataFrame | pl.DataFrame | list[spark.Row],
         /,
         *,
         spark_session: None = None,
@@ -81,10 +79,11 @@ class Duped:
         id: str | None = None,
         keep: Rule = "first",
     ):
-        self._df: WrappedDataFrame = wrap(df, id)
         self._sm = StrategyManager()
 
-        if isinstance(self._df, WrappedSparkDataFrame):
+        self._executor: LocalExecutor | SparkExecutor
+        if isinstance(df, spark.DataFrame):
+            spark_session, id = _validate_spark_args(spark_session, id)
             self._executor = SparkExecutor(
                 keep=keep,
                 spark_session=spark_session,
@@ -92,6 +91,8 @@ class Duped:
             )
         else:
             self._executor = LocalExecutor(keep=keep)
+
+        self._df = wrap(df, id)
 
     def apply(self, strategy: BaseStrategy | dict) -> None:
         self._sm.apply(strategy)
@@ -104,14 +105,14 @@ class Duped:
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
-        strategies = self._sm.get()
+        strats = self._sm.get()
 
-        self._df = self._executor.canonicalize(self._df, columns, strategies)
+        self._df = self._executor.canonicalize(self._df, columns, strats)
 
         self._sm.reset()
 
     @property
-    def strategies(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
+    def strats(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
         """
         Returns the strategies currently stored in the strategy manager.
 
@@ -127,3 +128,16 @@ class Duped:
     @property
     def df(self) -> DataFrameLike:
         return self._df.unwrap()
+
+
+def _validate_spark_args(
+    spark_session: SparkSession | None = None,
+    id: str | None = None,
+    /
+) -> tuple[SparkSession, str]:
+
+    if spark_session is None:
+        raise ValueError("spark_session must be provided for a spark dataframe")
+    if id is None:
+        raise ValueError("unique id label must be provided for a spark dataframe")
+    return spark_session, id

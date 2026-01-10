@@ -5,72 +5,66 @@ ABC for wrapped dataframe interfaces
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from functools import singledispatch
 from typing_extensions import override
-from typing import Any, final, Self
+from typing import Any, final, Generic, Self, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from pyspark.sql import (
-    DataFrame as SparkDataFrame,  # avoid name clash
-    Row,
-)
+import pyspark.sql as spark
 
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.types import DataFrameLike, SeriesLike
 
 
-class WrappedDataFrame(ABC):
-    """Container class for a dataframe and associated methods
+# TYPES
 
-    At runtime any instance of this class will also be a data container of the
-    dataframe. The abstractmethods defined here are all the required
-    implementations needed
-    """
 
-    def __init__(self, df: DataFrameLike):
-        self._df: DataFrameLike = df
+T = TypeVar("T")
 
-    def unwrap(self) -> DataFrameLike:
+
+# BASE
+
+
+class Frame(ABC, Generic[T]):
+
+    def __init__(self, df: T):
+        self._df: T = df
+
+    def unwrap(self) -> T:
         return self._df
 
-    @staticmethod
-    @abstractmethod
-    def _add_canonical_id(df: DataFrameLike):
-        """Return a dataframe with a group id column"""
-        pass  # pragma: no cover
-
-    # DATAFRAME WRAPPERS:
-
-    @abstractmethod
-    def put_col(self, column: str, array) -> Self:
-        """assign i.e. write a column with array-like data
-
-        No return; `_df` is updated
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
-    def get_col(self, column: str) -> SeriesLike:
-        """Return a column array-like of data"""
-        pass  # pragma: no cover
-
-    @abstractmethod
-    def get_cols(self, columns: Iterable[str]) -> DataFrameLike:
-        """Return columns dataframe-like of data"""
-        pass  # pragma: no cover
-
-
-    # delegation
+    # delegation: use ._df without using property explicitely
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._df, name)
 
+    # Protocol:
+
+    @staticmethod
+    @abstractmethod
+    def _add_canonical_id(df: T, id: str | None):
+        pass
+
+    @abstractmethod
+    def put_col(self, column: str, array) -> Self:
+        pass
+
+    @abstractmethod
+    def get_col(self, column: str) -> SeriesLike:
+        pass
+
+    @abstractmethod
+    def get_cols(self, columns: tuple[str, ...]) -> T:
+        pass
+
+
+# WRAPPERS
+
 
 @final
-class WrappedPandasDataFrame(WrappedDataFrame):
+class PandasDF(Frame[pd.DataFrame]):
 
     def __init__(self, df: pd.DataFrame, id: str | None):
         super().__init__(df)
@@ -79,7 +73,7 @@ class WrappedPandasDataFrame(WrappedDataFrame):
 
     @staticmethod
     @override
-    def _add_canonical_id(df) -> pd.DataFrame:
+    def _add_canonical_id(df: pd.DataFrame, id: str | None = None) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
 
     # PANDAS API WRAPPERS:
@@ -94,12 +88,12 @@ class WrappedPandasDataFrame(WrappedDataFrame):
         return self._df[column]
 
     @override
-    def get_cols(self, columns: Iterable[str]) -> pd.DataFrame:
+    def get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
         return self._df[list(columns)]
 
 
 @final
-class WrappedPolarsDataFrame(WrappedDataFrame):
+class PolarsDF(Frame[pl.DataFrame]):
 
     def __init__(self, df: pl.DataFrame, id: str | None):
         super().__init__(df)
@@ -108,7 +102,7 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
 
     @staticmethod
     @override
-    def _add_canonical_id(df) -> pl.DataFrame:
+    def _add_canonical_id(df: pl.DataFrame, id: str | None = None) -> pl.DataFrame:
         return df.with_columns(pl.arange(1, len(df) + 1).alias(CANONICAL_ID))
 
     # POLARS API WRAPPERS:
@@ -124,61 +118,61 @@ class WrappedPolarsDataFrame(WrappedDataFrame):
         return self._df.get_column(column)
 
     @override
-    def get_cols(self, columns: Iterable[str]) -> pl.DataFrame:
+    def get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
         return self._df.select(columns)
 
 
 @final
-class WrappedSparkDataFrame(WrappedDataFrame):
+class SparkDF(Frame[spark.DataFrame]):
 
-    not_implemented = "Spark DataFrame methods are available per partition only, i.e. for lists of `pyspark.sql.Row`"
+    err_msg = "Spark DataFrame methods are available per partition only, i.e. for lists of `pyspark.sql.Row`"
 
-    def __init__(self, df: SparkDataFrame, id: str | None):
+    def __init__(self, df: spark.DataFrame, id: str | None):
         super().__init__(df)
         del id  # Not implemented, input param there for API consistency
 
     @override
     def _add_canonical_id(self):
-        raise NotImplementedError(self.not_implemented)  # pragma: no cover
+        raise NotImplementedError(self.err_msg)
 
     # SPARK API WRAPPERS:
 
     @override
     def put_col(self):
-        raise NotImplementedError(self.not_implemented)
+        raise NotImplementedError(self.err_msg)
 
     @override
     def get_col(self):
-        raise NotImplementedError(self.not_implemented)
+        raise NotImplementedError(self.err_msg)
 
     @override
     def get_cols(self):
-        raise NotImplementedError(self.not_implemented)
+        raise NotImplementedError(self.err_msg)
 
 
 @final
-class WrappedSparkRows(WrappedDataFrame):
+class SparkRows(Frame[list[spark.Row]]):
     """Lower level DataFrame wrapper per partition i.e. list of Rows
 
     Can be emulated by operating on a collected pyspark dataframe i.e.
     df.collect()
     """
 
-    def __init__(self, df: list[Row], id: str):
+    def __init__(self, df: list[spark.Row], id: str):
         super().__init__(df)
-        self._df: list[Row] = self._add_canonical_id(df, id)
+        self._df: list[spark.Row] = self._add_canonical_id(df, id)
 
     @staticmethod
     @override
-    def _add_canonical_id(df: list[Row], id: str) -> list[Row]:  # type: ignore[override]
-        return [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in df]
+    def _add_canonical_id(df: list[spark.Row], id: str | None) -> list[spark.Row]:
+        return [spark.Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in df]
 
     # SPARK API WRAPPERS:
 
     @override
     def put_col(self, column: str, array) -> Self:
         array = [i.item() if isinstance(i, np.generic) else i for i in array]
-        self._df = [Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
+        self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
     @override
@@ -186,15 +180,15 @@ class WrappedSparkRows(WrappedDataFrame):
         return [row[column] for row in self._df]
 
     @override
-    def get_cols(self, columns: Iterable[str]) -> list[list[Any]]:
+    def get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:  # type: ignore
         return [[row[c] for c in columns] for row in self._df]
 
 
-# WRAP DATAFRAME DISPATCHER:
+# DISPATCHER:
 
 
 @singledispatch
-def wrap(df: DataFrameLike, id: str | None = None) -> WrappedDataFrame:
+def wrap(df: DataFrameLike, id: str | None = None):
     """
     Dispatch the dataframe to the appropriate wrapping handler.
 
@@ -202,7 +196,7 @@ def wrap(df: DataFrameLike, id: str | None = None) -> WrappedDataFrame:
         df: The dataframe to dispatch to the appropriate handler.
 
     Returns:
-        WrappedDataFrame, a DataFrame wrapped with a uniform interface.
+        Frame, a DataFrame wrapped with a uniform interface.
 
     Raises:
         NotImplementedError
@@ -212,21 +206,28 @@ def wrap(df: DataFrameLike, id: str | None = None) -> WrappedDataFrame:
 
 
 @wrap.register(pd.DataFrame)
-def _(df, id: str | None = None):
-    return WrappedPandasDataFrame(df, id)
+def _(df, id: str | None = None) -> PandasDF:
+    return PandasDF(df, id)
 
 
 @wrap.register(pl.DataFrame)
-def _(df, id: str | None = None):
-    return WrappedPolarsDataFrame(df, id)
+def _(df, id: str | None = None) -> PolarsDF:
+    return PolarsDF(df, id)
 
 
-@wrap.register(SparkDataFrame)
-def _(df, id: str | None = None):
-    return WrappedSparkDataFrame(df, id)
+@wrap.register(spark.DataFrame)
+def _(df, id: str) -> SparkDF:
+    return SparkDF(df, id)
 
 
 @wrap.register(list)
-def _(df: list[Row], id: str):
+def _(df: list[spark.Row], id: str) -> SparkRows:
     """As lists can be large: `all` membership is `Row` is not validated"""
-    return WrappedSparkRows(df, id)
+    return SparkRows(df, id)
+
+
+# ACCESSIBLE TYPES
+
+
+LocalDF: TypeAlias = PandasDF | PolarsDF | SparkRows
+DF = TypeVar("DF", SparkDF, LocalDF)

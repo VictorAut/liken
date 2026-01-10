@@ -7,10 +7,10 @@ import pytest
 
 from dupegrouper.base import Duped, BaseStrategy
 from dupegrouper.dataframe import (
-    WrappedPandasDataFrame,
-    WrappedPolarsDataFrame,
-    WrappedSparkDataFrame,
-    WrappedSparkRows,
+    PandasDF,
+    PolarsDF,
+    SparkDF,
+    SparkRows,
 )
 from dupegrouper.types import DataFrameLike
 
@@ -418,13 +418,13 @@ def lowlevel_dataframe(request, df_pandas, df_polars, df_spark):
     the public API
     """
     if request.param == "pandas":
-        return df_pandas, WrappedPandasDataFrame, None
+        return df_pandas, PandasDF, None
     if request.param == "polars":
-        return df_polars, WrappedPolarsDataFrame, None
+        return df_polars, PolarsDF, None
     if request.param == "spark_df":
-        return df_spark, WrappedSparkDataFrame, None
+        return df_spark, SparkDF, None
     if request.param == "spark_row":
-        return df_spark.collect(), WrappedSparkRows, "id"  # i.e. list[Row]
+        return df_spark.collect(), SparkRows, "id"  # i.e. list[Row]
 
 
 # Mocks
@@ -447,7 +447,6 @@ def strategy_mock():
     return Mock(spec=BaseStrategy)
 
 
-
 # helpers
 
 
@@ -466,5 +465,3 @@ class Helpers:
 @pytest.fixture(scope="session", autouse=True)
 def helpers():
     return Helpers
-
-

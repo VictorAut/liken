@@ -45,4 +45,5 @@ def register(f: Callable):
     @wraps(f)
     def wrapper(**kwargs):
         return Custom(f, **kwargs)
+
     return wrapper

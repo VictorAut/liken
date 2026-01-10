@@ -1,6 +1,4 @@
-
 import pandas as pd
-
 
 
 def id():
@@ -132,6 +130,7 @@ def property_type():
         "rental",
     ]
 
+
 def property_height():
     return [
         2.4,
@@ -148,6 +147,7 @@ def property_height():
         2.7,
         4,
     ]
+
 
 def property_area_sq_ft():
     return [
@@ -166,6 +166,7 @@ def property_area_sq_ft():
         1545,
     ]
 
+
 def property_sea_level_elevation_m():
     return [
         5,
@@ -182,6 +183,7 @@ def property_sea_level_elevation_m():
         42,
         62,
     ]
+
 
 def property_num_rooms():
     return [
@@ -220,19 +222,19 @@ def blocking_key():
 
 
 a = pd.DataFrame(
-        {
-            "id": id(),
-            "address": address(),
-            "email": email(),
-            "account": account(),
-            "birth_country": birth_country(),
-            "martial_status": martial_status(),
-            "number_children": number_children(),
-            "property_type": property_type(),
-            "property_height":property_height(),
-            "property_area_sq_ft":property_area_sq_ft(),
-            "property_sea_level_elevation_m":property_sea_level_elevation_m(),
-            "property_num_rooms":property_num_rooms(),
-        }
-    )
+    {
+        "id": id(),
+        "address": address(),
+        "email": email(),
+        "account": account(),
+        "birth_country": birth_country(),
+        "martial_status": martial_status(),
+        "number_children": number_children(),
+        "property_type": property_type(),
+        "property_height": property_height(),
+        "property_area_sq_ft": property_area_sq_ft(),
+        "property_sea_level_elevation_m": property_sea_level_elevation_m(),
+        "property_num_rooms": property_num_rooms(),
+    }
+)
 a
