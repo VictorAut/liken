@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import numpy as np
 
 from dupegrouper.strats_library import (
@@ -45,7 +45,6 @@ def mock_df():
     return df
 
 
-
 ##############################
 # BaseStrategy core behavior #
 ##############################
@@ -75,6 +74,7 @@ def test_gen_similarity_pairs_not_implemented():
 # _get_components #
 ###################
 
+
 def test_get_components_calls_validate_and_get_array():
     strat = BaseStrategy()
 
@@ -98,19 +98,24 @@ def test_get_components_calls_validate_and_get_array():
 # canonicalize #
 ################
 
+
 def test_canonicalize_puts_canonical_id(mock_df):
     strat = BaseStrategy()
     strat.set_frame(mock_df).set_keep("first")
 
-    strat.get_array = Mock(side_effect=[
-        np.array([10, 20, 30], dtype=object),  # canonical ids
-        np.array(["a", "a", "b"], dtype=object),
-    ])
+    strat.get_array = Mock(
+        side_effect=[
+            np.array([10, 20, 30], dtype=object),  # canonical ids
+            np.array(["a", "a", "b"], dtype=object),
+        ]
+    )
 
-    strat._get_components = Mock(return_value={
-        0: [0, 1],
-        2: [2],
-    })
+    strat._get_components = Mock(
+        return_value={
+            0: [0, 1],
+            2: [2],
+        }
+    )
 
     result = strat.canonicalize("col")
 
@@ -121,6 +126,7 @@ def test_canonicalize_puts_canonical_id(mock_df):
 ####################
 # ColumnArrayMixin #
 ####################
+
 
 def test_column_array_mixin_str_column(mock_df):
     strat = Exact().set_frame(mock_df)
@@ -146,6 +152,7 @@ def test_column_array_mixin_invalid_type(mock_df):
 # Validation mixins #
 #####################
 
+
 def test_single_column_validation_accepts_str():
     StrStartsWith("x").validate("col")
 
@@ -164,10 +171,10 @@ def test_compound_column_validation_rejects_str():
         Jaccard().validate("a")
 
 
-
 ############################
 # Public factory functions #
 ############################
+
 
 @pytest.mark.parametrize(
     "factory, cls",

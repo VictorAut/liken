@@ -1,14 +1,14 @@
-from unittest.mock import Mock, patch
+import logging
 
 import pytest
 
 from dupegrouper.strats_manager import (
+    DEFAULT_STRAT_KEY,
     StratsConfig,
     StrategyManager,
     StrategyConfigTypeError,
 )
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.constants import DEFAULT_STRAT_KEY
 
 
 ###########
@@ -59,19 +59,19 @@ def test_stratsconfig_accepts_inputs(columns, strat):
 
 def test_stratsconfig_rejects_invalid_key_type(s1):
     config = StratsConfig()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict key"):
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict key type"):
         config[123] = [s1]
 
 
 def test_stratsconfig_rejects_invalid_value_type():
     config = StratsConfig()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict value"):
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict value"):
         config["col"] = "not_a_strategy"
 
 
 def test_stratsconfig_rejects_invalid_member_in_value(s1, s2, s3):
     config = StratsConfig()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for strat dict value member"):
+    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict value member"):
         config["col"] = [s1, "bad", s2, s3]
 
 
@@ -122,10 +122,29 @@ def test_strategy_manager_apply_stratsconfig(s1, s2, s3):
     assert result["b"] == (s2, s3)
 
 
-def test_strategy_manager_apply_invalid_type():
+def test_strategy_manager_apply_rejects_invalid_type():
     sm = StrategyManager()
-    with pytest.raises(StrategyConfigTypeError):
+    with pytest.raises(StrategyConfigTypeError, match="Invalid strategy"):
         sm.apply(123)
+
+
+def test_strategy_manager_apply_rejects_inline_after_dict(s1, s2, s3):
+    sm = StrategyManager()
+    sm.apply({"a": (s1,), "b": (s1, s2)})  # legal
+    with pytest.raises(StrategyConfigTypeError, match="Cannot apply a BaseStrategy after a strategy mapping"):
+        sm.apply(s3)
+
+
+def test_strategy_manager_apply_warns_dict_after_inline(caplog):
+    sm = StrategyManager()
+    strat = BaseStrategy()
+
+    sm.apply(strat)
+
+    with caplog.at_level(logging.WARNING):
+        sm.apply({"email": [strat]})
+
+    assert any("already been supplied with at least one in-line strat" in record.message for record in caplog.records)
 
 
 #######
@@ -149,8 +168,7 @@ def test_pretty_get_single_default_key(s1, s2):
     sm.apply(s1)
     sm.apply(s2)
 
-    pretty = sm.pretty_get()
-    assert pretty == ("DummyStrategy", "DummyStrategy")
+    assert sm.pretty_get() == ("DummyStrategy", "DummyStrategy")
 
 
 def test_pretty_get_multiple_keys(s1, s2, s3):
@@ -171,11 +189,15 @@ def test_pretty_get_multiple_keys(s1, s2, s3):
 
 def test_strategy_manager_reset_clears_strats(s1):
     sm = StrategyManager()
-    sm.apply(s1)
 
+    assert sm.get() == {DEFAULT_STRAT_KEY: []}
+    assert sm.pretty_get() == tuple()
+
+    sm.apply(s1)
     sm.reset()
-    assert sm.get() == {}
-    assert sm.pretty_get() is None
+
+    assert sm.get() == {DEFAULT_STRAT_KEY: []}
+    assert sm.pretty_get() == tuple()
 
 
 ###########################
