@@ -28,8 +28,6 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
         self._pair_fn = pair_fn
         self._kwargs = kwargs
 
-    # TODO remove this? 
-    @override  # As no validation mixin provided
     def validate(self, columns):
         del columns  # Unused
         pass

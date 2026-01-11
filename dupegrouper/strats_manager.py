@@ -1,11 +1,20 @@
 from collections import UserDict
-from typing import final
+import logging
+from typing import final, Final
 
-from dupegrouper.constants import DEFAULT_STRAT_KEY
 from dupegrouper.strats_library import BaseStrategy
 
 
-# TODO: need to add validation that if there are already keys in dict we cannot add to DEFAULT_STRAT_KEY!
+# LOGGER:
+
+
+logger = logging.getLogger(__name__)
+
+
+# CONSTANTS:
+
+
+DEFAULT_STRAT_KEY: Final[str] = "_default_"
 
 
 # STRATS CONFIG:
@@ -16,19 +25,18 @@ class StratsConfig(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise StrategyConfigTypeError(
-                f"Invalid type for strat dict key: " f'expected "str" or "tuple", got "{type(key).__name__}"'
+                f"Invalid type for dict key type: expected str or tuple, " f'got "{type(key).__name__}"'
             )
         if not isinstance(value, list | tuple | BaseStrategy):
             raise StrategyConfigTypeError(
-                f"Invalid type for strat dict value: "
-                f'expected "list", "tuple" or "BaseStrategy", got {value} "{type(value).__name__}"'
+                f"Invalid type for dict value: expected list, tuple or BaseStrategy, "
+                f'got {value} "{type(value).__name__}"'
             )
         for i, member in enumerate(value):
             if not isinstance(member, BaseStrategy):
                 raise StrategyConfigTypeError(
-                    f"Invalid type for strat dict value member: "
-                    f'position {i} of value for key "{key}". '
-                    f'Expected "BaseStrategy", got "{type(member).__name__}"'
+                    f"Invalid type for dict value member: at index {i} for key '{key}': "
+                    f'expected "BaseStrategy", got "{type(member).__name__}"'
                 )
         super().__setitem__(key, value)
 
@@ -49,23 +57,35 @@ class StrategyManager:
     def __init__(self) -> None:
         self._strats = StratsConfig({DEFAULT_STRAT_KEY: []})
 
-    def apply(self, strategy: BaseStrategy | dict | StratsConfig) -> None:
-        if isinstance(strategy, BaseStrategy):
-            self._strats[DEFAULT_STRAT_KEY].append(strategy)
+    def apply(self, strat: BaseStrategy | dict | StratsConfig) -> None:
+        if isinstance(strat, BaseStrategy):
+            if DEFAULT_STRAT_KEY not in self._strats:
+                raise StrategyConfigTypeError(
+                    "Cannot apply a BaseStrategy after a strategy mapping (dict) has been set. "
+                    "Use either individual BaseStrategy instances or a dict of strategies, not both."
+                )
+
+            self._strats[DEFAULT_STRAT_KEY].append(strat)
             return
-        if isinstance(strategy, dict | StratsConfig):
-            self._strats = StratsConfig(strategy)
+
+        if isinstance(strat, dict | StratsConfig):
+            # when an inline strat has already been provided: warn as it will be replaced
+            if self._strats[DEFAULT_STRAT_KEY]:
+                logger.warning(
+                    "The strat manager had already been supplied with at least one in-line strat which now will be replaced"
+                )
+
+            self._strats = StratsConfig(strat)
             return
-        raise StrategyConfigTypeError(f'Invalid strategy: Expected "BaseStrategy" or "dict", got {type(strategy)}')
+
+        raise StrategyConfigTypeError(f'Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}')
 
     def get(self) -> StratsConfig:
         return self._strats
 
-    def pretty_get(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
+    def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
         """pretty get"""
         strategies = self.get()
-        if not strategies:
-            return None
 
         def _parse(values):
             return tuple(type(vx).__name__ for vx in values)
@@ -76,7 +96,7 @@ class StrategyManager:
 
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
-        self._strats.clear()
+        self._strats = StratsConfig({DEFAULT_STRAT_KEY: []})
 
 
 # EXCEPTIONS:

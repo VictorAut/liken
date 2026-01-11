@@ -7,12 +7,11 @@ from pyspark.sql.types import StructField, StructType
 
 from dupegrouper.constants import (
     CANONICAL_ID,
-    DEFAULT_STRAT_KEY,
     PYSPARK_TYPES,
 )
 from dupegrouper.dataframe import DF, LocalDF, SparkDF
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StratsConfig
+from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsConfig
 from dupegrouper.types import Columns, Keep
 
 if TYPE_CHECKING:

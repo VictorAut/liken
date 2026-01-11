@@ -1,13 +1,11 @@
 from __future__ import annotations
 import pytest
-from unittest.mock import Mock, create_autospec
+from unittest.mock import create_autospec
 import pandas as pd
-import polars as pl
-from pyspark.sql import SparkSession, DataFrame as SparkDataFrame, Row
+from pyspark.sql import DataFrame as SparkDataFrame, Row
 import numpy as np
 
 from dupegrouper.dataframe import (
-    Frame,
     PandasDF,
     PolarsDF,
     SparkDF,
@@ -17,15 +15,13 @@ from dupegrouper.dataframe import (
 )
 
 
-# -------------------------
 # Fixtures
-# -------------------------
-
 
 
 @pytest.fixture
 def mock_spark_df():
     return create_autospec(SparkDataFrame)
+
 
 @pytest.fixture
 def spark_rows():
@@ -38,18 +34,19 @@ def spark_rows():
 # PandasDF tests #
 ##################
 
+
 def test_wrapper_methods_pandas(df_pandas, marital_status):
     df_wrapper = PandasDF(df_pandas, id="uid")
     assert CANONICAL_ID in df_wrapper.unwrap().columns
-    assert CANONICAL_ID in df_wrapper.columns # Note delegation layer!
-    
+    assert CANONICAL_ID in df_wrapper.columns  # Note delegation layer!
+
     result = df_wrapper.put_col("test_col", marital_status)
     assert result is df_wrapper
     assert "test_col" in df_wrapper.unwrap().columns
-    
+
     series = df_wrapper.get_col("test_col")
     assert isinstance(series, pd.Series)
-    
+
     df_subset = df_wrapper.get_cols(("email", "account"))
     assert isinstance(df_subset, pd.DataFrame)
     assert list(df_subset.columns) == ["email", "account"]
@@ -59,10 +56,11 @@ def test_wrapper_methods_pandas(df_pandas, marital_status):
 # PolarsDF tests #
 ##################
 
+
 def test_wrapper_methods_polars(df_polars, marital_status):
     df_wrapper = PolarsDF(df_polars, id="uid")
     assert CANONICAL_ID in df_wrapper.unwrap().columns
-    assert CANONICAL_ID in df_wrapper.columns # Note delegation layer!
+    assert CANONICAL_ID in df_wrapper.columns  # Note delegation layer!
 
     result = df_wrapper.put_col("test_col", marital_status)
     assert result is df_wrapper
@@ -70,7 +68,7 @@ def test_wrapper_methods_polars(df_polars, marital_status):
 
     series = df_wrapper.get_col("test_col")
     assert hasattr(series, "dtype")  # basic polars Series check
-    
+
     df_subset = df_wrapper.get_cols(("email", "account"))
     assert hasattr(df_subset, "columns")
 
@@ -78,6 +76,7 @@ def test_wrapper_methods_polars(df_polars, marital_status):
 #################
 # SparkDF tests #
 #################
+
 
 def test_wrapper_methods_spark(mock_spark_df):
     df_wrapper = SparkDF(mock_spark_df, id="uid")
@@ -95,18 +94,18 @@ def test_wrapper_methods_spark(mock_spark_df):
 # SparkRows tests #
 ###################
 
+
 def test_wrapper_methods_sparkrows(df_sparkrows, marital_status):
     df_wrapper = SparkRows(df_sparkrows, id="id")
     for row in df_wrapper.unwrap():
         assert CANONICAL_ID in row.asDict()
-    
-    
+
     result = df_wrapper.put_col("new_col", marital_status)
     assert result is df_wrapper
 
     col_values = df_wrapper.get_col("new_col")
     assert col_values == marital_status
-    
+
     cols_values = df_wrapper.get_cols(("email", "account"))
     assert all(isinstance(c, list) for c in cols_values)
     assert len(cols_values) == len(df_sparkrows[0].asDict())
@@ -115,6 +114,7 @@ def test_wrapper_methods_sparkrows(df_sparkrows, marital_status):
 ####################
 # Frame delegation #
 ####################
+
 
 def test_frame_getattr_delegates(df_pandas):
     df_wrapper = PandasDF(df_pandas, id="uid")
@@ -126,6 +126,7 @@ def test_frame_getattr_delegates(df_pandas):
 ###################
 # wrap dispatcher #
 ###################
+
 
 def test_wrap_dispatch(df_pandas, df_polars, df_spark, df_sparkrows):
     # Pandas
@@ -148,6 +149,7 @@ def test_wrap_dispatch(df_pandas, df_polars, df_spark, df_sparkrows):
 #################
 # put_col tests #
 #################
+
 
 @pytest.mark.parametrize(
     "array",

@@ -20,7 +20,6 @@ from pyspark.sql.types import (
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
-DEFAULT_STRAT_KEY: Final[str] = "_default"
 
 # Pyspark sql conversion types
 PYSPARK_TYPES: Final[dict] = {

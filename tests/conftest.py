@@ -342,7 +342,7 @@ def df_polars(
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def df_spark(
     spark,
     id,
@@ -398,12 +398,12 @@ def df_spark(
     ).repartition(1, "blocking_key")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def df_sparkrows(df_spark):
     return df_spark.collect()
 
 
-@pytest.fixture(params=["pandas", "polars", "spark"], scope="session")
+@pytest.fixture(params=["pandas", "polars", "spark"])
 def dataframe(request, df_pandas, df_polars, df_spark, spark):
     """return a tuple of positionally ordered input parameters of Duped
 
@@ -417,7 +417,7 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
         return df_spark, spark, "id"
 
 
-@pytest.fixture(params=["pandas", "polars", "spark_df", "spark_row"], scope="session")
+@pytest.fixture(params=["pandas", "polars", "spark_df", "spark_row"])
 def lowlevel_dataframe(request, df_pandas, df_polars, df_spark):
     """Most tests require the `dataframe` fixture, also defined above.
 

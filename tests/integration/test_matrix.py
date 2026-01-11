@@ -7,6 +7,7 @@ import pytest
 
 from dupegrouper import Duped
 from dupegrouper.constants import CANONICAL_ID
+from dupegrouper.custom import register
 from dupegrouper.strats_library import (
     cosine,
     exact,
@@ -39,9 +40,10 @@ NUMERICAL_COMPOUND_COL = (
 )
 
 
-# CUSTOM CALLABLE:
+# REGISTER A CUSTOM CALLABLE:
 
 
+@register
 def strings_same_len(array: typing.Iterable, min_len: int = 3):
     n = len(array)
     for i in range(n):
@@ -58,6 +60,11 @@ def strings_same_len(array: typing.Iterable, min_len: int = 3):
 # fmt: off
 
 PARAMS = [
+    # CUSTOM:
+    (strings_same_len, "first", "email", {"min_len": 3}, [1, 2, 3, 4, 3, 6, 3, 8, 4, 4, 11, 12, 4]),
+    (strings_same_len, "last", "email", {"min_len": 3}, [1, 2, 7, 13, 7, 6, 7, 8, 13, 13, 11, 12, 13]),
+    (strings_same_len, "first", "email", {"min_len": 15}, [1, 2, 3, 4, 5, 6, 7, 8, 4, 4, 11, 12, 4]),
+    (strings_same_len, "last", "email", {"min_len": 15}, [1, 2, 3, 13, 5, 6, 7, 8, 13, 13, 11, 12, 13]),
     # EXACT:
     # on single column
     (exact, "first", SINGLE_COL, {}, [1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 11, 12, 13]),
