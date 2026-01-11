@@ -47,19 +47,14 @@ def test_validate_keep_arg_invalid():
 
 
 def test_validate_spark_args_valid(mock_spark_session):
-    session, id_ = _validate_spark_args(mock_spark_session, "uid")
+    session = _validate_spark_args(mock_spark_session)
     assert session == mock_spark_session
-    assert id_ == "uid"
 
 
 def test_validate_spark_args_missing_session():
     with pytest.raises(ValueError, match="spark_session must be provided for a spark dataframe"):
-        _validate_spark_args(None, "uid")
+        _validate_spark_args(None)
 
-
-def test_validate_spark_args_missing_id(mock_spark_session):
-    with pytest.raises(ValueError, match="unique id label must be provided for a spark dataframe"):
-        _validate_spark_args(mock_spark_session, None)
 
 
 ##############################

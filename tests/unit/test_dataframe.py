@@ -98,7 +98,7 @@ def test_wrapper_methods_spark(mock_spark_df):
 def test_wrapper_methods_sparkrows(df_sparkrows, marital_status):
     df_wrapper = SparkRows(df_sparkrows, id="id")
     for row in df_wrapper.unwrap():
-        assert CANONICAL_ID in row.asDict()
+        assert CANONICAL_ID not in row.asDict()
 
     result = df_wrapper.put_col("new_col", marital_status)
     assert result is df_wrapper
