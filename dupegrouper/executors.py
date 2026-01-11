@@ -2,8 +2,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import final, Protocol, TYPE_CHECKING, TypeVar
 
+from pyspark.rdd import RDD
 from pyspark.sql import SparkSession, Row
-from pyspark.sql.types import StructField, StructType
+from pyspark.sql.types import LongType, StructField, StructType
 
 from dupegrouper.constants import (
     CANONICAL_ID,
@@ -16,7 +17,7 @@ from dupegrouper.types import Columns, Keep
 
 if TYPE_CHECKING:
     from dupegrouper.base import Duped
-    
+
 
 class Executor(Protocol[DF]):
     def canonicalize(
@@ -97,9 +98,14 @@ class SparkExecutor(Executor):
         id = self._id
         keep = self._keep
         process_partition = self._process_partition
+        add_canonical_id = self._add_canonical_id
 
-        # IMPORTANT: Do not pass any references to `self`
-        rdd = df.rdd.mapPartitions(
+        # Create new logical plan
+        df = df.select("*")
+
+        # IMPORTANT: no references to `self`
+        rdd_with_cid = add_canonical_id(df, id)
+        rdd = rdd_with_cid.mapPartitions(
             lambda partition: process_partition(
                 factory=Duped,
                 partition=partition,
@@ -112,18 +118,38 @@ class SparkExecutor(Executor):
 
         schema = self._get_schema(df)
 
-        df = SparkDF(
-            self._spark_session.createDataFrame(rdd, schema=schema),
-            id,
-        )
-        return df
+        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema))
 
     def _get_schema(self, df: SparkDF) -> StructType:
         fields = df.schema.fields
-        if CANONICAL_ID not in df.columns:
+        if CANONICAL_ID in df.columns:
+            return StructType(fields)
+
+        if self._id:
             id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(self._id))
-            fields += [StructField(CANONICAL_ID, id_type, True)]
+        else:
+            id_type = LongType()  # auto-incremental is numeric
+        fields += [StructField(CANONICAL_ID, id_type, True)]
         return StructType(fields)
+
+    @staticmethod
+    def _add_canonical_id(df: SparkDF, id: str | None) -> RDD[Row]:
+        """
+        Returns an RDD with a canonical ID column added.
+        If self._id is provided, copy that column. Otherwise, use zipWithIndex.
+        """
+        if CANONICAL_ID in df.columns:
+            return df.rdd
+        if id:
+            # Copy the id
+            return df.rdd.mapPartitions(
+                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            )
+        else:
+            # Create auto-increment
+            return df.rdd.zipWithIndex().mapPartitions(
+                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
+            )
 
     @staticmethod
     def _process_partition(

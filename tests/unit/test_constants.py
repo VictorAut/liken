@@ -25,7 +25,7 @@ def test_canonical_id_env_var(env_var_value, lowlevel_dataframe, monkeypatch):
         assert CANONICAL_ID not in df.columns
     elif isinstance(df, SparkRows):
         for row in df.unwrap():
-            assert CANONICAL_ID in row.asDict().keys()
+            assert CANONICAL_ID not in row.asDict().keys()
     else:
         assert CANONICAL_ID in df.columns
 

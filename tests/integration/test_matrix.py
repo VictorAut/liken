@@ -236,6 +236,8 @@ def test_canonicalize_matrix(strategy, rule, columns, input_params, expected_can
 
     assert helpers.get_column_as_list(df1, CANONICAL_ID) == expected_canonical_id
 
+    dg = Duped(df, spark_session=spark_session, id=id, keep=rule)
+
     # dictionary strategy addition
     dg.apply({columns: [strategy(**input_params)]})
     dg.canonicalize()

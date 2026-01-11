@@ -85,7 +85,7 @@ class Duped(Generic[DF]):
 
         self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
-            spark_session, id = _validate_spark_args(spark_session, id)
+            spark_session = _validate_spark_args(spark_session)
             self._executor = SparkExecutor(
                 keep=keep,
                 spark_session=spark_session,
@@ -132,15 +132,11 @@ class Duped(Generic[DF]):
         return self._df.unwrap()
 
 
-def _validate_spark_args(
-    spark_session: SparkSession | None = None, id: str | None = None, /
-) -> tuple[SparkSession, str]:
+def _validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
 
-    if spark_session is None:
+    if not spark_session:
         raise ValueError("spark_session must be provided for a spark dataframe")
-    if id is None:
-        raise ValueError("unique id label must be provided for a spark dataframe")
-    return spark_session, id
+    return spark_session
 
 
 def _validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
