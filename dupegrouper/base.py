@@ -133,7 +133,6 @@ class Duped(Generic[DF]):
 
 
 def _validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
-
     if not spark_session:
         raise ValueError("spark_session must be provided for a spark dataframe")
     return spark_session

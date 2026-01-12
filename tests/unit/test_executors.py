@@ -95,8 +95,8 @@ def test_sparkexecutor_init_sets_attributes():
     assert executor._id == "id"
 
 
-@patch("dupegrouper.executors.SparkExecutor._get_schema")
-@patch("dupegrouper.executors.SparkExecutor._add_canonical_id")
+@patch("dupegrouper.dataframe.SparkDF._get_schema")
+@patch("dupegrouper.dataframe.SparkDF._add_canonical_id")
 def test_sparkexecutor_canonicalize_maps_partitions(
     mock_add_canonical_id,
     mock_get_schema,
@@ -106,15 +106,12 @@ def test_sparkexecutor_canonicalize_maps_partitions(
     spark = Mock()
     executor = SparkExecutor(keep="first", spark_session=spark, id="id")
 
-    # mock RDD pipeline
     mock_rdd = Mock()
     mock_rdd.mapPartitions.return_value = mock_rdd
     mock_add_canonical_id.return_value = mock_rdd
 
-    # mock schema handling
     mock_get_schema.return_value = Mock()
 
-    # mock Spark createDataFrame
     spark.createDataFrame.return_value = "new_df"
 
     executor.canonicalize(
@@ -123,8 +120,6 @@ def test_sparkexecutor_canonicalize_maps_partitions(
         strats=strats_config,
     )
 
-    # assertions that actually matter
-    mock_add_canonical_id.assert_called_once()
     mock_rdd.mapPartitions.assert_called_once()
     spark.createDataFrame.assert_called_once()
 

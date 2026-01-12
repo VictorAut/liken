@@ -94,18 +94,12 @@ class SparkExecutor(Executor):
 
         from dupegrouper.base import Duped
 
-        # IMPORTANT: Use local variables, not references to `self`
+        # IMPORTANT: Use local variables, not references to Self
         id = self._id
         keep = self._keep
         process_partition = self._process_partition
-        add_canonical_id = self._add_canonical_id
 
-        # Create new logical plan
-        df = df.select("*")
-
-        # IMPORTANT: no references to `self`
-        rdd_with_cid = add_canonical_id(df, id)
-        rdd = rdd_with_cid.mapPartitions(
+        rdd = df.mapPartitions(
             lambda partition: process_partition(
                 factory=Duped,
                 partition=partition,
@@ -116,41 +110,9 @@ class SparkExecutor(Executor):
             )
         )
 
-        schema = self._get_schema(df)
+        schema = df._schema
 
-        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema))
-
-    def _get_schema(self, df: SparkDF) -> StructType:
-        fields = df.schema.fields
-        if CANONICAL_ID in df.columns:
-            return StructType(fields)
-
-        if self._id:
-            id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(self._id))
-        else:
-            id_type = LongType()  # auto-incremental is numeric
-        fields += [StructField(CANONICAL_ID, id_type, True)]
-        return StructType(fields)
-
-    @staticmethod
-    def _add_canonical_id(df: SparkDF, id: str | None) -> RDD[Row]:
-        """
-        Returns an RDD with a canonical ID column added.
-        If self._id is provided, copy that column. Otherwise, use zipWithIndex.
-        """
-        # TODO: move to dataframe.py.
-        if CANONICAL_ID in df.columns:
-            return df.rdd
-        if id:
-            # Copy the id
-            return df.rdd.mapPartitions(
-                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
-            )
-        else:
-            # Create auto-increment
-            return df.rdd.zipWithIndex().mapPartitions(
-                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
-            )
+        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init = False)
 
     @staticmethod
     def _process_partition(
