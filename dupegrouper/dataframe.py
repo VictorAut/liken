@@ -12,10 +12,12 @@ from typing import Any, final, Generic, Self, TypeAlias, TypeVar
 import numpy as np
 import pandas as pd
 import polars as pl
+from pyspark.rdd import RDD
+from pyspark.sql.types import LongType, StructField, StructType
+from pyspark.sql import Row
 import pyspark.sql as spark
-from pyspark.sql.functions import monotonically_increasing_id
 
-from dupegrouper.constants import CANONICAL_ID
+from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
 from dupegrouper.types import DataFrameLike, SeriesLike
 
 
@@ -36,9 +38,17 @@ class Frame(ABC, Generic[T]):
     def unwrap(self) -> T:
         return self._df
 
-    # delegation: use ._df without using property explicitely
-
     def __getattr__(self, name: str) -> Any:
+        """Delegation: use ._df without using property explicitely.
+
+        So, the use of Self even with no attribute returns ._df attribute.
+        Therefore calling Self == call Self._df. This is useful as it makes the
+        API more concise in other modules.
+
+        For example, as the Duped class attribute ._df is an instance of this
+        class, it avoids having to do Duped()._df._df to access the actual
+        dataframe.
+        """
         return getattr(self._df, name)
 
     # Protocol:
@@ -76,9 +86,21 @@ class PandasDF(Frame[pd.DataFrame]):
     @staticmethod
     @override
     def _add_canonical_id(df: pd.DataFrame, id: str | None = None) -> pd.DataFrame:
-        if id is not None and id in df.columns:
-            return df.assign(**{CANONICAL_ID: df[id]})
-        return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
+        has_canonical: bool = CANONICAL_ID in df.columns
+        id_is_canonical: bool = id == CANONICAL_ID
+
+        if not has_canonical:
+            if id:
+                # write new with id
+                return df.assign(**{CANONICAL_ID: df[id]})
+            # write new auto-incrementing
+            return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
+        if id:
+            if not id_is_canonical:
+                # overwrite with id
+                return df.assign(**{CANONICAL_ID: df[id]})
+            return df
+        return df
 
     # PANDAS API WRAPPERS:
 
@@ -108,9 +130,21 @@ class PolarsDF(Frame[pl.DataFrame]):
     @staticmethod
     @override
     def _add_canonical_id(df: pl.DataFrame, id: str | None = None) -> pl.DataFrame:
-        if id is not None and id in df.columns:
-            return df.with_columns(df[id].alias(CANONICAL_ID))
-        return df.with_columns(pl.arange(1, len(df) + 1).alias(CANONICAL_ID))
+        has_canonical: bool = CANONICAL_ID in df.columns
+        id_is_canonical: bool = id == CANONICAL_ID
+
+        if not has_canonical:
+            if id:
+                # write new with id
+                return df.with_columns(df[id].alias(CANONICAL_ID))
+            # write new auto-incrementing
+            return df.with_columns(pl.arange(1, len(df) + 1).alias(CANONICAL_ID))
+        if id:
+            if not id_is_canonical:
+                # overwrite with id
+                return df.with_columns(df[id].alias(CANONICAL_ID))
+            return df
+        return df
 
     # POLARS API WRAPPERS:
 
@@ -132,29 +166,70 @@ class PolarsDF(Frame[pl.DataFrame]):
 @final
 class SparkDF(Frame[spark.DataFrame]):
 
-    err_msg = "Spark DataFrame methods are available per partition only, i.e. for lists of `pyspark.sql.Row`"
+    ERR_MSG = "Method is available for spark RDD, not spark DataFrame"
 
-    def __init__(self, df: spark.DataFrame, id: str | None = None):
+    def __init__(self, df: spark.DataFrame, id: str | None = None, is_init: bool = True):
         super().__init__(df)
-        del id # Unused
+        if is_init:
+            self._df: RDD[Row] = self._add_canonical_id(df, id)
+        else:
+            self._df: spark.DataFrame = df
+        self._id = id
+        self._schema = self._get_schema(df)
 
+    @staticmethod
     @override
-    def _add_canonical_id(self):
-        raise NotImplementedError(self.err_msg)
+    def _add_canonical_id(df: spark.DataFrame, id: str | None = None) -> RDD[Row]:
+        has_canonical: bool = CANONICAL_ID in df.columns
+        id_is_canonical: bool = id == CANONICAL_ID
+
+        df = df.select("*")  # TODO move to __init__
+
+        if not has_canonical:
+            if id:
+                # write new with id
+                return df.rdd.mapPartitions(
+                    lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+                )
+            # write new auto-incrementing
+            return df.rdd.zipWithIndex().mapPartitions(
+                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
+            )
+        if id:
+            if not id_is_canonical:
+                # overwrite with id
+                df: spark.DataFrame = df.drop(CANONICAL_ID)
+                return df.rdd.mapPartitions(
+                    lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+                )
+            return df
+        return df
+
+    def _get_schema(self, df: SparkDF) -> StructType:
+        fields = df.schema.fields
+        if CANONICAL_ID in df.columns:
+            return StructType(fields)
+
+        if self._id:
+            id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(self._id))
+        else:
+            id_type = LongType()  # auto-incremental is numeric
+        fields += [StructField(CANONICAL_ID, id_type, True)]
+        return StructType(fields)
 
     # SPARK API WRAPPERS:
 
     @override
     def put_col(self):
-        raise NotImplementedError(self.err_msg)
+        raise NotImplementedError(self.ERR_MSG)
 
     @override
     def get_col(self):
-        raise NotImplementedError(self.err_msg)
+        raise NotImplementedError(self.ERR_MSG)
 
     @override
     def get_cols(self):
-        raise NotImplementedError(self.err_msg)
+        raise NotImplementedError(self.ERR_MSG)
 
 
 @final
@@ -174,7 +249,7 @@ class SparkRows(Frame[list[spark.Row]]):
     @override
     def _add_canonical_id(df: list[spark.Row], id: str | None) -> list[spark.Row]:
         # TODO: consider `NotImplementedError`
-        del df, id # unused
+        del df, id  # unused
         pass
 
     # SPARK API WRAPPERS:
