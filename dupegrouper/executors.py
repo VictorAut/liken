@@ -138,6 +138,7 @@ class SparkExecutor(Executor):
         Returns an RDD with a canonical ID column added.
         If self._id is provided, copy that column. Otherwise, use zipWithIndex.
         """
+        # TODO: move to dataframe.py.
         if CANONICAL_ID in df.columns:
             return df.rdd
         if id:
