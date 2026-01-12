@@ -232,7 +232,6 @@ def _(df, id: str) -> SparkDF:
 
 @wrap.register(list)
 def _(df: list[spark.Row], id: str) -> SparkRows:
-    """As lists can be large: `all` membership is `Row` is not validated"""
     return SparkRows(df, id)
 
 
