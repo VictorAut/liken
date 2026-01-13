@@ -2,9 +2,18 @@ from unittest.mock import Mock, patch, create_autospec
 
 import pandas as pd
 import polars as pl
-from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
+from pyspark.sql import (
+    DataFrame as SparkDataFrame,
+    functions as F,
+    SparkSession,
+)
+import pyspark.sql as spark
+from pyspark.sql.functions import row_number, monotonically_increasing_id
+from pyspark.sql.types import StringType
+from pyspark.sql.window import Window
 import pytest
 
+from dupegrouper.datasets.datasets import fake13
 from dupegrouper.base import Duped, BaseStrategy
 from dupegrouper.dataframe import (
     PandasDF,
@@ -13,220 +22,6 @@ from dupegrouper.dataframe import (
     SparkRows,
 )
 from dupegrouper.types import DataFrameLike
-
-
-@pytest.fixture(scope="session")
-def id():
-    return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-
-
-@pytest.fixture(scope="session")
-def address():
-    return [
-        "123ab, OL5 9PL, UK",
-        "99 Ambleside avenue park Road, ED3 3RT, Edinburgh, United Kingdom",
-        "Calle Ancho, 12, 05688, Rioja, Navarra, Espana",
-        "Calle Sueco, 56, 05688, Rioja, Navarra",
-        "4 Brinkworth Way, GH9 5KL, Edinburgh, United Kingdom",
-        "66b Porters street, OL5 9PL, Newark, United Kingdom",
-        "C. Ancho 49, 05687, Navarra",
-        "Ambleside avenue Park Road ED3, UK",
-        "123ab, OL5 9PL, UK",
-        "123ab, OL5 9PL, UK",
-        "37 Lincolnshire lane, GH9 5DF, Edinburgh, UK",
-        "37 GH9, UK",
-        "totally random non existant address",
-    ]
-
-
-@pytest.fixture(scope="session")
-def email():
-    return [
-        "bbab@example.com",
-        "bb@example.com",
-        "a@example.com",
-        "hellothere@example.com",
-        "b@example.com",
-        "bab@example.com",
-        "b@example.com",
-        "hellthere@example.com",
-        "hellathere@example.com",
-        "irrelevant@hotmail.com",
-        "yet.another.email@msn.com",
-        "awesome_surfer_77@yahoo.com",
-        "fictitious@never.co.uk",
-    ]
-
-
-@pytest.fixture(scope="session")
-def account():
-    return [
-        "reddit",
-        "reddit",
-        "facebook",
-        "pinterest",
-        "pinterest",
-        "flickr",
-        "reddit",
-        "reddit",
-        "facebook",
-        "google",
-        "flickr",
-        "linkedin",
-        "linkedin",
-    ]
-
-
-@pytest.fixture(scope="session")
-def birth_country():
-    return [
-        "spain",
-        "spain",
-        "germany",
-        "japan",
-        "malaysia",
-        "malaysia",
-        "japan",
-        "germany",
-        "japan",
-        "malaysia",
-        "germany",
-        "france",
-        "japan",
-    ]
-
-
-@pytest.fixture(scope="session")
-def marital_status():
-    return [
-        "married",
-        "married",
-        "single",
-        "married",
-        "single",
-        "single",
-        "married",
-        "married",
-        "single",
-        "divorced",
-        "married",
-        "married",
-        "single",
-    ]
-
-
-@pytest.fixture(scope="session")
-def number_children():
-    return [
-        1,
-        1,
-        2,
-        0,
-        0,
-        0,
-        1,
-        0,
-        3,
-        1,
-        1,
-        1,
-        0,
-    ]
-
-
-@pytest.fixture(scope="session")
-def property_type():
-    return [
-        "rental",
-        "rental",
-        "rental",
-        "owner",
-        "rental",
-        "owner",
-        "rental",
-        "owner",
-        "owner",
-        "social housing",
-        "rental",
-        "rental",
-        "rental",
-    ]
-
-
-@pytest.fixture(scope="session")
-def property_height():
-    return [
-        2.4,
-        2.4,
-        2.5,
-        4.0,
-        6.0,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.7,
-        4.0,
-    ]
-
-
-@pytest.fixture(scope="session")
-def property_area_sq_ft():
-    return [
-        545,
-        452,
-        623,
-        2077,
-        3656,
-        4000,
-        1323,
-        509,
-        500,
-        450,
-        345,
-        1045,
-        1545,
-    ]
-
-
-@pytest.fixture(scope="session")
-def property_sea_level_elevation_m():
-    return [
-        5,
-        6,
-        5,
-        305,
-        1342,
-        25,
-        132,
-        200,
-        300,
-        15,
-        22,
-        42,
-        62,
-    ]
-
-
-@pytest.fixture(scope="session")
-def property_num_rooms():
-    return [
-        3,
-        3,
-        3,
-        6,
-        7,
-        8,
-        4,
-        2,
-        3,
-        3,
-        3,
-        4,
-        6,
-    ]
 
 
 @pytest.fixture(scope="session")
@@ -268,134 +63,23 @@ def spark():
     spark.stop()
 
 
-@pytest.fixture
-def mock_spark_session():
-    return create_autospec(SparkSession)
-
-
 # raw data inputs
 
 
 @pytest.fixture(scope="session")
-def df_pandas(
-    id,
-    address,
-    email,
-    account,
-    birth_country,
-    marital_status,
-    number_children,
-    property_type,
-    property_height,
-    property_area_sq_ft,
-    property_sea_level_elevation_m,
-    property_num_rooms,
-):
-    return pd.DataFrame(
-        {
-            "id": id,
-            "address": address,
-            "email": email,
-            "account": account,
-            "birth_country": birth_country,
-            "marital_status": marital_status,
-            "number_children": number_children,
-            "property_type": property_type,
-            "property_height": property_height,
-            "property_area_sq_ft": property_area_sq_ft,
-            "property_sea_level_elevation_m": property_sea_level_elevation_m,
-            "property_num_rooms": property_num_rooms,
-        }
-    )
+def df_pandas():
+    return fake13("pandas")
 
 
 @pytest.fixture(scope="session")
-def df_polars(
-    id,
-    address,
-    email,
-    account,
-    birth_country,
-    marital_status,
-    number_children,
-    property_type,
-    property_height,
-    property_area_sq_ft,
-    property_sea_level_elevation_m,
-    property_num_rooms,
-):
-    return pl.DataFrame(
-        {
-            "id": id,
-            "address": address,
-            "email": email,
-            "account": account,
-            "birth_country": birth_country,
-            "marital_status": marital_status,
-            "number_children": number_children,
-            "property_type": property_type,
-            "property_height": property_height,
-            "property_area_sq_ft": property_area_sq_ft,
-            "property_sea_level_elevation_m": property_sea_level_elevation_m,
-            "property_num_rooms": property_num_rooms,
-        }
-    )
+def df_polars():
+    return fake13("polars")
 
 
 @pytest.fixture(scope="function")
-def df_spark(
-    spark,
-    id,
-    address,
-    email,
-    account,
-    birth_country,
-    marital_status,
-    number_children,
-    property_type,
-    property_height,
-    property_area_sq_ft,
-    property_sea_level_elevation_m,
-    property_num_rooms,
-    blocking_key,
-):
+def df_spark(spark):
     """Default is a single partition"""
-
-    return spark.createDataFrame(
-        [
-            [
-                id[i],
-                address[i],
-                email[i],
-                account[i],
-                birth_country[i],
-                marital_status[i],
-                number_children[i],
-                property_type[i],
-                property_height[i],
-                property_area_sq_ft[i],
-                property_sea_level_elevation_m[i],
-                property_num_rooms[i],
-                blocking_key[i],
-            ]
-            for i in range(len(id))
-        ],
-        schema=(
-            "id",
-            "address",
-            "email",
-            "account",
-            "birth_country",
-            "marital_status",
-            "number_children",
-            "property_type",
-            "property_height",
-            "property_area_sq_ft",
-            "property_sea_level_elevation_m",
-            "property_num_rooms",
-            "blocking_key",
-        ),
-    ).repartition(1, "blocking_key")
+    return fake13("spark", spark_session=spark)
 
 
 @pytest.fixture(scope="function")
@@ -456,6 +140,10 @@ def duped_mock(dataframe):
 def strategy_mock():
     return Mock(spec=BaseStrategy)
 
+@pytest.fixture
+def mock_spark_session():
+    return create_autospec(SparkSession)
+
 
 # helpers
 
@@ -470,7 +158,25 @@ class Helpers:
             return [value[col] for value in df.select(col).collect()]
         if isinstance(df, list):  # i.e. list[Row]
             return [value[col] for value in df]
+        
 
+    @staticmethod
+    def add_column(df, column: list, label: str):
+        if isinstance(df, pd.DataFrame):
+            # TODO
+            pass
+        if isinstance(df, pl.DataFrame):
+            # TODO
+            pass
+        if isinstance(df, SparkDataFrame):
+            # add column to spark DataFrame
+            labels_udf = F.udf(lambda indx: column[indx - 1], StringType())
+            df = df.withColumn("num_id", row_number().over(Window.orderBy(monotonically_increasing_id())))
+            df = df.withColumn(label, labels_udf("num_id"))
+            return df.drop("num_id")
+        if isinstance(df, list):  # i.e. list[Row]
+            # TODO
+            pass
 
 @pytest.fixture(scope="session", autouse=True)
 def helpers():
