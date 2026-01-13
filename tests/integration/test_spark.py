@@ -1,3 +1,5 @@
+"""Test that canonicalisation is only operated upon per partition"""
+
 from __future__ import annotations
 
 import pytest
@@ -15,15 +17,17 @@ from dupegrouper.strats_library import Exact
     ],
     ids=["1 partitions", "2 partitions"],
 )
-def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, helpers):
+def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, blocking_key, helpers):
 
-    df_spark = df_spark.repartition(num_partitions, "blocking_key")
+    df = helpers.add_column(df_spark, blocking_key, "blocking_key")
+
+    df = df.repartition(num_partitions, "blocking_key")
 
     strategies = {
         "address": [Exact()],
         "email": [Exact()],
     }
-    dg = Duped(df_spark, spark_session=spark, id="id")
+    dg = Duped(df, spark_session=spark)
     dg.apply(strategies)
     dg.canonicalize()
 
