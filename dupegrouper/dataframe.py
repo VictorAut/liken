@@ -172,10 +172,15 @@ class SparkDF(Frame[spark.DataFrame]):
 
     def __init__(self, df: spark.DataFrame, id: str | None = None, is_init: bool = True):
         super().__init__(df)
+        
+        # re-instantiate spark plan
+        df = df.select("*")
+
         if is_init:
             self._df: RDD[Row] = self._add_canonical_id(df, id)
         else:
             self._df: spark.DataFrame = df
+
         self._id = id
         self._schema = self._get_schema(df)
 
@@ -185,18 +190,16 @@ class SparkDF(Frame[spark.DataFrame]):
         has_canonical: bool = CANONICAL_ID in df.columns
         id_is_canonical: bool = id == CANONICAL_ID
 
-        df = df.select("*")  # TODO move to __init__
-
         if has_canonical:
             if id:
                 if id_is_canonical:
-                    return df
+                    return df.rdd
                 # overwrite with id
                 df: spark.DataFrame = df.drop(CANONICAL_ID)
                 return df.rdd.mapPartitions(
                     lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
                 )
-            return df
+            return df.rdd
         if id:
             # write new with id
             return df.rdd.mapPartitions(
@@ -218,6 +221,19 @@ class SparkDF(Frame[spark.DataFrame]):
             id_type = LongType()  # auto-incremental is numeric
         fields += [StructField(CANONICAL_ID, id_type, True)]
         return StructType(fields)
+    
+    @override
+    def unwrap(self) -> spark.DataFrame:
+        """Ensure the unwrapped dataframe is always an instance of DataFrame
+        
+        Permits the access of the base Duped class attribute dataframe to be
+        returned as a DataFrame even if no canonicalisation has been applied
+        yet. For example this would be needed if inspecting the dataframe as
+        contained in an instance of Duped having yet to call the canonicalizer
+        on the set of strategies"""
+        if isinstance(self._df, RDD):
+            return self._df.toDF()
+        return self._df
 
     # SPARK API WRAPPERS:
 
