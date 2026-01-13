@@ -119,7 +119,7 @@ class BaseStrategy():
                 rep_index[i] = rep
 
         new_canonicals = np.array(
-            [int(canonicals[rep_index[i]]) for i in range(n)],
+            [canonicals[rep_index[i]] for i in range(n)],
             dtype=object,
         )
 
