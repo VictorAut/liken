@@ -71,6 +71,7 @@ class StrategyManager:
         if isinstance(strat, dict | StratsConfig):
             # when an inline strat has already been provided: warn as it will be replaced
             if self._strats[DEFAULT_STRAT_KEY]:
+                # change this to use warnings library instead
                 logger.warning(
                     "The strat manager had already been supplied with at least one in-line strat which now will be replaced"
                 )

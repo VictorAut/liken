@@ -79,7 +79,7 @@ class PandasDF(Frame[pd.DataFrame]):
 
     def __init__(self, df: pd.DataFrame, id: str | None):
         super().__init__(df)
-        self._df: pd.DataFrame = self._add_canonical_id(df)
+        self._df: pd.DataFrame = self._add_canonical_id(df, id)
         self._id = id
         # TODO validate that id exists in the DF!
 
@@ -89,18 +89,19 @@ class PandasDF(Frame[pd.DataFrame]):
         has_canonical: bool = CANONICAL_ID in df.columns
         id_is_canonical: bool = id == CANONICAL_ID
 
-        if not has_canonical:
+        if has_canonical:
             if id:
-                # write new with id
-                return df.assign(**{CANONICAL_ID: df[id]})
-            # write new auto-incrementing
-            return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=1, stop=len(df) + 1)})
-        if id:
-            if not id_is_canonical:
+                if id_is_canonical:
+                    return df
                 # overwrite with id
                 return df.assign(**{CANONICAL_ID: df[id]})
+            #TODO: need a warning here. user needs to know that they should pass id="canonical_id"
             return df
-        return df
+        if id:
+            # write new with id
+            return df.assign(**{CANONICAL_ID: df[id]})
+        # write new auto-incrementing
+        return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
 
     # PANDAS API WRAPPERS:
 
@@ -123,7 +124,7 @@ class PolarsDF(Frame[pl.DataFrame]):
 
     def __init__(self, df: pl.DataFrame, id: str | None):
         super().__init__(df)
-        self._df: pl.DataFrame = self._add_canonical_id(df)
+        self._df: pl.DataFrame = self._add_canonical_id(df, id)
         self._id = id
         # TODO validate that id exists in the DF!
 
@@ -133,18 +134,19 @@ class PolarsDF(Frame[pl.DataFrame]):
         has_canonical: bool = CANONICAL_ID in df.columns
         id_is_canonical: bool = id == CANONICAL_ID
 
-        if not has_canonical:
+        if has_canonical:
             if id:
-                # write new with id
-                return df.with_columns(df[id].alias(CANONICAL_ID))
-            # write new auto-incrementing
-            return df.with_columns(pl.arange(1, len(df) + 1).alias(CANONICAL_ID))
-        if id:
-            if not id_is_canonical:
+                if id_is_canonical:
+                    return df
                 # overwrite with id
                 return df.with_columns(df[id].alias(CANONICAL_ID))
             return df
-        return df
+        if id:
+            # write new with id
+            return df.with_columns(df[id].alias(CANONICAL_ID))
+        # write new auto-incrementing
+        return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
+        
 
     # POLARS API WRAPPERS:
 
@@ -185,25 +187,25 @@ class SparkDF(Frame[spark.DataFrame]):
 
         df = df.select("*")  # TODO move to __init__
 
-        if not has_canonical:
+        if has_canonical:
             if id:
-                # write new with id
-                return df.rdd.mapPartitions(
-                    lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
-                )
-            # write new auto-incrementing
-            return df.rdd.zipWithIndex().mapPartitions(
-                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
-            )
-        if id:
-            if not id_is_canonical:
+                if id_is_canonical:
+                    return df
                 # overwrite with id
                 df: spark.DataFrame = df.drop(CANONICAL_ID)
                 return df.rdd.mapPartitions(
                     lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
                 )
             return df
-        return df
+        if id:
+            # write new with id
+            return df.rdd.mapPartitions(
+                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            )
+        # write new auto-incrementing
+        return df.rdd.zipWithIndex().mapPartitions(
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
+        )
 
     def _get_schema(self, df: SparkDF) -> StructType:
         fields = df.schema.fields
