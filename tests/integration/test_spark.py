@@ -10,8 +10,8 @@ from dupegrouper.strats_library import Exact
 @pytest.mark.parametrize(
     "num_partitions, expected_ids",
     [
-        (1, [1, 2, 3, 4, 5, 6, 5, 8, 1, 1, 11, 12, 13]),
-        (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 11, 12, 13]),
+        (1, [0, 1, 2, 3, 4, 5, 4, 7, 0, 0, 10, 11, 12]),
+        (2, [0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 10, 11, 12]),
     ],
     ids=["1 partitions", "2 partitions"],
 )
