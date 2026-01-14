@@ -9,7 +9,7 @@ from pyspark.sql import (
 )
 import pyspark.sql as spark
 from pyspark.sql.functions import row_number, monotonically_increasing_id
-from pyspark.sql.types import StringType
+from pyspark.sql.types import LongType, StringType
 from pyspark.sql.window import Window
 import pytest
 
@@ -59,6 +59,7 @@ def spark():
         .config("spark.driver.bindAddress", "127.0.0.1")
         .getOrCreate()
     )
+    spark.sparkContext.setLogLevel("ERROR")
     yield spark
     spark.stop()
 
@@ -98,7 +99,7 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
     if request.param == "polars":
         return df_polars, None, None
     if request.param == "spark":
-        return df_spark, spark, "id"
+        return df_spark, spark, None
 
 
 @pytest.fixture(params=["pandas", "polars", "spark_df", "spark_row"])
@@ -161,16 +162,20 @@ class Helpers:
         
 
     @staticmethod
-    def add_column(df, column: list, label: str):
+    def add_column(df, column: list, label: str, dtype = None):
         if isinstance(df, pd.DataFrame):
-            # TODO
-            pass
+            df = df.assign(**{label:column})
+            return df
         if isinstance(df, pl.DataFrame):
-            # TODO
-            pass
+            df = df.with_columns(pl.Series(name=label, values=column))
+            return df
         if isinstance(df, SparkDataFrame):
             # add column to spark DataFrame
-            labels_udf = F.udf(lambda indx: column[indx - 1], StringType())
+            if dtype is int:
+                _type = LongType()
+            if dtype is str:
+                _type = StringType()
+            labels_udf = F.udf(lambda indx: column[indx - 1], _type)
             df = df.withColumn("num_id", row_number().over(Window.orderBy(monotonically_increasing_id())))
             df = df.withColumn(label, labels_udf("num_id"))
             return df.drop("num_id")

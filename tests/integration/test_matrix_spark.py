@@ -19,7 +19,7 @@ from dupegrouper.strats_library import Exact
 )
 def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, blocking_key, helpers):
 
-    df = helpers.add_column(df_spark, blocking_key, "blocking_key")
+    df = helpers.add_column(df_spark, blocking_key, "blocking_key", str)
 
     df = df.repartition(num_partitions, "blocking_key")
 

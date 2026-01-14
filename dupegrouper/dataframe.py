@@ -14,6 +14,9 @@ import pandas as pd
 import polars as pl
 from pyspark.rdd import RDD
 from pyspark.sql.types import LongType, StructField, StructType
+from pyspark.sql.types import (
+    LongType, IntegerType, DoubleType, FloatType, StringType, BooleanType
+)
 from pyspark.sql import Row
 import pyspark.sql as spark
 
@@ -95,7 +98,7 @@ class PandasDF(Frame[pd.DataFrame]):
                     return df
                 # overwrite with id
                 return df.assign(**{CANONICAL_ID: df[id]})
-            #TODO: need a warning here. user needs to know that they should pass id="canonical_id"
+            # TODO: need a warning here. user needs to know that they should pass id="canonical_id"
             return df
         if id:
             # write new with id
@@ -146,7 +149,6 @@ class PolarsDF(Frame[pl.DataFrame]):
             return df.with_columns(df[id].alias(CANONICAL_ID))
         # write new auto-incrementing
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
-        
 
     # POLARS API WRAPPERS:
 
@@ -170,25 +172,39 @@ class SparkDF(Frame[spark.DataFrame]):
 
     ERR_MSG = "Method is available for spark RDD, not spark DataFrame"
 
-    def __init__(self, df: spark.DataFrame, id: str | None = None, is_init: bool = True):
+    def __init__(self, df: spark.DataFrame, id: str | None = None, spark_session = None, is_init: bool = True):
         super().__init__(df)
-        
+
         # re-instantiate spark plan
         df = df.select("*")
 
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, id)
+            self._df: RDD[Row] = self._add_canonical_id(df, spark_session, id)
         else:
             self._df: spark.DataFrame = df
 
         self._id = id
         self._schema = self._get_schema(df)
 
-    @staticmethod
+    # @staticmethod
     @override
-    def _add_canonical_id(df: spark.DataFrame, id: str | None = None) -> RDD[Row]:
+    def _add_canonical_id(self, df: spark.DataFrame, spark_session, id: str | None = None) -> RDD[Row]:
         has_canonical: bool = CANONICAL_ID in df.columns
         id_is_canonical: bool = id == CANONICAL_ID
+
+
+        new_schema = self._get_schema(df)
+        canonical_type = new_schema[-1].dataType  # last field is CANONICAL_ID
+        def cast_value(value):
+            if isinstance(canonical_type, (LongType, IntegerType)):
+                return int(value)
+            elif isinstance(canonical_type, (DoubleType, FloatType)):
+                return float(value)
+            elif isinstance(canonical_type, StringType):
+                return str(value)
+            elif isinstance(canonical_type, BooleanType):
+                return bool(value)
+            return value
 
         if has_canonical:
             if id:
@@ -196,9 +212,16 @@ class SparkDF(Frame[spark.DataFrame]):
                     return df.rdd
                 # overwrite with id
                 df: spark.DataFrame = df.drop(CANONICAL_ID)
-                return df.rdd.mapPartitions(
-                    lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
-                )
+                   
+                # return df.rdd.mapPartitions(
+                #     lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+                # )
+                return spark_session.createDataFrame(
+                    df.rdd.mapPartitions(
+                        lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: cast_value(row[id])}) for row in partition]
+                    ),
+                    schema=new_schema,
+                ).rdd
             return df.rdd
         if id:
             # write new with id
@@ -221,11 +244,11 @@ class SparkDF(Frame[spark.DataFrame]):
             id_type = LongType()  # auto-incremental is numeric
         fields += [StructField(CANONICAL_ID, id_type, True)]
         return StructType(fields)
-    
+
     @override
     def unwrap(self) -> spark.DataFrame:
         """Ensure the unwrapped dataframe is always an instance of DataFrame
-        
+
         Permits the access of the base Duped class attribute dataframe to be
         returned as a DataFrame even if no canonicalisation has been applied
         yet. For example this would be needed if inspecting the dataframe as
@@ -291,7 +314,7 @@ class SparkRows(Frame[list[spark.Row]]):
 
 
 @singledispatch
-def wrap(df: DataFrameLike, id: str | None = None):
+def wrap(df: DataFrameLike, id: str | None = None, spark_session = None):
     """
     Dispatch the dataframe to the appropriate wrapping handler.
 
@@ -309,22 +332,22 @@ def wrap(df: DataFrameLike, id: str | None = None):
 
 
 @wrap.register(pd.DataFrame)
-def _(df, id: str | None = None) -> PandasDF:
+def _(df, id: str | None = None, spark_session = None) -> PandasDF:
     return PandasDF(df, id)
 
 
 @wrap.register(pl.DataFrame)
-def _(df, id: str | None = None) -> PolarsDF:
+def _(df, id: str | None = None, spark_session = None) -> PolarsDF:
     return PolarsDF(df, id)
 
 
 @wrap.register(spark.DataFrame)
-def _(df, id: str) -> SparkDF:
-    return SparkDF(df, id)
+def _(df, id: str, spark_session) -> SparkDF:
+    return SparkDF(df, id, spark_session)
 
 
 @wrap.register(list)
-def _(df: list[spark.Row], id: str) -> SparkRows:
+def _(df: list[spark.Row], id: str, spark_session = None) -> SparkRows:
     return SparkRows(df, id)
 
 

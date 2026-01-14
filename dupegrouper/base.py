@@ -81,6 +81,9 @@ class Duped(Generic[DF]):
     ):
         self._sm = StrategyManager()
 
+        # TODO: need to validate that df is not a NoneType
+        # TODO: warnings e.g. if canonical_id is already present in the data
+
         keep = _validate_keep_arg(keep)
 
         self._executor: LocalExecutor | SparkExecutor
@@ -94,7 +97,7 @@ class Duped(Generic[DF]):
         else:
             self._executor = LocalExecutor(keep=keep)
 
-        self._df = wrap(df, id)
+        self._df = wrap(df, id, spark_session)
 
     def apply(self, strategy: BaseStrategy | dict) -> None:
         self._sm.apply(strategy)
