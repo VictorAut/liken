@@ -142,22 +142,35 @@ PARAMS = [
         ["e00005", "e00006", "e00005"],
     ),
 ]
+IDS = [
+    "new-auto-incremental-canonical_id",
+    "copy-numeric-id",
+    "copy-string-id",
+    "canonical_id-already-exists-not-deduped",
+    "canonical_id-already-exists-partially-deduped",
+    "canonical_id-already-exists-not-deduped-verbose",
+    "canonical_id-already-exists-partially-deduped-verbose",
+    "overwrite-numeric-to-numeric",
+    "overwrite-string-to-numeric",
+    "overwrite-numeric-to-string",
+    "overwrite-string-to-string",
+]
 
+
+@pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
 @pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-@pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS)
 def test_id_matrix(backend, id, schema, data, expected_canonical_id, spark, helpers):
 
     if backend == "pandas":
         df = pd.DataFrame(columns=schema, data=data)
 
-    elif backend == "polars":
+    if backend == "polars":
         df = pl.DataFrame(schema=schema, data=data, orient="row")
 
-    elif backend == "spark":
+    if backend == "spark":
         df = spark.createDataFrame(schema=schema, data=data)
 
     dg = Duped(df, spark_session=spark, id=id)
-
     dg.apply(exact())
     dg.canonicalize(SINGLE_COL)
 

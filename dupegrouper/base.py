@@ -97,7 +97,7 @@ class Duped(Generic[DF]):
         else:
             self._executor = LocalExecutor(keep=keep)
 
-        self._df = wrap(df, id, spark_session)
+        self._df = wrap(df, id)
 
     def apply(self, strategy: BaseStrategy | dict) -> None:
         self._sm.apply(strategy)
