@@ -1,15 +1,10 @@
 from __future__ import annotations
+
 from collections.abc import Iterator
-from typing import final, Protocol, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
-from pyspark.rdd import RDD
-from pyspark.sql import SparkSession, Row
-from pyspark.sql.types import LongType, StructField, StructType
+from pyspark.sql import Row, SparkSession
 
-from dupegrouper.constants import (
-    CANONICAL_ID,
-    PYSPARK_TYPES,
-)
 from dupegrouper.dataframe import DF, LocalDF, SparkDF
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsConfig
@@ -62,7 +57,7 @@ class LocalExecutor(Executor):
             #
             .set_frame(df)
             .set_keep(self._keep)
-            .canonicalize(columns)
+            .canonicalize(columns)  # type: ignore
         )
 
 
@@ -94,7 +89,7 @@ class SparkExecutor(Executor):
 
         from dupegrouper.base import Duped
 
-        # IMPORTANT: Use local variables, not references to Self
+        # IMPORTANT: Use local variables, no references to Self
         id = self._id
         keep = self._keep
         process_partition = self._process_partition
@@ -112,11 +107,11 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init = False)
+        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
     @staticmethod
     def _process_partition(
-        factory: Duped,
+        factory: Type[Duped[SparkDF]],
         partition: Iterator[Row],
         strats: StratsConfig,
         id: str,
@@ -148,4 +143,4 @@ class SparkExecutor(Executor):
         dp.apply(strats)
         dp.canonicalize(columns)
 
-        return iter(dp.df)
+        return iter(cast(list[Row], dp.df))

@@ -7,23 +7,23 @@ overrideable `canonicalize()` is defined.
 """
 
 from __future__ import annotations
-from abc import ABC
-from collections.abc import Iterator
-from collections import defaultdict
-from functools import cache
+
 import logging
 import re
-from typing_extensions import override
-from typing import Any, final, Self, TYPE_CHECKING
+from collections import defaultdict
+from collections.abc import Iterator
+from functools import cache
+from typing import TYPE_CHECKING, Any, Self, final
 
+import numpy as np
 from datasketch import MinHash, MinHashLSH
 from networkx.utils.union_find import UnionFind
-import numpy as np
 from numpy.linalg import norm
 from rapidfuzz import fuzz
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
+from typing_extensions import override
 
 from dupegrouper.constants import CANONICAL_ID
 
@@ -46,15 +46,17 @@ from typing import Protocol
 class BaseProtocol(Protocol):
     wrapped_df: LocalDF
     keep: Keep
+
     def set_frame(self, wrapped_df: LocalDF) -> Self: ...
     def set_keep(self, wrapped_df: Keep) -> Self: ...
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
-    def _get_components(self, columns: Columns) -> dict[object, list[int]]: ...
+    def _get_components(self, columns: Columns) -> dict[int, list[int]]: ...
     def canonicalize(self, columns: Columns) -> LocalDF: ...
     def get_array(self, columns: Columns) -> np.ndarray: ...
     def validate(self, columns: Columns) -> None: ...
 
-class BaseStrategy():
+
+class BaseStrategy:
     """
     @private
 
@@ -65,7 +67,7 @@ class BaseStrategy():
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def set_frame(self: BaseProtocol, wrapped_df: LocalDF) -> BaseProtocol:
+    def set_frame(self, wrapped_df: LocalDF) -> Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -78,15 +80,15 @@ class BaseStrategy():
         self.wrapped_df: LocalDF = wrapped_df
         return self
 
-    def set_keep(self: BaseProtocol, keep: Keep = "first") -> BaseProtocol:
+    def set_keep(self, keep: Keep = "first") -> Self:
         self.keep = keep
         return self
 
-    def _gen_similarity_pairs(self: BaseProtocol, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
-    def _get_components(self: BaseProtocol, columns: Columns) -> dict[object, list[int]]:
+    def _get_components(self: BaseProtocol, columns: Columns) -> dict[int, list[int]]:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -182,7 +184,7 @@ class Exact(BaseStrategy, ColumnArrayMixin):
         return tuple(value.tolist())
 
     @override
-    def _get_components(self, columns: Columns) -> dict[object, list[int]]:
+    def _get_components(self, columns: Columns) -> dict[int, list[int]]:
         array = self.get_array(columns)
 
         if isinstance(columns, str):

@@ -1,9 +1,8 @@
-from collections import UserDict
 import logging
-from typing import final, Final
+from collections import UserDict
+from typing import Final, final
 
 from dupegrouper.strats_library import BaseStrategy
-
 
 # LOGGER:
 
@@ -79,7 +78,7 @@ class StrategyManager:
             self._strats = StratsConfig(strat)
             return
 
-        raise StrategyConfigTypeError(f'Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}')
+        raise StrategyConfigTypeError(f"Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}")
 
     def get(self) -> StratsConfig:
         return self._strats

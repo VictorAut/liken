@@ -1,11 +1,11 @@
 from collections.abc import Iterable, Iterator
 from functools import wraps
-from typing_extensions import override
 from typing import Callable, TypeAlias, final
 
-from dupegrouper.strats_library import ThresholdDedupers, ColumnArrayMixin
-from dupegrouper.types import ArrayLike, SimilarPairIndices
+from typing_extensions import override
 
+from dupegrouper.strats_library import ColumnArrayMixin, ThresholdDedupers
+from dupegrouper.types import ArrayLike, SimilarPairIndices
 
 PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
 
