@@ -34,11 +34,13 @@ DATA13 = [
 
 def fake13(
     backend: typing.Literal["pandas", "polars", "spark"] = "pandas",
-    spark_session: SparkSession = None,
+    spark_session: SparkSession | None = None,
 ):
     if backend == "pandas":
         return pd.DataFrame(columns=COLUMNS, data=DATA13)
     if backend == "polars":
         return pl.DataFrame(schema=COLUMNS, data=DATA13, orient="row")
     if backend == "spark":
-        return spark_session.createDataFrame(schema=COLUMNS, data=DATA13)
+        if spark_session:
+            return spark_session.createDataFrame(schema=COLUMNS, data=DATA13)
+        raise ValueError("Spark Session not passed yet 'spark' backend requested")

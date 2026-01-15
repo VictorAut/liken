@@ -141,6 +141,7 @@ def duped_mock(dataframe):
 def strategy_mock():
     return Mock(spec=BaseStrategy)
 
+
 @pytest.fixture
 def mock_spark_session():
     return create_autospec(SparkSession)
@@ -159,12 +160,11 @@ class Helpers:
             return [value[col] for value in df.select(col).collect()]
         if isinstance(df, list):  # i.e. list[Row]
             return [value[col] for value in df]
-        
 
     @staticmethod
-    def add_column(df, column: list, label: str, dtype = None):
+    def add_column(df, column: list, label: str, dtype=None):
         if isinstance(df, pd.DataFrame):
-            df = df.assign(**{label:column})
+            df = df.assign(**{label: column})
             return df
         if isinstance(df, pl.DataFrame):
             df = df.with_columns(pl.Series(name=label, values=column))
@@ -182,6 +182,7 @@ class Helpers:
         if isinstance(df, list):  # i.e. list[Row]
             # TODO
             pass
+
 
 @pytest.fixture(scope="session", autouse=True)
 def helpers():

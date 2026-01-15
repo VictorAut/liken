@@ -4,22 +4,21 @@ ABC for wrapped dataframe interfaces
 """
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 from functools import singledispatch
-from typing_extensions import override
-from typing import Any, final, Generic, Self, TypeAlias, TypeVar
+from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from pyspark.rdd import RDD
-from pyspark.sql.types import LongType, StructField, StructType
-from pyspark.sql import Row
 import pyspark.sql as spark
+from pyspark.rdd import RDD
+from pyspark.sql import Row
+from pyspark.sql.types import LongType, StructField, StructType
+from typing_extensions import override
 
 from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
-from dupegrouper.types import DataFrameLike, SeriesLike
-
+from dupegrouper.types import DataFrameLike
 
 # TYPES
 
@@ -52,12 +51,19 @@ class Frame(Generic[T]):
         return getattr(self._df, name)
 
 
-# MIXIN
+# CANONICAL ID
+
+
+class AddsCanonical(Protocol):
+    def _df_as_is(self, df): ...
+    def _df_overwrite_id(self, df, id: str): ...
+    def _df_copy_id(self, df, id: str): ...
+    def _df_autoincrement_id(self, df): ...
 
 
 class CanonicalIdMixin:
 
-    def _add_canonical_id(self, df, id):
+    def _add_canonical_id(self: AddsCanonical, df, id: str | None):
         has_canonical: bool = CANONICAL_ID in df.columns
         id_is_canonical: bool = id == CANONICAL_ID
 
@@ -86,20 +92,16 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
         self._id = id
         # TODO validate that id exists in the DF!
 
-    @staticmethod
-    def _df_as_is(df: pd.DataFrame) -> pd.DataFrame:
+    def _df_as_is(self, df: pd.DataFrame) -> pd.DataFrame:
         return df
 
-    @staticmethod
-    def _df_overwrite_id(df: pl.DataFrame, id: str) -> pd.DataFrame:
+    def _df_overwrite_id(self, df: pd.DataFrame, id: str) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: df[id]})
 
-    @staticmethod
-    def _df_copy_id(df: pd.DataFrame, id: str) -> pd.DataFrame:
+    def _df_copy_id(self, df: pd.DataFrame, id: str) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: df[id]})
 
-    @staticmethod
-    def _df_autoincrement_id(df: pd.DataFrame) -> pd.DataFrame:
+    def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
 
     # WRAPPER METHODS:
@@ -123,20 +125,16 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
         self._id = id
         # TODO validate that id exists in the DF!
 
-    @staticmethod
-    def _df_as_is(df: pl.DataFrame) -> pl.DataFrame:
+    def _df_as_is(self, df: pl.DataFrame) -> pl.DataFrame:
         return df
 
-    @staticmethod
-    def _df_overwrite_id(df: pl.DataFrame, id: str) -> pl.DataFrame:
+    def _df_overwrite_id(self, df: pl.DataFrame, id: str) -> pl.DataFrame:
         return df.with_columns(df[id].alias(CANONICAL_ID))
 
-    @staticmethod
-    def _df_copy_id(df: pl.DataFrame, id: str) -> pl.DataFrame:
+    def _df_copy_id(self, df: pl.DataFrame, id: str) -> pl.DataFrame:
         return df.with_columns(df[id].alias(CANONICAL_ID))
 
-    @staticmethod
-    def _df_autoincrement_id(df: pl.DataFrame) -> pl.DataFrame:
+    def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
 
     # WRAPPER METHODS:
@@ -153,8 +151,11 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
         return self._df.select(columns)
 
 
+SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
+
+
 @final
-class SparkDF(Frame[spark.DataFrame]):
+class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     ERR_MSG = "Method is available for spark RDD, not spark DataFrame"
 
@@ -164,54 +165,25 @@ class SparkDF(Frame[spark.DataFrame]):
         id: str | None = None,
         is_init: bool = True,
     ):
-        # re-instantiate spark plan
+        # new spark plan
         df = df.select("*")
 
+        self._df: SparkObject
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, id)
+            self._df = self._add_canonical_id(df, id)
         else:
-            self._df: spark.DataFrame = df
+            self._df = df
 
         self._id = id
-
-    @override
-    def _add_canonical_id(self, df: spark.DataFrame, id: str | None = None) -> RDD[Row]:
-        has_canonical: bool = CANONICAL_ID in df.columns
-        id_is_canonical: bool = id == CANONICAL_ID
-
-        if has_canonical:
-            if id:
-                if id_is_canonical:
-                    self._schema = df.schema
-                    return df.rdd
-                # overwrite with id
-                df: spark.DataFrame = df.drop(CANONICAL_ID)
-                self._schema = self._new_schema(df, id)
-                return df.rdd.mapPartitions(
-                    lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
-                )
-            self._schema = df.schema
-            return df.rdd
-        if id:
-            # write new with id
-            self._schema = self._new_schema(df, id)
-            return df.rdd.mapPartitions(
-                lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
-            )
-        # write new auto-incrementing
-        self._schema = self._new_schema(df)
-        return df.rdd.zipWithIndex().mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
-        )
 
     def _df_as_is(self, df: spark.DataFrame) -> RDD[Row]:
         self._schema = df.schema
         return df.rdd
 
     def _df_overwrite_id(self, df: spark.DataFrame, id: str) -> RDD[Row]:
-        df: spark.DataFrame = df.drop(CANONICAL_ID)
-        self._schema = self._new_schema(df, id)
-        return df.rdd.mapPartitions(
+        df_new: spark.DataFrame = df.drop(CANONICAL_ID)
+        self._schema = self._new_schema(df_new, id)
+        return df_new.rdd.mapPartitions(
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
         )
 
@@ -228,10 +200,11 @@ class SparkDF(Frame[spark.DataFrame]):
         )
 
     @staticmethod
-    def _new_schema(df: SparkDF, id: str | None = None) -> StructType:
+    def _new_schema(df: spark.DataFrame, id: str | None = None) -> StructType:
         fields = df.schema.fields
         if id:
-            id_type = PYSPARK_TYPES.get(dict(df.dtypes).get(id))
+            dtype = dict(df.dtypes)[id]
+            id_type = PYSPARK_TYPES[dtype]
         else:
             id_type = LongType()  # auto-incremental is numeric
         fields += [StructField(CANONICAL_ID, id_type, True)]
@@ -269,17 +242,14 @@ class SparkRows(Frame[list[spark.Row]]):
 
     # WRAPPER METHODS:
 
-    @override
     def put_col(self, column: str, array) -> Self:
         array = [i.item() if isinstance(i, np.generic) else i for i in array]
         self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
-    @override
     def get_col(self, column: str) -> list[Any]:
         return [row[column] for row in self._df]
 
-    @override
     def get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:
         return [[row[c] for c in columns] for row in self._df]
 

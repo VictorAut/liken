@@ -1,18 +1,19 @@
 from __future__ import annotations
+
 import os
 from typing import Final
 
 from pyspark.sql.types import (
-    StringType,
-    IntegerType,
-    LongType,
+    BooleanType,
+    DataType,
+    DateType,
     DoubleType,
     FloatType,
-    BooleanType,
+    IntegerType,
+    LongType,
+    StringType,
     TimestampType,
-    DateType,
 )
-
 
 # CONSTANTS:
 
@@ -22,13 +23,13 @@ CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
 
 # Pyspark sql conversion types
-PYSPARK_TYPES: Final[dict] = {
-    "string": StringType(),
-    "int": IntegerType(),
-    "bigint": LongType(),
+PYSPARK_TYPES: Final[dict[str, DataType]] = {
+    "boolean": BooleanType(),
+    "date": DateType(),
     "double": DoubleType(),
     "float": FloatType(),
-    "boolean": BooleanType(),
+    "int": IntegerType(),
+    "bigint": LongType(),
+    "string": StringType(),
     "timestamp": TimestampType(),
-    "date": DateType(),
 }

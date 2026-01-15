@@ -5,23 +5,20 @@ functionality provided by dupegrouper.
 """
 
 from __future__ import annotations
+
 import logging
-from typing import Literal, overload, Generic
+from typing import Generic, Literal, overload
 
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
+
 from dupegrouper.dataframe import DF, wrap
 from dupegrouper.executors import Executor, LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StrategyManager
-from dupegrouper.types import (
-    Columns,
-    DataFrameLike,
-    Keep,
-)
-
+from dupegrouper.strats_manager import StrategyManager, StratsConfig
+from dupegrouper.types import Columns, DataFrameLike, Keep
 
 # LOGGER:
 
@@ -99,7 +96,7 @@ class Duped(Generic[DF]):
 
         self._df = wrap(df, id)
 
-    def apply(self, strategy: BaseStrategy | dict) -> None:
+    def apply(self, strategy: BaseStrategy | StratsConfig | dict) -> None:
         self._sm.apply(strategy)
 
     def canonicalize(self, columns: Columns | None = None) -> None:

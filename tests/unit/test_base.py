@@ -56,7 +56,6 @@ def test_validate_spark_args_missing_session():
         _validate_spark_args(None)
 
 
-
 ##############################
 # StrategyManager delegation #
 ##############################
