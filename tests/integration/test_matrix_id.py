@@ -10,9 +10,9 @@ import pytest
 from dupegrouper import Duped, exact
 from dupegrouper.constants import CANONICAL_ID
 
-# suppress pyspark setting new column using window operation
-warnings.simplefilter(action="ignore", category=Warning)
-warnings.filterwarnings("ignore")
+# # suppress pyspark setting new column using window operation
+# warnings.simplefilter(action="ignore", category=Warning)
+# warnings.filterwarnings("ignore")
 
 
 # CONSTANTS:

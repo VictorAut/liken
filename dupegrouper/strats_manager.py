@@ -1,13 +1,8 @@
-import logging
 from collections import UserDict
 from typing import Final, final
+import warnings
 
 from dupegrouper.strats_library import BaseStrategy
-
-# LOGGER:
-
-
-logger = logging.getLogger(__name__)
 
 
 # CONSTANTS:
@@ -68,11 +63,11 @@ class StrategyManager:
             return
 
         if isinstance(strat, dict | StratsConfig):
-            # when an inline strat has already been provided: warn as it will be replaced
+            # when an inline strat has already been provided, it will be replaced
             if self._strats[DEFAULT_STRAT_KEY]:
-                # change this to use warnings library instead
-                logger.warning(
-                    "The strat manager had already been supplied with at least one in-line strat which now will be replaced"
+                warnings.warn(
+                    "The strat manager had already been supplied with at least one in-line strat which now will be replaced",
+                    category=UserWarning(),
                 )
 
             self._strats = StratsConfig(strat)
