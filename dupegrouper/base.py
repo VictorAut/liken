@@ -6,7 +6,6 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 
-import logging
 from typing import Generic, Literal, overload
 
 import pandas as pd
@@ -20,13 +19,9 @@ from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StrategyManager, StratsConfig
 from dupegrouper.types import Columns, DataFrameLike, Keep
 
-# LOGGER:
 
 
-logger = logging.getLogger(__name__)
-
-
-# Duped:
+# API:
 
 
 class Duped(Generic[DF]):
@@ -78,7 +73,6 @@ class Duped(Generic[DF]):
     ):
         self._sm = StrategyManager()
 
-        # TODO: need to validate that df is not a NoneType
         # TODO: warnings e.g. if canonical_id is already present in the data
 
         keep = _validate_keep_arg(keep)

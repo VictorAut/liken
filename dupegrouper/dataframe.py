@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from functools import singledispatch
 from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -73,6 +74,10 @@ class CanonicalIdMixin:
                     return self._df_as_is(df)
                 # overwrite with id
                 return self._df_overwrite_id(df, id)
+            warnings.warn(
+                f"Canonical ID '{CANONICAL_ID}' already exists. Pass '{CANONICAL_ID}' to `id` arg for consistency",
+                category=UserWarning,
+            )
             return self._df_as_is(df)
         if id:
             # write new with id

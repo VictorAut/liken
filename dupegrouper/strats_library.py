@@ -13,7 +13,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from functools import cache
-from typing import TYPE_CHECKING, Any, Self, final
+from typing import TYPE_CHECKING, Any, Protocol, Self, final
 
 import numpy as np
 from datasketch import MinHash, MinHashLSH
@@ -32,18 +32,12 @@ if TYPE_CHECKING:
     from dupegrouper.types import Columns, Keep, SimilarPairIndices
 
 
-# LOGGER:
-
-
-logger = logging.getLogger(__name__)
 
 
 # BASE STRATEGY:
 
-from typing import Protocol
 
-
-class BaseProtocol(Protocol):
+class BaseStrategyProtocol(Protocol):
     wrapped_df: LocalDF
     keep: Keep
 
@@ -88,7 +82,7 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-    def _get_components(self: BaseProtocol, columns: Columns) -> dict[int, list[int]]:
+    def _get_components(self: BaseStrategyProtocol, columns: Columns) -> dict[int, list[int]]:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -104,7 +98,7 @@ class BaseStrategy:
 
         return components
 
-    def canonicalize(self: BaseProtocol, columns: Columns) -> LocalDF:
+    def canonicalize(self: BaseStrategyProtocol, columns: Columns) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
 
