@@ -10,30 +10,26 @@ from dupegrouper.base import (
 )
 
 
-##################
-# Initialization #
-##################
+# INITIALIZATION:
 
 
 @patch("dupegrouper.base.LocalExecutor")
 @patch("dupegrouper.base.SparkExecutor")
 @patch("dupegrouper.base.wrap")
 def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor, dataframe):
-    df, spark, id = dataframe
+    df, spark = dataframe
 
     mock_wrap.return_value = Mock()
-    dupe = Duped(df, spark_session=spark, id=id, keep="first")
+    dupe = Duped(df, spark_session=spark, keep="first")
     if spark:
-        mock_spark_executor.assert_called_once_with(keep="first", spark_session=spark, id=id)
+        mock_spark_executor.assert_called_once_with(keep="first", spark_session=spark, id=None)
     else:
         mock_local_executor.assert_called_once_with(keep="first")
-    mock_wrap.assert_called_once_with(df, id)
+    mock_wrap.assert_called_once_with(df, None)
     assert dupe._executor is not None
 
 
-##############
-# Validation #
-##############
+# VALIDATION
 
 
 @pytest.mark.parametrize("keep", ["first", "last"])
@@ -56,64 +52,61 @@ def test_validate_spark_args_missing_session():
         _validate_spark_args(None)
 
 
-##############################
-# StrategyManager delegation #
-##############################
+# StrategyManager
 
 
 @patch("dupegrouper.base.StrategyManager")
-def test_apply_delegates_to_strategy_manager(mock, dataframe):
-    df, spark, id = dataframe
+def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
+    df, spark = dataframe
 
-    strat = Mock()
     mock_sm = mock.return_value
-    dupe = Duped(df, spark_session=spark, id=id)
-    dupe.apply({"address": strat})
-    mock_sm.apply.assert_called_once_with({"address": strat})
+    dupe = Duped(df, spark_session=spark)
+    dupe.apply({"address": strategy_mock})
+    mock_sm.apply.assert_called_once_with({"address": strategy_mock})
 
 
-######################
-# canonicalize tests #
-######################
+# canonicalize
 
 
 @patch("dupegrouper.base.LocalExecutor")
 @patch("dupegrouper.base.wrap")
 @patch("dupegrouper.base.StrategyManager")
-def test_canonicalize_calls_executor_and_resets_strategy_manager(mock_sm, mock_wrap, mock_local, dataframe):
+def test_canonicalize_calls_executor_and_resets_strategy_manager(
+    mock_sm,
+    mock_wrap,
+    mock_local,
+    dataframe,
+    strategy_mock,
+):
 
-    df, spark, id = dataframe
-
-    strat = Mock()
+    df, spark = dataframe
 
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
-    mock_sm.get.return_value = {"address": strat}
+    mock_sm.get.return_value = {"address": strategy_mock}
 
-    dupe = Duped(df, spark_session=spark, id=id)
+    dupe = Duped(df, spark_session=spark)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
     dupe.canonicalize(columns="address")
 
     mock_sm.get.assert_called_once()
-    mock_executor.canonicalize.assert_called_once_with(mock_wrap.return_value, "address", {"address": strat})
+    mock_executor.canonicalize.assert_called_once_with(mock_wrap.return_value, "address", {"address": strategy_mock})
     mock_sm.reset.assert_called_once()
 
 
-#######################
-# Property attributes #
-#######################
+# Property attributes
 
 
 @patch("dupegrouper.base.StrategyManager")
 def test_strats_property_returns_manager_output(mock_sm, dataframe):
-    df, spark, id = dataframe
+    df, spark = dataframe
     mock_sm = mock_sm.return_value
     mock_sm.pretty_get.return_value = ("strategy1",)
 
-    dupe = Duped(df, spark_session=spark, id=id)
+    dupe = Duped(df, spark_session=spark)
     dupe._sm = mock_sm
     assert dupe.strats == ("strategy1",)
 

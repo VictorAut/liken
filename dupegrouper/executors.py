@@ -64,7 +64,7 @@ class LocalExecutor(Executor):
 @final
 class SparkExecutor(Executor):
 
-    def __init__(self, keep: Keep, spark_session: SparkSession, id):
+    def __init__(self, keep: Keep, spark_session: SparkSession, id: str | None = None):
         self._keep = keep
         self._spark_session = spark_session
         self._id = id
@@ -114,7 +114,7 @@ class SparkExecutor(Executor):
         factory: Type[Duped[SparkDF]],
         partition: Iterator[Row],
         strats: StratsConfig,
-        id: str,
+        id: str | None,
         columns: Columns | None,
         keep: Keep = "first",
     ) -> Iterator[Row]:
