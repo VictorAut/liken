@@ -1,7 +1,7 @@
 import pytest
 
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.dataframe import SparkDF, SparkRows
+from dupegrouper.dataframe import SparkDF, SparkRows, wrap
 
 
 @pytest.mark.parametrize(
@@ -12,21 +12,18 @@ from dupegrouper.dataframe import SparkDF, SparkRows
         "random_id",
     ],
 )
-def test_canonical_id_env_var(env_var_value, lowlevel_dataframe, monkeypatch):
-    df, wrapper, id = lowlevel_dataframe
+def test_canonical_id_env_var(env_var_value, dataframe, monkeypatch):
+    df, _ = dataframe
 
     monkeypatch.delenv("CANONICAL_ID", raising=False)
     if env_var_value is not None:
         monkeypatch.setenv("CANONICAL_ID", env_var_value)
 
-    df = wrapper(df, id)
+    assert CANONICAL_ID not in df.columns
+    
+    wdf = wrap(df)
+    df = wdf.unwrap()
 
-    if isinstance(df, SparkDF):
-        assert CANONICAL_ID not in df.columns
-    elif isinstance(df, SparkRows):
-        for row in df.unwrap():
-            assert CANONICAL_ID not in row.asDict().keys()
-    else:
-        assert CANONICAL_ID in df.columns
+    assert CANONICAL_ID in df.columns
 
     monkeypatch.delenv("CANONICAL_ID", raising=False)

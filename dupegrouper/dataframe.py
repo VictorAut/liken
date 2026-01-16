@@ -92,7 +92,7 @@ class CanonicalIdMixin:
 @final
 class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
-    def __init__(self, df: pd.DataFrame, id: str | None):
+    def __init__(self, df: pd.DataFrame, id: str | None = None):
         self._df: pd.DataFrame = self._add_canonical_id(df, id)
         self._id = id
         # TODO validate that id exists in the DF!
@@ -125,7 +125,7 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 @final
 class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
 
-    def __init__(self, df: pl.DataFrame, id: str | None):
+    def __init__(self, df: pl.DataFrame, id: str | None = None):
         self._df: pl.DataFrame = self._add_canonical_id(df, id)
         self._id = id
         # TODO validate that id exists in the DF!
@@ -291,7 +291,7 @@ def _(df, id: str | None = None) -> PolarsDF:
 
 
 @wrap.register(spark.DataFrame)
-def _(df, id: str | None) -> SparkDF:
+def _(df, id: str | None = None) -> SparkDF:
     return SparkDF(df, id)
 
 

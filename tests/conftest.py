@@ -95,11 +95,11 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
     This is useful for implementations that ARE part of the public API
     """
     if request.param == "pandas":
-        return df_pandas, None, None
+        return df_pandas, None
     if request.param == "polars":
-        return df_polars, None, None
+        return df_polars, None
     if request.param == "spark":
-        return df_spark, spark, None
+        return df_spark, spark
 
 
 @pytest.fixture(params=["pandas", "polars", "spark_df", "spark_row"])
