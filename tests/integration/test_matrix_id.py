@@ -1,6 +1,7 @@
 """Narrow integration tests for specific behaviour of individual stratgies"""
 
 from __future__ import annotations
+
 import warnings
 
 import pandas as pd
@@ -9,10 +10,6 @@ import pytest
 
 from dupegrouper import Duped, exact
 from dupegrouper.constants import CANONICAL_ID
-
-# # suppress pyspark setting new column using window operation
-# warnings.simplefilter(action="ignore", category=Warning)
-# warnings.filterwarnings("ignore")
 
 
 # CONSTANTS:
@@ -170,7 +167,10 @@ def test_id_matrix(backend, id, schema, data, expected_canonical_id, spark, help
     if backend == "spark":
         df = spark.createDataFrame(schema=schema, data=data)
 
-    dg = Duped(df, spark_session=spark, id=id)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        dg = Duped(df, spark_session=spark, id=id)
+
     dg.apply(exact())
     dg.canonicalize(SINGLE_COL)
 

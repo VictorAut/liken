@@ -1,31 +1,29 @@
-import pytest
 from unittest.mock import Mock
+
 import numpy as np
+import pytest
 
 from dupegrouper.strats_library import (
-    BaseStrategy,
-    Exact,
-    # BinaryDedupers,
-    StrStartsWith,
-    StrEndsWith,
-    StrContains,
-    # ThresholdDedupers,
-    Fuzzy,
-    TfIdf,
     LSH,
-    Jaccard,
+    BaseStrategy,
     Cosine,
-    exact,
-    str_startswith,
-    str_endswith,
-    str_contains,
-    fuzzy,
-    tfidf,
-    lsh,
-    jaccard,
+    Exact,
+    Fuzzy,
+    Jaccard,
+    StrContains,
+    StrEndsWith,
+    StrStartsWith,
+    TfIdf,
     cosine,
+    exact,
+    fuzzy,
+    jaccard,
+    lsh,
+    str_contains,
+    str_endswith,
+    str_startswith,
+    tfidf,
 )
-
 
 ############
 # Fixtures #

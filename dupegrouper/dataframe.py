@@ -5,9 +5,9 @@ ABC for wrapped dataframe interfaces
 
 from __future__ import annotations
 
+import warnings
 from functools import singledispatch
 from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -55,6 +55,7 @@ class Frame(Generic[T]):
 # CANONICAL ID
 
 
+# TODO type this with generic
 class AddsCanonical(Protocol):
     def _df_as_is(self, df): ...
     def _df_overwrite_id(self, df, id: str): ...

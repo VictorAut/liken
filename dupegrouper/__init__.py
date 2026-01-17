@@ -5,17 +5,16 @@
 from dupegrouper.base import Duped
 from dupegrouper.custom import register
 from dupegrouper.strats_library import (
-    exact,
     cosine,
+    exact,
     fuzzy,
     jaccard,
     lsh,
-    tfidf,
     str_contains,
     str_endswith,
     str_startswith,
+    tfidf,
 )
-
 
 __all__ = [
     "Duped",

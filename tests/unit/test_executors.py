@@ -1,14 +1,12 @@
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+from pyspark.rdd import RDD
 from pyspark.sql import Row
-from pyspark.sql.types import StructType, StructField, StringType
 
 from dupegrouper.executors import LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StratsConfig, DEFAULT_STRAT_KEY
-from dupegrouper.constants import CANONICAL_ID
-
+from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsConfig
 
 ############################
 # Fixtures
@@ -33,16 +31,6 @@ def strats_config(mock_strategy):
 @pytest.fixture
 def local_df():
     return Mock()
-
-
-@pytest.fixture
-def spark_df():
-    df = Mock()
-    df.rdd = Mock()
-    df.schema = StructType([StructField("id", StringType(), True)])
-    df.columns = ["id"]
-    df.dtypes = [("id", "string")]
-    return df
 
 
 #################
@@ -95,24 +83,30 @@ def test_sparkexecutor_init_sets_attributes():
     assert executor._id == "id"
 
 
-@patch("dupegrouper.dataframe.SparkDF._get_schema")
-@patch("dupegrouper.dataframe.SparkDF._add_canonical_id")
+@pytest.fixture
+def spark_df():
+    df = Mock()
+
+    mock_rdd = Mock(spec=RDD)
+    mock_rdd.mapPartitions.return_value = mock_rdd
+
+    df.mapPartitions = Mock(side_effect=mock_rdd.mapPartitions)
+
+    df._df = mock_rdd
+    df._schema = Mock()
+    return df
+
+
 def test_sparkexecutor_canonicalize_maps_partitions(
-    mock_add_canonical_id,
-    mock_get_schema,
     spark_df,
     strats_config,
 ):
     spark = Mock()
     executor = SparkExecutor(keep="first", spark_session=spark, id="id")
 
-    mock_rdd = Mock()
-    mock_rdd.mapPartitions.return_value = mock_rdd
-    mock_add_canonical_id.return_value = mock_rdd
-
-    mock_get_schema.return_value = Mock()
-
-    spark.createDataFrame.return_value = "new_df"
+    spark_df_result = Mock()
+    spark_df_result.select.return_value = spark_df_result
+    spark.createDataFrame.return_value = spark_df_result
 
     executor.canonicalize(
         df=spark_df,
@@ -120,23 +114,8 @@ def test_sparkexecutor_canonicalize_maps_partitions(
         strats=strats_config,
     )
 
-    mock_rdd.mapPartitions.assert_called_once()
+    spark_df._df.mapPartitions.assert_called_once()
     spark.createDataFrame.assert_called_once()
-
-
-def test_sparkexecutor_get_schema_adds_canonical_id():
-    spark = Mock()
-    executor = SparkExecutor(keep="first", spark_session=spark, id="id")
-
-    df = Mock()
-    df.schema.fields = [StructField("id", StringType(), True)]
-    df.columns = ["id"]
-    df.dtypes = [("id", "string")]
-
-    schema = executor._get_schema(df)
-
-    field_names = {f.name for f in schema.fields}
-    assert CANONICAL_ID in field_names
 
 
 ######################

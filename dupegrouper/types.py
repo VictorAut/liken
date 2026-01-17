@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from typing import Any, Literal, TypeAlias
 
 import numpy as np
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
-
 
 DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame | spark.DataFrame | list[spark.Row]"
 SeriesLike: TypeAlias = "pd.Series | pl.Series | list[Any]"

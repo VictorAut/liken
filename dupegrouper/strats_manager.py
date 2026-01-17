@@ -1,9 +1,8 @@
+import warnings
 from collections import UserDict
 from typing import Final, final
-import warnings
 
 from dupegrouper.strats_library import BaseStrategy
-
 
 # CONSTANTS:
 
@@ -67,7 +66,7 @@ class StrategyManager:
             if self._strats[DEFAULT_STRAT_KEY]:
                 warnings.warn(
                     "The strat manager had already been supplied with at least one in-line strat which now will be replaced",
-                    category=UserWarning(),
+                    category=UserWarning,
                 )
 
             self._strats = StratsConfig(strat)

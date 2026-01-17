@@ -1,14 +1,9 @@
 from unittest.mock import Mock, patch
 
-from pandas.testing import assert_frame_equal
 import pytest
+from pandas.testing import assert_frame_equal
 
-from dupegrouper.base import (
-    Duped,
-    _validate_keep_arg,
-    _validate_spark_args,
-)
-
+from dupegrouper.base import Duped, _validate_keep_arg, _validate_spark_args
 
 # INITIALIZATION:
 

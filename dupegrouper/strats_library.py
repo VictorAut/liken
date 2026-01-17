@@ -8,7 +8,6 @@ overrideable `canonicalize()` is defined.
 
 from __future__ import annotations
 
-import logging
 import re
 from collections import defaultdict
 from collections.abc import Iterator
@@ -30,7 +29,6 @@ from dupegrouper.constants import CANONICAL_ID
 if TYPE_CHECKING:
     from dupegrouper.dataframe import LocalDF
     from dupegrouper.types import Columns, Keep, SimilarPairIndices
-
 
 
 
@@ -113,6 +111,8 @@ class BaseStrategy:
 
             for i in members:
                 rep_index[i] = rep
+
+        print(rep_index)
 
         new_canonicals = np.array(
             [canonicals[rep_index[i]] for i in range(n)],
