@@ -46,7 +46,6 @@ class Duped(Generic[DF]):
         *,
         spark_session: None = None,
         id: str | None = None,
-        keep: Keep = "first",
     ): ...
 
     @overload
@@ -57,7 +56,6 @@ class Duped(Generic[DF]):
         *,
         spark_session: SparkSession,
         id: str,
-        keep: Keep = "first",
     ): ...
 
     def __init__(
@@ -67,29 +65,28 @@ class Duped(Generic[DF]):
         *,
         spark_session: SparkSession | None = None,
         id: str | None = None,
-        keep: Keep = "first",
     ):
         self._sm = StrategyManager()
-
-        keep = _validate_keep_arg(keep)
 
         self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
             spark_session = _validate_spark_args(spark_session)
-            self._executor = SparkExecutor(
-                keep=keep,
-                spark_session=spark_session,
-                id=id,
-            )
+            self._executor = SparkExecutor(spark_session=spark_session, id=id)
         else:
-            self._executor = LocalExecutor(keep=keep)
+            self._executor = LocalExecutor()
 
         self._df = wrap(df, id)
 
     def apply(self, strategy: BaseStrategy | StratsConfig | dict) -> None:
         self._sm.apply(strategy)
 
-    def canonicalize(self, columns: Columns | None = None) -> None:
+    def canonicalize(
+        self,
+        columns: Columns | None = None,
+        /,
+        keep: Keep = "first",
+        drop_duplicates: bool = False,
+    ) -> None:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
@@ -97,13 +94,27 @@ class Duped(Generic[DF]):
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
+        keep = _validate_keep_arg(keep)
+
         strats = self._sm.get()
 
-        self._df = self._executor.canonicalize(self._df, columns, strats)
+        self._df = self._executor.execute(
+            self._df,
+            columns=columns,
+            strats=strats,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            drop_canonical_id=False,
+        )
 
         self._sm.reset()
 
-    def drop(self, columns: Columns | None = None) -> None:
+    def drop_duplicates(
+        self,
+        columns: Columns | None = None,
+        /,
+        keep: Keep = "first",
+    ) -> None:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
@@ -111,9 +122,18 @@ class Duped(Generic[DF]):
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
+        keep = _validate_keep_arg(keep)
+
         strats = self._sm.get()
 
-        self._df = self._executor.canonicalize(self._df, columns, strats)
+        self._df = self._executor.execute(
+            self._df,
+            columns=columns,
+            strats=strats,
+            keep=keep,
+            drop_duplicates=True,
+            drop_canonical_id=True,
+        )
 
         self._sm.reset()
 

@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from dupegrouper.types import Columns, Keep, SimilarPairIndices
 
 
-
 # BASE STRATEGY:
 
 
@@ -40,7 +39,7 @@ class BaseStrategyProtocol(Protocol):
     keep: Keep
 
     def set_frame(self, wrapped_df: LocalDF) -> Self: ...
-    def set_keep(self, wrapped_df: Keep) -> Self: ...
+    def set_keep(self, keep: Keep) -> Self: ...
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
     def _get_components(self, columns: Columns) -> dict[int, list[int]]: ...
     def canonicalize(self, columns: Columns) -> LocalDF: ...
@@ -96,7 +95,12 @@ class BaseStrategy:
 
         return components
 
-    def canonicalize(self: BaseStrategyProtocol, columns: Columns) -> LocalDF:
+    def canonicalizer(
+        self: BaseStrategyProtocol,
+        columns: Columns,
+        *,
+        drop_duplicates: bool,
+    ) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
         components: dict[int, list[int]] = self._get_components(columns)
 
@@ -112,14 +116,17 @@ class BaseStrategy:
             for i in members:
                 rep_index[i] = rep
 
-        print(rep_index)
 
         new_canonicals = np.array(
             [canonicals[rep_index[i]] for i in range(n)],
             dtype=object,
         )
 
-        return self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
+        self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
+
+        if not drop_duplicates:
+            return self.wrapped_df
+        return self.wrapped_df.drop_duplicates(keep=self.keep)
 
 
 class ColumnArrayMixin:

@@ -115,7 +115,7 @@ def test_canonicalize_puts_canonical_id(mock_df):
         }
     )
 
-    result = strat.canonicalize("col")
+    result = strat.canonicalizer("col", drop_duplicates=False,)
 
     mock_df.put_col.assert_called_once()
     assert result is mock_df

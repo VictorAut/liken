@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final
+from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final, Hashable
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from pyspark.sql.types import LongType, StructField, StructType
 from typing_extensions import override
 
 from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
-from dupegrouper.types import DataFrameLike
+from dupegrouper.types import DataFrameLike, Keep
 
 # TYPES
 
@@ -121,6 +121,14 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
     def get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
         return self._df[list(columns)]
+    
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop(columns=column)
+        return self
+
+    def drop_duplicates(self, keep: Keep) -> Self:
+        self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
+        return self
 
 
 @final
@@ -155,6 +163,14 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
 
     def get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
         return self._df.select(columns)
+
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop(column)
+        return self
+
+    def drop_duplicates(self, keep: Keep) -> Self:
+        self._df = self._df.unique(keep=keep, subset=CANONICAL_ID)
+        return self
 
 
 SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
@@ -231,6 +247,10 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     # WRAPPER METHODS:
 
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop(column)
+        return self
+
     def put_col(self):
         raise NotImplementedError(self.ERR_MSG)
 
@@ -239,6 +259,11 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     def get_cols(self):
         raise NotImplementedError(self.ERR_MSG)
+    
+    def drop_duplicates(self):
+        raise NotImplementedError(self.ERR_MSG)
+    
+
 
 
 @final
@@ -258,6 +283,25 @@ class SparkRows(Frame[list[spark.Row]]):
 
     def get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:
         return [[row[c] for c in columns] for row in self._df]
+
+    def drop_duplicates(self, keep: Keep) -> list[Row]:
+
+        seen: set[Hashable] = set()
+        result: list[Row] = []
+
+        iterable = self._df if keep == "first" else reversed(self._df)
+
+        for row in iterable:
+            key = row[CANONICAL_ID]
+            if key not in seen:
+                seen.add(key)
+                result.append(row)
+
+        if keep == "last":
+            result.reverse()
+
+        self._df = result
+        return self
 
 
 # DISPATCHER:

@@ -15,11 +15,11 @@ def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor,
     df, spark = dataframe
 
     mock_wrap.return_value = Mock()
-    dupe = Duped(df, spark_session=spark, keep="first")
+    dupe = Duped(df, spark_session=spark)
     if spark:
-        mock_spark_executor.assert_called_once_with(keep="first", spark_session=spark, id=None)
+        mock_spark_executor.assert_called_once_with(spark_session=spark, id=None)
     else:
-        mock_local_executor.assert_called_once_with(keep="first")
+        mock_local_executor.assert_called_once()
     mock_wrap.assert_called_once_with(df, None)
     assert dupe._executor is not None
 
@@ -85,10 +85,16 @@ def test_canonicalize_calls_executor_and_resets_strategy_manager(
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
-    dupe.canonicalize(columns="address")
+    dupe.canonicalize("address")
 
     mock_sm.get.assert_called_once()
-    mock_executor.canonicalize.assert_called_once_with(mock_wrap.return_value, "address", {"address": strategy_mock})
+    mock_executor.execute.assert_called_once_with(
+        mock_wrap.return_value,
+        columns="address",
+        strats={"address": strategy_mock},
+        keep="first",
+        drop_duplicates =False,
+    )
     mock_sm.reset.assert_called_once()
 
 
