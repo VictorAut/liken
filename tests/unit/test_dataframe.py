@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from unittest.mock import create_autospec
+from unittest.mock import Mock, create_autospec
 
-from pyspark.sql import DataFrame as SparkDataFrame, Row
 import pandas as pd
-import polars as pl
 import pytest
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql import Row
 
-import numpy as np
-
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import (
+    CanonicalIdMixin,
     PandasDF,
     PolarsDF,
     SparkDF,
     SparkRows,
     wrap,
 )
-
 
 # FIXTURES:
 
@@ -127,31 +126,60 @@ def test_wrap_dispatch(df_pandas, df_polars, df_spark, df_sparkrows):
 # Add Canonical ID
 
 
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_id_matrix(backend, spark):
-
-    if backend == "pandas":
-        df = pd.DataFrame(columns=["test", "hello"])
-
-    if backend == "polars":
-        df = pl.DataFrame(schema=["test", "hello"])
-
-    if backend == "spark":
-        df = spark.createDataFrame(schema=["test", "hello"], data=[])
+class DummyFrame(CanonicalIdMixin):
+    def _df_as_is(self, df): ...
+    def _df_overwrite_id(self, df, id): ...
+    def _df_copy_id(self, df, id): ...
+    def _df_autoincrement_id(self, df): ...
 
 
+PARAMS = [
+    (CANONICAL_ID, ["address", CANONICAL_ID], "_df_as_is"),
+    ("uid", ["address", CANONICAL_ID], "_df_overwrite_id"),
+    (None, ["address", CANONICAL_ID], "_df_as_is"),
+    ("uid", ["address", "uid"], "_df_copy_id"),
+    (None, ["address"], "_df_autoincrement_id"),
+]
+IDS = [
+    "canonical id already exists; verbose definition",
+    "new canonical id as overwrite from other id",
+    "canonical id already exists; with warning",
+    "new canonical id as write from other id",
+    "new autoincremental canonical id",
+]
 
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName('SparkByExamples.com').getOrCreate()
 
-#Creates Empty RDD
-emptyRDD = spark.sparkContext.emptyRDD()
+@pytest.mark.filterwarnings("ignore:Canonical ID.*:UserWarning")
+@pytest.mark.parametrize("id, cols, method", PARAMS, ids=IDS)
+def test_add_canonical_id_mixin(id, cols, method):
 
-from pyspark.sql.types import StructType,StructField, StringType
-schema = StructType([
-  StructField('firstname', StringType(), True),
-  StructField('middlename', StringType(), True),
-  StructField('lastname', StringType(), True)
-  ])
+    dummy = DummyFrame()
+    dummy._df_as_is = Mock()
+    dummy._df_overwrite_id = Mock()
+    dummy._df_copy_id = Mock()
+    dummy._df_autoincrement_id = Mock()
 
-spark.createDataFrame(emptyRDD,schema=["hello", "bye"])
+    df = Mock()
+    df.columns = cols
+
+    dummy._add_canonical_id(df, id)
+
+    expected = getattr(dummy, method)
+    expected.assert_called_once()
+
+
+def test_add_canonical_id_warning():
+
+    dummy = DummyFrame()
+    dummy._df_as_is = Mock()
+
+    df = Mock()
+    df.columns = ["address", CANONICAL_ID]
+
+    with pytest.warns(
+        UserWarning,
+        match=f"Canonical ID '{CANONICAL_ID}' already exists",
+    ):
+        dummy._add_canonical_id(df, id=None)
+
+    dummy._df_as_is.assert_called_once()

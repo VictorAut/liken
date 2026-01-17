@@ -55,10 +55,13 @@ pytest-cov = "^6.1.1"
 [tool.poetry.group.docs.dependencies]
 pdoc = "^15.0.1"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# linting
 
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
 
 [tool.mypy]
 warn_no_return = false
@@ -67,5 +70,9 @@ warn_no_return = false
 module = ["multipledispatch.*"]
 follow_untyped_imports = true
 
-[tool.black]
-line-length = 120
+
+# build system
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

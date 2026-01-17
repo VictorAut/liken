@@ -87,6 +87,7 @@ class SparkExecutor(Executor):
             Instance's _df attribute is updated
         """
 
+        # import in worker node
         from dupegrouper.base import Duped
 
         # IMPORTANT: Use local variables, no references to Self

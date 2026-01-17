@@ -1,7 +1,7 @@
 import pytest
 
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.dataframe import SparkDF, SparkRows, wrap
+from dupegrouper.dataframe import wrap
 
 
 @pytest.mark.parametrize(
@@ -20,7 +20,7 @@ def test_canonical_id_env_var(env_var_value, dataframe, monkeypatch):
         monkeypatch.setenv("CANONICAL_ID", env_var_value)
 
     assert CANONICAL_ID not in df.columns
-    
+
     wdf = wrap(df)
     df = wdf.unwrap()
 

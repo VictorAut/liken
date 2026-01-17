@@ -1,15 +1,12 @@
-import logging
-
 import pytest
 
+from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import (
     DEFAULT_STRAT_KEY,
-    StratsConfig,
-    StrategyManager,
     StrategyConfigTypeError,
+    StrategyManager,
+    StratsConfig,
 )
-from dupegrouper.strats_library import BaseStrategy
-
 
 ###########
 # Helpers #
@@ -135,16 +132,17 @@ def test_strategy_manager_apply_rejects_inline_after_dict(s1, s2, s3):
         sm.apply(s3)
 
 
-def test_strategy_manager_apply_warns_dict_after_inline(caplog):
+def test_strategy_manager_apply_warns_dict_after_inline():
     sm = StrategyManager()
     strat = BaseStrategy()
 
     sm.apply(strat)
 
-    with caplog.at_level(logging.WARNING):
+    with pytest.warns(
+        UserWarning,
+        match="The strat manager had already been supplied with at least one in-line strat",
+    ):
         sm.apply({"email": [strat]})
-
-    assert any("already been supplied with at least one in-line strat" in record.message for record in caplog.records)
 
 
 #######

@@ -19,8 +19,6 @@ from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StrategyManager, StratsConfig
 from dupegrouper.types import Columns, DataFrameLike, Keep
 
-
-
 # API:
 
 
@@ -73,8 +71,6 @@ class Duped(Generic[DF]):
     ):
         self._sm = StrategyManager()
 
-        # TODO: warnings e.g. if canonical_id is already present in the data
-
         keep = _validate_keep_arg(keep)
 
         self._executor: LocalExecutor | SparkExecutor
@@ -94,6 +90,20 @@ class Duped(Generic[DF]):
         self._sm.apply(strategy)
 
     def canonicalize(self, columns: Columns | None = None) -> None:
+        """canonicalize, and group, the data based on the provided attribute
+
+        Args:
+            columns: The attribute to deduplicate. If strategies have been added
+                as a mapping object, this must not passed, as the keys of the
+                mapping object will be used instead
+        """
+        strats = self._sm.get()
+
+        self._df = self._executor.canonicalize(self._df, columns, strats)
+
+        self._sm.reset()
+
+    def drop(self, columns: Columns | None = None) -> None:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:

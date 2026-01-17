@@ -1,6 +1,7 @@
 """Narrow integration tests for specific behaviour of individual stratgies"""
 
 from __future__ import annotations
+
 import typing
 
 import pytest
@@ -14,12 +15,11 @@ from dupegrouper.strats_library import (
     fuzzy,
     jaccard,
     lsh,
-    str_startswith,
-    str_endswith,
     str_contains,
+    str_endswith,
+    str_startswith,
     tfidf,
 )
-
 
 # CONSTANTS:
 
@@ -225,7 +225,7 @@ PARAMS = [
 @pytest.mark.parametrize("strategy, rule, columns, input_params, expected_canonical_id", PARAMS)
 def test_canonicalize_matrix(strategy, rule, columns, input_params, expected_canonical_id, dataframe, helpers):
 
-    df, spark_session, _ = dataframe
+    df, spark_session = dataframe
 
     dg = Duped(df, spark_session=spark_session, keep=rule)
 

@@ -1,26 +1,18 @@
-from unittest.mock import Mock, patch, create_autospec
+from unittest.mock import Mock, create_autospec, patch
 
 import pandas as pd
 import polars as pl
-from pyspark.sql import (
-    DataFrame as SparkDataFrame,
-    functions as F,
-    SparkSession,
-)
-import pyspark.sql as spark
-from pyspark.sql.functions import row_number, monotonically_increasing_id
+import pytest
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.functions import monotonically_increasing_id, row_number
 from pyspark.sql.types import LongType, StringType
 from pyspark.sql.window import Window
-import pytest
 
+from dupegrouper.base import BaseStrategy, Duped
+from dupegrouper.dataframe import PandasDF, PolarsDF, SparkDF, SparkRows
 from dupegrouper.datasets.datasets import fake13
-from dupegrouper.base import Duped, BaseStrategy
-from dupegrouper.dataframe import (
-    PandasDF,
-    PolarsDF,
-    SparkDF,
-    SparkRows,
-)
 from dupegrouper.types import DataFrameLike
 
 
@@ -102,39 +94,8 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
         return df_spark, spark
 
 
-@pytest.fixture(params=["pandas", "polars", "spark_df", "spark_row"])
-def lowlevel_dataframe(request, df_pandas, df_polars, df_spark):
-    """Most tests require the `dataframe` fixture, also defined above.
-
-    However, this fixture offers all wrappers exhaustively, including the lower
-    level wrapper for spark.
-
-    This is useful for testing lower level implementations that are NOT part of
-    the public API
-    """
-    if request.param == "pandas":
-        return df_pandas, PandasDF, None
-    if request.param == "polars":
-        return df_polars, PolarsDF, None
-    if request.param == "spark_df":
-        return df_spark, SparkDF, None
-    if request.param == "spark_row":
-        return df_spark.collect(), SparkRows, "id"  # i.e. list[Row]
-
 
 # Mocks
-
-
-@pytest.fixture
-def duped_mock(dataframe):
-    df, _, id = dataframe
-
-    df_mock = Mock(spec=type(df))
-
-    with patch("dupegrouper.base.wrap"):
-        instance = Duped(df_mock, id=id)
-        instance._df = Mock()
-        yield instance
 
 
 @pytest.fixture
