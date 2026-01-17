@@ -222,23 +222,23 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize("strategy, rule, columns, input_params, expected_canonical_id", PARAMS)
-def test_canonicalize_matrix(strategy, rule, columns, input_params, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
+def test_canonicalize_matrix(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session, keep=rule)
+    dg = Duped(df, spark_session=spark_session)
 
     # single strategy item addition
     dg.apply(strategy(**input_params))
-    dg.canonicalize(columns)
+    dg.canonicalize(columns, keep=keep)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
-    dg = Duped(df, spark_session=spark_session, keep=rule)
+    dg = Duped(df, spark_session=spark_session)
 
     # dictionary strategy addition
     dg.apply({columns: [strategy(**input_params)]})
-    dg.canonicalize()
+    dg.canonicalize(keep=keep)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id

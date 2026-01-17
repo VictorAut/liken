@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import partial
 from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
 from pyspark.sql import Row, SparkSession
 
+from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import DF, LocalDF, SparkDF
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsConfig
@@ -15,9 +17,11 @@ if TYPE_CHECKING:
 
 
 class Executor(Protocol[DF]):
-    def canonicalize(
+    def execute(
         self,
         df: DF,
+        /,
+        *,
         columns: Columns | None,
         strats: StratsConfig,
     ) -> DF: ...
@@ -26,54 +30,75 @@ class Executor(Protocol[DF]):
 @final
 class LocalExecutor(Executor):
 
-    def __init__(self, keep: Keep):
-        self._keep = keep
-
-    def canonicalize(
+    def execute(
         self,
         df: LocalDF,
+        /,
+        *,
         columns: Columns | None,
         strats: StratsConfig,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
     ) -> LocalDF:
+        _call_strat = partial(
+            self._call_strat,
+            df=df,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+        )
+
         if not columns:
             for col, iter_strats in strats.items():
                 for strat in iter_strats:
-                    df = self._call_strat(strat, df, col)
+                    df = _call_strat(strat=strat, columns=col)
             return df
 
         # For inline calls e.g.`.canonicalize("address")`
         for strat in strats[DEFAULT_STRAT_KEY]:
-            df = self._call_strat(strat, df, columns)
+            df = _call_strat(strat=strat, columns=columns)
+
+        if drop_canonical_id:
+            return df.drop_col(CANONICAL_ID)
         return df
 
+    @staticmethod
     def _call_strat(
-        self,
         strat: BaseStrategy,
         df: LocalDF,
         columns: Columns,
+        keep: Keep,
+        drop_duplicates: bool,
     ) -> LocalDF:
         return (
             strat
             #
             .set_frame(df)
-            .set_keep(self._keep)
-            .canonicalize(columns)  # type: ignore
+            .set_keep(keep)
+            .canonicalizer(
+                columns,
+                drop_duplicates=drop_duplicates,
+            )  # type: ignore
         )
 
 
 @final
 class SparkExecutor(Executor):
 
-    def __init__(self, keep: Keep, spark_session: SparkSession, id: str | None = None):
-        self._keep = keep
+    def __init__(self, spark_session: SparkSession, id: str | None = None):
         self._spark_session = spark_session
         self._id = id
 
-    def canonicalize(
+    def execute(
         self,
         df: SparkDF,
+        /,
+        *,
         columns: Columns | None,
         strats: StratsConfig,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
     ) -> SparkDF:
         """Spark specific deduplication helper
 
@@ -92,7 +117,6 @@ class SparkExecutor(Executor):
 
         # IMPORTANT: Use local variables, no references to Self
         id = self._id
-        keep = self._keep
         process_partition = self._process_partition
 
         rdd = df.mapPartitions(
@@ -102,21 +126,28 @@ class SparkExecutor(Executor):
                 strats=strats,
                 id=id,
                 columns=columns,
+                drop_duplicates=drop_duplicates,
                 keep=keep,
             )
         )
 
         schema = df._schema
 
-        return SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+
+        if drop_canonical_id:
+            return df.drop_col(CANONICAL_ID)
+        return df
 
     @staticmethod
     def _process_partition(
+        *,
         factory: Type[Duped[SparkDF]],
         partition: Iterator[Row],
         strats: StratsConfig,
         id: str | None,
         columns: Columns | None,
+        drop_duplicates: bool,
         keep: Keep = "first",
     ) -> Iterator[Row]:
         """process a spark dataframe partition i.e. a list[Row]
@@ -140,8 +171,12 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows, id=id, keep=keep)
+        dp = factory(rows, id=id)
         dp.apply(strats)
-        dp.canonicalize(columns)
+        dp.canonicalize(
+            columns,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+        )
 
         return iter(cast(list[Row], dp.df))

@@ -18,7 +18,7 @@ def mock_strategy():
     strat = Mock(spec=BaseStrategy)
     strat.set_frame.return_value = strat
     strat.set_keep.return_value = strat
-    strat.canonicalize.return_value = "df_out"
+    strat.canonicalizer.return_value = "df_out"
     return strat
 
 
@@ -39,34 +39,38 @@ def local_df():
 
 
 def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, strats_config):
-    executor = LocalExecutor(keep="last")
+    executor = LocalExecutor()
 
-    executor.canonicalize(
-        df=local_df,
+    executor.execute(
+        local_df,
         columns="address",
         strats=strats_config,
+        keep="last",
+        drop_duplicates=False,
     )
 
     mock_strategy.set_frame.assert_called_once_with(local_df)
     mock_strategy.set_keep.assert_called_once_with("last")
-    mock_strategy.canonicalize.assert_called_once_with("address")
+    mock_strategy.canonicalizer.assert_called_once_with("address", drop_duplicates=False)
 
 
 def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
 
     cfg = StratsConfig({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
 
-    executor = LocalExecutor(keep="first")
+    executor = LocalExecutor()
 
-    executor.canonicalize(
-        df=local_df,
+    executor.execute(
+        local_df,
         columns=None,
         strats=cfg,
+        keep="first",
+        drop_duplicates=False,
     )
 
     mock_strategy.set_frame.assert_called()
     mock_strategy.set_keep.assert_called_with("first")
-    assert mock_strategy.canonicalize.call_count == 3
+    assert mock_strategy.canonicalizer.call_count == 3
 
 
 #################
@@ -76,9 +80,8 @@ def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
 
 def test_sparkexecutor_init_sets_attributes():
     spark = Mock()
-    executor = SparkExecutor(keep="first", spark_session=spark, id="id")
+    executor = SparkExecutor(spark_session=spark, id="id")
 
-    assert executor._keep == "first"
     assert executor._spark_session is spark
     assert executor._id == "id"
 
@@ -102,16 +105,18 @@ def test_sparkexecutor_canonicalize_maps_partitions(
     strats_config,
 ):
     spark = Mock()
-    executor = SparkExecutor(keep="first", spark_session=spark, id="id")
+    executor = SparkExecutor(spark_session=spark, id="id")
 
     spark_df_result = Mock()
     spark_df_result.select.return_value = spark_df_result
     spark.createDataFrame.return_value = spark_df_result
 
-    executor.canonicalize(
-        df=spark_df,
+    executor.execute(
+        spark_df,
         columns="address",
         strats=strats_config,
+        keep="first",
+        drop_duplicates=False,
     )
 
     spark_df._df.mapPartitions.assert_called_once()
@@ -133,6 +138,7 @@ def test_process_partition_empty_partition_returns_empty(mock_duped):
             id="id",
             columns="address",
             keep="first",
+            drop_duplicates=False,
         )
     )
 
@@ -156,10 +162,15 @@ def test_process_partition_calls_duped_api(mock_duped):
             id="id",
             columns="address",
             keep="last",
+            drop_duplicates=False,
         )
     )
 
-    mock_duped.assert_called_once_with([row], id="id", keep="last")
+    mock_duped.assert_called_once_with([row], id="id")
     dp_instance.apply.assert_called_once()
-    dp_instance.canonicalize.assert_called_once_with("address")
+    dp_instance.canonicalize.assert_called_once_with(
+        "address",
+        keep="last",
+        drop_duplicates=False,
+    )
     assert result == ["out"]
