@@ -50,6 +50,10 @@ def test_wrapper_methods_pandas(df_pandas, new_col):
     series = wdf.get_col("new_col")
     assert isinstance(series, pd.Series)
 
+    dropped = result.drop_col("new_col")
+    assert dropped is wdf
+    assert "new_col" not in wdf.unwrap().columns
+
     df_subset = wdf.get_cols(("email", "account"))
     assert isinstance(df_subset, pd.DataFrame)
     assert list(df_subset.columns) == ["email", "account"]
@@ -65,12 +69,20 @@ def test_wrapper_methods_polars(df_polars, new_col):
     series = wdf.get_col("test_col")
     assert hasattr(series, "dtype")  # basic polars Series check
 
+    dropped = result.drop_col("test_col")
+    assert dropped is wdf
+    assert "test_col" not in wdf.unwrap().columns
+
     df_subset = wdf.get_cols(("email", "account"))
     assert hasattr(df_subset, "columns")
 
 
 def test_wrapper_methods_spark(df_spark):
-    wdf = SparkDF(df_spark)
+    wdf = SparkDF(df_spark, is_init=False)
+
+    dropped = wdf.drop_col("address")
+    assert dropped is wdf
+    assert "address" not in wdf.unwrap().columns
 
     with pytest.raises(NotImplementedError):
         wdf.put_col()
@@ -78,6 +90,8 @@ def test_wrapper_methods_spark(df_spark):
         wdf.get_col()
     with pytest.raises(NotImplementedError):
         wdf.get_cols()
+    with pytest.raises(NotImplementedError):
+        wdf.drop_duplicates()
 
 
 def test_wrapper_methods_sparkrows(df_sparkrows, new_col):
@@ -91,6 +105,39 @@ def test_wrapper_methods_sparkrows(df_sparkrows, new_col):
 
     cols_values = wdf.get_cols(("email", "account"))
     assert all(isinstance(c, list) for c in cols_values)
+
+
+@pytest.fixture
+def dummy_sparkrows():
+    return [
+        Row(canonical_id=1, address="a"),
+        Row(canonical_id=1, address="b"),
+        Row(canonical_id=2, address="c"),
+        Row(canonical_id=2, address="d"),
+    ]
+
+def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
+    
+    # first
+    
+    wdf = SparkRows(dummy_sparkrows)
+
+    deduped = wdf.drop_duplicates(keep="first")
+
+    assert deduped is wdf
+    assert [row.address for row in wdf._df] == ["a", "c"]
+
+    # last
+
+    wdf = SparkRows(dummy_sparkrows)
+
+    deduped = wdf.drop_duplicates(keep="last")
+
+    assert deduped is wdf
+    assert [row.address for row in wdf._df] == ["b", "d"]
+
+    
+
 
 
 # DataFrame delegation

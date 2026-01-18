@@ -169,7 +169,7 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
-        self._df = self._df.unique(keep=keep, subset=CANONICAL_ID)
+        self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
 
 

@@ -24,7 +24,7 @@ def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor,
     assert dupe._executor is not None
 
 
-# VALIDATION
+# validators
 
 
 @pytest.mark.parametrize("keep", ["first", "last"])
@@ -66,7 +66,7 @@ def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
 @patch("dupegrouper.base.LocalExecutor")
 @patch("dupegrouper.base.wrap")
 @patch("dupegrouper.base.StrategyManager")
-def test_canonicalize_calls_executor_and_resets_strategy_manager(
+def test_canonicalize_calls(
     mock_sm,
     mock_wrap,
     mock_local,
@@ -93,9 +93,47 @@ def test_canonicalize_calls_executor_and_resets_strategy_manager(
         columns="address",
         strats={"address": strategy_mock},
         keep="first",
-        drop_duplicates =False,
+        drop_duplicates=False,
+        drop_canonical_id=False,
     )
     mock_sm.reset.assert_called_once()
+
+@patch("dupegrouper.base.LocalExecutor")
+@patch("dupegrouper.base.wrap")
+@patch("dupegrouper.base.StrategyManager")
+def test_drop_duplicate_calls(
+    mock_sm,
+    mock_wrap,
+    mock_local,
+    dataframe,
+    strategy_mock,
+):
+
+    df, spark = dataframe
+
+    mock_wrap.return_value = Mock()
+    mock_executor = mock_local.return_value
+    mock_sm = mock_sm.return_value
+    mock_sm.get.return_value = {"address": strategy_mock}
+
+    dupe = Duped(df, spark_session=spark)
+    dupe._executor = mock_executor
+    dupe._sm = mock_sm
+
+    dupe.drop_duplicates("address")
+
+    mock_sm.get.assert_called_once()
+    mock_executor.execute.assert_called_once_with(
+        mock_wrap.return_value,
+        columns="address",
+        strats={"address": strategy_mock},
+        keep="first",
+        drop_duplicates=True,
+        drop_canonical_id=True,
+    )
+    mock_sm.reset.assert_called_once()
+
+
 
 
 # Property attributes
