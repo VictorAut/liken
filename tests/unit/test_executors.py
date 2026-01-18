@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, ANY
 
 import pytest
 from pyspark.rdd import RDD
@@ -39,6 +39,8 @@ def local_df():
 
 
 def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, strats_config):
+    mock_strategy.build_union_find.return_value = ({0: 0}, 1)
+
     executor = LocalExecutor()
 
     executor.execute(
@@ -52,10 +54,11 @@ def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, 
 
     mock_strategy.set_frame.assert_called_once_with(local_df)
     mock_strategy.set_keep.assert_called_once_with("last")
-    mock_strategy.canonicalizer.assert_called_once_with("address", drop_duplicates=False)
+    mock_strategy.canonicalizer.assert_called_once_with(components=ANY, drop_duplicates=False)
 
 
 def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
+    mock_strategy.build_union_find.return_value = ({0: 0}, 1)
 
     cfg = StratsConfig({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
 
