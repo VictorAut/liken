@@ -47,6 +47,7 @@ def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, 
         strats=strats_config,
         keep="last",
         drop_duplicates=False,
+        drop_canonical_id=False,
     )
 
     mock_strategy.set_frame.assert_called_once_with(local_df)
@@ -66,6 +67,7 @@ def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
         strats=cfg,
         keep="first",
         drop_duplicates=False,
+        drop_canonical_id=False,
     )
 
     mock_strategy.set_frame.assert_called()
@@ -117,6 +119,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
         strats=strats_config,
         keep="first",
         drop_duplicates=False,
+        drop_canonical_id=False,
     )
 
     spark_df._df.mapPartitions.assert_called_once()

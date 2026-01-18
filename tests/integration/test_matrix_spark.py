@@ -17,7 +17,7 @@ from dupegrouper.strats_library import Exact
     ],
     ids=["1 partitions", "2 partitions"],
 )
-def test_spark_partitions(num_partitions, expected_ids, df_spark, spark, blocking_key, helpers):
+def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_key, helpers):
 
     df = helpers.add_column(df_spark, blocking_key, "blocking_key", str)
 

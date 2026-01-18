@@ -156,7 +156,7 @@ IDS = [
 
 @pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
 @pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_id_matrix(backend, id, schema, data, expected_canonical_id, spark, helpers):
+def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, helpers):
 
     if backend == "pandas":
         df = pd.DataFrame(columns=schema, data=data)

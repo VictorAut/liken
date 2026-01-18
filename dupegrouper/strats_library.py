@@ -84,14 +84,19 @@ class BaseStrategy:
         array = self.get_array(columns)
 
         n = len(array)
+        print(n)
 
         uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
 
+        print({i: uf[i] for i in range(n)})
+
         components = defaultdict(list)
         for i in range(n):
             components[uf[i]].append(i)
+
+        print(components)
 
         return components
 

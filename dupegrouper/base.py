@@ -95,7 +95,6 @@ class Duped(Generic[DF]):
                 mapping object will be used instead
         """
         keep = _validate_keep_arg(keep)
-
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -123,7 +122,6 @@ class Duped(Generic[DF]):
                 mapping object will be used instead
         """
         keep = _validate_keep_arg(keep)
-
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -166,3 +164,4 @@ def _validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last
     if keep not in ("first", "last"):
         raise ValueError("Keep must be one of 'first' or 'last'")
     return keep
+
