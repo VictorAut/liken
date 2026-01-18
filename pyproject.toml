@@ -54,8 +54,11 @@ pytest-cov = "^6.1.1"
 
 [tool.poetry.group.docs.dependencies]
 pdoc = "^15.0.1"
+mkdocs = "^1.6.1"
+mkdocstrings = {extras = ["python"], version = "^1.0.0"}
+mkdocs-material = "^9.7.1"
 
-# linting
+
 
 [tool.black]
 line-length = 120
