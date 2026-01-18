@@ -1,0 +1,29 @@
+site_name: Wreathe
+
+theme:
+  name: "material"
+  palette:
+
+  # Palette toggle for light mode
+  - scheme: default
+    # primary: green
+    # accent: orange
+    toggle:
+      icon: material/brightness-7 
+      name: Switch to dark mode
+
+  # Palette toggle for dark mode
+  - scheme: slate
+    toggle:
+      icon: material/brightness-4
+      name: Switch to light mode
+
+plugins:
+  - mkdocstrings
+
+nav:
+  - index.md
+  - tutorials.md
+  - How-To Guides: how-to-guides.md
+  - reference.md
+  - explanation.md
