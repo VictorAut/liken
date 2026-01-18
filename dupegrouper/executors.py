@@ -52,11 +52,10 @@ class LocalExecutor(Executor):
             for col, iter_strats in strats.items():
                 for strat in iter_strats:
                     df = _call_strat(strat=strat, columns=col)
-            return df
-
-        # For inline calls e.g.`.canonicalize("address")`
-        for strat in strats[DEFAULT_STRAT_KEY]:
-            df = _call_strat(strat=strat, columns=columns)
+        else:
+            # For inline calls e.g.`.canonicalize("address")`
+            for strat in strats[DEFAULT_STRAT_KEY]:
+                df = _call_strat(strat=strat, columns=columns)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
