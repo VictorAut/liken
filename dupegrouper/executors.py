@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from collections import defaultdict
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
@@ -41,44 +42,50 @@ class LocalExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
     ) -> LocalDF:
-        _call_strat = partial(
-            self._call_strat,
-            df=df,
-            keep=keep,
-            drop_duplicates=drop_duplicates,
-        )
 
         if not columns:
             for col, iter_strats in strats.items():
                 for strat in iter_strats:
-                    df = _call_strat(strat=strat, columns=col)
+                    uf, n = self._build_uf(strat, df, col, keep)
+                    components = self._get_components(uf, n)
+                    df = self._call_strat(strat, components, drop_duplicates)
         else:
             # For inline calls e.g.`.canonicalize("address")`
             for strat in strats[DEFAULT_STRAT_KEY]:
-                df = _call_strat(strat=strat, columns=columns)
+                uf, n = self._build_uf(strat, df, columns, keep)
+                components = self._get_components(uf, n)
+                df = self._call_strat(strat, components, drop_duplicates)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
         return df
 
     @staticmethod
-    def _call_strat(
+    def _build_uf(
         strat: BaseStrategy,
         df: LocalDF,
         columns: Columns,
         keep: Keep,
+    ) -> LocalDF:
+        return strat.set_frame(df).set_keep(keep).build_union_find(columns)
+
+    @staticmethod
+    def _get_components(
+        uf,
+        n: int,
+    ) -> dict[int | tuple[int, ...], list[int]]:
+        components = defaultdict(list)
+        for i in range(n):
+            components[uf[i]].append(i)
+        return components
+
+    @staticmethod
+    def _call_strat(
+        strat: BaseStrategy,
+        components: dict[int | tuple[int, ...], list[int]],
         drop_duplicates: bool,
     ) -> LocalDF:
-        return (
-            strat
-            #
-            .set_frame(df)
-            .set_keep(keep)
-            .canonicalizer(
-                columns,
-                drop_duplicates=drop_duplicates,
-            )  # type: ignore
-        )
+        return strat.canonicalizer(components=components, drop_duplicates=drop_duplicates)
 
 
 @final
