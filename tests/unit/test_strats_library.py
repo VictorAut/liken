@@ -68,30 +68,6 @@ def test_gen_similarity_pairs_not_implemented():
         list(strat._gen_similarity_pairs(np.array([])))
 
 
-###################
-# _get_components #
-###################
-
-
-def test_get_components_calls_validate_and_get_array():
-    strat = BaseStrategy()
-
-    validate = Mock()
-    get_array = Mock(return_value=np.array([0, 1, 2]))
-    gen_pairs = Mock(return_value=iter([(0, 1)]))
-
-    strat.validate = validate
-    strat.get_array = get_array
-    strat._gen_similarity_pairs = gen_pairs
-
-    components = strat._get_components("column")
-
-    validate.assert_called_once_with("column")
-    get_array.assert_called_once_with("column")
-    gen_pairs.assert_called_once()
-    assert isinstance(components, dict)
-
-
 ################
 # canonicalize #
 ################
@@ -108,14 +84,15 @@ def test_canonicalize_puts_canonical_id(mock_df):
         ]
     )
 
-    strat._get_components = Mock(
-        return_value={
-            0: [0, 1],
-            2: [2],
-        }
-    )
+    components = {
+        0: [0, 1],
+        2: [2],
+    }
 
-    result = strat.canonicalizer("col", drop_duplicates=False,)
+    result = strat.canonicalizer(
+        components=components,
+        drop_duplicates=False,
+    )
 
     mock_df.put_col.assert_called_once()
     assert result is mock_df

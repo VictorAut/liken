@@ -107,8 +107,32 @@ PARAMS = [
 
 # fmt: on
 
+IDS = [
+    "custom-no-drop",
+    "custom-with-drop",
+    "exact-single-no-drop",
+    "exact-single-with-drop",
+    "exact-compound-no-drop",
+    "exact-compound-with-drop",
+    "fuzzy-no-drop",
+    "fuzzy-with-drop",
+    "cosine-no-drop",
+    "cosine-with-drop",
+    "jaccard-no-drop",
+    "jaccard-with-drop",
+    "lsh-no-drop",
+    "lsh-with-drop",
+    "str_startswith-no-drop",
+    "str_startswith-with-drop",
+    "str_endswith-no-drop",
+    "str_endswith-with-drop",
+    "str_contains-no-drop",
+    "str_contains-with-drop",
+    "tfidf-no-drop",
+    "tfidf-with-drop",
+]
 
-@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS)
+@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
 def test_matrix_strats(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
