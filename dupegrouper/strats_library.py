@@ -79,24 +79,29 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-    def _get_components(self: BaseStrategyProtocol, columns: Columns) -> dict[int, list[int]]:
+    
+    def _build_union_find(self: BaseStrategyProtocol, columns: Columns) -> dict[int, int]:
         self.validate(columns)
         array = self.get_array(columns)
 
         n = len(array)
-        print(n)
 
         uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
 
-        print({i: uf[i] for i in range(n)})
+        # print("union find", {i: uf[i] for i in range(n)})
+
+        return uf, n
+    
+    def _get_components(self, columns: Columns) -> dict[int, list[int]]:
+        uf, n = self._build_union_find(columns)
 
         components = defaultdict(list)
         for i in range(n):
             components[uf[i]].append(i)
 
-        print(components)
+        # print("components", components)
 
         return components
 
