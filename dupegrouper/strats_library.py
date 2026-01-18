@@ -79,8 +79,8 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-    
-    def _build_union_find(self: BaseStrategyProtocol, columns: Columns) -> dict[int, int]:
+
+    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> dict[int, int]:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -93,26 +93,14 @@ class BaseStrategy:
         # print("union find", {i: uf[i] for i in range(n)})
 
         return uf, n
-    
-    def _get_components(self, columns: Columns) -> dict[int, list[int]]:
-        uf, n = self._build_union_find(columns)
-
-        components = defaultdict(list)
-        for i in range(n):
-            components[uf[i]].append(i)
-
-        # print("components", components)
-
-        return components
 
     def canonicalizer(
         self: BaseStrategyProtocol,
-        columns: Columns,
         *,
+        components: dict[int | tuple[int, ...], list[int]],
         drop_duplicates: bool,
     ) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
-        components: dict[int, list[int]] = self._get_components(columns)
 
         n = len(canonicals)
 
@@ -185,30 +173,22 @@ class Exact(BaseStrategy, ColumnArrayMixin):
     """
     @private
     """
-
-    @staticmethod
-    def as_is(value):
-        return value
-
-    @staticmethod
-    def to_tuple(value):
-        return tuple(value.tolist())
-
+    def validate(self, columns):
+        del columns  # Unused
+        pass
+    
     @override
-    def _get_components(self, columns: Columns) -> dict[int, list[int]]:
-        array = self.get_array(columns)
+    def _gen_similarity_pairs(self, array: np.ndarray):
+        buckets = defaultdict(list)
 
-        if isinstance(columns, str):
-            key_fn = self.as_is
-        else:
-            key_fn = self.to_tuple
-
-        components = defaultdict(list)
         for i, v in enumerate(array):
-            components[key_fn(v)].append(i)
+            key = v if array.ndim == 1 else tuple(v.tolist())
+            buckets[key].append(i)
 
-        return components
-
+        for indices in buckets.values():
+            for i in range(len(indices)):
+                for j in range(i + 1, len(indices)):
+                    yield indices[i], indices[j]
 
 # BINARY DEDUPERS:
 
