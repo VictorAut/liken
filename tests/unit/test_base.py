@@ -60,7 +60,7 @@ def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
     mock_sm.apply.assert_called_once_with({"address": strategy_mock})
 
 
-# canonicalize
+# canonicalize / drop_duplicates
 
 
 @patch("dupegrouper.base.LocalExecutor")
@@ -132,8 +132,6 @@ def test_drop_duplicate_calls(
         drop_canonical_id=True,
     )
     mock_sm.reset.assert_called_once()
-
-
 
 
 # Property attributes
