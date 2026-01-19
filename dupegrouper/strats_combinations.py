@@ -1,25 +1,33 @@
-from dupegrouper.strats_library import exact, fuzzy, tfidf, lsh, str_contains
+from __future__ import annotations
+
+from typing import Self
+from dupegrouper.strats_library import BaseStrategy, exact, fuzzy, tfidf, lsh, str_contains
 
 
 class On:
-    def __init__(self, column: str, func):
-        self.column = column
-        self.func = func
-        self.strats = [(column, func.__name__)]
+    def __init__(self, column: str, strat):
+        self._column = column
+        self._strat = strat
+        self._strats = [(column, strat)]
 
-    def do(self):
-        print(self.strats)
-
-    def __and__(self, other):
-        self.strats.append((other.column, other.func.__name__))
+    def __and__(self, other: On) -> Self:
+        self._strats.append((other._column, other._strat))
         return self
+    
+    @property
+    def and_strats(self) -> list[tuple[str, BaseStrategy]]:
+        return self._strats
 
 
 test = (
-    On("email", exact),
-    On("address", fuzzy) & On("address", lsh) & On("address", str_contains),
+    On("email", exact()),
+    On("address", fuzzy()) & On("address", lsh()) & On("address", str_contains(pattern="h")),
 )
 
-for stage in test:
-    stage.do()
-    
+# for stage in test:
+#     for col, strat in stage.and_strats:
+#         print(col)
+#         print(strat)
+#         print("do something")
+#     print("collecting......")
+#     # break

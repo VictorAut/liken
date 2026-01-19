@@ -71,6 +71,10 @@ class StrategyManager:
 
             self._strats = StratsConfig(strat)
             return
+        
+        if isinstance(strat, tuple):
+            self._strats = strat
+            return
 
         raise StrategyConfigTypeError(f"Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}")
 
