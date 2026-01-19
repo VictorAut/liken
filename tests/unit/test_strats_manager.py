@@ -14,7 +14,8 @@ from dupegrouper.strats_manager import (
 
 
 class DummyStrategy(BaseStrategy):
-    pass
+    def __str__(self):
+        return self.str_representation("dummy_strategy")
 
 
 @pytest.fixture
@@ -166,7 +167,7 @@ def test_pretty_get_single_default_key(s1, s2):
     sm.apply(s1)
     sm.apply(s2)
 
-    assert sm.pretty_get() == ("DummyStrategy", "DummyStrategy")
+    assert sm.pretty_get() == ("dummy_strategy()", "dummy_strategy()")
 
 
 def test_pretty_get_multiple_keys(s1, s2, s3):
@@ -175,8 +176,8 @@ def test_pretty_get_multiple_keys(s1, s2, s3):
 
     pretty = sm.pretty_get()
     assert pretty == {
-        "col_a": ("DummyStrategy", "DummyStrategy"),
-        "col_b": ("DummyStrategy",),
+        "col_a": ("dummy_strategy()", "dummy_strategy()"),
+        "col_b": ("dummy_strategy()",),
     }
 
 
