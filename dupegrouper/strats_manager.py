@@ -79,14 +79,14 @@ class StrategyManager:
 
     def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
         """pretty get"""
-        strategies = self.get()
+        strats = self.get()
 
         def _parse(values):
-            return tuple(type(vx).__name__ for vx in values)
+            return tuple(str(v) for v in values)
 
-        if set(strategies) == {DEFAULT_STRAT_KEY}:
-            return tuple(_parse(strategies[DEFAULT_STRAT_KEY]))
-        return {key: _parse(values) for key, values in strategies.items()}
+        if set(strats) == {DEFAULT_STRAT_KEY}:
+            return tuple(_parse(strats[DEFAULT_STRAT_KEY]))
+        return {k: _parse(v) for k, v in strats.items()}
 
     def reset(self):
         """Reset strategy collection to empty defaultdict"""

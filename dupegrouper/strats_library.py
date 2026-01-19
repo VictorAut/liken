@@ -125,6 +125,21 @@ class BaseStrategy:
         if not drop_duplicates:
             return self.wrapped_df
         return self.wrapped_df.drop_duplicates(keep=self.keep)
+    
+    
+    def str_representation(self, name: str) -> str:
+        args = ", ".join(repr(a) for a in self._init_args)
+        kwargs = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
+
+        joined = ", ".join(filter(None, [args, kwargs]))
+        return f"{name}({joined})"
+    
+    def __repr__(self):
+        return self.str_representation(self.__class__.__name__)
+    
+    def __str__(self):
+        # overridable; fall-back to:
+        return self.__repr__()
 
 
 class ColumnArrayMixin:
@@ -173,6 +188,8 @@ class Exact(BaseStrategy, ColumnArrayMixin):
     """
     @private
     """
+    NAME: str = "exact"
+
     def validate(self, columns):
         del columns  # Unused
         pass
@@ -189,6 +206,9 @@ class Exact(BaseStrategy, ColumnArrayMixin):
             for i in range(len(indices)):
                 for j in range(i + 1, len(indices)):
                     yield indices[i], indices[j]
+    
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 # BINARY DEDUPERS:
 
@@ -199,8 +219,8 @@ class BinaryDedupers(BaseStrategy):
     @private
     """
 
-    def __init__(self, pattern: str, case: bool = True):
-        super().__init__(pattern=pattern, case=case)
+    def __init__(self, pattern: str, case: bool = True, **kwargs):
+        super().__init__(pattern=pattern, case=case, **kwargs)
         self._pattern = pattern
         self._case = case
 
@@ -234,6 +254,8 @@ class StrStartsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
+    NAME: str = "str_startswith"
+
     @override
     def _matches(self, value: str | None) -> bool:
         if value is None:
@@ -244,6 +266,9 @@ class StrStartsWith(
             if self._case
             else value.lower().startswith(self._pattern.lower())
         )
+    
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 
 @final
@@ -261,6 +286,8 @@ class StrEndsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
+    NAME: str = "str_endswith"
+
     @override
     def _matches(self, value: str | None) -> bool:
         if value is None:
@@ -271,6 +298,9 @@ class StrEndsWith(
             if self._case
             else value.lower().endswith(self._pattern.lower())
         )
+    
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 
 @final
@@ -286,8 +316,10 @@ class StrContains(
     Defaults to case sensitive. Supports literal substring or regex search.
     """
 
+    NAME: str = "str_contains"
+
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
-        super().__init__(pattern=pattern, case=case)
+        super().__init__(pattern=pattern, case=case, regex=regex)
         self._regex = regex
 
         if self._regex:
@@ -306,6 +338,9 @@ class StrContains(
                 return self._pattern in value
             else:
                 return self._pattern.lower() in value.lower()
+            
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 
 # THRESHOLD DEDUPERS:
@@ -316,8 +351,8 @@ class ThresholdDedupers(BaseStrategy):
     @private
     """
 
-    def __init__(self, threshold: float = 0.95):
-        super().__init__(threshold=threshold)
+    def __init__(self, threshold: float = 0.95, **kwargs):
+        super().__init__(threshold=threshold, **kwargs)
         self._threshold = threshold
 
         if not (0 <= threshold < 1):
@@ -334,6 +369,8 @@ class Fuzzy(
     @private
     """
 
+    NAME: str = "fuzzy"
+
     @staticmethod
     @cache
     def _fuzz_ratio(s1, s2) -> float:
@@ -345,6 +382,9 @@ class Fuzzy(
             for j in range(i + 1, n):
                 if self._fuzz_ratio(array[i], array[j]) > self._threshold:
                     yield i, j
+
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 
 @final
@@ -366,6 +406,8 @@ class TfIdf(
     as listed in the [TF-IDF vectorizer documentation](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
     """
 
+    NAME: str = "tfidf"
+
     def __init__(
         self,
         ngram: int | tuple[int, int] = 3,
@@ -375,6 +417,8 @@ class TfIdf(
     ):
         super().__init__(
             threshold=threshold,
+            ngram=ngram,
+            topn=topn,
             **kwargs,
         )
         self._ngram = ngram
@@ -418,6 +462,9 @@ class TfIdf(
         for i in range(len(rows)):
             yield rows[i], cols[i]
 
+    def __str__(self):
+        return self.str_representation(self.NAME)
+
 
 @final
 class LSH(
@@ -429,6 +476,8 @@ class LSH(
     @private
     """
 
+    NAME: str = "lsh"
+
     def __init__(
         self,
         ngram: int = 3,
@@ -437,6 +486,8 @@ class LSH(
     ):
         super().__init__(
             threshold=threshold,
+            ngram=ngram,
+            num_perm=num_perm,
         )
         self._ngram = ngram
         self._threshold = threshold
@@ -477,6 +528,10 @@ class LSH(
                     yield idx, idy
 
 
+    def __str__(self):
+        return self.str_representation(self.NAME)
+    
+
 # COMPOUND COLUMN:
 
 
@@ -489,6 +544,8 @@ class Jaccard(
     """
     @private
     """
+
+    NAME: str = "jaccard"
 
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         sets = [set(row) for row in array]
@@ -509,6 +566,9 @@ class Jaccard(
                 if len(intersection) / len(union) > self._threshold:
                     yield idx, idy
 
+    def __str__(self):
+        return self.str_representation(self.NAME)
+
 
 @final
 class Cosine(
@@ -519,6 +579,8 @@ class Cosine(
     """
     @private
     """
+
+    NAME: str = "cosine"
 
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         n = len(array)
@@ -536,6 +598,9 @@ class Cosine(
 
                 if product / norms > self._threshold:
                     yield idx, idy
+
+    def __str__(self):
+        return self.str_representation(self.NAME)
 
 
 # PUBLIC:

@@ -25,6 +25,10 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
         /,
         **kwargs,
     ):
+        super().__init__(
+            pair_fn=pair_fn,
+            **kwargs,
+        )
         self._pair_fn = pair_fn
         self._kwargs = kwargs
 
@@ -35,6 +39,9 @@ class Custom(ThresholdDedupers, ColumnArrayMixin):
     @override
     def _gen_similarity_pairs(self, array) -> Iterator[SimilarPairIndices]:
         yield from self._pair_fn(array, **self._kwargs)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 # REGISTER:
