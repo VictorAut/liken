@@ -43,18 +43,28 @@ class LocalExecutor(Executor):
         drop_canonical_id: bool,
     ) -> LocalDF:
 
-        if not columns:
-            for col, iter_strats in strats.items():
-                for strat in iter_strats:
-                    uf, n = self._build_uf(strat, df, col, keep)
+        if isinstance(strats, StratsConfig):
+            if not columns:
+                for col, iter_strats in strats.items():
+                    for strat in iter_strats:
+                        uf, n = self._build_uf(strat, df, col, keep)
+                        components = self._get_components(uf, n)
+                        df = self._call_strat(strat, components, drop_duplicates)
+            else:
+                # For inline calls e.g.`.canonicalize("address")`
+                for strat in strats[DEFAULT_STRAT_KEY]:
+                    uf, n = self._build_uf(strat, df, columns, keep)
                     components = self._get_components(uf, n)
                     df = self._call_strat(strat, components, drop_duplicates)
         else:
-            # For inline calls e.g.`.canonicalize("address")`
-            for strat in strats[DEFAULT_STRAT_KEY]:
-                uf, n = self._build_uf(strat, df, columns, keep)
-                components = self._get_components(uf, n)
+            for stage in strats:
+                ufs = []
+                for col, strat in stage.and_strats:
+                    uf, n = self._build_uf(strat, df, col, keep)
+                    ufs.append(uf)
+                components = self._get_multi_components(ufs, n)
                 df = self._call_strat(strat, components, drop_duplicates)
+
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -71,12 +81,23 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _get_components(
-        uf,
+        uf: dict[int, int],
         n: int,
-    ) -> dict[int | tuple[int, ...], list[int]]:
+    ) -> dict[int, list[int]]:
         components = defaultdict(list)
         for i in range(n):
             components[uf[i]].append(i)
+        return components
+    
+    @staticmethod
+    def _get_multi_components(
+        ufs: list[dict[int, int]],
+        n: int,
+    ) -> dict[tuple[int, ...], list[int]]:
+        components = defaultdict(list)
+        for i in range(n):
+            signature = tuple(uf[i] for uf in ufs)
+            components[signature].append(i)
         return components
 
     @staticmethod

@@ -23,20 +23,10 @@ from dupegrouper.types import Columns, DataFrameLike, Keep
 
 
 class Duped(Generic[DF]):
+    """TODO
+    """
     _df: DF
     _executor: Executor[DF]
-    """Top-level entrypoint for grouping duplicates
-
-    This class handles initialisation of a dataframe, dispatching appropriately
-    given the supported dataframe libraries (e.g. Pandas). An instance of this
-    class can then accept a variety of strategies for deduplication and
-    grouping.
-
-    Upon initialisation, `Duped` sets a new column, usually `"canonical_id"`
-    — but you can control this by setting an environment variable `CANONICAL_ID` at
-    runtime. The canonical_id is a monotonically increasing, numeric id column
-    starting at 1 to the length of the dataframe provided.
-    """
 
     @overload
     def __init__(
