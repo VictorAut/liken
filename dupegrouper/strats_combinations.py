@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Self
-from dupegrouper.strats_library import BaseStrategy, exact, fuzzy, tfidf, lsh, str_contains
+from typing import Any, Self
+from dupegrouper.strats_library import BaseStrategy, exact, fuzzy, lsh, str_contains
 
 
 class On:
-    def __init__(self, column: str, strat):
+    def __init__(self, column: str, strat: BaseStrategy):
         self._column = column
-        self._strat = strat
-        self._strats = [(column, strat)]
+        self._strat = _validate_strat_arg(strat)
+        self._strats: list[tuple[str, BaseStrategy]] = [(column, strat)]
 
     def __and__(self, other: On) -> Self:
         self._strats.append((other._column, other._strat))
@@ -19,15 +19,7 @@ class On:
         return self._strats
 
 
-test = (
-    On("email", exact()),
-    On("address", fuzzy()) & On("address", lsh()) & On("address", str_contains(pattern="h")),
-)
-
-# for stage in test:
-#     for col, strat in stage.and_strats:
-#         print(col)
-#         print(strat)
-#         print("do something")
-#     print("collecting......")
-#     # break
+def _validate_strat_arg(strat: Any):
+    if not isinstance(strat, BaseStrategy):
+        raise TypeError(f"Invalid arg: strat must be instance of BaseStrategy, got {type(strat).__name__}")
+    return strat

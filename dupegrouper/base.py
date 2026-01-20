@@ -16,8 +16,9 @@ from pyspark.sql import SparkSession
 from dupegrouper.dataframe import DF, wrap
 from dupegrouper.executors import Executor, LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StrategyManager, StratsConfig
+from dupegrouper.strats_manager import StrategyManager, StratsDict
 from dupegrouper.types import Columns, DataFrameLike, Keep
+
 
 # API:
 
@@ -67,7 +68,7 @@ class Duped(Generic[DF]):
 
         self._df = wrap(df, id)
 
-    def apply(self, strategy: BaseStrategy | StratsConfig | dict) -> None:
+    def apply(self, strategy: BaseStrategy | StratsDict | dict) -> None:
         self._sm.apply(strategy)
 
     def canonicalize(
@@ -144,14 +145,15 @@ class Duped(Generic[DF]):
         return self._df.unwrap()
 
 
+# TODO: typing here should be `Any`?
 def _validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
     if not spark_session:
-        raise ValueError("spark_session must be provided for a spark dataframe")
+        raise ValueError("Invalid arg: spark_session must be provided for a spark dataframe")
     return spark_session
 
 
 def _validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
     if keep not in ("first", "last"):
-        raise ValueError("Keep must be one of 'first' or 'last'")
+        raise ValueError("Invalid arg: keep must be one of 'first' or 'last'")
     return keep
 

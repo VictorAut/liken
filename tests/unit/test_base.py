@@ -33,7 +33,7 @@ def test_validate_keep_arg_valid(keep):
 
 
 def test_validate_keep_arg_invalid():
-    with pytest.raises(ValueError, match="Keep must be one of 'first' or 'last'"):
+    with pytest.raises(ValueError, match="Invalid arg: keep must be one of 'first' or 'last'"):
         _validate_keep_arg("middle")
 
 
@@ -43,7 +43,7 @@ def test_validate_spark_args_valid(mock_spark_session):
 
 
 def test_validate_spark_args_missing_session():
-    with pytest.raises(ValueError, match="spark_session must be provided for a spark dataframe"):
+    with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
         _validate_spark_args(None)
 
 

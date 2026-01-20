@@ -6,7 +6,7 @@ from pyspark.sql import Row
 
 from dupegrouper.executors import LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsConfig
+from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict
 
 ############################
 # Fixtures
@@ -24,7 +24,7 @@ def mock_strategy():
 
 @pytest.fixture
 def strats_config(mock_strategy):
-    cfg = StratsConfig({DEFAULT_STRAT_KEY: [mock_strategy]})
+    cfg = StratsDict({DEFAULT_STRAT_KEY: [mock_strategy]})
     return cfg
 
 
@@ -60,7 +60,7 @@ def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, 
 def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
     mock_strategy.build_union_find.return_value = ({0: 0}, 1)
 
-    cfg = StratsConfig({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
+    cfg = StratsDict({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
 
     executor = LocalExecutor()
 
