@@ -79,7 +79,6 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-
     def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> dict[int, int]:
         self.validate(columns)
         array = self.get_array(columns)
@@ -114,7 +113,6 @@ class BaseStrategy:
             for i in members:
                 rep_index[i] = rep
 
-
         new_canonicals = np.array(
             [canonicals[rep_index[i]] for i in range(n)],
             dtype=object,
@@ -125,18 +123,17 @@ class BaseStrategy:
         if not drop_duplicates:
             return self.wrapped_df
         return self.wrapped_df.drop_duplicates(keep=self.keep)
-    
-    
+
     def str_representation(self, name: str) -> str:
         args = ", ".join(repr(a) for a in self._init_args)
         kwargs = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
 
         joined = ", ".join(filter(None, [args, kwargs]))
         return f"{name}({joined})"
-    
+
     def __repr__(self):
         return self.str_representation(self.__class__.__name__)
-    
+
     def __str__(self):
         # overridable; fall-back to:
         return self.__repr__()
@@ -188,12 +185,13 @@ class Exact(BaseStrategy, ColumnArrayMixin):
     """
     @private
     """
+
     NAME: str = "exact"
 
     def validate(self, columns):
         del columns  # Unused
         pass
-    
+
     @override
     def _gen_similarity_pairs(self, array: np.ndarray):
         buckets = defaultdict(list)
@@ -206,9 +204,10 @@ class Exact(BaseStrategy, ColumnArrayMixin):
             for i in range(len(indices)):
                 for j in range(i + 1, len(indices)):
                     yield indices[i], indices[j]
-    
+
     def __str__(self):
         return self.str_representation(self.NAME)
+
 
 # BINARY DEDUPERS:
 
@@ -266,7 +265,7 @@ class StrStartsWith(
             if self._case
             else value.lower().startswith(self._pattern.lower())
         )
-    
+
     def __str__(self):
         return self.str_representation(self.NAME)
 
@@ -298,7 +297,7 @@ class StrEndsWith(
             if self._case
             else value.lower().endswith(self._pattern.lower())
         )
-    
+
     def __str__(self):
         return self.str_representation(self.NAME)
 
@@ -338,7 +337,7 @@ class StrContains(
                 return self._pattern in value
             else:
                 return self._pattern.lower() in value.lower()
-            
+
     def __str__(self):
         return self.str_representation(self.NAME)
 
@@ -527,10 +526,9 @@ class LSH(
                 if idx < idy:
                     yield idx, idy
 
-
     def __str__(self):
         return self.str_representation(self.NAME)
-    
+
 
 # COMPOUND COLUMN:
 

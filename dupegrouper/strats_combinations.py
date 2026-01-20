@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Self
+
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.validators import validate_strat_arg
 
@@ -14,9 +15,7 @@ class On:
     def __and__(self, other: On) -> Self:
         self._strats.append((other._column, other._strat))
         return self
-    
+
     @property
     def and_strats(self) -> list[tuple[str, BaseStrategy]]:
         return self._strats
-
-

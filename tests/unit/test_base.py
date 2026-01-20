@@ -99,6 +99,7 @@ def test_canonicalize_calls(
     )
     mock_sm.reset.assert_called_once()
 
+
 @patch("dupegrouper.base.LocalExecutor")
 @patch("dupegrouper.base.wrap")
 @patch("dupegrouper.base.StrategyManager")

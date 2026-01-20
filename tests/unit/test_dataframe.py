@@ -116,10 +116,11 @@ def dummy_sparkrows():
         Row(canonical_id=2, address="d"),
     ]
 
+
 def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
-    
+
     # first
-    
+
     wdf = SparkRows(dummy_sparkrows)
 
     deduped = wdf.drop_duplicates(keep="first")
@@ -135,9 +136,6 @@ def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
 
     assert deduped is wdf
     assert [row.address for row in wdf._df] == ["b", "d"]
-
-    
-
 
 
 # DataFrame delegation

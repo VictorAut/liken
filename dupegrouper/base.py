@@ -6,7 +6,7 @@ functionality provided by dupegrouper.
 
 from __future__ import annotations
 
-from typing import Generic, Literal, overload
+from typing import Generic, overload
 
 import pandas as pd
 import polars as pl
@@ -20,13 +20,12 @@ from dupegrouper.strats_manager import StrategyManager, StratsDict
 from dupegrouper.types import Columns, DataFrameLike, Keep
 from dupegrouper.validators import validate_keep_arg, validate_spark_args
 
-
 # API:
 
 
 class Duped(Generic[DF]):
-    """TODO
-    """
+    """TODO"""
+
     _df: DF
     _executor: Executor[DF]
 
