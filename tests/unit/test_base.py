@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 import pytest
 from pandas.testing import assert_frame_equal
 
-from dupegrouper.base import Duped, _validate_keep_arg, _validate_spark_args
+from dupegrouper.base import Duped
+from dupegrouper.validators import validate_keep_arg, validate_spark_args
 
 # INITIALIZATION:
 
@@ -29,22 +30,22 @@ def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor,
 
 @pytest.mark.parametrize("keep", ["first", "last"])
 def test_validate_keep_arg_valid(keep):
-    assert _validate_keep_arg(keep) == keep
+    assert validate_keep_arg(keep) == keep
 
 
 def test_validate_keep_arg_invalid():
     with pytest.raises(ValueError, match="Invalid arg: keep must be one of 'first' or 'last'"):
-        _validate_keep_arg("middle")
+        validate_keep_arg("middle")
 
 
 def test_validate_spark_args_valid(mock_spark_session):
-    session = _validate_spark_args(mock_spark_session)
+    session = validate_spark_args(mock_spark_session)
     assert session == mock_spark_session
 
 
 def test_validate_spark_args_missing_session():
     with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
-        _validate_spark_args(None)
+        validate_spark_args(None)
 
 
 # StrategyManager

@@ -18,6 +18,7 @@ from dupegrouper.executors import Executor, LocalExecutor, SparkExecutor
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import StrategyManager, StratsDict
 from dupegrouper.types import Columns, DataFrameLike, Keep
+from dupegrouper.validators import validate_keep_arg, validate_spark_args
 
 
 # API:
@@ -61,7 +62,7 @@ class Duped(Generic[DF]):
 
         self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
-            spark_session = _validate_spark_args(spark_session)
+            spark_session = validate_spark_args(spark_session)
             self._executor = SparkExecutor(spark_session=spark_session, id=id)
         else:
             self._executor = LocalExecutor()
@@ -85,7 +86,7 @@ class Duped(Generic[DF]):
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
-        keep = _validate_keep_arg(keep)
+        keep = validate_keep_arg(keep)
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -112,7 +113,7 @@ class Duped(Generic[DF]):
                 as a mapping object, this must not passed, as the keys of the
                 mapping object will be used instead
         """
-        keep = _validate_keep_arg(keep)
+        keep = validate_keep_arg(keep)
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -143,17 +144,3 @@ class Duped(Generic[DF]):
     @property
     def df(self) -> DataFrameLike:
         return self._df.unwrap()
-
-
-# TODO: typing here should be `Any`?
-def _validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
-    if not spark_session:
-        raise ValueError("Invalid arg: spark_session must be provided for a spark dataframe")
-    return spark_session
-
-
-def _validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
-    if keep not in ("first", "last"):
-        raise ValueError("Invalid arg: keep must be one of 'first' or 'last'")
-    return keep
-
