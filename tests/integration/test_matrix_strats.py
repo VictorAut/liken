@@ -9,6 +9,7 @@ import pytest
 from dupegrouper import Duped
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.custom import register
+from dupegrouper.strats_combinations import On
 from dupegrouper.strats_library import (
     cosine,
     exact,
@@ -159,22 +160,35 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_strats(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_strats_inline(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
     dg = Duped(df, spark_session=spark_session)
-
-    # single strategy item addition
     dg.apply(strategy(**strat_kwarg))
     dg.canonicalize(columns)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
-    dg = Duped(df, spark_session=spark_session)
 
-    # dictionary strategy addition
+@pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_strats_dict(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
+
+    df, spark_session = dataframe
+
+    dg = Duped(df, spark_session=spark_session)
     dg.apply({columns: [strategy(**strat_kwarg)]})
+    dg.canonicalize()
+
+    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+
+@pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_strats_on(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
+
+    df, spark_session = dataframe
+
+    dg = Duped(df, spark_session=spark_session)
+    dg.apply((On(columns, strategy(**strat_kwarg)),))
     dg.canonicalize()
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id

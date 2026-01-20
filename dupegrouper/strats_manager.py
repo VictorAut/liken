@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import warnings
 from collections import UserDict
-from typing import Final, final, TYPE_CHECKING
+from typing import Final, final
 
-from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_combinations import On
-
+from dupegrouper.strats_library import BaseStrategy
 
 # CONSTANTS:
 
@@ -49,14 +49,13 @@ class StratsTuple(tuple):
 
         for i, item in enumerate(items):
             if not isinstance(item, On):
-                raise TypeError(
-                    f"Element at index {i} is not an instance of On"
-                )
+                raise TypeError(f"Element at index {i} is not an instance of On")
 
         return super().__new__(cls, items)
 
 
-# STRATS CONFIG:
+# STRATS MANAGER:
+
 
 @final
 class StrategyManager:
@@ -74,7 +73,7 @@ class StrategyManager:
     def __init__(self) -> None:
         self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
 
-    def apply(self, strat: BaseStrategy | dict) -> None:
+    def apply(self, strat: BaseStrategy | dict | StratsDict | tuple) -> None:
         if isinstance(strat, BaseStrategy):
             if DEFAULT_STRAT_KEY not in self._strats:
                 raise StrategyConfigTypeError(
@@ -85,7 +84,8 @@ class StrategyManager:
             self._strats[DEFAULT_STRAT_KEY].append(strat)
             return
 
-        if isinstance(strat, dict):
+        # raw user input is dict, but StratsDict passed to spark workers
+        if isinstance(strat, dict | StratsDict):
             # when an inline strat has already been provided, it will be replaced
             if self._strats[DEFAULT_STRAT_KEY]:
                 warnings.warn(
@@ -95,7 +95,7 @@ class StrategyManager:
 
             self._strats = StratsDict(strat)
             return
-        
+
         if isinstance(strat, tuple):
             # i.e. when it already has been applied a strategy
             if isinstance(self._strats, tuple):
@@ -103,7 +103,7 @@ class StrategyManager:
                     "The strat manager had already been supplied with at least one strategy tuple which now will be replaced",
                     category=UserWarning,
                 )
-            self._strats = StratsTuple(strat)
+            self._strats = StratsTuple(deepcopy(strat)) # TODO: Explain this in detail!
             return
 
         raise StrategyConfigTypeError(f"Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}")

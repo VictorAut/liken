@@ -46,6 +46,7 @@ scipy-stubs = { version = "^1.15.2.1", python = ">=3.10" }
 pyinstrument = "^5.0.1"
 types-networkx = "^3.6.1.20251220"
 isort = "^7.0.0"
+pylint = "^4.0.4"
 
 
 [tool.poetry.group.test.dependencies]

@@ -132,6 +132,7 @@ IDS = [
     "tfidf-with-drop",
 ]
 
+
 @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
 def test_matrix_strats(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 

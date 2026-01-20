@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import Any, Generic, Protocol, Self, TypeAlias, TypeVar, final, Hashable
+from typing import Any, Generic, Hashable, Protocol, Self, TypeAlias, TypeVar, final
 
 import numpy as np
 import pandas as pd
@@ -121,7 +121,7 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
     def get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
         return self._df[list(columns)]
-    
+
     def drop_col(self, column: str) -> Self:
         self._df = self._df.drop(columns=column)
         return self
@@ -259,11 +259,9 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     def get_cols(self):
         raise NotImplementedError(self.ERR_MSG)
-    
+
     def drop_duplicates(self):
         raise NotImplementedError(self.ERR_MSG)
-    
-
 
 
 @final

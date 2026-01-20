@@ -6,7 +6,7 @@ import pytest
 
 from dupegrouper.base import Duped
 from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strats_library import Exact
+from dupegrouper.strats_library import exact
 
 
 @pytest.mark.parametrize(
@@ -24,8 +24,8 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
     df = df.repartition(num_partitions, "blocking_key")
 
     strategies = {
-        "address": [Exact()],
-        "email": [Exact()],
+        "address": (exact(),),
+        "email": (exact(),),
     }
     dg = Duped(df, spark_session=spark)
     dg.apply(strategies)

@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch, ANY
+from unittest.mock import ANY, Mock, patch
 
 import pytest
 from pyspark.rdd import RDD

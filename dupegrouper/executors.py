@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from collections import defaultdict
-from functools import partial
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
 from pyspark.sql import Row, SparkSession
@@ -65,7 +64,6 @@ class LocalExecutor(Executor):
                 components = self._get_multi_components(ufs, n)
                 df = self._call_strat(strat, components, drop_duplicates)
 
-
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
         return df
@@ -88,7 +86,7 @@ class LocalExecutor(Executor):
         for i in range(n):
             components[uf[i]].append(i)
         return components
-    
+
     @staticmethod
     def _get_multi_components(
         ufs: list[dict[int, int]],

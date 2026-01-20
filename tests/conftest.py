@@ -1,4 +1,4 @@
-from unittest.mock import Mock, create_autospec, patch
+from unittest.mock import Mock, create_autospec
 
 import pandas as pd
 import polars as pl
@@ -10,8 +10,7 @@ from pyspark.sql.functions import monotonically_increasing_id, row_number
 from pyspark.sql.types import LongType, StringType
 from pyspark.sql.window import Window
 
-from dupegrouper.base import BaseStrategy, Duped
-from dupegrouper.dataframe import PandasDF, PolarsDF, SparkDF, SparkRows
+from dupegrouper.base import BaseStrategy
 from dupegrouper.datasets.datasets import fake13
 from dupegrouper.types import DataFrameLike
 
@@ -92,7 +91,6 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
         return df_polars, None
     if request.param == "spark":
         return df_spark, spark
-
 
 
 # Mocks
