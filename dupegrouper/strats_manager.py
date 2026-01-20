@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import warnings
 from collections import UserDict
-from typing import Final, final
+from typing import Final, final, TYPE_CHECKING
 
 from dupegrouper.strats_library import BaseStrategy
+from dupegrouper.strats_combinations import On
+
 
 # CONSTANTS:
 
@@ -14,7 +18,7 @@ DEFAULT_STRAT_KEY: Final[str] = "_default_"
 
 
 @final
-class StratsConfig(UserDict):
+class StratsDict(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise StrategyConfigTypeError(
@@ -35,6 +39,26 @@ class StratsConfig(UserDict):
 
 
 @final
+class StratsTuple(tuple):
+    def __new__(cls, items):
+        if not isinstance(items, tuple):
+            raise TypeError("StratsTuple must be constructed from a tuple")
+
+        if not items:
+            raise ValueError("StratsTuple cannot be empty")
+
+        for i, item in enumerate(items):
+            if not isinstance(item, On):
+                raise TypeError(
+                    f"Element at index {i} is not an instance of On"
+                )
+
+        return super().__new__(cls, items)
+
+
+# STRATS CONFIG:
+
+@final
 class StrategyManager:
     """
     Manage and validate collection(s) of deduplication strategies.
@@ -48,9 +72,9 @@ class StrategyManager:
     """
 
     def __init__(self) -> None:
-        self._strats = StratsConfig({DEFAULT_STRAT_KEY: []})
+        self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
 
-    def apply(self, strat: BaseStrategy | dict | StratsConfig) -> None:
+    def apply(self, strat: BaseStrategy | dict) -> None:
         if isinstance(strat, BaseStrategy):
             if DEFAULT_STRAT_KEY not in self._strats:
                 raise StrategyConfigTypeError(
@@ -61,7 +85,7 @@ class StrategyManager:
             self._strats[DEFAULT_STRAT_KEY].append(strat)
             return
 
-        if isinstance(strat, dict | StratsConfig):
+        if isinstance(strat, dict):
             # when an inline strat has already been provided, it will be replaced
             if self._strats[DEFAULT_STRAT_KEY]:
                 warnings.warn(
@@ -69,16 +93,22 @@ class StrategyManager:
                     category=UserWarning,
                 )
 
-            self._strats = StratsConfig(strat)
+            self._strats = StratsDict(strat)
             return
         
         if isinstance(strat, tuple):
-            self._strats = strat
+            # i.e. when it already has been applied a strategy
+            if isinstance(self._strats, tuple):
+                warnings.warn(
+                    "The strat manager had already been supplied with at least one strategy tuple which now will be replaced",
+                    category=UserWarning,
+                )
+            self._strats = StratsTuple(strat)
             return
 
         raise StrategyConfigTypeError(f"Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}")
 
-    def get(self) -> StratsConfig:
+    def get(self) -> StratsDict:
         return self._strats
 
     def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
@@ -94,7 +124,7 @@ class StrategyManager:
 
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
-        self._strats = StratsConfig({DEFAULT_STRAT_KEY: []})
+        self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
 
 
 # EXCEPTIONS:
