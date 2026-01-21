@@ -29,12 +29,15 @@ class StratsDict(UserDict):
                 f"Invalid type for dict value: expected list, tuple or BaseStrategy, "
                 f'got {value} "{type(value).__name__}"'
             )
-        for i, member in enumerate(value):
-            if not isinstance(member, BaseStrategy):
-                raise StrategyConfigTypeError(
-                    f"Invalid type for dict value member: at index {i} for key '{key}': "
-                    f'expected "BaseStrategy", got "{type(member).__name__}"'
-                )
+        if not isinstance(value, BaseStrategy):
+            for i, member in enumerate(value):
+                if not isinstance(member, BaseStrategy):
+                    raise StrategyConfigTypeError(
+                        f"Invalid type for dict value member: at index {i} for key '{key}': "
+                        f'expected "BaseStrategy", got "{type(member).__name__}"'
+                    )
+        else:
+            value = (value,)
         super().__setitem__(key, value)
 
 
@@ -95,6 +98,9 @@ class StrategyManager:
 
             self._strats = StratsDict(strat)
             return
+        
+        if isinstance(strat, On):
+            strat = (strat,)
 
         if isinstance(strat, tuple):
             # i.e. when it already has been applied a strategy
@@ -106,7 +112,7 @@ class StrategyManager:
             self._strats = StratsTuple(deepcopy(strat)) # TODO: Explain this in detail!
             return
 
-        raise StrategyConfigTypeError(f"Invalid strategy: Expected BaseStrategy or dict, got {type(strat).__name__}")
+        raise StrategyConfigTypeError(f"Invalid strategy: Expected a BaseStrategy, a dict, a tuple of On or a single On, got {type(strat).__name__}")
 
     def get(self) -> StratsDict:
         return self._strats

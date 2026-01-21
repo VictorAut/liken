@@ -62,8 +62,8 @@ PARAMS = [
     ((On("email", fuzzy(0.95)),), [0, 0, 2, 3, 0, 0, 0, 3, 3, 9, 10, 11, 12]),
     ((On("email", fuzzy(0.95)) & On("email", str_same_len()),), [0, 1, 2, 3, 4, 5, 4, 7, 3, 9, 10, 11, 12]),
     # single column
-    # ((On("address", fuzzy(0.95)),), [0, 0, 2, 3, 0, 0, 0, 3, 3, 9, 10, 11, 12]),
-    # ((On("address", fuzzy(0.95)) & On("address", str_same_len()),), [0, 1, 2, 3, 4, 5, 4, 7, 3, 9, 10, 11, 12]),
+    ((On("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 7, 0, 0, 10, 11, 12]),
+    ((On("address", fuzzy(0.70)) & On("address", str_same_len()),), [0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 10, 11, 12]),
 ]
 
 # fmt: on
