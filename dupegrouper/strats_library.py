@@ -71,6 +71,16 @@ class BaseStrategy:
         self.wrapped_df: LocalDF = wrapped_df
         return self
 
+
+    def get_array(self, columns: Columns) -> np.ndarray:
+        if isinstance(columns, str):
+            return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
+        elif isinstance(columns, tuple):
+            return np.asarray(self.wrapped_df.get_cols(columns), dtype=object)
+        else:
+            raise TypeError("`columns` must be str or tuple[str]")
+
+
     def set_keep(self, keep: Keep = "first") -> Self:
         self.keep = keep
         return self
@@ -88,8 +98,6 @@ class BaseStrategy:
         uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
-
-        # print("union find", {i: uf[i] for i in range(n)})
 
         return uf, n
 
@@ -139,22 +147,6 @@ class BaseStrategy:
         return self.__repr__()
 
 
-class ColumnArrayMixin:
-    """
-    @private
-    """
-
-    wrapped_df: LocalDF
-
-    def get_array(self, columns: Columns) -> np.ndarray:
-        if isinstance(columns, str):
-            return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
-        elif isinstance(columns, tuple):
-            return np.asarray(self.wrapped_df.get_cols(columns), dtype=object)
-        else:
-            raise TypeError("`columns` must be str or tuple[str]")
-
-
 class SingleColumnValidationMixin:
     """
     @private
@@ -181,7 +173,7 @@ class CompoundColumnValidationMixin:
 
 
 @final
-class Exact(BaseStrategy, ColumnArrayMixin):
+class Exact(BaseStrategy):
     """
     @private
     """
@@ -212,7 +204,6 @@ class Exact(BaseStrategy, ColumnArrayMixin):
 # BINARY DEDUPERS:
 
 
-# TODO: Eventually make `StrMethods` which inherits from `BinaryDedupers`
 class BinaryDedupers(BaseStrategy):
     """
     @private
@@ -237,11 +228,31 @@ class BinaryDedupers(BaseStrategy):
                 if self._matches(array[j]):
                     yield i, j
 
+    def __invert__(self):
+        return NegatedBinaryDeduper(self)
+    
+
+class NegatedBinaryDeduper(BinaryDedupers):
+    """
+    Internal strategy that negates another BinaryDedupers.
+    """
+
+    def __init__(self, inner: BinaryDedupers):
+        self._inner = inner
+
+    def _matches(self, value):
+        return not self._inner._matches(value)
+
+    def __str__(self):
+        return f"~{self._inner}"
+    
+    def validate(self, columns):
+        return getattr(self._inner, "validate")(columns)
+
 
 @final
 class StrStartsWith(
     BinaryDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -273,7 +284,6 @@ class StrStartsWith(
 @final
 class StrEndsWith(
     BinaryDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -305,7 +315,6 @@ class StrEndsWith(
 @final
 class StrContains(
     BinaryDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -361,7 +370,6 @@ class ThresholdDedupers(BaseStrategy):
 @final
 class Fuzzy(
     ThresholdDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -389,7 +397,6 @@ class Fuzzy(
 @final
 class TfIdf(
     ThresholdDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -468,7 +475,6 @@ class TfIdf(
 @final
 class LSH(
     ThresholdDedupers,
-    ColumnArrayMixin,
     SingleColumnValidationMixin,
 ):
     """
@@ -536,7 +542,6 @@ class LSH(
 @final
 class Jaccard(
     ThresholdDedupers,
-    ColumnArrayMixin,
     CompoundColumnValidationMixin,
 ):
     """
@@ -571,7 +576,6 @@ class Jaccard(
 @final
 class Cosine(
     ThresholdDedupers,
-    ColumnArrayMixin,
     CompoundColumnValidationMixin,
 ):
     """
