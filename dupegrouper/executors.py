@@ -9,7 +9,7 @@ from pyspark.sql import Row, SparkSession
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.dataframe import DF, LocalDF, SparkDF
 from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict
+from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict, StratsTuple
 from dupegrouper.types import Columns, Keep
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ class LocalExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict,
+        strats: StratsDict | StratsTuple,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -55,7 +55,8 @@ class LocalExecutor(Executor):
                     uf, n = self._build_uf(strat, df, columns, keep)
                     components = self._get_components(uf, n)
                     df = self._call_strat(strat, components, drop_duplicates)
-        else:
+        
+        if isinstance(strats, StratsTuple):
             for stage in strats:
                 ufs = []
                 for col, strat in stage.and_strats:
@@ -74,7 +75,7 @@ class LocalExecutor(Executor):
         df: LocalDF,
         columns: Columns,
         keep: Keep,
-    ) -> LocalDF:
+    ) -> tuple[dict[int, int], int]:
         return strat.set_frame(df).set_keep(keep).build_union_find(columns)
 
     @staticmethod

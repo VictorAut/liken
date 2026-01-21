@@ -4,7 +4,7 @@ from typing import Callable, TypeAlias, final
 
 from typing_extensions import override
 
-from dupegrouper.strats_library import ColumnArrayMixin, ThresholdDedupers
+from dupegrouper.strats_library import ThresholdDedupers
 from dupegrouper.types import ArrayLike, SimilarPairIndices
 
 PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
@@ -14,7 +14,7 @@ PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
 
 
 @final
-class Custom(ThresholdDedupers, ColumnArrayMixin):
+class Custom(ThresholdDedupers):
     """
     @private
     """

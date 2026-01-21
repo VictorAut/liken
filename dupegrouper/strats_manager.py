@@ -77,6 +77,13 @@ class StrategyManager:
         self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
 
     def apply(self, strat: BaseStrategy | dict | StratsDict | tuple) -> None:
+        
+        # Contents of StratsTuple is mutable!
+        # `On` operated on with `&` results in modified `On`
+        # Of which only the first one is preserved
+        # To guarantee repeated use of the base class, require deepcopy
+        strat = deepcopy(strat)
+
         if isinstance(strat, BaseStrategy):
             if DEFAULT_STRAT_KEY not in self._strats:
                 raise StrategyConfigTypeError(
@@ -109,12 +116,14 @@ class StrategyManager:
                     "The strat manager had already been supplied with at least one strategy tuple which now will be replaced",
                     category=UserWarning,
                 )
-            self._strats = StratsTuple(deepcopy(strat)) # TODO: Explain this in detail!
+            
+            # deepcopy also required here
+            self._strats = StratsTuple(deepcopy(strat))
             return
 
         raise StrategyConfigTypeError(f"Invalid strategy: Expected a BaseStrategy, a dict, a tuple of On or a single On, got {type(strat).__name__}")
 
-    def get(self) -> StratsDict:
+    def get(self) -> StratsDict | StratsTuple:
         return self._strats
 
     def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
