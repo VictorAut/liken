@@ -81,10 +81,6 @@ class BaseStrategy:
             raise TypeError("`columns` must be str or tuple[str]")
 
 
-    def set_keep(self, keep: Keep = "first") -> Self:
-        self.keep = keep
-        return self
-
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
@@ -106,6 +102,7 @@ class BaseStrategy:
         *,
         components: dict[int | tuple[int, ...], list[int]],
         drop_duplicates: bool,
+        keep: Keep,
     ) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
 
@@ -113,9 +110,9 @@ class BaseStrategy:
 
         rep_index: dict[int, int] = {}
         for members in components.values():
-            if self.keep == "first":
+            if keep == "first":
                 rep = min(members)
-            elif self.keep == "last":
+            elif keep == "last":
                 rep = max(members)
 
             for i in members:
@@ -130,7 +127,7 @@ class BaseStrategy:
 
         if not drop_duplicates:
             return self.wrapped_df
-        return self.wrapped_df.drop_duplicates(keep=self.keep)
+        return self.wrapped_df.drop_duplicates(keep=keep)
 
     def str_representation(self, name: str) -> str:
         args = ", ".join(repr(a) for a in self._init_args)

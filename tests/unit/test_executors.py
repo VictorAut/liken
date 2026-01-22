@@ -17,7 +17,6 @@ from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict
 def mock_strategy():
     strat = Mock(spec=BaseStrategy)
     strat.set_frame.return_value = strat
-    strat.set_keep.return_value = strat
     strat.canonicalizer.return_value = "df_out"
     return strat
 
@@ -38,7 +37,7 @@ def local_df():
 #################
 
 
-def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, strats_config):
+def test_localexecutor_canonicalize_sequential_calls(mock_strategy, local_df, strats_config):
     mock_strategy.build_union_find.return_value = ({0: 0}, 1)
 
     executor = LocalExecutor()
@@ -53,11 +52,10 @@ def test_localexecutor_canonicalize_inline_style_calls(mock_strategy, local_df, 
     )
 
     mock_strategy.set_frame.assert_called_once_with(local_df)
-    mock_strategy.set_keep.assert_called_once_with("last")
-    mock_strategy.canonicalizer.assert_called_once_with(components=ANY, drop_duplicates=False)
+    mock_strategy.canonicalizer.assert_called_once_with(components=ANY, drop_duplicates=False, keep="last")
 
 
-def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
+def test_localexecutor_canonicalize_dict_calls(mock_strategy, local_df):
     mock_strategy.build_union_find.return_value = ({0: 0}, 1)
 
     cfg = StratsDict({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
@@ -74,8 +72,10 @@ def test_localexecutor_canonicalize_dict_style_calls(mock_strategy, local_df):
     )
 
     mock_strategy.set_frame.assert_called()
-    mock_strategy.set_keep.assert_called_with("first")
     assert mock_strategy.canonicalizer.call_count == 3
+
+
+# TODO: test_localexecutor_canonicalize_rules_calls
 
 
 #################

@@ -82,7 +82,7 @@ class StrategyManager:
         # `On` operated on with `&` results in modified `On`
         # Of which only the first one is preserved
         # To guarantee repeated use of the base class, require deepcopy
-        strat = deepcopy(strat)
+        # strat = deepcopy(strat)
 
         if isinstance(strat, BaseStrategy):
             if DEFAULT_STRAT_KEY not in self._strats:
