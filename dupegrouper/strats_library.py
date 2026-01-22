@@ -35,10 +35,10 @@ if TYPE_CHECKING:
 
 
 class BaseStrategyProtocol(Protocol):
-    wrapped_df: LocalDF
+    wdf: LocalDF
     keep: Keep
 
-    def set_frame(self, wrapped_df: LocalDF) -> Self: ...
+    def set_frame(self, wdf: LocalDF) -> Self: ...
     def set_keep(self, keep: Keep) -> Self: ...
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
     def _get_components(self, columns: Columns) -> dict[int, list[int]]: ...
@@ -58,7 +58,7 @@ class BaseStrategy:
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def set_frame(self, wrapped_df: LocalDF) -> Self:
+    def set_frame(self, wdf: LocalDF) -> Self:
         """Inject dataframe data and load dataframe methods corresponding
         to the type of the dataframe the corresponding methods.
 
@@ -68,15 +68,15 @@ class BaseStrategy:
         Returns:
             self: i.e. allow for further chaining
         """
-        self.wrapped_df: LocalDF = wrapped_df
+        self.wdf: LocalDF = wdf
         return self
 
 
     def get_array(self, columns: Columns) -> np.ndarray:
         if isinstance(columns, str):
-            return np.asarray(self.wrapped_df.get_col(columns), dtype=object)
+            return np.asarray(self.wdf.get_col(columns), dtype=object)
         elif isinstance(columns, tuple):
-            return np.asarray(self.wrapped_df.get_cols(columns), dtype=object)
+            return np.asarray(self.wdf.get_cols(columns), dtype=object)
         else:
             raise TypeError("`columns` must be str or tuple[str]")
 
@@ -123,11 +123,11 @@ class BaseStrategy:
             dtype=object,
         )
 
-        self.wrapped_df.put_col(CANONICAL_ID, new_canonicals)
+        self.wdf.put_col(CANONICAL_ID, new_canonicals)
 
         if not drop_duplicates:
-            return self.wrapped_df
-        return self.wrapped_df.drop_duplicates(keep=keep)
+            return self.wdf
+        return self.wdf.drop_duplicates(keep=keep)
 
     def str_representation(self, name: str) -> str:
         args = ", ".join(repr(a) for a in self._init_args)
