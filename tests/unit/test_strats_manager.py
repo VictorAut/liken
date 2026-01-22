@@ -5,11 +5,12 @@ import pytest
 from dupegrouper.strats_library import BaseStrategy
 from dupegrouper.strats_manager import (
     DEFAULT_STRAT_KEY,
-    StrategyConfigTypeError,
+    InvalidStrategyError,
     StrategyManager,
     StratsDict,
 )
-from dupegrouper.strats_combinations import On
+from dupegrouper.strats_combinations import On, on
+from dupegrouper.strats_manager import Rules
 
 ###########
 # Helpers #
@@ -60,19 +61,19 @@ def test_stratsconfig_accepts_inputs(columns, strat):
 
 def test_stratsconfig_rejects_invalid_key_type(s1):
     config = StratsDict()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict key type"):
+    with pytest.raises(InvalidStrategyError, match="Invalid type for dict key type"):
         config[123] = [s1]
 
 
 def test_stratsconfig_rejects_invalid_value_type():
     config = StratsDict()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict value"):
+    with pytest.raises(InvalidStrategyError, match="Invalid type for dict value"):
         config["col"] = "not_a_strategy"
 
 
 def test_stratsconfig_rejects_invalid_member_in_value(s1, s2, s3):
     config = StratsDict()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid type for dict value member"):
+    with pytest.raises(InvalidStrategyError, match="Invalid type for dict value member"):
         config["col"] = [s1, "bad", s2, s3]
 
 
@@ -123,9 +124,9 @@ def test_strategy_manager_apply_dict(s1, s2, s3):
     assert result["b"] == (s2, s3)
 
 
-def test_strategy_manager_apply_single_on_no_tuple(s1):
+def test_strategy_manager_apply_single_on_not_rule(s1):
     sm = StrategyManager()
-    strat = On("a", s1) # Not a tuple!
+    strat = on("a", s1) # Not a tuple!
 
     sm.apply(strat)
     result = sm.get()
@@ -138,7 +139,20 @@ def test_strategy_manager_apply_single_on_no_tuple(s1):
 
 def test_strategy_manager_apply_single_on_as_tuple(s1):
     sm = StrategyManager()
-    strat = (On("a", s1),) # Is a tuple
+    strat = (on("a", s1),) # Is a tuple
+
+    sm.apply(strat)
+    result = sm.get()
+
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert isinstance(result[0], On)
+    assert result[0]._column == "a"
+    assert isinstance(result[0]._strat, type(s1))
+
+def test_strategy_manager_apply_single_on_as_rule(s1):
+    sm = StrategyManager()
+    strat = Rules(on("a", s1),)
 
     sm.apply(strat)
     result = sm.get()
@@ -151,7 +165,7 @@ def test_strategy_manager_apply_single_on_as_tuple(s1):
 
 def test_strategy_manager_apply_tuple(s1, s2, s3):
     sm = StrategyManager()
-    strat = (On("a", s1), On("b", s2) & On("c", s3))
+    strat = Rules(on("a", s1), on("b", s2) & on("c", s3))
 
     sm.apply(strat)
     result = sm.get()
@@ -162,18 +176,18 @@ def test_strategy_manager_apply_tuple(s1, s2, s3):
 
 def test_strategy_manager_apply_rejects_invalid_type():
     sm = StrategyManager()
-    with pytest.raises(StrategyConfigTypeError, match="Invalid strategy"):
+    with pytest.raises(InvalidStrategyError, match="Invalid strategy"):
         sm.apply(123)
 
 
-def test_strategy_manager_apply_rejects_inline_after_dict(s1, s2, s3):
+def test_strategy_manager_apply_rejects_sequence_after_dict(s1, s2, s3):
     sm = StrategyManager()
     sm.apply({"a": (s1,), "b": (s1, s2)})  # legal
-    with pytest.raises(StrategyConfigTypeError, match="Cannot apply a BaseStrategy after a strategy mapping"):
+    with pytest.raises(InvalidStrategyError, match="Cannot apply a 'BaseStrategy' after a strategy mapping"):
         sm.apply(s3)
 
 
-def test_strategy_manager_apply_warns_dict_after_inline():
+def test_strategy_manager_apply_warns_dict_after_sequence():
     sm = StrategyManager()
     strat = BaseStrategy()
 
@@ -181,7 +195,7 @@ def test_strategy_manager_apply_warns_dict_after_inline():
 
     with pytest.warns(
         UserWarning,
-        match="The strat manager had already been supplied with at least one in-line strat",
+        match="Replacing previously added sequence strategy with a dict strategy",
     ):
         sm.apply({"email": [strat]})
 
@@ -240,10 +254,10 @@ def test_strategy_manager_reset_clears_strats(s1):
 
 
 ###########################
-# StrategyConfigTypeError #
+# InvalidStrategyError #
 ###########################
 
 
 def test_strategy_config_type_error_is_type_error():
-    err = StrategyConfigTypeError("bad")
+    err = InvalidStrategyError("bad")
     assert isinstance(err, TypeError)

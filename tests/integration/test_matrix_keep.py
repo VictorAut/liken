@@ -9,7 +9,8 @@ import pytest
 from dupegrouper import Duped
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.strats_combinations import On
+from dupegrouper.strats_combinations import on
+from dupegrouper.strats_manager import Rules
 from dupegrouper.strats_library import (
     cosine,
     exact,
@@ -107,7 +108,7 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_inline(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_sequence_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
@@ -118,7 +119,7 @@ def test_matrix_keep_inline(strategy, keep, columns, input_params, expected_cano
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
 @pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_dict(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
@@ -129,12 +130,12 @@ def test_matrix_keep_dict(strategy, keep, columns, input_params, expected_canoni
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
 @pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_on(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_rules_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
     dg = Duped(df, spark_session=spark_session)
-    dg.apply((On(columns, strategy(**input_params)),))
+    dg.apply(Rules(on(columns, strategy(**input_params))))
     dg.canonicalize(keep=keep)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id

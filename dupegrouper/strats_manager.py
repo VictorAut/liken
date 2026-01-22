@@ -13,6 +13,22 @@ from dupegrouper.strats_library import BaseStrategy
 
 DEFAULT_STRAT_KEY: Final[str] = "_default_"
 
+INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
+INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseStrategy', got '{}'"
+INVALID_DICT_MEMBER_MSG: Final[str] = (
+    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseStrategy', got '{}'"
+)
+INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
+    "Cannot apply a 'BaseStrategy' after a strategy mapping (dict) has been set. "
+    "Use either individual 'BaseStrategy' instances or a dict of strategies, not both."
+)
+INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
+INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
+INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseStrategy', a dict or 'Rules', got '{}'"
+
+WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence strategy with a dict strategy"
+WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
+
 
 # STRATS CONFIG:
 
@@ -21,38 +37,30 @@ DEFAULT_STRAT_KEY: Final[str] = "_default_"
 class StratsDict(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
-            raise StrategyConfigTypeError(
-                f"Invalid type for dict key type: expected str or tuple, " f'got "{type(key).__name__}"'
-            )
+            raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
         if not isinstance(value, list | tuple | BaseStrategy):
-            raise StrategyConfigTypeError(
-                f"Invalid type for dict value: expected list, tuple or BaseStrategy, "
-                f'got {value} "{type(value).__name__}"'
-            )
+            raise InvalidStrategyError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
         if not isinstance(value, BaseStrategy):
             for i, member in enumerate(value):
                 if not isinstance(member, BaseStrategy):
-                    raise StrategyConfigTypeError(
-                        f"Invalid type for dict value member: at index {i} for key '{key}': "
-                        f'expected "BaseStrategy", got "{type(member).__name__}"'
-                    )
+                    raise InvalidStrategyError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
         else:
             value = (value,)
         super().__setitem__(key, value)
 
 
 @final
-class StratsTuple(tuple):
-    def __new__(cls, items):
-        if not isinstance(items, tuple):
-            raise TypeError("StratsTuple must be constructed from a tuple")
+class Rules(tuple):
+    def __new__(cls, *items):
+        if len(items) == 1 and isinstance(items[0], tuple):
+            items = items[0]
 
         if not items:
-            raise ValueError("StratsTuple cannot be empty")
+            raise InvalidStrategyError(INVALID_RULE_EMPTY_MSG)
 
         for i, item in enumerate(items):
             if not isinstance(item, On):
-                raise TypeError(f"Element at index {i} is not an instance of On")
+                raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
 
         return super().__new__(cls, items)
 
@@ -70,60 +78,43 @@ class StrategyManager:
     upon addition allowing only the following stratgies types:
         - `BaseStrategy`
     A public property exposes stratgies upon successul addition and validation.
-    A `StrategyConfigTypeError` is thrown, otherwise.
+    A `InvalidStrategyError` is thrown, otherwise.
     """
 
     def __init__(self) -> None:
         self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
 
-    def apply(self, strat: BaseStrategy | dict | StratsDict | tuple) -> None:
-        
-        # Contents of StratsTuple is mutable!
-        # `On` operated on with `&` results in modified `On`
-        # Of which only the first one is preserved
-        # To guarantee repeated use of the base class, require deepcopy
-        # strat = deepcopy(strat)
+    def apply(self, strat: BaseStrategy | dict | StratsDict | Rules) -> None:
 
         if isinstance(strat, BaseStrategy):
             if DEFAULT_STRAT_KEY not in self._strats:
-                raise StrategyConfigTypeError(
-                    "Cannot apply a BaseStrategy after a strategy mapping (dict) has been set. "
-                    "Use either individual BaseStrategy instances or a dict of strategies, not both."
-                )
-
+                raise InvalidStrategyError(INVALID_SEQUENCE_AFTER_DICT_MSG)
             self._strats[DEFAULT_STRAT_KEY].append(strat)
             return
 
-        # raw user input is dict, but StratsDict passed to spark workers
         if isinstance(strat, dict | StratsDict):
-            # when an inline strat has already been provided, it will be replaced
             if self._strats[DEFAULT_STRAT_KEY]:
-                warnings.warn(
-                    "The strat manager had already been supplied with at least one in-line strat which now will be replaced",
-                    category=UserWarning,
-                )
-
+                warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
             self._strats = StratsDict(strat)
             return
-        
+
         if isinstance(strat, On):
             strat = (strat,)
 
-        if isinstance(strat, tuple):
-            # i.e. when it already has been applied a strategy
-            if isinstance(self._strats, tuple):
-                warnings.warn(
-                    "The strat manager had already been supplied with at least one strategy tuple which now will be replaced",
-                    category=UserWarning,
-                )
-            
-            # deepcopy also required here
-            self._strats = StratsTuple(deepcopy(strat))
+        if isinstance(strat, Rules | tuple):
+            if isinstance(self._strats, Rules):
+                warn(WARN_RULES_REPLACES_RULES_MSG)
+
+            # Contents of Rules is mutable!
+            # `On` operated on with `&` results in modified `On`
+            # Of which only the first one is preserved
+            # To guarantee repeated use of the base class, require deepcopy
+            self._strats = Rules(deepcopy(strat))
             return
 
-        raise StrategyConfigTypeError(f"Invalid strategy: Expected a BaseStrategy, a dict, a tuple of On or a single On, got {type(strat).__name__}")
+        raise InvalidStrategyError(INVALID_FALLBACK_MSG.format(type(strat).__name__))
 
-    def get(self) -> StratsDict | StratsTuple:
+    def get(self) -> StratsDict | Rules:
         return self._strats
 
     def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
@@ -146,6 +137,10 @@ class StrategyManager:
 
 
 @final
-class StrategyConfigTypeError(TypeError):
+class InvalidStrategyError(TypeError):
     def __init__(self, msg):
         super().__init__(msg)
+
+
+def warn(msg: str) -> Warning:
+    return warnings.warn(msg, category=UserWarning)

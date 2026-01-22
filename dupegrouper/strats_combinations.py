@@ -19,3 +19,9 @@ class On:
     @property
     def and_strats(self) -> list[tuple[str, BaseStrategy]]:
         return self._strats
+
+
+# PUBLIC API:
+
+def on(column: str, strat: BaseStrategy, /):
+    return On(column, strat)

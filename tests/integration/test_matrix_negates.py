@@ -9,7 +9,8 @@ import pytest
 from dupegrouper import Duped
 from dupegrouper.constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.strats_combinations import On
+from dupegrouper.strats_manager import Rules
+from dupegrouper.strats_combinations import on
 from dupegrouper.strats_library import (
     cosine,
     exact,
@@ -41,35 +42,15 @@ PARAMS = [
 # fmt: on
 
 
-# @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
-# def test_matrix_negates_inline(strategy, expected_canonical_id, dataframe, helpers):
-
-#     df, spark_session = dataframe
-
-#     dg = Duped(df, spark_session=spark_session)
-#     dg.apply(strategy)
-#     dg.canonicalize("email")
-
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
-
-# @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
-# def test_matrix_negates_dict(strategy, expected_canonical_id, dataframe, helpers):
-
-#     df, spark_session = dataframe
-
-#     dg = Duped(df, spark_session=spark_session)
-#     dg.apply({"email": strategy})
-#     dg.canonicalize()
-
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+# Negation is strongly encouraged to be only for the Rules API!
 
 @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
-def test_matrix_negates_on(strategy, expected_canonical_id, dataframe, helpers):
+def test_matrix_negates(strategy, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
     dg = Duped(df, spark_session=spark_session)
-    dg.apply(On("email", strategy))
+    dg.apply(Rules(on("email", strategy)))
     dg.canonicalize()
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id

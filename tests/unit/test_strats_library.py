@@ -52,7 +52,7 @@ def test_set_frame_sets_wrapped_df(mock_df):
     strat = BaseStrategy()
     returned = strat.set_frame(mock_df)
     assert returned is strat
-    assert strat.wrapped_df is mock_df
+    assert strat.wdf is mock_df
 
 
 def test_gen_similarity_pairs_not_implemented():
