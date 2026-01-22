@@ -55,13 +55,6 @@ def test_set_frame_sets_wrapped_df(mock_df):
     assert strat.wrapped_df is mock_df
 
 
-def test_set_keep_sets_keep_value():
-    strat = BaseStrategy()
-    returned = strat.set_keep("last")
-    assert returned is strat
-    assert strat.keep == "last"
-
-
 def test_gen_similarity_pairs_not_implemented():
     strat = BaseStrategy()
     with pytest.raises(NotImplementedError):
@@ -75,7 +68,7 @@ def test_gen_similarity_pairs_not_implemented():
 
 def test_canonicalize_puts_canonical_id(mock_df):
     strat = BaseStrategy()
-    strat.set_frame(mock_df).set_keep("first")
+    strat.set_frame(mock_df)
 
     strat.get_array = Mock(
         side_effect=[
@@ -92,6 +85,7 @@ def test_canonicalize_puts_canonical_id(mock_df):
     result = strat.canonicalizer(
         components=components,
         drop_duplicates=False,
+        keep="first"
     )
 
     mock_df.put_col.assert_called_once()

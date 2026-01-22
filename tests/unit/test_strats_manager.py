@@ -81,7 +81,7 @@ def test_stratsconfig_rejects_invalid_member_in_value(s1, s2, s3):
 ################
 
 
-def test_strategy_manager_apply_inline_once(s1):
+def test_strategy_manager_apply_sequential_once(s1):
     sm = StrategyManager()
     sm.apply(s1)
 
@@ -89,7 +89,7 @@ def test_strategy_manager_apply_inline_once(s1):
     assert s1 in strats[DEFAULT_STRAT_KEY]
 
 
-def test_strategy_manager_apply_inline_multiple(s1, s2, s3):
+def test_strategy_manager_apply_sequential_multiple(s1, s2, s3):
     sm = StrategyManager()
     sm.apply(s1)
     sm.apply(s2)

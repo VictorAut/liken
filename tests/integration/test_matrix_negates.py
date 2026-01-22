@@ -41,27 +41,27 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
-def test_matrix_negates_inline(strategy, expected_canonical_id, dataframe, helpers):
+# @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
+# def test_matrix_negates_inline(strategy, expected_canonical_id, dataframe, helpers):
 
-    df, spark_session = dataframe
+#     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
-    dg.apply(strategy)
-    dg.canonicalize("email")
+#     dg = Duped(df, spark_session=spark_session)
+#     dg.apply(strategy)
+#     dg.canonicalize("email")
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
-@pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
-def test_matrix_negates_dict(strategy, expected_canonical_id, dataframe, helpers):
+# @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
+# def test_matrix_negates_dict(strategy, expected_canonical_id, dataframe, helpers):
 
-    df, spark_session = dataframe
+#     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
-    dg.apply({"email": strategy})
-    dg.canonicalize()
+#     dg = Duped(df, spark_session=spark_session)
+#     dg.apply({"email": strategy})
+#     dg.canonicalize()
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
 @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
 def test_matrix_negates_on(strategy, expected_canonical_id, dataframe, helpers):

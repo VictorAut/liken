@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Protocol, Type, cast, final
+from functools import partial
 
 from pyspark.sql import Row, SparkSession
 
@@ -42,41 +43,42 @@ class LocalExecutor(Executor):
         drop_canonical_id: bool,
     ) -> LocalDF:
 
+        call_strat = partial(
+            self._call_strat,
+            drop_duplicates=drop_duplicates,
+            keep=keep,
+        )
+
         if isinstance(strats, StratsDict):
             if not columns:
                 for col, iter_strats in strats.items():
                     for strat in iter_strats:
-                        uf, n = self._build_uf(strat, df, col, keep)
+                        uf, n = self._build_uf(strat, df, col)
                         components = self._get_components(uf, n)
-                        df = self._call_strat(strat, components, drop_duplicates)
+                        df = call_strat(strat, components)
             else:
                 # For inline calls e.g.`.canonicalize("address")`
                 for strat in strats[DEFAULT_STRAT_KEY]:
-                    uf, n = self._build_uf(strat, df, columns, keep)
+                    uf, n = self._build_uf(strat, df, columns)
                     components = self._get_components(uf, n)
-                    df = self._call_strat(strat, components, drop_duplicates)
-        
+                    df = call_strat(strat, components)
+
         if isinstance(strats, StratsTuple):
             for stage in strats:
                 ufs = []
                 for col, strat in stage.and_strats:
-                    uf, n = self._build_uf(strat, df, col, keep)
+                    uf, n = self._build_uf(strat, df, col)
                     ufs.append(uf)
                 components = self._get_multi_components(ufs, n)
-                df = self._call_strat(strat, components, drop_duplicates)
+                df = call_strat(strat, components)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
         return df
 
     @staticmethod
-    def _build_uf(
-        strat: BaseStrategy,
-        df: LocalDF,
-        columns: Columns,
-        keep: Keep,
-    ) -> tuple[dict[int, int], int]:
-        return strat.set_frame(df).set_keep(keep).build_union_find(columns)
+    def _build_uf(strat: BaseStrategy, df: LocalDF, columns: Columns) -> tuple[dict[int, int], int]:
+        return strat.set_frame(df).build_union_find(columns)
 
     @staticmethod
     def _get_components(
@@ -104,8 +106,13 @@ class LocalExecutor(Executor):
         strat: BaseStrategy,
         components: dict[int | tuple[int, ...], list[int]],
         drop_duplicates: bool,
+        keep: Keep,
     ) -> LocalDF:
-        return strat.canonicalizer(components=components, drop_duplicates=drop_duplicates)
+        return strat.canonicalizer(
+            components=components,
+            drop_duplicates=drop_duplicates,
+            keep=keep,
+        )
 
 
 @final
