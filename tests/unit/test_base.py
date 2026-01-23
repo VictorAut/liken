@@ -3,15 +3,15 @@ from unittest.mock import Mock, patch
 import pytest
 from pandas.testing import assert_frame_equal
 
-from dupegrouper.base import Duped
-from dupegrouper.validators import validate_keep_arg, validate_spark_args
+from dupegrouper._validators import validate_keep_arg, validate_spark_args
+from dupegrouper.dedupe import Duped
 
 # INITIALIZATION:
 
 
-@patch("dupegrouper.base.LocalExecutor")
-@patch("dupegrouper.base.SparkExecutor")
-@patch("dupegrouper.base.wrap")
+@patch("dupegrouper.dedupe.LocalExecutor")
+@patch("dupegrouper.dedupe.SparkExecutor")
+@patch("dupegrouper.dedupe.wrap")
 def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor, dataframe):
     df, spark = dataframe
 
@@ -51,7 +51,7 @@ def test_validate_spark_args_missing_session():
 # StrategyManager
 
 
-@patch("dupegrouper.base.StrategyManager")
+@patch("dupegrouper.dedupe.StrategyManager")
 def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
     df, spark = dataframe
 
@@ -64,9 +64,9 @@ def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
 # canonicalize / drop_duplicates
 
 
-@patch("dupegrouper.base.LocalExecutor")
-@patch("dupegrouper.base.wrap")
-@patch("dupegrouper.base.StrategyManager")
+@patch("dupegrouper.dedupe.LocalExecutor")
+@patch("dupegrouper.dedupe.wrap")
+@patch("dupegrouper.dedupe.StrategyManager")
 def test_canonicalize_calls(
     mock_sm,
     mock_wrap,
@@ -100,9 +100,9 @@ def test_canonicalize_calls(
     mock_sm.reset.assert_called_once()
 
 
-@patch("dupegrouper.base.LocalExecutor")
-@patch("dupegrouper.base.wrap")
-@patch("dupegrouper.base.StrategyManager")
+@patch("dupegrouper.dedupe.LocalExecutor")
+@patch("dupegrouper.dedupe.wrap")
+@patch("dupegrouper.dedupe.StrategyManager")
 def test_drop_duplicate_calls(
     mock_sm,
     mock_wrap,
@@ -139,7 +139,7 @@ def test_drop_duplicate_calls(
 # Property attributes
 
 
-@patch("dupegrouper.base.StrategyManager")
+@patch("dupegrouper.dedupe.StrategyManager")
 def test_strats_property_returns_manager_output(mock_sm, dataframe):
     df, spark = dataframe
     mock_sm = mock_sm.return_value
@@ -150,7 +150,7 @@ def test_strats_property_returns_manager_output(mock_sm, dataframe):
     assert dupe.strats == ("strategy1",)
 
 
-@patch("dupegrouper.base.wrap")
+@patch("dupegrouper.dedupe.wrap")
 def test_df_property_returns_unwrapped_df(mock_wrap, df_pandas):
     mock_df_wrapper = Mock()
     mock_df_wrapper.unwrap.return_value = df_pandas

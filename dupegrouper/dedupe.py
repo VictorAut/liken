@@ -13,12 +13,12 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
-from dupegrouper.dataframe import DF, wrap
-from dupegrouper.executors import Executor, LocalExecutor, SparkExecutor
-from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import StrategyManager, StratsDict
-from dupegrouper.types import Columns, DataFrameLike, Keep
-from dupegrouper.validators import validate_keep_arg, validate_spark_args
+from dupegrouper._dataframe import DF, wrap
+from dupegrouper._executors import Executor, LocalExecutor, SparkExecutor
+from dupegrouper._strats_library import BaseStrategy
+from dupegrouper._strats_manager import StrategyManager, StratsDict
+from dupegrouper._types import Columns, DataFrameLike, Keep
+from dupegrouper._validators import validate_keep_arg, validate_spark_args
 
 # API:
 

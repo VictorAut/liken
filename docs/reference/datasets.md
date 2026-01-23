@@ -3,6 +3,4 @@ an **information-oriented** approach. Use it as a
 reference for the technical implementation of the
 `calculator` project code.
 
-::: dupegrouper.base
-
-::: dupegrouper.strats_library
+::: dupegrouper.datasets

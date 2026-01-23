@@ -2,17 +2,13 @@
 .. include:: ../README.md
 """
 
-from dupegrouper.base import Duped
-from dupegrouper.custom import register
-from dupegrouper.strats_library import (
+from dupegrouper.dedupe import Duped
+from dupegrouper._strats_library import (
     cosine,
     exact,
     fuzzy,
     jaccard,
     lsh,
-    str_contains,
-    str_endswith,
-    str_startswith,
     tfidf,
 )
 
@@ -24,8 +20,4 @@ __all__ = [
     "jaccard",
     "lsh",
     "tfidf",
-    "str_contains",
-    "str_endswith",
-    "str_startswith",
-    "register",
 ]

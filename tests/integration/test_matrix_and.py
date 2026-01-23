@@ -6,22 +6,10 @@ import typing
 
 import pytest
 
-from dupegrouper import Duped
-from dupegrouper.constants import CANONICAL_ID
+from dupegrouper import Duped, fuzzy
+from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.strats_combinations import on
-from dupegrouper.strats_manager import Rules
-from dupegrouper.strats_library import (
-    cosine,
-    exact,
-    fuzzy,
-    jaccard,
-    lsh,
-    str_contains,
-    str_endswith,
-    str_startswith,
-    tfidf,
-)
+from dupegrouper.rules import Rules, on
 
 # CONSTANTS:
 
@@ -50,9 +38,7 @@ def str_same_len(array: typing.Iterable):
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
-            if (
-                len(array[i]) == len(array[j])
-            ):
+            if len(array[i]) == len(array[j]):
                 yield i, j
 
 

@@ -1,8 +1,8 @@
-from typing import Any, Literal, Final
+from typing import Any, Final, Literal
 
 from pyspark.sql import SparkSession
 
-from dupegrouper.strats_library import BaseStrategy
+from dupegrouper._strats_library import BaseStrategy
 
 INVALID: Final[str] = "Invalid arg: "
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"

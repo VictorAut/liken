@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from dupegrouper.strats_library import (
+from dupegrouper._strats_library import (
     LSH,
     BaseStrategy,
     Cosine,
@@ -82,11 +82,7 @@ def test_canonicalize_puts_canonical_id(mock_df):
         2: [2],
     }
 
-    result = strat.canonicalizer(
-        components=components,
-        drop_duplicates=False,
-        keep="first"
-    )
+    result = strat.canonicalizer(components=components, drop_duplicates=False, keep="first")
 
     mock_df.put_col.assert_called_once()
     assert result is mock_df

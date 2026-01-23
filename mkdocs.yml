@@ -1,4 +1,4 @@
-site_name: Wreathe
+site_name: Enlace
 
 theme:
   name: "material"
@@ -19,11 +19,19 @@ theme:
       name: Switch to light mode
 
 plugins:
-  - mkdocstrings
+  - mkdocstrings:
+      handlers:
+          python:
+            options:
+              show_if_no_docstring: False
 
 nav:
   - index.md
   - tutorials.md
   - How-To Guides: how-to-guides.md
-  - reference.md
+  - Reference:
+    - Enlace: reference/enlace.md
+    - Custom: reference/custom.md
+    - Datasets: reference/datasets.md
+    - Rules: reference/rules.md
   - explanation.md

@@ -4,9 +4,9 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
-from dupegrouper.executors import LocalExecutor, SparkExecutor
-from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict
+from dupegrouper._executors import LocalExecutor, SparkExecutor
+from dupegrouper._strats_library import BaseStrategy
+from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, StratsDict
 
 ############################
 # Fixtures
@@ -134,7 +134,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 ######################
 
 
-@patch("dupegrouper.base.Duped")
+@patch("dupegrouper.dedupe.Duped")
 def test_process_partition_empty_partition_returns_empty(mock_duped):
     result = list(
         SparkExecutor._process_partition(
@@ -152,7 +152,7 @@ def test_process_partition_empty_partition_returns_empty(mock_duped):
     mock_duped.assert_not_called()
 
 
-@patch("dupegrouper.base.Duped")
+@patch("dupegrouper.dedupe.Duped")
 def test_process_partition_calls_duped_api(mock_duped):
     row = Row(id="1")
     dp_instance = Mock()

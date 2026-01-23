@@ -6,22 +6,18 @@ import typing
 
 import pytest
 
-from dupegrouper import Duped
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.custom import register
-from dupegrouper.strats_combinations import on
-from dupegrouper.strats_manager import Rules
-from dupegrouper.strats_library import (
+from dupegrouper import (
+    Duped,
     cosine,
     exact,
     fuzzy,
     jaccard,
     lsh,
-    str_contains,
-    str_endswith,
-    str_startswith,
     tfidf,
 )
+from dupegrouper._constants import CANONICAL_ID
+from dupegrouper.custom import register
+from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
 
 # CONSTANTS:
 
@@ -118,6 +114,7 @@ def test_matrix_keep_sequence_api(strategy, keep, columns, input_params, expecte
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
+
 @pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
 def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
@@ -128,6 +125,7 @@ def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_ca
     dg.canonicalize(keep=keep)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+
 
 @pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
 def test_matrix_keep_rules_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
