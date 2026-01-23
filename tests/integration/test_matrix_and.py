@@ -6,10 +6,11 @@ import typing
 
 import pytest
 
-from dupegrouper import Duped, fuzzy
+from dupegrouper import Dedupe, fuzzy
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
 from dupegrouper.rules import Rules, on
+
 
 # CONSTANTS:
 
@@ -61,7 +62,7 @@ def test_matrix_and(strat, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(Rules(strat))
     dg.canonicalize()
 

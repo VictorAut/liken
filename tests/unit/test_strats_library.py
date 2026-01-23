@@ -3,6 +3,14 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
+from dupegrouper import (
+    cosine,
+    exact,
+    fuzzy,
+    jaccard,
+    lsh,
+    tfidf,
+)
 from dupegrouper._strats_library import (
     LSH,
     BaseStrategy,
@@ -15,19 +23,12 @@ from dupegrouper._strats_library import (
     StrStartsWith,
     TfIdf,
 )
-from dupegrouper import (
-    cosine,
-    exact,
-    fuzzy,
-    jaccard,
-    lsh,
-    tfidf,
-)
 from dupegrouper.rules import (
     str_contains,
     str_endswith,
     str_startswith,
 )
+
 
 ############
 # Fixtures #

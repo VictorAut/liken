@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import typing
 
 import pytest
 
-from dupegrouper import Duped
+from dupegrouper import Dedupe
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+
 
 # fmt: off
 
@@ -35,7 +35,7 @@ def test_matrix_negates(strategy, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(Rules(on("email", strategy)))
     dg.canonicalize()
 

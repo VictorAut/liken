@@ -4,6 +4,7 @@ from pyspark.sql import SparkSession
 
 from dupegrouper._strats_library import BaseStrategy
 
+
 INVALID: Final[str] = "Invalid arg: "
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
 INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last'"

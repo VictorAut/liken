@@ -2,7 +2,6 @@
 .. include:: ../README.md
 """
 
-from dupegrouper.dedupe import Duped
 from dupegrouper._strats_library import (
     cosine,
     exact,
@@ -11,9 +10,11 @@ from dupegrouper._strats_library import (
     lsh,
     tfidf,
 )
+from dupegrouper.dedupe import Dedupe
+
 
 __all__ = [
-    "Duped",
+    "Dedupe",
     "exact",
     "cosine",
     "fuzzy",

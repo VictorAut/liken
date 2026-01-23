@@ -46,8 +46,8 @@ class Frame(Generic[T]):
         Therefore calling Self == call Self._df. This is useful as it makes the
         API more concise in other modules.
 
-        For example, as the Duped class attribute ._df is an instance of this
-        class, it avoids having to do Duped()._df._df to access the actual
+        For example, as the Dedupe class attribute ._df is an instance of this
+        class, it avoids having to do Dedupe()._df._df to access the actual
         dataframe.
         """
         return getattr(self._df, name)
@@ -237,10 +237,10 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
     def unwrap(self) -> spark.DataFrame:
         """Ensure the unwrapped dataframe is always an instance of DataFrame
 
-        Permits the access of the base Duped class attribute dataframe to be
+        Permits the access of the base Dedupe class attribute dataframe to be
         returned as a DataFrame even if no canonicalisation has been applied
         yet. For example this would be needed if inspecting the dataframe as
-        contained in an instance of Duped having yet to call the canonicalizer
+        contained in an instance of Dedupe having yet to call the canonicalizer
         on the set of strategies"""
         if isinstance(self._df, RDD):
             return self._df.toDF()

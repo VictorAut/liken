@@ -1,4 +1,3 @@
-from unittest.mock import Mock
 
 import pytest
 
@@ -12,6 +11,7 @@ from dupegrouper._strats_manager import (
     StratsDict,
     on,
 )
+
 
 ###########
 # Helpers #
@@ -205,6 +205,16 @@ def test_strategy_manager_apply_warns_dict_after_sequence():
         match="Replacing previously added sequence strategy with a dict strategy",
     ):
         sm.apply({"email": [strat]})
+
+
+def test_rule_rejects_empty():
+    with pytest.raises(InvalidStrategyError, match="Rules cannot be empty"):
+        Rules()
+
+
+def test_rule_rejects_not_instance_of_on():
+    with pytest.raises(InvalidStrategyError, match="Invalid Rules element at index"):
+        Rules("123")
 
 
 #######

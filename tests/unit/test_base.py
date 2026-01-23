@@ -4,7 +4,8 @@ import pytest
 from pandas.testing import assert_frame_equal
 
 from dupegrouper._validators import validate_keep_arg, validate_spark_args
-from dupegrouper.dedupe import Duped
+from dupegrouper.dedupe import Dedupe
+
 
 # INITIALIZATION:
 
@@ -16,7 +17,7 @@ def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor,
     df, spark = dataframe
 
     mock_wrap.return_value = Mock()
-    dupe = Duped(df, spark_session=spark)
+    dupe = Dedupe(df, spark_session=spark)
     if spark:
         mock_spark_executor.assert_called_once_with(spark_session=spark, id=None)
     else:
@@ -56,7 +57,7 @@ def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
     df, spark = dataframe
 
     mock_sm = mock.return_value
-    dupe = Duped(df, spark_session=spark)
+    dupe = Dedupe(df, spark_session=spark)
     dupe.apply({"address": strategy_mock})
     mock_sm.apply.assert_called_once_with({"address": strategy_mock})
 
@@ -82,7 +83,7 @@ def test_canonicalize_calls(
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": strategy_mock}
 
-    dupe = Duped(df, spark_session=spark)
+    dupe = Dedupe(df, spark_session=spark)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -118,7 +119,7 @@ def test_drop_duplicate_calls(
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": strategy_mock}
 
-    dupe = Duped(df, spark_session=spark)
+    dupe = Dedupe(df, spark_session=spark)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -145,7 +146,7 @@ def test_strats_property_returns_manager_output(mock_sm, dataframe):
     mock_sm = mock_sm.return_value
     mock_sm.pretty_get.return_value = ("strategy1",)
 
-    dupe = Duped(df, spark_session=spark)
+    dupe = Dedupe(df, spark_session=spark)
     dupe._sm = mock_sm
     assert dupe.strats == ("strategy1",)
 
@@ -156,5 +157,5 @@ def test_df_property_returns_unwrapped_df(mock_wrap, df_pandas):
     mock_df_wrapper.unwrap.return_value = df_pandas
     mock_wrap.return_value = mock_df_wrapper
 
-    dupe = Duped(df_pandas)
+    dupe = Dedupe(df_pandas)
     assert_frame_equal(dupe.df, df_pandas)

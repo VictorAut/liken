@@ -17,6 +17,7 @@ from dupegrouper._dataframe import (
     wrap,
 )
 
+
 # FIXTURES:
 
 
@@ -123,18 +124,18 @@ def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
 
     wdf = SparkRows(dummy_sparkrows)
 
-    deduped = wdf.drop_duplicates(keep="first")
+    dededupe = wdf.drop_duplicates(keep="first")
 
-    assert deduped is wdf
+    assert dededupe is wdf
     assert [row.address for row in wdf._df] == ["a", "c"]
 
     # last
 
     wdf = SparkRows(dummy_sparkrows)
 
-    deduped = wdf.drop_duplicates(keep="last")
+    dededupe = wdf.drop_duplicates(keep="last")
 
-    assert deduped is wdf
+    assert dededupe is wdf
     assert [row.address for row in wdf._df] == ["b", "d"]
 
 

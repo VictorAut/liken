@@ -81,7 +81,7 @@ def df_sparkrows(df_spark):
 
 @pytest.fixture(params=["pandas", "polars", "spark"])
 def dataframe(request, df_pandas, df_polars, df_spark, spark):
-    """return a tuple of positionally ordered input parameters of Duped
+    """return a tuple of positionally ordered input parameters of Dedupe
 
     This is useful for implementations that ARE part of the public API
     """

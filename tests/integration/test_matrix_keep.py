@@ -7,7 +7,7 @@ import typing
 import pytest
 
 from dupegrouper import (
-    Duped,
+    Dedupe,
     cosine,
     exact,
     fuzzy,
@@ -18,6 +18,7 @@ from dupegrouper import (
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
 from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+
 
 # CONSTANTS:
 
@@ -108,7 +109,7 @@ def test_matrix_keep_sequence_api(strategy, keep, columns, input_params, expecte
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(strategy(**input_params))
     dg.canonicalize(columns, keep=keep)
 
@@ -120,7 +121,7 @@ def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_ca
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply({columns: [strategy(**input_params)]})
     dg.canonicalize(keep=keep)
 
@@ -132,7 +133,7 @@ def test_matrix_keep_rules_api(strategy, keep, columns, input_params, expected_c
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(Rules(on(columns, strategy(**input_params))))
     dg.canonicalize(keep=keep)
 
