@@ -1,11 +1,10 @@
-from .._strats_library import str_contains, str_endswith, str_startswith
-from .._strats_manager import Rules, on
+from dupegrouper.rules.rules import Rules, on, str_startswith, str_endswith, str_contains
 
-_rules_api = ["Rules", "on"]
-_rules_strats = [
+
+__all__ = [
+    "Rules",
+    "on",
     "str_contains",
     "str_endswith",
     "str_startswith",
 ]
-
-__all__ = _rules_api + _rules_strats

@@ -14,15 +14,19 @@ from dupegrouper._strats_library import (
     StrEndsWith,
     StrStartsWith,
     TfIdf,
+)
+from dupegrouper import (
     cosine,
     exact,
     fuzzy,
     jaccard,
     lsh,
+    tfidf,
+)
+from dupegrouper.rules import (
     str_contains,
     str_endswith,
     str_startswith,
-    tfidf,
 )
 
 ############

@@ -23,7 +23,8 @@ plugins:
       handlers:
           python:
             options:
-              show_if_no_docstring: False
+              show_if_no_docstring: false
+              show_symbol_type_toc: true
 
 nav:
   - index.md

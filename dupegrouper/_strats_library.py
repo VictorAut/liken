@@ -608,25 +608,6 @@ def exact() -> BaseStrategy:
     return Exact()
 
 
-def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
-    """TODO"""
-    return StrStartsWith(pattern=pattern, case=case)
-
-
-def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
-    """TODO"""
-    return StrEndsWith(pattern=pattern, case=case)
-
-
-def str_contains(
-    pattern: str,
-    case: bool = True,
-    regex: bool = False,
-) -> BaseStrategy:
-    """TODO"""
-    return StrContains(pattern=pattern, case=case, regex=regex)
-
-
 def fuzzy(threshold: float = 0.95) -> BaseStrategy:
     """TODO"""
     return Fuzzy(threshold=threshold)
