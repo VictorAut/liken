@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Iterator
 from typing import Callable, TypeAlias, final
+from functools import wraps
 
 from typing_extensions import override
 
@@ -41,3 +42,12 @@ class Custom(ThresholdDedupers):
 
     def __str__(self):
         return self.__repr__()
+    
+
+def register(f: Callable):
+    """TODO"""
+    @wraps(f)
+    def wrapper(**kwargs):
+        return Custom(f, **kwargs)
+
+    return wrapper

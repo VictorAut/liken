@@ -86,7 +86,6 @@ class On:
 
 
 def on(column: str, strat: BaseStrategy, /):
-    """here's how you define a single strategy in a Rule"""
     return On(column, strat)
 
 

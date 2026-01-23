@@ -1,16 +1,12 @@
-from functools import wraps
+
 from typing import Callable
 
-from .._custom import Custom
-
-
-# REGISTER:
+from .._custom import register as _register
 
 
 def register(f: Callable):
     """TODO"""
-    @wraps(f)
-    def wrapper(**kwargs):
-        return Custom(f, **kwargs)
+    return _register(f)
 
-    return wrapper
+
+
