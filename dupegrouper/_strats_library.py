@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 class BaseStrategyProtocol(Protocol):
     wdf: LocalDF
     keep: Keep
+    fill_na_placeholders: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
     def set_keep(self, keep: Keep) -> Self: ...
@@ -57,6 +58,8 @@ class BaseStrategy:
 
     Defines a deduplication strategy.
     """
+
+    fill_na_placeholders: bool = True # TODO document this
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -97,7 +100,7 @@ class BaseStrategy:
 
     def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> UF:
         self.validate(columns)
-        array = self.get_array(columns, fill_na_placeholders=True)
+        array = self.get_array(columns, fill_na_placeholders=self.fill_na_placeholders)
 
         n = len(array)
 
@@ -268,6 +271,8 @@ class IsNA(
 
     NAME: str = "isna"
 
+    fill_na_placeholders: bool = False
+
     @override
     def _gen_similarity_pairs(self, array: np.ndarray):
         indices: list[int] = []
@@ -306,7 +311,7 @@ class _NotNA(
     Deduplicate all non-NA / non-null values.
     """
 
-    NAME: str = "notna"
+    fill_na_placeholders: bool = False
 
     @override
     def _gen_similarity_pairs(self, array: np.ndarray):
