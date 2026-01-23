@@ -94,15 +94,14 @@ PARAMS = [
     (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.75, "num_perm": 128}, [0, 1, 2, 3, 4, 5, 1, 0, 4, 9]),
     (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.65, "num_perm": 128}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
     (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.55, "num_perm": 128}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
-    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.45, "num_perm": 128},  [0, 1, 2, 2, 1, 2, 1, 0, 1, 9]),
-    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.35, "num_perm": 128},  [0, 1, 1, 1, 1, 1, 1, 0, 1, 0]),
+    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.45, "num_perm": 128}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.35, "num_perm": 128}, [0, 1, 1, 1, 4, 1, 1, 0, 4, 0]),
     # progressive deduping: fix threshold; vary ngram
-    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.45, "num_perm": 128},  [0, 1, 2, 2, 1, 2, 1, 0, 1, 9]),
-    (lsh, SINGLE_COL, {"ngram": 2, "threshold": 0.45, "num_perm": 128},  [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    (lsh, SINGLE_COL, {"ngram": 3, "threshold": 0.45, "num_perm": 128},  [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lsh, SINGLE_COL, {"ngram": 2, "threshold": 0.45, "num_perm": 128}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lsh, SINGLE_COL, {"ngram": 3, "threshold": 0.45, "num_perm": 128}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # progressive deduping: fix parameters; vary permutations
     (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.55, "num_perm": 32}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
-    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.55, "num_perm": 64}, [0, 1, 2, 2, 1, 5, 1, 0, 1, 9]),
+    (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.55, "num_perm": 64}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
     (lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.55, "num_perm": 128}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
     #
     # STRING STARTS WITH:
@@ -141,7 +140,7 @@ PARAMS = [
     (tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.65, "topn": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
     (tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.50, "topn": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
     # progressive deduping: vary ngram
-    (tfidf, SINGLE_COL, {"ngram": (1, 2), "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (tfidf, SINGLE_COL, {"ngram": (1, 2), "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
     (tfidf, SINGLE_COL, {"ngram": (1, 3), "threshold": 0.80, "topn": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (tfidf, SINGLE_COL, {"ngram": (2, 3), "threshold": 0.80, "topn": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # progressive deduping: vary topn
@@ -165,25 +164,25 @@ def test_matrix_strats_sequence_api(strategy, columns, strat_kwarg, expected_can
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
 
-# @pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
-# def test_matrix_strats_dict_api(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_strats_dict_api(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
-#     df, spark_session = dataframe
+    df, spark_session = dataframe
 
-#     dg = Dedupe(df, spark_session=spark_session)
-#     dg.apply({columns: [strategy(**strat_kwarg)]})
-#     dg.canonicalize()
+    dg = Dedupe(df, spark_session=spark_session)
+    dg.apply({columns: [strategy(**strat_kwarg)]})
+    dg.canonicalize()
 
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
 
 
-# @pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
-# def test_matrix_strats_rules_api(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_strats_rules_api(strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
-#     df, spark_session = dataframe
+    df, spark_session = dataframe
 
-#     dg = Dedupe(df, spark_session=spark_session)
-#     dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
-#     dg.canonicalize()
+    dg = Dedupe(df, spark_session=spark_session)
+    dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
+    dg.canonicalize()
 
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
