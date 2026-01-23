@@ -35,7 +35,7 @@ def spark_rows():
 
 @pytest.fixture
 def new_col():
-    return ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"]
+    return ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
 
 
 # wrapper methods

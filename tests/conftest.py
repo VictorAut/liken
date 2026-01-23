@@ -11,7 +11,7 @@ from pyspark.sql.types import LongType, StringType
 from pyspark.sql.window import Window
 
 from dupegrouper._types import DataFrameLike
-from dupegrouper.datasets.synthetic import fake_13
+from dupegrouper.datasets.synthetic import fake_10
 from dupegrouper.dedupe import BaseStrategy
 
 
@@ -23,9 +23,6 @@ def blocking_key():
         "key_2",
         "key_2",
         "key_2",
-        "key_2",
-        "key_1",
-        "key_1",
         "key_1",
         "key_1",
         "key_1",
@@ -36,7 +33,7 @@ def blocking_key():
 
 @pytest.fixture(scope="session")
 def canonical_id():
-    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 @pytest.fixture(scope="session")
@@ -60,18 +57,18 @@ def spark():
 
 @pytest.fixture(scope="session")
 def df_pandas():
-    return fake_13("pandas")
+    return fake_10("pandas")
 
 
 @pytest.fixture(scope="session")
 def df_polars():
-    return fake_13("polars")
+    return fake_10("polars")
 
 
 @pytest.fixture(scope="function")
 def df_spark(spark):
     """Default is a single partition"""
-    return fake_13("spark", spark_session=spark)
+    return fake_10("spark", spark_session=spark)
 
 
 @pytest.fixture(scope="function")

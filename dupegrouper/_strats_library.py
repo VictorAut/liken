@@ -24,7 +24,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from dupegrouper._constants import CANONICAL_ID
+from dupegrouper._constants import CANONICAL_ID, NA_MISSING_PLACEHOLDER
 
 import pandas as pd
 
@@ -75,9 +75,11 @@ class BaseStrategy:
 
     def get_array(self, columns: Columns) -> np.ndarray:
         if isinstance(columns, str):
-            return np.asarray(self.wdf.get_col(columns), dtype=object)
+            col = self.wdf.fill_na(self.wdf.get_col(columns), NA_MISSING_PLACEHOLDER)
+            return np.asarray(col, dtype=object)
         elif isinstance(columns, tuple):
-            return np.asarray(self.wdf.get_cols(columns), dtype=object)
+            cols = self.wdf.get_cols(columns)
+            return np.asarray(cols, dtype=object)
         else:
             raise TypeError("`columns` must be str or tuple[str]")
 
@@ -281,7 +283,6 @@ class IsNA(
     def __str__(self):
         return self.str_representation(self.NAME)
 
-
     def __invert__(self):
         return _NotNA()
 
@@ -303,15 +304,15 @@ class _NotNA(
         indices: list[int] = []
 
         for i, v in enumerate(array):
-            notna = True 
-            if v is None: 
-                notna = False 
-            if v is pd.NA: 
-                notna = False 
-            elif v != v: 
-                notna = False 
-            
-            if notna: 
+            notna = True
+            if v is None:
+                notna = False
+            if v is pd.NA:
+                notna = False
+            elif v != v:
+                notna = False
+
+            if notna:
                 indices.append(i)
 
         for i in range(len(indices)):
@@ -669,12 +670,25 @@ class Cosine(
         n = len(array)
         for idx in range(n):
             for idy in range(idx + 1, n):
-                product = np.dot(array[idx], array[idy])
+                arrx = array[idx]
+                arry = array[idy]
+                mask = [
+                    (
+                        x is not None
+                        and y is not None
+                        and not (isinstance(x, float) and np.isnan(x))
+                        and not (isinstance(y, float) and np.isnan(y))
+                    )
+                    for x, y in zip(arrx, arry)
+                ]
+                arrx_masked = arrx[mask]
+                arry_masked = arry[mask]
+                product = np.dot(arrx_masked, arry_masked)
 
                 if not product:
                     continue  # no match
 
-                norms = norm(array[idx]) * norm(array[idy])
+                norms = norm(arrx_masked) * norm(arry_masked)
 
                 if not norms:
                     continue  # zero div: guardrail
