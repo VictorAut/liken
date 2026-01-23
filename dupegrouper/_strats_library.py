@@ -27,10 +27,12 @@ from typing_extensions import override
 from dupegrouper._constants import CANONICAL_ID, NA_MISSING_PLACEHOLDER
 
 import pandas as pd
+import polars as pl
 
 if TYPE_CHECKING:
     from dupegrouper._dataframe import LocalDF
     from dupegrouper._types import UF, Columns, Keep, SimilarPairIndices
+    
 
 
 # BASE STRATEGY:
@@ -73,9 +75,15 @@ class BaseStrategy:
         self.wdf: LocalDF = wdf
         return self
 
-    def get_array(self, columns: Columns) -> np.ndarray:
+    def get_array(self, columns: Columns, fill_na_placeholders: bool = False) -> np.ndarray:
         if isinstance(columns, str):
-            col = self.wdf.fill_na(self.wdf.get_col(columns), NA_MISSING_PLACEHOLDER)
+            
+            col = self.wdf.get_col(columns)
+            # fills null values with a dummy "na" value
+            # Cannot apply generically due to polars type enforcement
+            if fill_na_placeholders:
+                col = self.wdf.fill_na(col, NA_MISSING_PLACEHOLDER)
+            
             return np.asarray(col, dtype=object)
         elif isinstance(columns, tuple):
             cols = self.wdf.get_cols(columns)
@@ -89,7 +97,7 @@ class BaseStrategy:
 
     def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> UF:
         self.validate(columns)
-        array = self.get_array(columns)
+        array = self.get_array(columns, fill_na_placeholders=True)
 
         n = len(array)
 
@@ -107,6 +115,7 @@ class BaseStrategy:
         keep: Keep,
     ) -> LocalDF:
         canonicals = self.get_array(CANONICAL_ID)
+        print(canonicals)
 
         n = len(canonicals)
 
