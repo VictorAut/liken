@@ -8,8 +8,9 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from dupegrouper import Duped, exact
+from dupegrouper import Dedupe, exact
 from dupegrouper._constants import CANONICAL_ID
+
 
 # CONSTANTS:
 
@@ -142,10 +143,10 @@ IDS = [
     "new-auto-incremental-canonical_id",
     "copy-numeric-id",
     "copy-string-id",
-    "canonical_id-already-exists-not-deduped",
-    "canonical_id-already-exists-partially-deduped",
-    "canonical_id-already-exists-not-deduped-verbose",
-    "canonical_id-already-exists-partially-deduped-verbose",
+    "canonical_id-already-exists-not-dededupe",
+    "canonical_id-already-exists-partially-dededupe",
+    "canonical_id-already-exists-not-dededupe-verbose",
+    "canonical_id-already-exists-partially-dededupe-verbose",
     "overwrite-numeric-to-numeric",
     "overwrite-string-to-numeric",
     "overwrite-numeric-to-string",
@@ -168,7 +169,7 @@ def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, help
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        dg = Duped(df, spark_session=spark, id=id)
+        dg = Dedupe(df, spark_session=spark, id=id)
 
     dg.apply(exact())
     dg.canonicalize(SINGLE_COL)

@@ -6,7 +6,7 @@ import pytest
 
 from dupegrouper import exact
 from dupegrouper._constants import CANONICAL_ID
-from dupegrouper.dedupe import Duped
+from dupegrouper.dedupe import Dedupe
 
 
 @pytest.mark.parametrize(
@@ -27,7 +27,7 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
         "address": (exact(),),
         "email": (exact(),),
     }
-    dg = Duped(df, spark_session=spark)
+    dg = Dedupe(df, spark_session=spark)
     dg.apply(strategies)
     dg.canonicalize()
 

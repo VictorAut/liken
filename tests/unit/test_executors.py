@@ -8,6 +8,7 @@ from dupegrouper._executors import LocalExecutor, SparkExecutor
 from dupegrouper._strats_library import BaseStrategy
 from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, StratsDict
 
+
 ############################
 # Fixtures
 ############################
@@ -134,11 +135,11 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 ######################
 
 
-@patch("dupegrouper.dedupe.Duped")
-def test_process_partition_empty_partition_returns_empty(mock_duped):
+@patch("dupegrouper.dedupe.Dedupe")
+def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     result = list(
         SparkExecutor._process_partition(
-            factory=mock_duped,
+            factory=mock_dedupe,
             partition=iter([]),
             strats=Mock(),
             id="id",
@@ -149,20 +150,20 @@ def test_process_partition_empty_partition_returns_empty(mock_duped):
     )
 
     assert result == []
-    mock_duped.assert_not_called()
+    mock_dedupe.assert_not_called()
 
 
-@patch("dupegrouper.dedupe.Duped")
-def test_process_partition_calls_duped_api(mock_duped):
+@patch("dupegrouper.dedupe.Dedupe")
+def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
     dp_instance = Mock()
     dp_instance.df = ["out"]
 
-    mock_duped.return_value = dp_instance
+    mock_dedupe.return_value = dp_instance
 
     result = list(
         SparkExecutor._process_partition(
-            factory=mock_duped,
+            factory=mock_dedupe,
             partition=iter([row]),
             strats=Mock(),
             id="id",
@@ -172,7 +173,7 @@ def test_process_partition_calls_duped_api(mock_duped):
         )
     )
 
-    mock_duped.assert_called_once_with([row], id="id")
+    mock_dedupe.assert_called_once_with([row], id="id")
     dp_instance.apply.assert_called_once()
     dp_instance.canonicalize.assert_called_once_with(
         "address",

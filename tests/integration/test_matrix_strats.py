@@ -7,7 +7,7 @@ import typing
 import pytest
 
 from dupegrouper import (
-    Duped,
+    Dedupe,
     cosine,
     exact,
     fuzzy,
@@ -18,6 +18,7 @@ from dupegrouper import (
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
 from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+
 
 # CONSTANTS:
 
@@ -161,7 +162,7 @@ def test_matrix_strats_sequence_api(strategy, columns, strat_kwarg, expected_can
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(strategy(**strat_kwarg))
     dg.canonicalize(columns)
 
@@ -173,7 +174,7 @@ def test_matrix_strats_dict_api(strategy, columns, strat_kwarg, expected_canonic
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply({columns: [strategy(**strat_kwarg)]})
     dg.canonicalize()
 
@@ -185,7 +186,7 @@ def test_matrix_strats_rules_api(strategy, columns, strat_kwarg, expected_canoni
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
     dg.canonicalize()
 

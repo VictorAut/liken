@@ -7,7 +7,7 @@ import typing
 import pytest
 
 from dupegrouper import (
-    Duped,
+    Dedupe,
     cosine,
     exact,
     fuzzy,
@@ -18,6 +18,7 @@ from dupegrouper import (
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
 from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+
 
 # CONSTANTS:
 
@@ -138,7 +139,7 @@ def test_matrix_strats_sequence_api(
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
 
     # single strategy item addition
     dg.apply(strategy(**strat_kwarg))
@@ -152,7 +153,7 @@ def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expe
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
 
     # dictionary strategy addition
     dg.apply({columns: [strategy(**strat_kwarg)]})
@@ -162,11 +163,11 @@ def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expe
 
 
 @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dg = Duped(df, spark_session=spark_session)
+    dg = Dedupe(df, spark_session=spark_session)
     dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
     dg.canonicalize(**drop_kwarg)
 

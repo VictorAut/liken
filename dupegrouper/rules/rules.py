@@ -1,10 +1,11 @@
-from .._strats_library import BaseStrategy, StrContains, StrEndsWith, StrStartsWith
-from .._strats_manager import Rules as _Rules, on as _on
-
+from .._strats_library import BaseStrategy, StrContains, StrEndsWith, StrStartsWith, IsNA
+from .._strats_manager import Rules as _Rules
+from .._strats_manager import on as _on
 
 
 class Rules(_Rules):
     """TODO"""
+
     pass
 
 
@@ -13,9 +14,12 @@ def on(column: str, strat: BaseStrategy, /):
     return _on(column, strat)
 
 
-
 # STRATEGIES:
 
+
+def isna():
+    """TODO"""
+    return IsNA()
 
 def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     """TODO"""

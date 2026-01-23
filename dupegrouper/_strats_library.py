@@ -26,9 +26,11 @@ from typing_extensions import override
 
 from dupegrouper._constants import CANONICAL_ID
 
+import pandas as pd
+
 if TYPE_CHECKING:
     from dupegrouper._dataframe import LocalDF
-    from dupegrouper._types import Columns, Keep, SimilarPairIndices
+    from dupegrouper._types import UF, Columns, Keep, SimilarPairIndices
 
 
 # BASE STRATEGY:
@@ -83,7 +85,7 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> dict[int, int]:
+    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> UF:
         self.validate(columns)
         array = self.get_array(columns)
 
@@ -204,10 +206,8 @@ class BinaryDedupers(BaseStrategy):
     @private
     """
 
-    def __init__(self, pattern: str, case: bool = True, **kwargs):
-        super().__init__(pattern=pattern, case=case, **kwargs)
-        self._pattern = pattern
-        self._case = case
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def _matches(self, value):
         del value  # Unused
@@ -246,6 +246,80 @@ class NegatedBinaryDeduper(BinaryDedupers):
 
 
 @final
+class IsNA(
+    BinaryDedupers,
+    SingleColumnValidationMixin,
+):
+    """
+    @private
+    Deduplicates all missing / null values into a single group.
+    """
+
+    NAME: str = "isna"
+
+    @override
+    def _gen_similarity_pairs(self, array: np.ndarray):
+        indices: list[int] = []
+
+        for i, v in enumerate(array):
+            # Spark & Polars
+            if v is None:
+                indices.append(i)
+                continue
+
+            if v is pd.NA:
+                indices.append(i)
+                continue  # important! next line would break otherwise.
+
+            if v != v:
+                indices.append(i)
+
+        for i in range(len(indices)):
+            for j in range(i + 1, len(indices)):
+                yield indices[i], indices[j]
+
+    def __str__(self):
+        return self.str_representation(self.NAME)
+
+
+    def __invert__(self):
+        return _NotNA()
+
+
+@final
+class _NotNA(
+    BaseStrategy,
+    SingleColumnValidationMixin,
+):
+    """
+    @private
+    Deduplicate all non-NA / non-null values.
+    """
+
+    NAME: str = "notna"
+
+    @override
+    def _gen_similarity_pairs(self, array: np.ndarray):
+        indices: list[int] = []
+
+        for i, v in enumerate(array):
+            notna = True 
+            if v is None: 
+                notna = False 
+            if v is pd.NA: 
+                notna = False 
+            elif v != v: 
+                notna = False 
+            
+            if notna: 
+                indices.append(i)
+
+        for i in range(len(indices)):
+            for j in range(i + 1, len(indices)):
+                yield indices[i], indices[j]
+
+
+@final
 class StrStartsWith(
     BinaryDedupers,
     SingleColumnValidationMixin,
@@ -260,6 +334,11 @@ class StrStartsWith(
     """
 
     NAME: str = "str_startswith"
+
+    def __init__(self, pattern: str, case: bool = True):
+        super().__init__(pattern=pattern, case=case)
+        self._pattern = pattern
+        self._case = case
 
     @override
     def _matches(self, value: str | None) -> bool:
@@ -292,6 +371,11 @@ class StrEndsWith(
 
     NAME: str = "str_endswith"
 
+    def __init__(self, pattern: str, case: bool = True):
+        super().__init__(pattern=pattern, case=case)
+        self._pattern = pattern
+        self._case = case
+
     @override
     def _matches(self, value: str | None) -> bool:
         if value is None:
@@ -323,6 +407,8 @@ class StrContains(
 
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
         super().__init__(pattern=pattern, case=case, regex=regex)
+        self._pattern = pattern
+        self._case = case
         self._regex = regex
 
         if self._regex:

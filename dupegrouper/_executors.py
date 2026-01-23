@@ -11,10 +11,11 @@ from dupegrouper._constants import CANONICAL_ID
 from dupegrouper._dataframe import DF, LocalDF, SparkDF
 from dupegrouper._strats_library import BaseStrategy
 from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, Rules, StratsDict
-from dupegrouper._types import Columns, Keep
+from dupegrouper._types import UF, Columns, Keep
+
 
 if TYPE_CHECKING:
-    from dupegrouper.dedupe import Duped
+    from dupegrouper.dedupe import Dedupe
 
 
 class Executor(Protocol[DF]):
@@ -57,7 +58,7 @@ class LocalExecutor(Executor):
                         components = self._get_components(uf, n)
                         df = call_strat(strat, components)
             else:
-                # For inline calls e.g.`.canonicalize("address")`
+                # For sequence calls e.g.`.canonicalize("address")`
                 for strat in strats[DEFAULT_STRAT_KEY]:
                     uf, n = self._build_uf(strat, df, columns)
                     components = self._get_components(uf, n)
@@ -81,12 +82,12 @@ class LocalExecutor(Executor):
         strat: BaseStrategy,
         df: LocalDF,
         columns: Columns,
-    ) -> tuple[dict[int, int], int]:
+    ) -> tuple[UF, int]:
         return strat.set_frame(df).build_union_find(columns)
 
     @staticmethod
     def _get_components(
-        uf: dict[int, int],
+        uf: UF,
         n: int,
     ) -> dict[int, list[int]]:
         components = defaultdict(list)
@@ -96,7 +97,7 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _get_multi_components(
-        ufs: list[dict[int, int]],
+        ufs: list[UF],
         n: int,
     ) -> dict[tuple[int, ...], list[int]]:
         components = defaultdict(list)
@@ -150,7 +151,7 @@ class SparkExecutor(Executor):
         """
 
         # import in worker node
-        from dupegrouper.dedupe import Duped
+        from dupegrouper.dedupe import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
         id = self._id
@@ -158,7 +159,7 @@ class SparkExecutor(Executor):
 
         rdd = df.mapPartitions(
             lambda partition: process_partition(
-                factory=Duped,
+                factory=Dedupe,
                 partition=partition,
                 strats=strats,
                 id=id,
@@ -179,7 +180,7 @@ class SparkExecutor(Executor):
     @staticmethod
     def _process_partition(
         *,
-        factory: Type[Duped[SparkDF]],
+        factory: Type[Dedupe[SparkDF]],
         partition: Iterator[Row],
         strats: StratsDict,
         id: str | None,

@@ -1,6 +1,6 @@
 """dupegrouper main entrypoint
 
-This module contains `Duped`, at the core of all 'dupe and group'
+This module contains `Dedupe`, at the core of all 'dupe and group'
 functionality provided by dupegrouper.
 """
 
@@ -20,10 +20,11 @@ from dupegrouper._strats_manager import StrategyManager, StratsDict
 from dupegrouper._types import Columns, DataFrameLike, Keep
 from dupegrouper._validators import validate_keep_arg, validate_spark_args
 
+
 # API:
 
 
-class Duped(Generic[DF]):
+class Dedupe(Generic[DF]):
     """TODO"""
 
     _df: DF
