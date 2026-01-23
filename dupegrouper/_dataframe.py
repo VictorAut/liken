@@ -31,7 +31,7 @@ T = TypeVar("T")
 # BASE
 
 
-class Frame(Generic[T]):
+class Frame(Generic[T]): # TODO: interface?!
 
     def __init__(self, df: T):
         self._df: T = df
@@ -130,6 +130,11 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
+    
+    @staticmethod
+    @override
+    def fill_na(series: pd.Series, value: str) -> pd.Series:
+        return series.fillna(value)
 
 
 @final
@@ -172,6 +177,10 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
+    
+    @staticmethod
+    def fill_na(series: pl.Series, value: str) -> pl.Series:
+        return series.fill_null(value)
 
 
 SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
@@ -301,6 +310,10 @@ class SparkRows(Frame[list[spark.Row]]):
 
         self._df = result
         return self
+    
+    @staticmethod
+    def fill_na(series: list, value: str) -> list:
+        return [value if v is None else v for v in series]
 
 
 # DISPATCHER:

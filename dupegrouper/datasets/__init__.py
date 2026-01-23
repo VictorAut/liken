@@ -1,4 +1,4 @@
-from .synthetic import fake_13
+from .synthetic import fake_10
 
 
-__all__ = ["fake_13"]
+__all__ = ["fake_10"]

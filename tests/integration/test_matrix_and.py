@@ -47,8 +47,8 @@ def str_same_len(array: typing.Iterable):
 
 PARAMS = [
     # single column
-    ((on("email", fuzzy(0.95)),), [0, 0, 2, 3, 0, 0, 0, 3, 3, 9, 10, 11, 12]),
-    ((on("email", fuzzy(0.95)) & on("email", str_same_len()),), [0, 1, 2, 3, 4, 5, 4, 7, 3, 9, 10, 11, 12]),
+    ((on("email", fuzzy(0.95)),), [0, 0, 2, 3, 4, 0, 0, 3, 3, 9, 10, 0]),
+    ((on("email", fuzzy(0.95)) & on("email", str_same_len()),), [0, 1, 2, 3, 4, 5, 5, 7, 3, 9, 10, 11]),
     # single column
     ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 7, 0, 0, 10, 11, 12]),
     ((on("address", fuzzy(0.70)) & on("address", str_same_len()),), [0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 10, 11, 12]),

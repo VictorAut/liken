@@ -22,6 +22,8 @@ from pyspark.sql.types import (
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
+NA_MISSING_PLACEHOLDER: Final[str] = "_na_missing_placeholder_"
+
 
 # Pyspark sql conversion types
 PYSPARK_TYPES: Final[dict[str, DataType]] = {
