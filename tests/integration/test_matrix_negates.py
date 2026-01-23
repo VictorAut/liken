@@ -7,23 +7,8 @@ import typing
 import pytest
 
 from dupegrouper import Duped
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.custom import register
-from dupegrouper.strats_manager import Rules
-from dupegrouper.strats_combinations import on
-from dupegrouper.strats_library import (
-    cosine,
-    exact,
-    fuzzy,
-    jaccard,
-    lsh,
-    str_contains,
-    str_endswith,
-    str_startswith,
-    tfidf,
-)
-
-
+from dupegrouper._constants import CANONICAL_ID
+from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
 
 # fmt: off
 
@@ -43,6 +28,7 @@ PARAMS = [
 
 
 # Negation is strongly encouraged to be only for the Rules API!
+
 
 @pytest.mark.parametrize("strategy, expected_canonical_id", PARAMS)
 def test_matrix_negates(strategy, expected_canonical_id, dataframe, helpers):

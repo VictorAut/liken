@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from dupegrouper.base import Duped
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.strats_library import exact
+from dupegrouper import exact
+from dupegrouper._constants import CANONICAL_ID
+from dupegrouper.dedupe import Duped
 
 
 @pytest.mark.parametrize(

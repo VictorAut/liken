@@ -6,22 +6,18 @@ import typing
 
 import pytest
 
-from dupegrouper import Duped
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.custom import register
-from dupegrouper.strats_combinations import on
-from dupegrouper.strats_manager import Rules
-from dupegrouper.strats_library import (
+from dupegrouper import (
+    Duped,
     cosine,
     exact,
     fuzzy,
     jaccard,
     lsh,
-    str_contains,
-    str_endswith,
-    str_startswith,
     tfidf,
 )
+from dupegrouper._constants import CANONICAL_ID
+from dupegrouper.custom import register
+from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
 
 # CONSTANTS:
 
@@ -136,7 +132,9 @@ IDS = [
 
 
 @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-def test_matrix_strats_sequence_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_strats_sequence_api(
+    strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers
+):
 
     df, spark_session = dataframe
 
@@ -147,6 +145,7 @@ def test_matrix_strats_sequence_api(strategy, columns, drop_kwarg, strat_kwarg, 
     dg.canonicalize(columns, **drop_kwarg)
 
     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+
 
 @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
 def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):

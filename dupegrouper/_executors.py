@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Protocol, Type, cast, final
 from functools import partial
+from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
 from pyspark.sql import Row, SparkSession
 
-from dupegrouper.constants import CANONICAL_ID
-from dupegrouper.dataframe import DF, LocalDF, SparkDF
-from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import DEFAULT_STRAT_KEY, StratsDict, Rules
-from dupegrouper.types import Columns, Keep
+from dupegrouper._constants import CANONICAL_ID
+from dupegrouper._dataframe import DF, LocalDF, SparkDF
+from dupegrouper._strats_library import BaseStrategy
+from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, Rules, StratsDict
+from dupegrouper._types import Columns, Keep
 
 if TYPE_CHECKING:
-    from dupegrouper.base import Duped
+    from dupegrouper.dedupe import Duped
 
 
 class Executor(Protocol[DF]):
@@ -150,7 +150,7 @@ class SparkExecutor(Executor):
         """
 
         # import in worker node
-        from dupegrouper.base import Duped
+        from dupegrouper.dedupe import Duped
 
         # IMPORTANT: Use local variables, no references to Self
         id = self._id

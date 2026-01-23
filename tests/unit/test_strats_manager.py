@@ -2,15 +2,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from dupegrouper.strats_library import BaseStrategy
-from dupegrouper.strats_manager import (
+from dupegrouper._strats_library import BaseStrategy
+from dupegrouper._strats_manager import (
     DEFAULT_STRAT_KEY,
     InvalidStrategyError,
+    On,
+    Rules,
     StrategyManager,
     StratsDict,
+    on,
 )
-from dupegrouper.strats_combinations import On, on
-from dupegrouper.strats_manager import Rules
 
 ###########
 # Helpers #
@@ -113,6 +114,7 @@ def test_strategy_manager_apply_dict_single(s1, s2, s3):
     assert result["b"] == (s2,)
     assert result["c"] == (s3,)
 
+
 def test_strategy_manager_apply_dict(s1, s2, s3):
     sm = StrategyManager()
     strat = {"a": [s1], "b": (s2, s3)}
@@ -126,7 +128,7 @@ def test_strategy_manager_apply_dict(s1, s2, s3):
 
 def test_strategy_manager_apply_single_on_not_rule(s1):
     sm = StrategyManager()
-    strat = on("a", s1) # Not a tuple!
+    strat = on("a", s1)  # Not a tuple!
 
     sm.apply(strat)
     result = sm.get()
@@ -136,10 +138,11 @@ def test_strategy_manager_apply_single_on_not_rule(s1):
     assert isinstance(result[0], On)
     assert result[0]._column == "a"
     assert isinstance(result[0]._strat, type(s1))
+
 
 def test_strategy_manager_apply_single_on_as_tuple(s1):
     sm = StrategyManager()
-    strat = (on("a", s1),) # Is a tuple
+    strat = (on("a", s1),)  # Is a tuple
 
     sm.apply(strat)
     result = sm.get()
@@ -149,10 +152,13 @@ def test_strategy_manager_apply_single_on_as_tuple(s1):
     assert isinstance(result[0], On)
     assert result[0]._column == "a"
     assert isinstance(result[0]._strat, type(s1))
+
 
 def test_strategy_manager_apply_single_on_as_rule(s1):
     sm = StrategyManager()
-    strat = Rules(on("a", s1),)
+    strat = Rules(
+        on("a", s1),
+    )
 
     sm.apply(strat)
     result = sm.get()
@@ -162,6 +168,7 @@ def test_strategy_manager_apply_single_on_as_rule(s1):
     assert isinstance(result[0], On)
     assert result[0]._column == "a"
     assert isinstance(result[0]._strat, type(s1))
+
 
 def test_strategy_manager_apply_tuple(s1, s2, s3):
     sm = StrategyManager()
@@ -171,7 +178,7 @@ def test_strategy_manager_apply_tuple(s1, s2, s3):
     result = sm.get()
 
     assert isinstance(result, tuple)
-    assert len(result) == 2 # As the & operator returns instance of self.
+    assert len(result) == 2  # As the & operator returns instance of self.
 
 
 def test_strategy_manager_apply_rejects_invalid_type():

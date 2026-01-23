@@ -18,8 +18,9 @@ from pyspark.sql import Row
 from pyspark.sql.types import LongType, StructField, StructType
 from typing_extensions import override
 
-from dupegrouper.constants import CANONICAL_ID, PYSPARK_TYPES
-from dupegrouper.types import DataFrameLike, Keep
+from dupegrouper._constants import CANONICAL_ID, PYSPARK_TYPES
+from dupegrouper._types import DataFrameLike, Keep
+
 
 # TYPES
 

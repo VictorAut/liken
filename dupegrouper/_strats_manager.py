@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import warnings
 from collections import UserDict
-from typing import Final, final
+from copy import deepcopy
+from typing import Final, Self, final
 
-from dupegrouper.strats_combinations import On
-from dupegrouper.strats_library import BaseStrategy
+from dupegrouper._strats_library import BaseStrategy
+from dupegrouper._validators import validate_strat_arg
+
 
 # CONSTANTS:
 
@@ -30,7 +31,7 @@ WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequen
 WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
 
 
-# STRATS CONFIG:
+# STRATS DICT CONFIG:
 
 
 @final
@@ -49,6 +50,9 @@ class StratsDict(UserDict):
         super().__setitem__(key, value)
 
 
+# STRATS RULES CONFIG
+
+
 @final
 class Rules(tuple):
     def __new__(cls, *items):
@@ -63,6 +67,27 @@ class Rules(tuple):
                 raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
 
         return super().__new__(cls, items)
+
+
+@final
+class On:
+    def __init__(self, column: str, strat: BaseStrategy):
+        self._column = column
+        self._strat = validate_strat_arg(strat)
+        self._strats: list[tuple[str, BaseStrategy]] = [(column, strat)]
+
+    def __and__(self, other: On) -> Self:
+        self._strats.append((other._column, other._strat))
+        return self
+
+    @property
+    def and_strats(self) -> list[tuple[str, BaseStrategy]]:
+        return self._strats
+
+
+def on(column: str, strat: BaseStrategy, /):
+    """here's how you define a single strategy in a Rule"""
+    return On(column, strat)
 
 
 # STRATS MANAGER:

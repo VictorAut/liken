@@ -1,11 +1,10 @@
 from collections.abc import Iterable, Iterator
-from functools import wraps
 from typing import Callable, TypeAlias, final
 
 from typing_extensions import override
 
-from dupegrouper.strats_library import ThresholdDedupers
-from dupegrouper.types import ArrayLike, SimilarPairIndices
+from dupegrouper._strats_library import ThresholdDedupers
+from dupegrouper._types import ArrayLike, SimilarPairIndices
 
 PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
 
@@ -42,14 +41,3 @@ class Custom(ThresholdDedupers):
 
     def __str__(self):
         return self.__repr__()
-
-
-# REGISTER:
-
-
-def register(f: Callable):
-    @wraps(f)
-    def wrapper(**kwargs):
-        return Custom(f, **kwargs)
-
-    return wrapper

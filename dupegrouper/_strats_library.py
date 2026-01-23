@@ -24,11 +24,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from dupegrouper.constants import CANONICAL_ID
+from dupegrouper._constants import CANONICAL_ID
 
 if TYPE_CHECKING:
-    from dupegrouper.dataframe import LocalDF
-    from dupegrouper.types import Columns, Keep, SimilarPairIndices
+    from dupegrouper._dataframe import LocalDF
+    from dupegrouper._types import Columns, Keep, SimilarPairIndices
 
 
 # BASE STRATEGY:
@@ -71,7 +71,6 @@ class BaseStrategy:
         self.wdf: LocalDF = wdf
         return self
 
-
     def get_array(self, columns: Columns) -> np.ndarray:
         if isinstance(columns, str):
             return np.asarray(self.wdf.get_col(columns), dtype=object)
@@ -79,7 +78,6 @@ class BaseStrategy:
             return np.asarray(self.wdf.get_cols(columns), dtype=object)
         else:
             raise TypeError("`columns` must be str or tuple[str]")
-
 
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
@@ -227,7 +225,7 @@ class BinaryDedupers(BaseStrategy):
 
     def __invert__(self):
         return NegatedBinaryDeduper(self)
-    
+
 
 class NegatedBinaryDeduper(BinaryDedupers):
     """
@@ -242,7 +240,7 @@ class NegatedBinaryDeduper(BinaryDedupers):
 
     def __str__(self):
         return f"~{self._inner}"
-    
+
     def validate(self, columns):
         return getattr(self._inner, "validate")(columns)
 
