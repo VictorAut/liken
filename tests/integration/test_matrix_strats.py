@@ -17,7 +17,7 @@ from dupegrouper import (
 )
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith, isna
 
 
 # CONSTANTS:
@@ -147,6 +147,9 @@ PARAMS = [
     (tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.80, "topn": 1}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
     (tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.80, "topn": 3}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
+    #
+    # ISNA:
+    (isna, SINGLE_COL, {}, [0, 1, 2, 3, 4, 5, 6, 7, 4, 9]),
 ]
 
 # fmt: on

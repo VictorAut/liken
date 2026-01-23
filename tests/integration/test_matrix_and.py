@@ -9,7 +9,7 @@ import pytest
 from dupegrouper import Dedupe, fuzzy
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.rules import Rules, on
+from dupegrouper.rules import Rules, on, isna
 
 
 # CONSTANTS:
@@ -52,6 +52,9 @@ PARAMS = [
     # single column
     ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     ((on("address", fuzzy(0.70)) & on("address", str_same_len()),), [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    # single column
+    ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    ((on("address", fuzzy(0.70)) & on("address", ~isna()),), [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
 ]
 
 # fmt: on
