@@ -169,9 +169,9 @@ def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, help
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        dg = Dedupe(df, spark_session=spark, id=id)
+        dp = Dedupe(df, spark_session=spark, id=id)
 
-    dg.apply(exact())
-    dg.canonicalize(SINGLE_COL)
+    dp.apply(exact())
+    df = dp.canonicalize(SINGLE_COL)
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

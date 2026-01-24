@@ -139,36 +139,36 @@ def test_matrix_strats_sequence_api(
 
     df, spark_session = dataframe
 
-    dg = Dedupe(df, spark_session=spark_session)
+    dp = Dedupe(df, spark_session=spark_session)
 
     # single strategy item addition
-    dg.apply(strategy(**strat_kwarg))
-    dg.canonicalize(columns, **drop_kwarg)
+    dp.apply(strategy(**strat_kwarg))
+    df = dp.canonicalize(columns, **drop_kwarg)
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
-
-
-# @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-# def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
-
-#     df, spark_session = dataframe
-
-#     dg = Dedupe(df, spark_session=spark_session)
-
-#     # dictionary strategy addition
-#     dg.apply({columns: [strategy(**strat_kwarg)]})
-#     dg.canonicalize(**drop_kwarg)
-
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-# @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-# def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
+def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
-#     df, spark_session = dataframe
+    df, spark_session = dataframe
 
-#     dg = Dedupe(df, spark_session=spark_session)
-#     dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
-#     dg.canonicalize(**drop_kwarg)
+    dp = Dedupe(df, spark_session=spark_session)
 
-#     assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    # dictionary strategy addition
+    dp.apply({columns: [strategy(**strat_kwarg)]})
+    df = dp.canonicalize(**drop_kwarg)
+
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
+
+
+@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
+def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+
+    df, spark_session = dataframe
+
+    dp = Dedupe(df, spark_session=spark_session)
+    dp.apply(Rules(on(columns, strategy(**strat_kwarg))))
+    df = dp.canonicalize(**drop_kwarg)
+
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

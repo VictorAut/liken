@@ -233,23 +233,27 @@ def test_strategy_manager_get_returns_config():
 ##############
 
 
-def test_pretty_get_single_default_key(s1, s2):
+def test_pretty_get_sequential_api(s1, s2):
     sm = StrategyManager()
     sm.apply(s1)
     sm.apply(s2)
 
-    assert sm.pretty_get() == ("dummy_strategy()", "dummy_strategy()")
+    assert sm.pretty_get() == "[\n\tdummy_strategy(),\n\tdummy_strategy()\n]"
 
 
-def test_pretty_get_multiple_keys(s1, s2, s3):
+def test_pretty_get_dict_api(s1, s2, s3):
     sm = StrategyManager()
     sm.apply({"col_a": [s1, s3], "col_b": [s2]})
 
     pretty = sm.pretty_get()
-    assert pretty == {
-        "col_a": ("dummy_strategy()", "dummy_strategy()"),
-        "col_b": ("dummy_strategy()",),
-    }
+    assert pretty == "{\n\t'col_a': (dummy_strategy(),\n\tdummy_strategy(),),\n\t'col_b': (dummy_strategy(),),\n}"
+
+def test_pretty_get_rules_api(s1, s2, s3):
+    sm = StrategyManager()
+    sm.apply(Rules(on("col_a", s1), on("col_b", s2)))
+
+    pretty = sm.pretty_get()
+    assert pretty == "Rules(\n\ton('col_a', dummy_strategy()),\n\ton('col_b', dummy_strategy())\n)"
 
 
 #########
@@ -261,13 +265,13 @@ def test_strategy_manager_reset_clears_strats(s1):
     sm = StrategyManager()
 
     assert sm.get() == {DEFAULT_STRAT_KEY: []}
-    assert sm.pretty_get() == tuple()
+    assert sm.pretty_get() is None
 
     sm.apply(s1)
     sm.reset()
 
     assert sm.get() == {DEFAULT_STRAT_KEY: []}
-    assert sm.pretty_get() == tuple()
+    assert sm.pretty_get() is None
 
 
 ###########################
