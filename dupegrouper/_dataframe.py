@@ -18,8 +18,8 @@ from pyspark.sql import Row
 from pyspark.sql.types import LongType, StructField, StructType
 from typing_extensions import override
 
-from dupegrouper._constants import CANONICAL_ID, PYSPARK_TYPES
-from dupegrouper._types import DataFrameLike, Keep
+from dupegrouper._constants import CANONICAL_ID, PYSPARK_TYPES, NA_PLACEHOLDER
+from dupegrouper._types import DataFrameLike, Keep, Columns
 
 
 # TYPES
@@ -31,7 +31,7 @@ T = TypeVar("T")
 # BASE
 
 
-class Frame(Generic[T]): # TODO: interface?!
+class Frame(Generic[T]):
 
     def __init__(self, df: T):
         self._df: T = df
@@ -51,6 +51,39 @@ class Frame(Generic[T]): # TODO: interface?!
         dataframe.
         """
         return getattr(self._df, name)
+    
+
+    def _get_col():
+        pass
+
+    def _get_cols():
+        pass
+    
+    def _fill_na():
+        pass
+
+    def get_array(self, columns: Columns, with_na: bool = False) -> np.ndarray:
+        """Generalise the getting of a column, or columns of a df to an array.
+        
+        Handles single column and multicolumn. For instances of single column
+        the initial column can initially be filled null placeholders, to allow
+        for use my strategies. This is optional so that specific strategies
+        that do care about nulls are not affected (e.g. IsNA).
+        """
+        if isinstance(columns, str):
+            cols = self._get_col(columns)
+            if with_na:
+                cols = self._fill_na(cols, NA_PLACEHOLDER)
+            
+        if isinstance(columns, tuple):
+            cols = self._get_cols(columns)
+            
+        return np.asarray(cols, dtype=object)
+    
+    def get_canonical(self) -> np.ndarray:
+        """convenience method for clean use"""
+        return self.get_array(CANONICAL_ID)
+
 
 
 # CANONICAL ID
@@ -113,15 +146,20 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
     # WRAPPER METHODS:
 
+    @staticmethod
+    @override
+    def _fill_na(series: pd.Series, value: str) -> pd.Series:
+        return series.fillna(value)
+
+    def _get_col(self, column: str) -> pd.Series:
+        return self._df[column]
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
+        return self._df[list(columns)]
+    
     def put_col(self, column: str, array) -> Self:
         self._df = self._df.assign(**{column: array})
         return self
-
-    def get_col(self, column: str) -> pd.Series:
-        return self._df[column]
-
-    def get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
-        return self._df[list(columns)]
 
     def drop_col(self, column: str) -> Self:
         self._df = self._df.drop(columns=column)
@@ -130,11 +168,6 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
-    
-    @staticmethod
-    @override
-    def fill_na(series: pd.Series, value: str) -> pd.Series:
-        return series.fillna(value)
 
 
 @final
@@ -159,16 +192,20 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
 
     # WRAPPER METHODS:
 
+    @staticmethod
+    def _fill_na(series: pl.Series, value: str) -> pl.Series:
+        return series.fill_null(value)
+
+    def _get_col(self, column: str) -> pl.Series:
+        return self._df.get_column(column)
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
+        return self._df.select(columns)
+    
     def put_col(self, column: str, array) -> Self:
         array = pl.Series(array)  # important; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
         return self
-
-    def get_col(self, column: str) -> pl.Series:
-        return self._df.get_column(column)
-
-    def get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
-        return self._df.select(columns)
 
     def drop_col(self, column: str) -> Self:
         self._df = self._df.drop(column)
@@ -177,10 +214,7 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
-    
-    @staticmethod
-    def fill_na(series: pl.Series, value: str) -> pl.Series:
-        return series.fill_null(value)
+
 
 
 SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
@@ -264,10 +298,10 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
     def put_col(self):
         raise NotImplementedError(self.ERR_MSG)
 
-    def get_col(self):
+    def _get_col(self):
         raise NotImplementedError(self.ERR_MSG)
 
-    def get_cols(self):
+    def _get_cols(self):
         raise NotImplementedError(self.ERR_MSG)
 
     def drop_duplicates(self):
@@ -281,16 +315,20 @@ class SparkRows(Frame[list[spark.Row]]):
 
     # WRAPPER METHODS:
 
+    @staticmethod
+    def _fill_na(series: list, value: str) -> list:
+        return [value if v is None else v for v in series]
+
+    def _get_col(self, column: str) -> list[Any]:
+        return [row[column] for row in self._df]
+
+    def _get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:
+        return [[row[c] for c in columns] for row in self._df]
+    
     def put_col(self, column: str, array) -> Self:
         array = [i.item() if isinstance(i, np.generic) else i for i in array]
         self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
-
-    def get_col(self, column: str) -> list[Any]:
-        return [row[column] for row in self._df]
-
-    def get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:
-        return [[row[c] for c in columns] for row in self._df]
 
     def drop_duplicates(self, keep: Keep) -> list[Row]:
 
@@ -311,9 +349,7 @@ class SparkRows(Frame[list[spark.Row]]):
         self._df = result
         return self
     
-    @staticmethod
-    def fill_na(series: list, value: str) -> list:
-        return [value if v is None else v for v in series]
+    
 
 
 # DISPATCHER:
@@ -322,16 +358,9 @@ class SparkRows(Frame[list[spark.Row]]):
 @singledispatch
 def wrap(df: DataFrameLike, id: str | None = None):
     """
-    Dispatch the dataframe to the appropriate wrapping handler.
-
-    Args:
-        df: The dataframe to dispatch to the appropriate handler.
-
-    Returns:
-        Frame, a DataFrame wrapped with a uniform interface.
-
-    Raises:
-        NotImplementedError
+    Wrap the dataframe with instance of `Frame`, for a generic interface
+    allowing use of selected methods such as "dropping columns", 
+    "filling nulls" etc.
     """
     del id  # Unused
     raise NotImplementedError(f"Unsupported data frame: {type(df)}")
