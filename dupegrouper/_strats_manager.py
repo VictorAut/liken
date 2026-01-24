@@ -83,6 +83,12 @@ class On:
     @property
     def and_strats(self) -> list[tuple[str, BaseStrategy]]:
         return self._strats
+    
+    def __str__(self):
+        rep = ""
+        for cs in self._strats:
+            rep += "on({}) & ".format("'{}', {}".format(cs[0], str(cs[1])))
+        return rep[:-3]
 
 
 def on(column: str, strat: BaseStrategy, /):
@@ -141,16 +147,49 @@ class StrategyManager:
     def get(self) -> StratsDict | Rules:
         return self._strats
 
-    def pretty_get(self) -> tuple[str, ...] | dict[str, tuple[str, ...]]:
-        """pretty get"""
+    def pretty_get(self) -> None | str:
+        """string representation of strats. 
+        
+        Output string must be formatted approximately such that it can be used
+        with .apply(), i.e. a string representation of one of:
+            - BaseStrategy
+            - StratsDict
+            - Rules
+        The seuqneital API with numerous additions of BaseStraegy means there
+        is not good way to retried this such that is available to "apply". So,
+        default to returning it as a list representation.
+        """
         strats = self.get()
 
-        def _parse(values):
-            return tuple(str(v) for v in values)
+        if isinstance(strats, StratsDict):         
+            # added as BaseStrategy (Sequential API)
+            if set(strats) == {DEFAULT_STRAT_KEY}:
+                
+                # short-circuit; nothing yet applied.
+                if not strats[DEFAULT_STRAT_KEY]:
+                    return
+                
+                rep = ""
+                for strat in strats[DEFAULT_STRAT_KEY]:
+                    rep += str(strat) + ",\n\t"
+                return f"[\n\t{rep[:-3]}\n]"
 
-        if set(strats) == {DEFAULT_STRAT_KEY}:
-            return tuple(_parse(strats[DEFAULT_STRAT_KEY]))
-        return {k: _parse(v) for k, v in strats.items()}
+            # Normal dict API
+            rep = ""
+            for k, values in strats.items():
+                krep = ""
+                for v in values:
+                    krep += str(v) + ",\n\t"
+                rep += f"\n\t'{k}': ({krep[:-3]},),"
+            return "{" + rep + "\n}"
+
+        # Rules API
+        if isinstance(strats, tuple):
+            rep = ""
+            for ons in strats:
+                rep += str(ons) + ",\n\t"
+            return f"Rules(\n\t{rep[:-3]}\n)"
+
 
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
