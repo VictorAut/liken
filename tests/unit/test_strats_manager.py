@@ -3,7 +3,7 @@ import pytest
 
 from dupegrouper._strats_library import BaseStrategy
 from dupegrouper._strats_manager import (
-    DEFAULT_STRAT_KEY,
+    SEQUENTIAL_API_DEFAULT_KEY,
     InvalidStrategyError,
     On,
     Rules,
@@ -88,7 +88,7 @@ def test_strategy_manager_apply_sequential_once(s1):
     sm.apply(s1)
 
     strats = sm.get()
-    assert s1 in strats[DEFAULT_STRAT_KEY]
+    assert s1 in strats[SEQUENTIAL_API_DEFAULT_KEY]
 
 
 def test_strategy_manager_apply_sequential_multiple(s1, s2, s3):
@@ -98,9 +98,9 @@ def test_strategy_manager_apply_sequential_multiple(s1, s2, s3):
     sm.apply(s3)
 
     strats = sm.get()
-    assert s1 in strats[DEFAULT_STRAT_KEY]
-    assert s2 in strats[DEFAULT_STRAT_KEY]
-    assert s3 in strats[DEFAULT_STRAT_KEY]
+    assert s1 in strats[SEQUENTIAL_API_DEFAULT_KEY]
+    assert s2 in strats[SEQUENTIAL_API_DEFAULT_KEY]
+    assert s3 in strats[SEQUENTIAL_API_DEFAULT_KEY]
 
 
 def test_strategy_manager_apply_dict_single(s1, s2, s3):
@@ -264,13 +264,13 @@ def test_pretty_get_rules_api(s1, s2, s3):
 def test_strategy_manager_reset_clears_strats(s1):
     sm = StrategyManager()
 
-    assert sm.get() == {DEFAULT_STRAT_KEY: []}
+    assert sm.get() == {SEQUENTIAL_API_DEFAULT_KEY: []}
     assert sm.pretty_get() is None
 
     sm.apply(s1)
     sm.reset()
 
-    assert sm.get() == {DEFAULT_STRAT_KEY: []}
+    assert sm.get() == {SEQUENTIAL_API_DEFAULT_KEY: []}
     assert sm.pretty_get() is None
 
 

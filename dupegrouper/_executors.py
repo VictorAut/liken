@@ -10,7 +10,7 @@ from pyspark.sql import Row, SparkSession
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper._dataframe import DF, LocalDF, SparkDF
 from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, Rules, StratsDict
+from dupegrouper._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, Rules, StratsDict
 from dupegrouper._types import UF, Columns, Keep
 
 
@@ -59,7 +59,7 @@ class LocalExecutor(Executor):
                         df = call_strat(strat, components)
             else:
                 # For sequence calls e.g.`.canonicalize("address")`
-                for strat in strats[DEFAULT_STRAT_KEY]:
+                for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     uf, n = self._build_uf(strat, df, columns)
                     components = self._get_components(uf, n)
                     df = call_strat(strat, components)

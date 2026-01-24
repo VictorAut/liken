@@ -6,7 +6,7 @@ from pyspark.sql import Row
 
 from dupegrouper._executors import LocalExecutor, SparkExecutor
 from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import DEFAULT_STRAT_KEY, StratsDict
+from dupegrouper._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, StratsDict
 
 
 ############################
@@ -24,7 +24,7 @@ def mock_strategy():
 
 @pytest.fixture
 def strats_config(mock_strategy):
-    cfg = StratsDict({DEFAULT_STRAT_KEY: [mock_strategy]})
+    cfg = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: [mock_strategy]})
     return cfg
 
 
