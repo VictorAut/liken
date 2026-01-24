@@ -24,7 +24,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from dupegrouper._constants import CANONICAL_ID, NA_MISSING_PLACEHOLDER
+from dupegrouper._constants import CANONICAL_ID, NA_PLACEHOLDER
 
 import pandas as pd
 import polars as pl
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 class BaseStrategyProtocol(Protocol):
     wdf: LocalDF
     keep: Keep
-    fill_na_placeholders: bool
+    with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
     def set_keep(self, keep: Keep) -> Self: ...
@@ -59,7 +59,7 @@ class BaseStrategy:
     Defines a deduplication strategy.
     """
 
-    fill_na_placeholders: bool = True # TODO document this
+    with_na_placeholder: bool = True # TODO document this
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -78,29 +78,13 @@ class BaseStrategy:
         self.wdf: LocalDF = wdf
         return self
 
-    def get_array(self, columns: Columns, fill_na_placeholders: bool = False) -> np.ndarray:
-        if isinstance(columns, str):
-            
-            col = self.wdf.get_col(columns)
-            # fills null values with a dummy "na" value
-            # Cannot apply generically due to polars type enforcement
-            if fill_na_placeholders:
-                col = self.wdf.fill_na(col, NA_MISSING_PLACEHOLDER)
-            
-            return np.asarray(col, dtype=object)
-        elif isinstance(columns, tuple):
-            cols = self.wdf.get_cols(columns)
-            return np.asarray(cols, dtype=object)
-        else:
-            raise TypeError("`columns` must be str or tuple[str]")
-
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
     def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> UF:
         self.validate(columns)
-        array = self.get_array(columns, fill_na_placeholders=self.fill_na_placeholders)
+        array = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
         n = len(array)
 
@@ -117,8 +101,7 @@ class BaseStrategy:
         drop_duplicates: bool,
         keep: Keep,
     ) -> LocalDF:
-        canonicals = self.get_array(CANONICAL_ID)
-        print(canonicals)
+        canonicals = self.wdf.get_canonical()
 
         n = len(canonicals)
 
@@ -238,10 +221,10 @@ class BinaryDedupers(BaseStrategy):
                     yield i, j
 
     def __invert__(self):
-        return NegatedBinaryDeduper(self)
+        return _NegatedBinaryDeduper(self)
 
 
-class NegatedBinaryDeduper(BinaryDedupers):
+class _NegatedBinaryDeduper(BinaryDedupers):
     """
     Internal strategy that negates another BinaryDedupers.
     """
@@ -271,7 +254,7 @@ class IsNA(
 
     NAME: str = "isna"
 
-    fill_na_placeholders: bool = False
+    with_na_placeholder: bool = False
 
     @override
     def _gen_similarity_pairs(self, array: np.ndarray):
@@ -311,7 +294,7 @@ class _NotNA(
     Deduplicate all non-NA / non-null values.
     """
 
-    fill_na_placeholders: bool = False
+    with_na_placeholder: bool = False
 
     @override
     def _gen_similarity_pairs(self, array: np.ndarray):
@@ -333,6 +316,71 @@ class _NotNA(
             for j in range(i + 1, len(indices)):
                 yield indices[i], indices[j]
 
+
+@final
+class StrLen(
+    BinaryDedupers,
+    SingleColumnValidationMixin,
+):
+    """
+    TODO
+    """
+
+    NAME: str = "str_len"
+
+    def __init__(self, min_len: int = 0, max_len: int | None = None):
+        super().__init__(min_len=min_len, max_len=max_len)
+        self._min_len = min_len
+        self._max_len = max_len
+
+    @override
+    def _matches(self, value: str | None) -> bool:
+        if not value:
+            return False
+        len_val = len(value)
+        if not self._max_len:
+            return len_val > self._min_len
+        return len_val > self._min_len and len_val <= self._max_len
+
+    def __str__(self):
+        return self.str_representation(self.NAME)
+
+
+@final
+class StrStartsWith(
+    BinaryDedupers,
+    SingleColumnValidationMixin,
+):
+    """
+    @private
+    Strings start with canonicalizer.
+
+    Defaults to case sensitive.
+
+    Regex is not supported, please use `StrContains` otherwise.
+    """
+
+    NAME: str = "str_startswith"
+
+    def __init__(self, pattern: str, case: bool = True):
+        super().__init__(pattern=pattern, case=case)
+        self._pattern = pattern
+        self._case = case
+
+    @override
+    def _matches(self, value: str | None) -> bool:
+        if value is None:
+            return False
+        return (
+            value.startswith(self._pattern)
+            #
+            if self._case
+            else value.lower().startswith(self._pattern.lower())
+        )
+
+    def __str__(self):
+        return self.str_representation(self.NAME)
+    
 
 @final
 class StrStartsWith(
