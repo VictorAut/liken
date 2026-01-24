@@ -26,6 +26,28 @@ def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor,
     assert dupe._executor is not None
 
 
+# No apply still exact dedupes
+
+
+@patch("dupegrouper.dedupe.StrategyManager")
+def test_no_apply_still_exact_apply_once(
+    mock_sm,
+    dataframe,
+):
+    
+    df, spark = dataframe
+    
+    sm = mock_sm.return_value
+    sm._has_applies = False
+    sm.is_sequential_applied = True
+    sm.get.return_value = {}
+    sm.reset.return_value = None
+
+    dp = Dedupe(df, spark_session=spark)
+    dp.canonicalize("address") # <-- no apply!
+
+    sm.apply.assert_called_once() 
+
 # validators
 
 
@@ -47,6 +69,39 @@ def test_validate_spark_args_valid(mock_spark_session):
 def test_validate_spark_args_missing_session():
     with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
         validate_spark_args(None)
+
+
+# Misuse of API:
+
+
+@patch("dupegrouper.dedupe.wrap")
+def test_validate_columns_args_not_used(mock_wrap, strategy_mock):
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(ValueError, match="Invalid arg: columns cannot be None"):
+        dp = Dedupe(Mock())
+        dp.apply(strategy_mock)
+        dp.canonicalize()  # <-- shouldn't be empty
+
+
+@patch("dupegrouper.dedupe.wrap")
+def test_validate_columns_args_not_none(mock_wrap, strategy_mock):
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(ValueError, match="Invalid arg: columns must be None"):
+        dp = Dedupe(Mock())
+        dp.apply({"address": strategy_mock})  # <-- label here
+        dp.canonicalize("address")  # <-- so should not be used here
+
+
+@patch("dupegrouper.dedupe.wrap")
+def test_validate_columns_args_repeated(mock_wrap, strategy_mock):
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(ValueError, match="Invalid arg: columns labels cannot be repeated"):
+        dp = Dedupe(Mock())
+        dp.apply(strategy_mock)
+        dp.canonicalize(("email", "email"))  # <-- shouldn't be repeated
 
 
 # StrategyManager

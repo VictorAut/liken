@@ -13,12 +13,13 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
+from dupegrouper import exact
 from dupegrouper._dataframe import DF, wrap
 from dupegrouper._executors import Executor, LocalExecutor, SparkExecutor
 from dupegrouper._strats_library import BaseStrategy
 from dupegrouper._strats_manager import StrategyManager, StratsDict
 from dupegrouper._types import Columns, DataFrameLike, Keep
-from dupegrouper._validators import validate_keep_arg, validate_spark_args
+from dupegrouper._validators import validate_keep_arg, validate_spark_args, validate_columns_arg
 
 
 # API:
@@ -75,7 +76,7 @@ class Dedupe(Generic[DF]):
     def canonicalize(
         self,
         columns: Columns | None = None,
-        /,
+        *,
         keep: Keep = "first",
         drop_duplicates: bool = False,
     ) -> None:
@@ -87,6 +88,11 @@ class Dedupe(Generic[DF]):
                 mapping object will be used instead
         """
         keep = validate_keep_arg(keep)
+        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        
+        # Allow use of no .apply(), assuming exact deduplication
+        if not self._sm._has_applies:
+            self.apply(exact())
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -99,7 +105,7 @@ class Dedupe(Generic[DF]):
         )
 
         self._sm.reset()
-        
+
         return self._df.unwrap()
 
         # raise TypeError("`columns` must be str or tuple[str]")
@@ -107,7 +113,7 @@ class Dedupe(Generic[DF]):
     def drop_duplicates(
         self,
         columns: Columns | None = None,
-        /,
+        *,
         keep: Keep = "first",
     ) -> None:
         """canonicalize, and group, the data based on the provided attribute
@@ -118,6 +124,11 @@ class Dedupe(Generic[DF]):
                 mapping object will be used instead
         """
         keep = validate_keep_arg(keep)
+        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        
+        # Allow use of no .apply(), assuming exact deduplication
+        if not self._sm._has_applies:
+            self._sm.apply(exact())
         strats = self._sm.get()
 
         self._df = self._executor.execute(
@@ -130,7 +141,7 @@ class Dedupe(Generic[DF]):
         )
 
         self._sm.reset()
-        
+
         return self._df.unwrap()
 
     @property

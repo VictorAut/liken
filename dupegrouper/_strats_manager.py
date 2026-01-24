@@ -5,14 +5,18 @@ from collections import UserDict
 from copy import deepcopy
 from typing import Final, Self, final
 
+from dupegrouper import exact
 from dupegrouper._strats_library import BaseStrategy
 from dupegrouper._validators import validate_strat_arg
 
 
 # CONSTANTS:
 
+# Sequential API use will load to this dictionary key by default:
 
-DEFAULT_STRAT_KEY: Final[str] = "_default_"
+SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
+
+# errors:
 
 INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
 INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseStrategy', got '{}'"
@@ -26,6 +30,8 @@ INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
 INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
 INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
 INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseStrategy', a dict or 'Rules', got '{}'"
+
+# warnings:
 
 WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence strategy with a dict strategy"
 WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
@@ -83,7 +89,7 @@ class On:
     @property
     def and_strats(self) -> list[tuple[str, BaseStrategy]]:
         return self._strats
-    
+
     def __str__(self):
         rep = ""
         for cs in self._strats:
@@ -112,18 +118,27 @@ class StrategyManager:
     """
 
     def __init__(self) -> None:
-        self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
+        self._strats = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        self._has_applies: bool = False
+
+    @property
+    def is_sequential_applied(self) -> bool:
+        """checks to see if stratgies are loaded under the default key"""
+        return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
 
     def apply(self, strat: BaseStrategy | dict | StratsDict | Rules) -> None:
+        
+        # track that at least one apply made
+        self._has_applies = True
 
         if isinstance(strat, BaseStrategy):
-            if DEFAULT_STRAT_KEY not in self._strats:
+            if not self.is_sequential_applied:
                 raise InvalidStrategyError(INVALID_SEQUENCE_AFTER_DICT_MSG)
-            self._strats[DEFAULT_STRAT_KEY].append(strat)
+            self._strats[SEQUENTIAL_API_DEFAULT_KEY].append(strat)
             return
 
         if isinstance(strat, dict | StratsDict):
-            if self._strats[DEFAULT_STRAT_KEY]:
+            if self._strats[SEQUENTIAL_API_DEFAULT_KEY]:
                 warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
             self._strats = StratsDict(strat)
             return
@@ -148,8 +163,8 @@ class StrategyManager:
         return self._strats
 
     def pretty_get(self) -> None | str:
-        """string representation of strats. 
-        
+        """string representation of strats.
+
         Output string must be formatted approximately such that it can be used
         with .apply(), i.e. a string representation of one of:
             - BaseStrategy
@@ -161,16 +176,16 @@ class StrategyManager:
         """
         strats = self.get()
 
-        if isinstance(strats, StratsDict):         
+        if isinstance(strats, StratsDict):
             # added as BaseStrategy (Sequential API)
-            if set(strats) == {DEFAULT_STRAT_KEY}:
-                
+            if self.is_sequential_applied:
+
                 # short-circuit; nothing yet applied.
-                if not strats[DEFAULT_STRAT_KEY]:
+                if not strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     return
-                
+
                 rep = ""
-                for strat in strats[DEFAULT_STRAT_KEY]:
+                for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     rep += str(strat) + ",\n\t"
                 return f"[\n\t{rep[:-3]}\n]"
 
@@ -190,10 +205,9 @@ class StrategyManager:
                 rep += str(ons) + ",\n\t"
             return f"Rules(\n\t{rep[:-3]}\n)"
 
-
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
-        self._strats = StratsDict({DEFAULT_STRAT_KEY: []})
+        self._strats = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
 
 
 # EXCEPTIONS:
