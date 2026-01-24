@@ -65,8 +65,8 @@ def test_matrix_and(strat, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dg = Dedupe(df, spark_session=spark_session)
-    dg.apply(Rules(strat))
-    dg.canonicalize()
+    dp = Dedupe(df, spark_session=spark_session)
+    dp.apply(Rules(strat))
+    df = dp.canonicalize()
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

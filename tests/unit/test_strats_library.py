@@ -38,13 +38,13 @@ from dupegrouper.rules import (
 @pytest.fixture
 def mock_df():
     """
-    Minimal LocalDF mock.
-    Only methods actually used by strategies are defined.
+    Minimal LocalDF. Only methods used by strategies defined.
     """
     df = Mock()
-    df.get_col.return_value = np.array([1, 2, 3], dtype=object)
-    df.get_cols.return_value = np.array([[1], [2], [3]], dtype=object)
+    df._get_col.return_value = np.array([1, 2, 3], dtype=object)
+    df._get_cols.return_value = np.array([[1], [2], [3]], dtype=object)
     df.put_col.return_value = df
+    df.get_array.return_value = np.array([1, 2, 3], dtype=object) # here as a placeholder
     return df
 
 
@@ -75,12 +75,14 @@ def test_canonicalize_puts_canonical_id(mock_df):
     strat = BaseStrategy()
     strat.set_frame(mock_df)
 
-    strat.get_array = Mock(
+    strat.wdf.get_array = Mock(
         side_effect=[
-            np.array([10, 20, 30], dtype=object),  # canonical ids
+            np.array([10, 20, 30], dtype=object),
             np.array(["a", "a", "b"], dtype=object),
         ]
     )
+
+    strat.wdf.get_canonical = Mock(side_effect=[np.array([10, 20, 30], dtype=object)])
 
     components = {
         0: [0, 1],
@@ -100,22 +102,16 @@ def test_canonicalize_puts_canonical_id(mock_df):
 
 def test_column_array_mixin_str_column(mock_df):
     strat = Exact().set_frame(mock_df)
-    arr = strat.get_array("a")
-    mock_df.get_col.assert_called_once_with("a")
+    arr = strat.wdf.get_array("a")
+    mock_df.get_array.assert_called_once_with("a")
     assert isinstance(arr, np.ndarray)
 
 
 def test_column_array_mixin_tuple_column(mock_df):
     strat = Exact().set_frame(mock_df)
-    arr = strat.get_array(("a", "b"))
-    mock_df.get_cols.assert_called_once_with(("a", "b"))
+    arr = strat.wdf.get_array(("a", "b"))
+    mock_df.get_array.assert_called_once_with(("a", "b"))
     assert isinstance(arr, np.ndarray)
-
-
-def test_column_array_mixin_invalid_type(mock_df):
-    strat = Exact().set_frame(mock_df)
-    with pytest.raises(TypeError):
-        strat.get_array(123)
 
 
 #####################

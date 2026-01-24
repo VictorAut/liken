@@ -27,8 +27,8 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
         "address": (exact(),),
         "email": (exact(),),
     }
-    dg = Dedupe(df, spark_session=spark)
-    dg.apply(strategies)
-    dg.canonicalize()
+    dp = Dedupe(df, spark_session=spark)
+    dp.apply(strategies)
+    df = dp.canonicalize()
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_ids
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids

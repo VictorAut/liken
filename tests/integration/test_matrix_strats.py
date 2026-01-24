@@ -17,7 +17,15 @@ from dupegrouper import (
 )
 from dupegrouper._constants import CANONICAL_ID
 from dupegrouper.custom import register
-from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith, isna
+from dupegrouper.rules import (
+    Rules,
+    isna,
+    on,
+    str_contains,
+    str_endswith,
+    str_len,
+    str_startswith,
+)
 
 
 # CONSTANTS:
@@ -120,6 +128,16 @@ PARAMS = [
     (str_endswith, SINGLE_COL, {"pattern": "kingdom", "case": True}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     (str_endswith, SINGLE_COL, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 1]),
     #
+    # STRING LEN:
+    # i.e. no deduping because no such thing as max_len and min_len being inversered
+    (str_len, "email", {"min_len": 10, "max_len": 9}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    # no deduping because bounds are out of range
+    (str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    # total deduping given no bounds
+    (str_len, "email", {}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    # resasonable bounds, given the column
+    (str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
+    #
     # STRING CONTAINS:
     # i.e. no deduping because no string starts with the pattern
     (str_contains, SINGLE_COL, {"pattern": "zzzzz", "case": True, "regex": True}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -160,11 +178,11 @@ def test_matrix_strats_sequence_api(strategy, columns, strat_kwarg, expected_can
 
     df, spark_session = dataframe
 
-    dg = Dedupe(df, spark_session=spark_session)
-    dg.apply(strategy(**strat_kwarg))
-    dg.canonicalize(columns)
+    dp = Dedupe(df, spark_session=spark_session)
+    dp.apply(strategy(**strat_kwarg))
+    df = dp.canonicalize(columns)
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
 @pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
@@ -172,11 +190,11 @@ def test_matrix_strats_dict_api(strategy, columns, strat_kwarg, expected_canonic
 
     df, spark_session = dataframe
 
-    dg = Dedupe(df, spark_session=spark_session)
-    dg.apply({columns: [strategy(**strat_kwarg)]})
-    dg.canonicalize()
+    dp = Dedupe(df, spark_session=spark_session)
+    dp.apply({columns: [strategy(**strat_kwarg)]})
+    df = dp.canonicalize()
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
 @pytest.mark.parametrize("strategy, columns, strat_kwarg, expected_canonical_id", PARAMS)
@@ -184,8 +202,8 @@ def test_matrix_strats_rules_api(strategy, columns, strat_kwarg, expected_canoni
 
     df, spark_session = dataframe
 
-    dg = Dedupe(df, spark_session=spark_session)
-    dg.apply(Rules(on(columns, strategy(**strat_kwarg))))
-    dg.canonicalize()
+    dp = Dedupe(df, spark_session=spark_session)
+    dp.apply(Rules(on(columns, strategy(**strat_kwarg))))
+    df = dp.canonicalize()
 
-    assert helpers.get_column_as_list(dg.df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

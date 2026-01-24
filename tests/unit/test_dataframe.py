@@ -48,14 +48,14 @@ def test_wrapper_methods_pandas(df_pandas, new_col):
     assert result is wdf
     assert "new_col" in wdf.unwrap().columns
 
-    series = wdf.get_col("new_col")
+    series = wdf._get_col("new_col")
     assert isinstance(series, pd.Series)
 
     dropped = result.drop_col("new_col")
     assert dropped is wdf
     assert "new_col" not in wdf.unwrap().columns
 
-    df_subset = wdf.get_cols(("email", "account"))
+    df_subset = wdf._get_cols(("email", "account"))
     assert isinstance(df_subset, pd.DataFrame)
     assert list(df_subset.columns) == ["email", "account"]
 
@@ -67,14 +67,14 @@ def test_wrapper_methods_polars(df_polars, new_col):
     assert result is wdf
     assert "test_col" in wdf.unwrap().columns
 
-    series = wdf.get_col("test_col")
+    series = wdf._get_col("test_col")
     assert hasattr(series, "dtype")  # basic polars Series check
 
     dropped = result.drop_col("test_col")
     assert dropped is wdf
     assert "test_col" not in wdf.unwrap().columns
 
-    df_subset = wdf.get_cols(("email", "account"))
+    df_subset = wdf._get_cols(("email", "account"))
     assert hasattr(df_subset, "columns")
 
 
@@ -88,9 +88,9 @@ def test_wrapper_methods_spark(df_spark):
     with pytest.raises(NotImplementedError):
         wdf.put_col()
     with pytest.raises(NotImplementedError):
-        wdf.get_col()
+        wdf._get_col()
     with pytest.raises(NotImplementedError):
-        wdf.get_cols()
+        wdf._get_cols()
     with pytest.raises(NotImplementedError):
         wdf.drop_duplicates()
 
@@ -101,10 +101,10 @@ def test_wrapper_methods_sparkrows(df_sparkrows, new_col):
     result = wdf.put_col("new_col", new_col)
     assert result is wdf
 
-    col_values = wdf.get_col("new_col")
+    col_values = wdf._get_col("new_col")
     assert col_values == new_col
 
-    cols_values = wdf.get_cols(("email", "account"))
+    cols_values = wdf._get_cols(("email", "account"))
     assert all(isinstance(c, list) for c in cols_values)
 
 
