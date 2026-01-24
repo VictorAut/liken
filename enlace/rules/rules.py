@@ -1,3 +1,6 @@
+"""TODO"""
+
+from typing import final
 from .._strats_library import (
     BaseStrategy,
     IsNA,
@@ -10,6 +13,7 @@ from .._strats_manager import Rules as _Rules
 from .._strats_manager import on as _on
 
 
+@final
 class Rules(_Rules):
     """TODO"""
 
@@ -28,9 +32,11 @@ def isna():
     """TODO"""
     return IsNA()
 
+
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
     """TODO"""
     return StrLen(min_len=min_len, max_len=max_len)
+
 
 def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     """TODO"""

@@ -34,9 +34,9 @@ def test_no_apply_still_exact_apply_once(
     mock_sm,
     dataframe,
 ):
-    
+
     df, spark = dataframe
-    
+
     sm = mock_sm.return_value
     sm._has_applies = False
     sm.is_sequential_applied = True
@@ -44,9 +44,10 @@ def test_no_apply_still_exact_apply_once(
     sm.reset.return_value = None
 
     dp = Dedupe(df, spark_session=spark)
-    dp.canonicalize("address") # <-- no apply!
+    dp.canonicalize("address")  # <-- no apply!
 
-    sm.apply.assert_called_once() 
+    sm.apply.assert_called_once()
+
 
 # validators
 
