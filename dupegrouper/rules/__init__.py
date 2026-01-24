@@ -4,6 +4,7 @@ from dupegrouper.rules.rules import (
     isna,
     str_contains,
     str_endswith,
+    str_len,
     str_startswith,
 )
 
@@ -14,5 +15,6 @@ __all__ = [
     "isna",
     "str_contains",
     "str_endswith",
+    "str_len",
     "str_startswith",
 ]
