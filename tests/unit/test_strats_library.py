@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from dupegrouper import (
+from enlace import (
     cosine,
     exact,
     fuzzy,

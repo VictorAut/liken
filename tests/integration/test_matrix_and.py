@@ -6,7 +6,7 @@ import typing
 
 import pytest
 
-from dupegrouper import Dedupe, fuzzy
+from enlace import Dedupe, fuzzy
 from enlace._constants import CANONICAL_ID
 from enlace.custom import register
 from enlace.rules import Rules, on, isna

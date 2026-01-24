@@ -6,7 +6,7 @@ import typing
 
 import pytest
 
-from dupegrouper import (
+from enlace import (
     Dedupe,
     cosine,
     exact,
