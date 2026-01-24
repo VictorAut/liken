@@ -99,6 +99,10 @@ class Dedupe(Generic[DF]):
         )
 
         self._sm.reset()
+        
+        return self._df.unwrap()
+
+        # raise TypeError("`columns` must be str or tuple[str]")
 
     def drop_duplicates(
         self,
@@ -126,6 +130,8 @@ class Dedupe(Generic[DF]):
         )
 
         self._sm.reset()
+        
+        return self._df.unwrap()
 
     @property
     def strats(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
