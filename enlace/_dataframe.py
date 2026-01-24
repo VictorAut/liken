@@ -1,7 +1,25 @@
 """
-@private
-ABC for wrapped dataframe interfaces
+This module provides wrappers to allow for a uniform interface across different
+backends. The backends covered are:
+    - Pandas
+    - Polars
+    - Spark DataFrames
+    - Spark RDDs
+    - Spark Rows
+
+Whilst Pandas and Polars wrappers are similarly wrapped, note the following:
+- Spark Rows inherits the majority of functionality related to getting
+    columns, puting columns, fill na etc
+- Conversely, Spark DataFrames take care of adding canonical IDs
+
+Additional Points regarding Spark. Upon initialising the public API with a 
+Spark DataFrame, the wrapper will call the SparkDF class which will create
+canonical IDs. However the output to this is RDDs which are then processed
+by the executor into Spark Rows which are dispatched to worker nodes. Spark
+Rows can be fully recovered to a Spark DataFrame using the same SparkDF class.
 """
+
+# mypy: disable-error-code="no-redef"
 
 from __future__ import annotations
 
@@ -18,25 +36,28 @@ from pyspark.sql import Row
 from pyspark.sql.types import LongType, StructField, StructType
 from typing_extensions import override
 
-from enlace._constants import CANONICAL_ID, PYSPARK_TYPES, NA_PLACEHOLDER
-from enlace._types import DataFrameLike, Keep, Columns
+from enlace._constants import CANONICAL_ID, NA_PLACEHOLDER, PYSPARK_TYPES
+from enlace._types import Columns, DataFrameLike, Keep, SeriesLike
+
 
 
 # TYPES
 
 
-T = TypeVar("T")
+D = TypeVar("D") # dataframe
+S = TypeVar("S") # Series
+
 
 
 # BASE
 
 
-class Frame(Generic[T]):
+class Frame(Generic[D, S]):
 
-    def __init__(self, df: T):
-        self._df: T = df
+    def __init__(self, df: D):
+        self._df: D = df
 
-    def unwrap(self) -> T:
+    def unwrap(self) -> D:
         return self._df
 
     def __getattr__(self, name: str) -> Any:
@@ -51,45 +72,44 @@ class Frame(Generic[T]):
         dataframe.
         """
         return getattr(self._df, name)
-    
 
-    def _get_col():
-        pass
+    def _get_col(self, columns: str) -> S:
+        del columns
+        raise NotImplementedError
 
-    def _get_cols():
-        pass
-    
-    def _fill_na():
-        pass
+    def _get_cols(self, columns: tuple[str, ...]) -> D:
+        del columns
+        raise NotImplementedError
+
+    @staticmethod
+    def _fill_na(series: S, value: str) -> S:
+        del series, value
+        raise NotImplementedError
 
     def get_array(self, columns: Columns, with_na: bool = False) -> np.ndarray:
         """Generalise the getting of a column, or columns of a df to an array.
-        
+
         Handles single column and multicolumn. For instances of single column
         the initial column can initially be filled null placeholders, to allow
         for use my strategies. This is optional so that specific strategies
         that do care about nulls are not affected (e.g. IsNA).
         """
         if isinstance(columns, str):
-            cols = self._get_col(columns)
+            cols: S = self._get_col(columns)
             if with_na:
-                cols = self._fill_na(cols, NA_PLACEHOLDER)
-            
-        if isinstance(columns, tuple):
-            cols = self._get_cols(columns)
-            
-        return np.asarray(cols, dtype=object)
-    
+                return np.asarray(self._fill_na(cols, NA_PLACEHOLDER), dtype=object)
+            return np.asarray(cols, dtype=object)
+        return np.asarray(self._get_cols(columns), dtype=object)
+
     def get_canonical(self) -> np.ndarray:
         """convenience method for clean use"""
         return self.get_array(CANONICAL_ID)
 
 
-
 # CANONICAL ID
 
 
-# TODO type this with generic
+# TODO type this with generic?
 class AddsCanonical(Protocol):
     def _df_as_is(self, df): ...
     def _df_overwrite_id(self, df, id: str): ...
@@ -125,7 +145,7 @@ class CanonicalIdMixin:
 
 
 @final
-class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
+class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
 
     def __init__(self, df: pd.DataFrame, id: str | None = None):
         self._df: pd.DataFrame = self._add_canonical_id(df, id)
@@ -156,7 +176,7 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
     def _get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
         return self._df[list(columns)]
-    
+
     def put_col(self, column: str, array) -> Self:
         self._df = self._df.assign(**{column: array})
         return self
@@ -171,7 +191,7 @@ class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
 
 
 @final
-class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
+class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
 
     def __init__(self, df: pl.DataFrame, id: str | None = None):
         self._df: pl.DataFrame = self._add_canonical_id(df, id)
@@ -201,7 +221,7 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
 
     def _get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
         return self._df.select(columns)
-    
+
     def put_col(self, column: str, array) -> Self:
         array = pl.Series(array)  # important; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
@@ -216,12 +236,11 @@ class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
         return self
 
 
-
 SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
 
 
 @final
-class SparkDF(Frame[SparkObject], CanonicalIdMixin):
+class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 
     ERR_MSG = "Method is available for spark RDD, not spark DataFrame"
 
@@ -231,14 +250,14 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
         id: str | None = None,
         is_init: bool = True,
     ):
-        # new spark plan
+        # new spark plan for safety
         df = df.select("*")
 
         self._df: SparkObject
         if is_init:
-            self._df = self._add_canonical_id(df, id)
+            self._df: RDD[Row] = self._add_canonical_id(df, id)
         else:
-            self._df = df
+            self._df: spark.DataFrame = df
 
         self._id = id
 
@@ -267,6 +286,9 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     @staticmethod
     def _new_schema(df: spark.DataFrame, id: str | None = None) -> StructType:
+        """Recreate the schema of the dataframe dynamically based on the type
+        of the id field.
+        """
         fields = df.schema.fields
         if id:
             dtype = dict(df.dtypes)[id]
@@ -292,6 +314,7 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
     # WRAPPER METHODS:
 
     def drop_col(self, column: str) -> Self:
+        """Only applies to Spark DataFrame to remove canonical ID"""
         self._df = self._df.drop(column)
         return self
 
@@ -309,9 +332,9 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
 
 @final
-class SparkRows(Frame[list[spark.Row]]):
+class SparkRows(Frame[list[spark.Row], list[Any]]):
     def __init__(self, df: list[spark.Row]):
-        self._df = df
+        self._df: list[spark.Row] = df
 
     # WRAPPER METHODS:
 
@@ -322,15 +345,15 @@ class SparkRows(Frame[list[spark.Row]]):
     def _get_col(self, column: str) -> list[Any]:
         return [row[column] for row in self._df]
 
-    def _get_cols(self, columns: tuple[str, ...]) -> list[list[Any]]:
+    def _get_cols(self, columns: tuple[str, ...]) -> list[spark.Row]:
         return [[row[c] for c in columns] for row in self._df]
-    
+
     def put_col(self, column: str, array) -> Self:
         array = [i.item() if isinstance(i, np.generic) else i for i in array]
         self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
-    def drop_duplicates(self, keep: Keep) -> list[Row]:
+    def drop_duplicates(self, keep: Keep) -> Self:
 
         seen: set[Hashable] = set()
         result: list[Row] = []
@@ -348,8 +371,6 @@ class SparkRows(Frame[list[spark.Row]]):
 
         self._df = result
         return self
-    
-    
 
 
 # DISPATCHER:
@@ -359,7 +380,7 @@ class SparkRows(Frame[list[spark.Row]]):
 def wrap(df: DataFrameLike, id: str | None = None):
     """
     Wrap the dataframe with instance of `Frame`, for a generic interface
-    allowing use of selected methods such as "dropping columns", 
+    allowing use of selected methods such as "dropping columns",
     "filling nulls" etc.
     """
     del id  # Unused

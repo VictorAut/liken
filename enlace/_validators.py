@@ -1,3 +1,4 @@
+"""TODO"""
 from collections import Counter
 from typing import Any, Final, Literal
 
@@ -15,10 +16,7 @@ INVALID_COLUMNS_EMPTY: Final[str] = (
     INVALID
     + "columns cannot be None, a column label of tuple of column labels must be provided when using sequential API."
 )
-INVALID_COLUMNS_REPEATED: Final[str] = (
-    INVALID
-    + "columns labels cannot be repeated. Repeated labels: '{}'"
-)
+INVALID_COLUMNS_REPEATED: Final[str] = INVALID + "columns labels cannot be repeated. Repeated labels: '{}'"
 INVALID_COLUMNS_NOT_NONE: Final[str] = (
     INVALID + "columns must be None when using the dict API, as they have been defined as dictionary keys."
 )
@@ -54,7 +52,9 @@ def validate_columns_arg(
             raise ValueError(INVALID_COLUMNS_EMPTY)
 
         if isinstance(columns, tuple):
-            for label, count in Counter(columns,).items():
+            for label, count in Counter(
+                columns,
+            ).items():
                 if count > 1:
                     raise ValueError(INVALID_COLUMNS_REPEATED.format(label))
 

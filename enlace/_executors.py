@@ -1,9 +1,11 @@
+# mypy: disable-error-code="no-redef"
+
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterator
 from functools import partial
-from typing import TYPE_CHECKING, Protocol, Type, cast, final
+from typing import TYPE_CHECKING, Protocol, Type, cast, final, TypeAlias
 
 from pyspark.sql import Row, SparkSession
 
@@ -18,6 +20,10 @@ if TYPE_CHECKING:
     from enlace.dedupe import Dedupe
 
 
+SingleComponents: TypeAlias = dict[int, list[int]]
+MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
+
+
 class Executor(Protocol[DF]):
     def execute(
         self,
@@ -25,7 +31,10 @@ class Executor(Protocol[DF]):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict,
+        strats: StratsDict | Rules,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
     ) -> DF: ...
 
 
@@ -55,13 +64,13 @@ class LocalExecutor(Executor):
                 for col, iter_strats in strats.items():
                     for strat in iter_strats:
                         uf, n = self._build_uf(strat, df, col)
-                        components = self._get_components(uf, n)
+                        components: SingleComponents = self._get_components(uf, n)
                         df = call_strat(strat, components)
             else:
                 # For sequence calls e.g.`.canonicalize("address")`
                 for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     uf, n = self._build_uf(strat, df, columns)
-                    components = self._get_components(uf, n)
+                    components: SingleComponents = self._get_components(uf, n)
                     df = call_strat(strat, components)
 
         if isinstance(strats, Rules):
@@ -70,7 +79,7 @@ class LocalExecutor(Executor):
                 for col, strat in stage.and_strats:
                     uf, n = self._build_uf(strat, df, col)
                     ufs.append(uf)
-                components = self._get_multi_components(ufs, n)
+                components: MultiComponents = self._get_multi_components(ufs, n)
                 df = call_strat(strat, components)
 
         if drop_canonical_id:
@@ -89,7 +98,7 @@ class LocalExecutor(Executor):
     def _get_components(
         uf: UF,
         n: int,
-    ) -> dict[int, list[int]]:
+    ) -> SingleComponents:
         components = defaultdict(list)
         for i in range(n):
             components[uf[i]].append(i)
@@ -99,7 +108,7 @@ class LocalExecutor(Executor):
     def _get_multi_components(
         ufs: list[UF],
         n: int,
-    ) -> dict[tuple[int, ...], list[int]]:
+    ) -> MultiComponents:
         components = defaultdict(list)
         for i in range(n):
             signature = tuple(uf[i] for uf in ufs)
@@ -109,7 +118,7 @@ class LocalExecutor(Executor):
     @staticmethod
     def _call_strat(
         strat: BaseStrategy,
-        components: dict[int | tuple[int, ...], list[int]],
+        components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
     ) -> LocalDF:
@@ -133,7 +142,7 @@ class SparkExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict,
+        strats: StratsDict | Rules,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -182,7 +191,7 @@ class SparkExecutor(Executor):
         *,
         factory: Type[Dedupe[SparkDF]],
         partition: Iterator[Row],
-        strats: StratsDict,
+        strats: StratsDict | Rules,
         id: str | None,
         columns: Columns | None,
         drop_duplicates: bool,

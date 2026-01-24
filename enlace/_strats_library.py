@@ -15,6 +15,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol, Self, final
 
 import numpy as np
+import pandas as pd
 from datasketch import MinHash, MinHashLSH
 from networkx.utils.union_find import UnionFind
 from numpy.linalg import norm
@@ -24,15 +25,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from enlace._constants import CANONICAL_ID, NA_PLACEHOLDER
+from enlace._constants import CANONICAL_ID
 
-import pandas as pd
-import polars as pl
 
 if TYPE_CHECKING:
     from enlace._dataframe import LocalDF
     from enlace._types import UF, Columns, Keep, SimilarPairIndices
-    
+    from enlace._executors import SingleComponents, MultiComponents
 
 
 # BASE STRATEGY:
@@ -40,41 +39,39 @@ if TYPE_CHECKING:
 
 class BaseStrategyProtocol(Protocol):
     wdf: LocalDF
-    keep: Keep
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
-    def set_keep(self, keep: Keep) -> Self: ...
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
-    def _get_components(self, columns: Columns) -> dict[int, list[int]]: ...
-    def canonicalize(self, columns: Columns) -> LocalDF: ...
-    def get_array(self, columns: Columns) -> np.ndarray: ...
+    def build_union_find(self, columns: Columns) -> tuple[UF, int]: ...
+    def canonicalizer(
+        self,
+        *,
+        components: SingleComponents | MultiComponents,
+        drop_duplicates: bool,
+        keep: Keep,
+    ) -> LocalDF: ...
+    def str_representation(self, name: str) -> str: ...
+    
+    # available with mixin
     def validate(self, columns: Columns) -> None: ...
 
 
-class BaseStrategy:
+class BaseStrategy(BaseStrategyProtocol):
     """
     @private
 
     Defines a deduplication strategy.
     """
 
-    with_na_placeholder: bool = True # TODO document this
+    with_na_placeholder: bool = True  # TODO document this
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
         self._init_kwargs = kwargs
 
     def set_frame(self, wdf: LocalDF) -> Self:
-        """Inject dataframe data and load dataframe methods corresponding
-        to the type of the dataframe the corresponding methods.
-
-        Args:
-            df: The dataframe to set
-
-        Returns:
-            self: i.e. allow for further chaining
-        """
+        """Inject dataframe and interface methods"""
         self.wdf: LocalDF = wdf
         return self
 
@@ -82,7 +79,7 @@ class BaseStrategy:
         del array  # Unused
         raise NotImplementedError
 
-    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> UF:
+    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> tuple[UF, int]:
         self.validate(columns)
         array = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
@@ -95,9 +92,9 @@ class BaseStrategy:
         return uf, n
 
     def canonicalizer(
-        self: BaseStrategyProtocol,
+        self,
         *,
-        components: dict[int | tuple[int, ...], list[int]],
+        components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
     ) -> LocalDF:
@@ -146,8 +143,7 @@ class SingleColumnValidationMixin:
     @private
     """
 
-    @staticmethod
-    def validate(columns: Any) -> None:
+    def validate(self, columns: Columns) -> None:
         if not isinstance(columns, str):
             raise ValueError("For single column strategies, `columns` must be defined as a string")
 
@@ -157,8 +153,7 @@ class CompoundColumnValidationMixin:
     @private
     """
 
-    @staticmethod
-    def validate(columns: Any) -> None:
+    def validate(self, columns: Columns) -> None:
         if not isinstance(columns, tuple):
             raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
 
@@ -174,6 +169,7 @@ class Exact(BaseStrategy):
 
     NAME: str = "exact"
 
+    @override
     def validate(self, columns):
         del columns  # Unused
         pass
@@ -345,42 +341,6 @@ class StrLen(
     def __str__(self):
         return self.str_representation(self.NAME)
 
-
-@final
-class StrStartsWith(
-    BinaryDedupers,
-    SingleColumnValidationMixin,
-):
-    """
-    @private
-    Strings start with canonicalizer.
-
-    Defaults to case sensitive.
-
-    Regex is not supported, please use `StrContains` otherwise.
-    """
-
-    NAME: str = "str_startswith"
-
-    def __init__(self, pattern: str, case: bool = True):
-        super().__init__(pattern=pattern, case=case)
-        self._pattern = pattern
-        self._case = case
-
-    @override
-    def _matches(self, value: str | None) -> bool:
-        if value is None:
-            return False
-        return (
-            value.startswith(self._pattern)
-            #
-            if self._case
-            else value.lower().startswith(self._pattern.lower())
-        )
-
-    def __str__(self):
-        return self.str_representation(self.NAME)
-    
 
 @final
 class StrStartsWith(

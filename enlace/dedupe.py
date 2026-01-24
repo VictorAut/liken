@@ -19,7 +19,11 @@ from enlace._executors import Executor, LocalExecutor, SparkExecutor
 from enlace._strats_library import BaseStrategy
 from enlace._strats_manager import StrategyManager, StratsDict
 from enlace._types import Columns, DataFrameLike, Keep
-from enlace._validators import validate_keep_arg, validate_spark_args, validate_columns_arg
+from enlace._validators import (
+    validate_columns_arg,
+    validate_keep_arg,
+    validate_spark_args,
+)
 
 
 # API:
@@ -79,7 +83,7 @@ class Dedupe(Generic[DF]):
         *,
         keep: Keep = "first",
         drop_duplicates: bool = False,
-    ) -> None:
+    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
@@ -89,7 +93,7 @@ class Dedupe(Generic[DF]):
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
-        
+
         # Allow use of no .apply(), assuming exact deduplication
         if not self._sm._has_applies:
             self.apply(exact())
@@ -115,7 +119,7 @@ class Dedupe(Generic[DF]):
         columns: Columns | None = None,
         *,
         keep: Keep = "first",
-    ) -> None:
+    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """canonicalize, and group, the data based on the provided attribute
 
         Args:
@@ -125,7 +129,7 @@ class Dedupe(Generic[DF]):
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
-        
+
         # Allow use of no .apply(), assuming exact deduplication
         if not self._sm._has_applies:
             self._sm.apply(exact())
@@ -145,11 +149,12 @@ class Dedupe(Generic[DF]):
         return self._df.unwrap()
 
     @property
-    def strats(self) -> None | tuple[str, ...] | dict[str, tuple[str, ...]]:
+    def strats(self) -> str | None:
         """
         Returns the strategies currently stored in the strategy manager.
 
-        If no strategies are stored, returns `None`. Otherwise, returns a tuple
+        If no strategies are stored, returns None. Otherwise, returns a string
+        representation of the strategies containedtuple
         of strategy names or a dictionary mapping attributes to their
         respective strategies.
 

@@ -75,6 +75,8 @@ warn_no_return = false
 module = ["multipledispatch.*"]
 follow_untyped_imports = true
 
+[tool.pylint]
+max-line-length=120
 
 # build system
 

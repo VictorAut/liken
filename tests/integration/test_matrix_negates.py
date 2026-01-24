@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-
 import pytest
 
 from enlace import Dedupe
 from enlace._constants import CANONICAL_ID
-from enlace.rules import Rules, on, str_contains, str_endswith, str_startswith, isna, str_len
+from enlace.rules import (
+    Rules,
+    isna,
+    on,
+    str_contains,
+    str_endswith,
+    str_len,
+    str_startswith,
+)
 
 
 # fmt: off

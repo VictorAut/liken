@@ -1,4 +1,3 @@
-
 import pytest
 
 from enlace._strats_library import BaseStrategy
@@ -247,6 +246,7 @@ def test_pretty_get_dict_api(s1, s2, s3):
 
     pretty = sm.pretty_get()
     assert pretty == "{\n\t'col_a': (dummy_strategy(),\n\tdummy_strategy(),),\n\t'col_b': (dummy_strategy(),),\n}"
+
 
 def test_pretty_get_rules_api(s1, s2, s3):
     sm = StrategyManager()

@@ -44,7 +44,7 @@ def mock_df():
     df._get_col.return_value = np.array([1, 2, 3], dtype=object)
     df._get_cols.return_value = np.array([[1], [2], [3]], dtype=object)
     df.put_col.return_value = df
-    df.get_array.return_value = np.array([1, 2, 3], dtype=object) # here as a placeholder
+    df.get_array.return_value = np.array([1, 2, 3], dtype=object)  # here as a placeholder
     return df
 
 

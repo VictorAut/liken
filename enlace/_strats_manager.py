@@ -5,7 +5,6 @@ from collections import UserDict
 from copy import deepcopy
 from typing import Final, Self, final
 
-from enlace import exact
 from enlace._strats_library import BaseStrategy
 from enlace._validators import validate_strat_arg
 
@@ -42,6 +41,11 @@ WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' 
 
 @final
 class StratsDict(UserDict):
+    """Container for combnations of strategies in the Sequential and Dict APIs
+    
+    For Sequential API all values (strategies) are added under a default key.
+    
+    For Dict API column label(s) (i.e. str or tuple) are the keys."""
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
@@ -59,8 +63,8 @@ class StratsDict(UserDict):
 # STRATS RULES CONFIG
 
 
-@final
 class Rules(tuple):
+    """Container for a combinations of On strategy in the Rules API"""
     def __new__(cls, *items):
         if len(items) == 1 and isinstance(items[0], tuple):
             items = items[0]
@@ -77,12 +81,27 @@ class Rules(tuple):
 
 @final
 class On:
+    """Unit container for a single strategy in the Rules API"""
+
     def __init__(self, column: str, strat: BaseStrategy):
         self._column = column
         self._strat = validate_strat_arg(strat)
         self._strats: list[tuple[str, BaseStrategy]] = [(column, strat)]
 
     def __and__(self, other: On) -> Self:
+        """Overloads `&` operator
+        
+        Mutates first instance of On in chain of `&` operates On instances.
+        Collectes the combinations of strategies into a single iterable for
+        that step. The executor will then apply all these combined strategies
+        and select union find components that satisfy all the combinations.
+        
+        Usage:
+            On("address", exact) & On("email", isna())
+
+        Returns:
+            Self, specifically Self of the first On.     
+        """
         self._strats.append((other._column, other._strat))
         return self
 
@@ -91,6 +110,10 @@ class On:
         return self._strats
 
     def __str__(self):
+        """string representation
+        
+        Parses a single On or combinations of On operated with `&`
+        """
         rep = ""
         for cs in self._strats:
             rep += "on({}) & ".format("'{}', {}".format(cs[0], str(cs[1])))
@@ -98,6 +121,7 @@ class On:
 
 
 def on(column: str, strat: BaseStrategy, /):
+    """Functional API version made available in `rules` sub-package"""
     return On(column, strat)
 
 
@@ -109,16 +133,22 @@ class StrategyManager:
     """
     Manage and validate collection(s) of deduplication strategies.
 
-    Strategies are collected into a dictionary-like collection where keys are
-    attribute names, and values are lists of strategies. Validation is provided
-    upon addition allowing only the following stratgies types:
-        - `BaseStrategy`
-    A public property exposes stratgies upon successul addition and validation.
-    A `InvalidStrategyError` is thrown, otherwise.
+    Supports addition of strategies as part of the three APIs:
+    - Sequential
+    - Dict
+    - Rules
+
+    For Sequential strategies, as instances of `BaseStrategy` are sequentially
+    to an idential structure of the Dict API but under a single default
+    dictionary key. Keys are column names, and values are iterables of 
+    strategies.
+    
+    Raises:
+        InvalidStrategyError for any misconfigured strategy
     """
 
     def __init__(self) -> None:
-        self._strats = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        self._strats: StratsDict | Rules = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
         self._has_applies: bool = False
 
     @property
@@ -127,8 +157,22 @@ class StrategyManager:
         return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
 
     def apply(self, strat: BaseStrategy | dict | StratsDict | Rules) -> None:
+        """Loads a strategy into the manager
         
+        This function currently handles all possible instances of strategy, and
+        the implementation achieves this by writing to the strategy dictionary
+        or overwriting the dictionary with `Rules`. 
+        
+        If the input strat is `BaseStrategy` then "Sequential" API is in use. If
+        dict (or StratsDict — even though this is not public) then it is the 
+        "Dict" API. Else "Rules" API is in use.
+        
+        Note also that as Rules contains On and combinations of On operated
+        with & results in self mutation, need deep copy to allow for
+        serialization to Spark workers."""
+
         # track that at least one apply made
+        # if not, used by `Dedupe` to include an exact deduper by default
         self._has_applies = True
 
         if isinstance(strat, BaseStrategy):
@@ -182,7 +226,7 @@ class StrategyManager:
 
                 # short-circuit; nothing yet applied.
                 if not strats[SEQUENTIAL_API_DEFAULT_KEY]:
-                    return
+                    return None
 
                 rep = ""
                 for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
@@ -219,5 +263,5 @@ class InvalidStrategyError(TypeError):
         super().__init__(msg)
 
 
-def warn(msg: str) -> Warning:
+def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)
