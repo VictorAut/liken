@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from dupegrouper import exact
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper.dedupe import Dedupe
+from enlace._constants import CANONICAL_ID
+from enlace.dedupe import Dedupe
 
 
 @pytest.mark.parametrize(

@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, Protocol, Type, cast, final
 
 from pyspark.sql import Row, SparkSession
 
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper._dataframe import DF, LocalDF, SparkDF
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, Rules, StratsDict
-from dupegrouper._types import UF, Columns, Keep
+from enlace._constants import CANONICAL_ID
+from enlace._dataframe import DF, LocalDF, SparkDF
+from enlace._strats_library import BaseStrategy
+from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, Rules, StratsDict
+from enlace._types import UF, Columns, Keep
 
 
 if TYPE_CHECKING:
-    from dupegrouper.dedupe import Dedupe
+    from enlace.dedupe import Dedupe
 
 
 class Executor(Protocol[DF]):
@@ -151,7 +151,7 @@ class SparkExecutor(Executor):
         """
 
         # import in worker node
-        from dupegrouper.dedupe import Dedupe
+        from enlace.dedupe import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
         id = self._id
@@ -192,7 +192,7 @@ class SparkExecutor(Executor):
 
         This function is functionality mapped to a worker node. For clean
         separation from the driver, strats are re-instantiated and the main
-        dupegrouper API is executed *per* worker node.
+        enlace API is executed *per* worker node.
 
         Args:
             paritition_iter: a partition

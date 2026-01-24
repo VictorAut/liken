@@ -15,9 +15,9 @@ from dupegrouper import (
     lsh,
     tfidf,
 )
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper.custom import register
-from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith
+from enlace._constants import CANONICAL_ID
+from enlace.custom import register
+from enlace.rules import Rules, on, str_contains, str_endswith, str_startswith
 
 
 # CONSTANTS:

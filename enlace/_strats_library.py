@@ -1,7 +1,7 @@
 """Abstract base class for derived deduplication atrategies
 
 This module contains `BaseStrategy` which provides
-`propagate_canonical_id()`, which is at the core functionality of `dupegrouper` and is
+`propagate_canonical_id()`, which is at the core functionality of `enlace` and is
 used for any deduplication that requires *grouping*. Additionally, the
 overrideable `canonicalize()` is defined.
 """
@@ -24,14 +24,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from dupegrouper._constants import CANONICAL_ID, NA_PLACEHOLDER
+from enlace._constants import CANONICAL_ID, NA_PLACEHOLDER
 
 import pandas as pd
 import polars as pl
 
 if TYPE_CHECKING:
-    from dupegrouper._dataframe import LocalDF
-    from dupegrouper._types import UF, Columns, Keep, SimilarPairIndices
+    from enlace._dataframe import LocalDF
+    from enlace._types import UF, Columns, Keep, SimilarPairIndices
     
 
 

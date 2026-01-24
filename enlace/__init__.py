@@ -2,7 +2,7 @@
 .. include:: ../README.md
 """
 
-from dupegrouper._strats_library import (
+from enlace._strats_library import (
     cosine,
     exact,
     fuzzy,
@@ -10,7 +10,7 @@ from dupegrouper._strats_library import (
     lsh,
     tfidf,
 )
-from dupegrouper.dedupe import Dedupe
+from enlace.dedupe import Dedupe
 
 
 __all__ = [

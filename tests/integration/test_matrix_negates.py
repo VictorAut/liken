@@ -6,8 +6,8 @@ from __future__ import annotations
 import pytest
 
 from dupegrouper import Dedupe
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper.rules import Rules, on, str_contains, str_endswith, str_startswith, isna, str_len
+from enlace._constants import CANONICAL_ID
+from enlace.rules import Rules, on, str_contains, str_endswith, str_startswith, isna, str_len
 
 
 # fmt: off

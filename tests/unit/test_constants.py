@@ -1,7 +1,7 @@
 import pytest
 
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper._dataframe import wrap
+from enlace._constants import CANONICAL_ID
+from enlace._dataframe import wrap
 
 
 @pytest.mark.parametrize(

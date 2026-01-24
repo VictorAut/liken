@@ -3,8 +3,8 @@ from typing import Any, Final, Literal
 
 from pyspark.sql import SparkSession
 
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._types import Columns
+from enlace._strats_library import BaseStrategy
+from enlace._types import Columns
 
 
 INVALID: Final[str] = "Invalid arg: "

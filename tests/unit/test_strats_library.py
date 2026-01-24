@@ -11,7 +11,7 @@ from dupegrouper import (
     lsh,
     tfidf,
 )
-from dupegrouper._strats_library import (
+from enlace._strats_library import (
     LSH,
     BaseStrategy,
     Cosine,
@@ -23,7 +23,7 @@ from dupegrouper._strats_library import (
     StrStartsWith,
     TfIdf,
 )
-from dupegrouper.rules import (
+from enlace.rules import (
     str_contains,
     str_endswith,
     str_startswith,

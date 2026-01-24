@@ -4,8 +4,8 @@ from typing import Callable, TypeAlias, final
 
 from typing_extensions import override
 
-from dupegrouper._strats_library import ThresholdDedupers
-from dupegrouper._types import ArrayLike, SimilarPairIndices
+from enlace._strats_library import ThresholdDedupers
+from enlace._types import ArrayLike, SimilarPairIndices
 
 
 # TYPES:
