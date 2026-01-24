@@ -7,8 +7,8 @@ import pytest
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
 
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper._dataframe import (
+from enlace._constants import CANONICAL_ID
+from enlace._dataframe import (
     CanonicalIdMixin,
     PandasDF,
     PolarsDF,

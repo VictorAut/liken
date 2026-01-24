@@ -5,9 +5,9 @@ from collections import UserDict
 from copy import deepcopy
 from typing import Final, Self, final
 
-from dupegrouper import exact
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._validators import validate_strat_arg
+from enlace import exact
+from enlace._strats_library import BaseStrategy
+from enlace._validators import validate_strat_arg
 
 
 # CONSTANTS:

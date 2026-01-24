@@ -1,7 +1,7 @@
-"""dupegrouper main entrypoint
+"""enlace main entrypoint
 
 This module contains `Dedupe`, at the core of all 'dupe and group'
-functionality provided by dupegrouper.
+functionality provided by enlace.
 """
 
 from __future__ import annotations
@@ -13,13 +13,13 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
-from dupegrouper import exact
-from dupegrouper._dataframe import DF, wrap
-from dupegrouper._executors import Executor, LocalExecutor, SparkExecutor
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import StrategyManager, StratsDict
-from dupegrouper._types import Columns, DataFrameLike, Keep
-from dupegrouper._validators import validate_keep_arg, validate_spark_args, validate_columns_arg
+from enlace import exact
+from enlace._dataframe import DF, wrap
+from enlace._executors import Executor, LocalExecutor, SparkExecutor
+from enlace._strats_library import BaseStrategy
+from enlace._strats_manager import StrategyManager, StratsDict
+from enlace._types import Columns, DataFrameLike, Keep
+from enlace._validators import validate_keep_arg, validate_spark_args, validate_columns_arg
 
 
 # API:

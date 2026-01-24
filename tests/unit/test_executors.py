@@ -4,9 +4,9 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
-from dupegrouper._executors import LocalExecutor, SparkExecutor
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, StratsDict
+from enlace._executors import LocalExecutor, SparkExecutor
+from enlace._strats_library import BaseStrategy
+from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, StratsDict
 
 
 ############################
@@ -135,7 +135,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 ######################
 
 
-@patch("dupegrouper.dedupe.Dedupe")
+@patch("enlace.dedupe.Dedupe")
 def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     result = list(
         SparkExecutor._process_partition(
@@ -153,7 +153,7 @@ def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     mock_dedupe.assert_not_called()
 
 
-@patch("dupegrouper.dedupe.Dedupe")
+@patch("enlace.dedupe.Dedupe")
 def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
     dp_instance = Mock()

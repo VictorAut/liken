@@ -9,7 +9,7 @@ import polars as pl
 import pytest
 
 from dupegrouper import Dedupe, exact
-from dupegrouper._constants import CANONICAL_ID
+from enlace._constants import CANONICAL_ID
 
 
 # CONSTANTS:

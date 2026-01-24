@@ -1,8 +1,8 @@
 
 import pytest
 
-from dupegrouper._strats_library import BaseStrategy
-from dupegrouper._strats_manager import (
+from enlace._strats_library import BaseStrategy
+from enlace._strats_manager import (
     SEQUENTIAL_API_DEFAULT_KEY,
     InvalidStrategyError,
     On,

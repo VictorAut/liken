@@ -7,9 +7,9 @@ import typing
 import pytest
 
 from dupegrouper import Dedupe, fuzzy
-from dupegrouper._constants import CANONICAL_ID
-from dupegrouper.custom import register
-from dupegrouper.rules import Rules, on, isna
+from enlace._constants import CANONICAL_ID
+from enlace.custom import register
+from enlace.rules import Rules, on, isna
 
 
 # CONSTANTS:

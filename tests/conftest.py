@@ -10,9 +10,9 @@ from pyspark.sql.functions import monotonically_increasing_id, row_number
 from pyspark.sql.types import LongType, StringType
 from pyspark.sql.window import Window
 
-from dupegrouper._types import DataFrameLike
-from dupegrouper.datasets.synthetic import fake_10
-from dupegrouper.dedupe import BaseStrategy
+from enlace._types import DataFrameLike
+from enlace.datasets.synthetic import fake_10
+from enlace.dedupe import BaseStrategy
 
 
 @pytest.fixture(scope="session")

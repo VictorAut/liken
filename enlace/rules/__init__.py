@@ -1,7 +1,7 @@
-from dupegrouper.rules.rules import (
+from .rules import (
     Rules,
-    on,
     isna,
+    on,
     str_contains,
     str_endswith,
     str_len,

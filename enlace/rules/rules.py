@@ -1,4 +1,11 @@
-from .._strats_library import BaseStrategy, StrLen, StrContains, StrEndsWith, StrStartsWith, IsNA
+from .._strats_library import (
+    BaseStrategy,
+    IsNA,
+    StrContains,
+    StrEndsWith,
+    StrLen,
+    StrStartsWith,
+)
 from .._strats_manager import Rules as _Rules
 from .._strats_manager import on as _on
 
