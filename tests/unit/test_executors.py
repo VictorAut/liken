@@ -1,12 +1,16 @@
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import ANY
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
-from enlace._executors import LocalExecutor, SparkExecutor
+from enlace._executors import LocalExecutor
+from enlace._executors import SparkExecutor
 from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, StratsDict
+from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
+from enlace._strats_manager import StratsDict
 
 
 ############################

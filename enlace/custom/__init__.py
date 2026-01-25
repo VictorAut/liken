@@ -1,4 +1,4 @@
-from .custom import register  # TODO relative path
+from .._custom import register
 
 
 __all__ = ["register"]

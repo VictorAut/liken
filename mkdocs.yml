@@ -26,6 +26,11 @@ plugins:
               show_if_no_docstring: false
               show_symbol_type_toc: true
 
+markdown_extensions:
+- pymdownx.highlight:
+    default_lang: python
+- pycon
+
 nav:
   - index.md
   - tutorials.md

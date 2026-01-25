@@ -986,6 +986,18 @@ docs = ["mdx_gh_links (>=0.2)", "mkdocs (>=1.6)", "mkdocs-gen-files", "mkdocs-li
 testing = ["coverage", "pyyaml"]
 
 [[package]]
+name = "markdown-pycon"
+version = "1.0.1"
+description = "Markdown extension to parse `pycon` code blocks without indentation or fences."
+optional = false
+python-versions = ">=3.9"
+groups = ["docs"]
+files = [
+    {file = "markdown_pycon-1.0.1-py3-none-any.whl", hash = "sha256:938ac2595c0056c10f497c2bde3e5add06797e485fc83b187b0eacc29a9ef7b2"},
+    {file = "markdown_pycon-1.0.1.tar.gz", hash = "sha256:02089b53b2056fd844e90e0c0ecd5c5b6f28d24daf313ddbea736fb90e066c32"},
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.3"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -1275,18 +1287,6 @@ files = [
 griffe = ">=1.13"
 mkdocs-autorefs = ">=1.4"
 mkdocstrings = ">=0.30"
-
-[[package]]
-name = "multipledispatch"
-version = "1.0.0"
-description = "Multiple dispatch"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "multipledispatch-1.0.0-py3-none-any.whl", hash = "sha256:0c53cd8b077546da4e48869f49b13164bebafd0c2a5afceb6bb6a316e7fb46e4"},
-    {file = "multipledispatch-1.0.0.tar.gz", hash = "sha256:5c839915465c68206c3e9c473357908216c28383b425361e5d144594bf85a7e0"},
-]
 
 [[package]]
 name = "mypy"
@@ -2925,4 +2925,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "439193dff51a5c4d79b66af5af09ff4c90aadcd14725e965994b7c82f15bb594"
+content-hash = "5cb83dab7010ab810e3aba4f988d335b2b95cb82f176061fb3b009f36c402f2c"

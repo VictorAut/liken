@@ -6,15 +6,13 @@ import pytest
 
 from enlace import Dedupe
 from enlace._constants import CANONICAL_ID
-from enlace.rules import (
-    Rules,
-    isna,
-    on,
-    str_contains,
-    str_endswith,
-    str_len,
-    str_startswith,
-)
+from enlace.rules import Rules
+from enlace.rules import isna
+from enlace.rules import on
+from enlace.rules import str_contains
+from enlace.rules import str_endswith
+from enlace.rules import str_len
+from enlace.rules import str_startswith
 
 
 # fmt: off

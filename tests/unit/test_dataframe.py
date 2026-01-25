@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from unittest.mock import Mock, create_autospec
+from unittest.mock import Mock
+from unittest.mock import create_autospec
 
 import pandas as pd
 import pytest
@@ -8,14 +9,12 @@ from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
 
 from enlace._constants import CANONICAL_ID
-from enlace._dataframe import (
-    CanonicalIdMixin,
-    PandasDF,
-    PolarsDF,
-    SparkDF,
-    SparkRows,
-    wrap,
-)
+from enlace._dataframe import CanonicalIdMixin
+from enlace._dataframe import PandasDF
+from enlace._dataframe import PolarsDF
+from enlace._dataframe import SparkDF
+from enlace._dataframe import SparkRows
+from enlace._dataframe import wrap
 
 
 # FIXTURES:

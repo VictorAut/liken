@@ -5,15 +5,27 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterator
 from functools import partial
-from typing import TYPE_CHECKING, Protocol, Type, cast, final, TypeAlias
+from typing import TYPE_CHECKING
+from typing import Protocol
+from typing import Type
+from typing import TypeAlias
+from typing import cast
+from typing import final
 
-from pyspark.sql import Row, SparkSession
+from networkx.utils.union_find import UnionFind
+from pyspark.sql import Row
+from pyspark.sql import SparkSession
 
 from enlace._constants import CANONICAL_ID
-from enlace._dataframe import DF, LocalDF, SparkDF
+from enlace._dataframe import DF
+from enlace._dataframe import LocalDF
+from enlace._dataframe import SparkDF
 from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY, Rules, StratsDict
-from enlace._types import UF, Columns, Keep
+from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
+from enlace._strats_manager import Rules
+from enlace._strats_manager import StratsDict
+from enlace._types import Columns
+from enlace._types import Keep
 
 
 if TYPE_CHECKING:
@@ -91,12 +103,12 @@ class LocalExecutor(Executor):
         strat: BaseStrategy,
         df: LocalDF,
         columns: Columns,
-    ) -> tuple[UF, int]:
+    ) -> tuple[UnionFind[int], int]:
         return strat.set_frame(df).build_union_find(columns)
 
     @staticmethod
     def _get_components(
-        uf: UF,
+        uf: UnionFind[int],
         n: int,
     ) -> SingleComponents:
         components = defaultdict(list)
@@ -106,7 +118,7 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _get_multi_components(
-        ufs: list[UF],
+        ufs: list[UnionFind[int]],
         n: int,
     ) -> MultiComponents:
         components = defaultdict(list)
@@ -219,7 +231,7 @@ class SparkExecutor(Executor):
 
         # Core API reused per partition, per worker node
         dp = factory(rows, id=id)
-        dp.apply(strats)
+        dp.apply(strats)  # type: ignore
         dp.canonicalize(
             columns,
             keep=keep,

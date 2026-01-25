@@ -6,18 +6,20 @@ import typing
 
 import pytest
 
-from enlace import (
-    Dedupe,
-    cosine,
-    exact,
-    fuzzy,
-    jaccard,
-    lsh,
-    tfidf,
-)
+from enlace import Dedupe
+from enlace import cosine
+from enlace import exact
+from enlace import fuzzy
+from enlace import jaccard
+from enlace import lsh
+from enlace import tfidf
 from enlace._constants import CANONICAL_ID
 from enlace.custom import register
-from enlace.rules import Rules, on, str_contains, str_endswith, str_startswith
+from enlace.rules import Rules
+from enlace.rules import on
+from enlace.rules import str_contains
+from enlace.rules import str_endswith
+from enlace.rules import str_startswith
 
 
 # CONSTANTS:

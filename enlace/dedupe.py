@@ -6,7 +6,8 @@ functionality provided by enlace.
 
 from __future__ import annotations
 
-from typing import Generic, overload
+from typing import Generic
+from typing import overload
 
 import pandas as pd
 import polars as pl
@@ -14,16 +15,21 @@ import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
 from enlace import exact
-from enlace._dataframe import DF, wrap
-from enlace._executors import Executor, LocalExecutor, SparkExecutor
+from enlace._dataframe import DF
+from enlace._dataframe import wrap
+from enlace._executors import Executor
+from enlace._executors import LocalExecutor
+from enlace._executors import SparkExecutor
 from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import StrategyManager, StratsDict
-from enlace._types import Columns, DataFrameLike, Keep
-from enlace._validators import (
-    validate_columns_arg,
-    validate_keep_arg,
-    validate_spark_args,
-)
+from enlace._strats_manager import Rules
+from enlace._strats_manager import StrategyManager
+from enlace._strats_manager import StratsDict
+from enlace._types import Columns
+from enlace._types import DataFrameLike
+from enlace._types import Keep
+from enlace._validators import validate_columns_arg
+from enlace._validators import validate_keep_arg
+from enlace._validators import validate_spark_args
 
 
 # API:
@@ -97,7 +103,7 @@ class Dedupe(Generic[DF]):
         # Allow use of no .apply(), assuming exact deduplication
         if not self._sm._has_applies:
             self.apply(exact())
-        strats = self._sm.get()
+        strats: StratsDict | Rules = self._sm.get()
 
         self._df = self._executor.execute(
             self._df,
@@ -111,8 +117,6 @@ class Dedupe(Generic[DF]):
         self._sm.reset()
 
         return self._df.unwrap()
-
-        # raise TypeError("`columns` must be str or tuple[str]")
 
     def drop_duplicates(
         self,
@@ -133,7 +137,7 @@ class Dedupe(Generic[DF]):
         # Allow use of no .apply(), assuming exact deduplication
         if not self._sm._has_applies:
             self._sm.apply(exact())
-        strats = self._sm.get()
+        strats: StratsDict | Rules = self._sm.get()
 
         self._df = self._executor.execute(
             self._df,

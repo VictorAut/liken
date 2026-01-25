@@ -1,36 +1,35 @@
-"""TODO"""
+"""This moduel contains argument validation for classes.
+
+Most validations are for public arguments of the 'Dedupe' class.
+
+However, some validations exist for other private classes
+"""
+
 from collections import Counter
-from typing import Any, Final, Literal
+from typing import Any
+from typing import Literal
 
 from pyspark.sql import SparkSession
 
+from enlace._constants import INVALID_COLUMNS_EMPTY
+from enlace._constants import INVALID_COLUMNS_NOT_NONE
+from enlace._constants import INVALID_COLUMNS_REPEATED
+from enlace._constants import INVALID_KEEP
+from enlace._constants import INVALID_SPARK
+from enlace._constants import INVALID_STRAT
 from enlace._strats_library import BaseStrategy
 from enlace._types import Columns
 
 
-INVALID: Final[str] = "Invalid arg: "
-INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
-INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got '{}'"
-INVALID_STRAT: Final[str] = INVALID + "strat must be instance of BaseStrategy, got {}"
-INVALID_COLUMNS_EMPTY: Final[str] = (
-    INVALID
-    + "columns cannot be None, a column label of tuple of column labels must be provided when using sequential API."
-)
-INVALID_COLUMNS_REPEATED: Final[str] = INVALID + "columns labels cannot be repeated. Repeated labels: '{}'"
-INVALID_COLUMNS_NOT_NONE: Final[str] = (
-    INVALID + "columns must be None when using the dict API, as they have been defined as dictionary keys."
-)
-
-
-# TODO: typing here should be `Any`?
 def validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
+    """Validates Spark arg in the 'Dedupe' class"""
     if not spark_session:
         raise ValueError(INVALID_SPARK)
     return spark_session
 
 
 def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
-
+    """Validates Keep arg in the 'Dedupe' class"""
     # TODO: do a type check and TypeError raise here too
     if keep not in ("first", "last"):
         raise ValueError(INVALID_KEEP.format(keep))
@@ -38,6 +37,10 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
 
 
 def validate_strat_arg(strat: Any):
+    """Validates that the given 'strategy' is in fact a `BaseStrategy`.
+
+    As used by the strategy manager
+    """
     if not isinstance(strat, BaseStrategy):
         raise TypeError(INVALID_STRAT.format(type(strat).__name__))
     return strat
@@ -47,6 +50,16 @@ def validate_columns_arg(
     columns: Columns | None,
     is_sequential_applied: bool,
 ) -> Columns | None:
+    """validates inputs to public api 'columns' arg.
+
+    Allowed combinations are:
+
+    - Sequential API: .canonicalize with columns defined
+    - Dict API: .canonicalize with no columns defined
+    - Rules API: .canonicalize with no columns defined
+
+    Any other combination/repetion raises a value error
+    """
     if is_sequential_applied:
         if not columns:
             raise ValueError(INVALID_COLUMNS_EMPTY)
