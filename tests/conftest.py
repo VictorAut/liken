@@ -1,4 +1,5 @@
-from unittest.mock import Mock, create_autospec
+from unittest.mock import Mock
+from unittest.mock import create_autospec
 
 import pandas as pd
 import polars as pl
@@ -6,8 +7,10 @@ import pytest
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.functions import monotonically_increasing_id, row_number
-from pyspark.sql.types import LongType, StringType
+from pyspark.sql.functions import monotonically_increasing_id
+from pyspark.sql.functions import row_number
+from pyspark.sql.types import LongType
+from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
 from enlace._types import DataFrameLike

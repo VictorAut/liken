@@ -12,11 +12,15 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from functools import cache
-from typing import TYPE_CHECKING, Any, Protocol, Self, final
+from typing import TYPE_CHECKING
+from typing import Protocol
+from typing import Self
+from typing import final
 
 import numpy as np
 import pandas as pd
-from datasketch import MinHash, MinHashLSH
+from datasketch import MinHash
+from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
 from numpy.linalg import norm
 from rapidfuzz import fuzz
@@ -30,20 +34,23 @@ from enlace._constants import CANONICAL_ID
 
 if TYPE_CHECKING:
     from enlace._dataframe import LocalDF
-    from enlace._types import UF, Columns, Keep, SimilarPairIndices
-    from enlace._executors import SingleComponents, MultiComponents
+    from enlace._executors import MultiComponents
+    from enlace._executors import SingleComponents
+    from enlace._types import Columns
+    from enlace._types import Keep
+    from enlace._types import SimilarPairIndices
 
 
-# BASE STRATEGY:
+# INTERFACE:
 
 
-class BaseStrategyProtocol(Protocol):
+class Base(Protocol):
     wdf: LocalDF
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
-    def build_union_find(self, columns: Columns) -> tuple[UF, int]: ...
+    def build_union_find(self, columns: Columns) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
         *,
@@ -52,12 +59,13 @@ class BaseStrategyProtocol(Protocol):
         keep: Keep,
     ) -> LocalDF: ...
     def str_representation(self, name: str) -> str: ...
-    
-    # available with mixin
     def validate(self, columns: Columns) -> None: ...
 
 
-class BaseStrategy(BaseStrategyProtocol):
+# BASE STRATEGY:
+
+
+class BaseStrategy(Base):
     """
     @private
 
@@ -79,7 +87,7 @@ class BaseStrategy(BaseStrategyProtocol):
         del array  # Unused
         raise NotImplementedError
 
-    def build_union_find(self: BaseStrategyProtocol, columns: Columns) -> tuple[UF, int]:
+    def build_union_find(self: Base, columns: Columns) -> tuple[UnionFind[int], int]:
         self.validate(columns)
         array = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
@@ -138,7 +146,7 @@ class BaseStrategy(BaseStrategyProtocol):
         return self.__repr__()
 
 
-class SingleColumnValidationMixin:
+class SingleColumnMixin:
     """
     @private
     """
@@ -148,7 +156,7 @@ class SingleColumnValidationMixin:
             raise ValueError("For single column strategies, `columns` must be defined as a string")
 
 
-class CompoundColumnValidationMixin:
+class CompoundValidationMixin:
     """
     @private
     """
@@ -167,7 +175,7 @@ class Exact(BaseStrategy):
     @private
     """
 
-    NAME: str = "exact"
+    name: str = "exact"
 
     @override
     def validate(self, columns):
@@ -188,7 +196,7 @@ class Exact(BaseStrategy):
                     yield indices[i], indices[j]
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 # BINARY DEDUPERS:
@@ -240,15 +248,15 @@ class _NegatedBinaryDeduper(BinaryDedupers):
 
 @final
 class IsNA(
+    SingleColumnMixin,
     BinaryDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
     Deduplicates all missing / null values into a single group.
     """
 
-    NAME: str = "isna"
+    name: str = "isna"
 
     with_na_placeholder: bool = False
 
@@ -274,7 +282,7 @@ class IsNA(
                 yield indices[i], indices[j]
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
     def __invert__(self):
         return _NotNA()
@@ -282,13 +290,15 @@ class IsNA(
 
 @final
 class _NotNA(
+    SingleColumnMixin,
     BaseStrategy,
-    SingleColumnValidationMixin,
 ):
     """
     @private
     Deduplicate all non-NA / non-null values.
     """
+    
+    name: str = "~isna"
 
     with_na_placeholder: bool = False
 
@@ -312,17 +322,20 @@ class _NotNA(
             for j in range(i + 1, len(indices)):
                 yield indices[i], indices[j]
 
+    def __str__(self):
+        return self.str_representation(self.name)
+
 
 @final
 class StrLen(
+    SingleColumnMixin,
     BinaryDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     TODO
     """
 
-    NAME: str = "str_len"
+    name: str = "str_len"
 
     def __init__(self, min_len: int = 0, max_len: int | None = None):
         super().__init__(min_len=min_len, max_len=max_len)
@@ -339,13 +352,13 @@ class StrLen(
         return len_val > self._min_len and len_val <= self._max_len
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class StrStartsWith(
+    SingleColumnMixin,
     BinaryDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
@@ -356,7 +369,7 @@ class StrStartsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    NAME: str = "str_startswith"
+    name: str = "str_startswith"
 
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
@@ -375,13 +388,13 @@ class StrStartsWith(
         )
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class StrEndsWith(
+    SingleColumnMixin,
     BinaryDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
@@ -392,7 +405,7 @@ class StrEndsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    NAME: str = "str_endswith"
+    name: str = "str_endswith"
 
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
@@ -411,13 +424,13 @@ class StrEndsWith(
         )
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class StrContains(
+    SingleColumnMixin,
     BinaryDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
@@ -426,7 +439,7 @@ class StrContains(
     Defaults to case sensitive. Supports literal substring or regex search.
     """
 
-    NAME: str = "str_contains"
+    name: str = "str_contains"
 
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
         super().__init__(pattern=pattern, case=case, regex=regex)
@@ -452,7 +465,7 @@ class StrContains(
                 return self._pattern.lower() in value.lower()
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 # THRESHOLD DEDUPERS:
@@ -473,14 +486,14 @@ class ThresholdDedupers(BaseStrategy):
 
 @final
 class Fuzzy(
+    SingleColumnMixin,
     ThresholdDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
     """
 
-    NAME: str = "fuzzy"
+    name: str = "fuzzy"
 
     @staticmethod
     @cache
@@ -495,13 +508,13 @@ class Fuzzy(
                     yield i, j
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class TfIdf(
+    SingleColumnMixin,
     ThresholdDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
@@ -516,7 +529,7 @@ class TfIdf(
     as listed in the [TF-IDF vectorizer documentation](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
     """
 
-    NAME: str = "tfidf"
+    name: str = "tfidf"
 
     def __init__(
         self,
@@ -573,19 +586,19 @@ class TfIdf(
             yield rows[i], cols[i]
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class LSH(
+    SingleColumnMixin,
     ThresholdDedupers,
-    SingleColumnValidationMixin,
 ):
     """
     @private
     """
 
-    NAME: str = "lsh"
+    name: str = "lsh"
 
     def __init__(
         self,
@@ -637,7 +650,7 @@ class LSH(
                     yield idx, idy
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 # COMPOUND COLUMN:
@@ -645,14 +658,14 @@ class LSH(
 
 @final
 class Jaccard(
+    CompoundValidationMixin,
     ThresholdDedupers,
-    CompoundColumnValidationMixin,
 ):
     """
     @private
     """
 
-    NAME: str = "jaccard"
+    name: str = "jaccard"
 
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         sets = [set(row) for row in array]
@@ -674,19 +687,19 @@ class Jaccard(
                     yield idx, idy
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
 @final
 class Cosine(
+    CompoundValidationMixin,
     ThresholdDedupers,
-    CompoundColumnValidationMixin,
 ):
     """
     @private
     """
 
-    NAME: str = "cosine"
+    name: str = "cosine"
 
     def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
         n = len(array)
@@ -719,10 +732,10 @@ class Cosine(
                     yield idx, idy
 
     def __str__(self):
-        return self.str_representation(self.NAME)
+        return self.str_representation(self.name)
 
 
-# PUBLIC:
+# PUBLIC PKG:
 
 
 def exact() -> BaseStrategy:
@@ -761,3 +774,35 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
 def cosine(threshold: float = 0.95) -> BaseStrategy:
     """TODO"""
     return Cosine(threshold=threshold)
+
+
+# RULES SUB PKG
+
+
+def isna():
+    """TODO"""
+    return IsNA()
+
+
+def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
+    """TODO"""
+    return StrLen(min_len=min_len, max_len=max_len)
+
+
+def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
+    """TODO"""
+    return StrStartsWith(pattern=pattern, case=case)
+
+
+def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
+    """TODO"""
+    return StrEndsWith(pattern=pattern, case=case)
+
+
+def str_contains(
+    pattern: str,
+    case: bool = True,
+    regex: bool = False,
+) -> BaseStrategy:
+    """TODO"""
+    return StrContains(pattern=pattern, case=case, regex=regex)

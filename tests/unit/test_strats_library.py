@@ -3,31 +3,25 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from enlace import (
-    cosine,
-    exact,
-    fuzzy,
-    jaccard,
-    lsh,
-    tfidf,
-)
-from enlace._strats_library import (
-    LSH,
-    BaseStrategy,
-    Cosine,
-    Exact,
-    Fuzzy,
-    Jaccard,
-    StrContains,
-    StrEndsWith,
-    StrStartsWith,
-    TfIdf,
-)
-from enlace.rules import (
-    str_contains,
-    str_endswith,
-    str_startswith,
-)
+from enlace import cosine
+from enlace import exact
+from enlace import fuzzy
+from enlace import jaccard
+from enlace import lsh
+from enlace import tfidf
+from enlace._strats_library import LSH
+from enlace._strats_library import BaseStrategy
+from enlace._strats_library import Cosine
+from enlace._strats_library import Exact
+from enlace._strats_library import Fuzzy
+from enlace._strats_library import Jaccard
+from enlace._strats_library import StrContains
+from enlace._strats_library import StrEndsWith
+from enlace._strats_library import StrStartsWith
+from enlace._strats_library import TfIdf
+from enlace.rules import str_contains
+from enlace.rules import str_endswith
+from enlace.rules import str_startswith
 
 
 ############

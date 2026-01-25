@@ -27,7 +27,6 @@ polars = "^1.24.0"
 rapidfuzz = "^3.12.2"
 scikit-learn = "^1.6.1"
 sparse-dot-topn = "^1.1.5"
-multipledispatch = "^1.0.0"
 typing-extensions = "^4.13.0"
 pyspark = "^3.5.5"
 datasketch = "^1.8.0"
@@ -58,6 +57,7 @@ pdoc = "^15.0.1"
 mkdocs = "^1.6.1"
 mkdocstrings = {extras = ["python"], version = "^1.0.0"}
 mkdocs-material = "^9.7.1"
+markdown-pycon = "^1.0.1"
 
 
 
@@ -67,13 +67,14 @@ line-length = 120
 [tool.isort]
 profile = "black"
 lines_after_imports = 2
+force_single_line = true
 
 [tool.mypy]
 warn_no_return = false
 
 [[tool.mypy.overrides]]
-module = ["multipledispatch.*"]
-follow_untyped_imports = true
+module = ["enlace.*"]
+ignore_missing_imports = true
 
 [tool.pylint]
 max-line-length=120

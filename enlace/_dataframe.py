@@ -12,7 +12,7 @@ Whilst Pandas and Polars wrappers are similarly wrapped, note the following:
     columns, puting columns, fill na etc
 - Conversely, Spark DataFrames take care of adding canonical IDs
 
-Additional Points regarding Spark. Upon initialising the public API with a 
+Additional Points regarding Spark. Upon initialising the public API with a
 Spark DataFrame, the wrapper will call the SparkDF class which will create
 canonical IDs. However the output to this is RDDs which are then processed
 by the executor into Spark Rows which are dispatched to worker nodes. Spark
@@ -25,7 +25,14 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import Any, Generic, Hashable, Protocol, Self, TypeAlias, TypeVar, final
+from typing import Any
+from typing import Generic
+from typing import Hashable
+from typing import Protocol
+from typing import Self
+from typing import TypeAlias
+from typing import TypeVar
+from typing import final
 
 import numpy as np
 import pandas as pd
@@ -33,20 +40,24 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.rdd import RDD
 from pyspark.sql import Row
-from pyspark.sql.types import LongType, StructField, StructType
+from pyspark.sql.types import LongType
+from pyspark.sql.types import StructField
+from pyspark.sql.types import StructType
 from typing_extensions import override
 
-from enlace._constants import CANONICAL_ID, NA_PLACEHOLDER, PYSPARK_TYPES
-from enlace._types import Columns, DataFrameLike, Keep, SeriesLike
-
+from enlace._constants import CANONICAL_ID
+from enlace._constants import NA_PLACEHOLDER
+from enlace._constants import PYSPARK_TYPES
+from enlace._types import Columns
+from enlace._types import DataFrameLike
+from enlace._types import Keep
 
 
 # TYPES
 
 
-D = TypeVar("D") # dataframe
-S = TypeVar("S") # Series
-
+D = TypeVar("D")  # dataframe
+S = TypeVar("S")  # Series
 
 
 # BASE

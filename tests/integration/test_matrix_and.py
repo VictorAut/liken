@@ -6,10 +6,13 @@ import typing
 
 import pytest
 
-from enlace import Dedupe, fuzzy
+from enlace import Dedupe
+from enlace import fuzzy
 from enlace._constants import CANONICAL_ID
 from enlace.custom import register
-from enlace.rules import Rules, isna, on
+from enlace.rules import Rules
+from enlace.rules import isna
+from enlace.rules import on
 
 
 # CONSTANTS:

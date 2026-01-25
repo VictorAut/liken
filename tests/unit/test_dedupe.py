@@ -1,9 +1,11 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 from pandas.testing import assert_frame_equal
 
-from enlace._validators import validate_keep_arg, validate_spark_args
+from enlace._validators import validate_keep_arg
+from enlace._validators import validate_spark_args
 from enlace.dedupe import Dedupe
 
 

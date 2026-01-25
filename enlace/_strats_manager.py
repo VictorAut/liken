@@ -3,37 +3,22 @@ from __future__ import annotations
 import warnings
 from collections import UserDict
 from copy import deepcopy
-from typing import Final, Self, final
+from typing import Self
+from typing import final
 
+from enlace._constants import INVALID_DICT_KEY_MSG
+from enlace._constants import INVALID_DICT_MEMBER_MSG
+from enlace._constants import INVALID_DICT_VALUE_MSG
+from enlace._constants import INVALID_FALLBACK_MSG
+from enlace._constants import INVALID_RULE_EMPTY_MSG
+from enlace._constants import INVALID_RULE_MEMBER_MSG
+from enlace._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
+from enlace._constants import SEQUENTIAL_API_DEFAULT_KEY
+from enlace._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
+from enlace._constants import WARN_RULES_REPLACES_RULES_MSG
 from enlace._strats_library import BaseStrategy
 from enlace._validators import validate_strat_arg
-
-
-# CONSTANTS:
-
-# Sequential API use will load to this dictionary key by default:
-
-SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
-
-# errors:
-
-INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
-INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseStrategy', got '{}'"
-INVALID_DICT_MEMBER_MSG: Final[str] = (
-    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseStrategy', got '{}'"
-)
-INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
-    "Cannot apply a 'BaseStrategy' after a strategy mapping (dict) has been set. "
-    "Use either individual 'BaseStrategy' instances or a dict of strategies, not both."
-)
-INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
-INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
-INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseStrategy', a dict or 'Rules', got '{}'"
-
-# warnings:
-
-WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence strategy with a dict strategy"
-WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
+from enlace._types import Columns
 
 
 # STRATS DICT CONFIG:
@@ -42,10 +27,11 @@ WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' 
 @final
 class StratsDict(UserDict):
     """Container for combnations of strategies in the Sequential and Dict APIs
-    
+
     For Sequential API all values (strategies) are added under a default key.
-    
+
     For Dict API column label(s) (i.e. str or tuple) are the keys."""
+
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
@@ -64,65 +50,93 @@ class StratsDict(UserDict):
 
 
 class Rules(tuple):
-    """Container for a combinations of On strategy in the Rules API"""
-    def __new__(cls, *items):
-        if len(items) == 1 and isinstance(items[0], tuple):
-            items = items[0]
+    """Tuple-like container of strategies
 
-        if not items:
+    Accepts single or multiple strategies where those strategies are passed
+    with the ``on`` function
+
+    Args:
+        *strategies: comma separated ``on`` strategies
+
+
+    Example:
+        A single strategy is passed:
+    
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on
+
+            STRAT = Rules(on("address", exact()))
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+
+        Multiple strategies are passed:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on
+
+            STRAT = Rules(
+            	on('address', exact()),
+                on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
+            )
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+    """
+
+    def __new__(cls, *strategies):
+        if len(strategies) == 1 and isinstance(strategies[0], tuple):
+            strategies = strategies[0]
+
+        if not strategies:
             raise InvalidStrategyError(INVALID_RULE_EMPTY_MSG)
 
-        for i, item in enumerate(items):
+        for i, item in enumerate(strategies):
             if not isinstance(item, On):
                 raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
 
-        return super().__new__(cls, items)
+        return super().__new__(cls, strategies)
 
 
 @final
 class On:
     """Unit container for a single strategy in the Rules API"""
 
-    def __init__(self, column: str, strat: BaseStrategy):
-        self._column = column
+    def __init__(self, columns: Columns, strat: BaseStrategy):
+        self._columns = columns
         self._strat = validate_strat_arg(strat)
-        self._strats: list[tuple[str, BaseStrategy]] = [(column, strat)]
+        self._strats: list[tuple[Columns, BaseStrategy]] = [(columns, strat)]
 
     def __and__(self, other: On) -> Self:
         """Overloads `&` operator
-        
+
         Mutates first instance of On in chain of `&` operates On instances.
         Collectes the combinations of strategies into a single iterable for
         that step. The executor will then apply all these combined strategies
         and select union find components that satisfy all the combinations.
-        
+
         Usage:
             On("address", exact) & On("email", isna())
 
         Returns:
-            Self, specifically Self of the first On.     
+            Self, specifically Self of the first On.
         """
-        self._strats.append((other._column, other._strat))
+        self._strats.append((other._columns, other._strat))
         return self
 
     @property
-    def and_strats(self) -> list[tuple[str, BaseStrategy]]:
+    def and_strats(self) -> list[tuple[Columns, BaseStrategy]]:
         return self._strats
 
     def __str__(self):
         """string representation
-        
+
         Parses a single On or combinations of On operated with `&`
         """
         rep = ""
         for cs in self._strats:
-            rep += "on({}) & ".format("'{}', {}".format(cs[0], str(cs[1])))
+            rep += f"on('{cs[0]}', {str(cs[1])}) & "
         return rep[:-3]
-
-
-def on(column: str, strat: BaseStrategy, /):
-    """Functional API version made available in `rules` sub-package"""
-    return On(column, strat)
 
 
 # STRATS MANAGER:
@@ -140,9 +154,9 @@ class StrategyManager:
 
     For Sequential strategies, as instances of `BaseStrategy` are sequentially
     to an idential structure of the Dict API but under a single default
-    dictionary key. Keys are column names, and values are iterables of 
+    dictionary key. Keys are columns names, and values are iterables of
     strategies.
-    
+
     Raises:
         InvalidStrategyError for any misconfigured strategy
     """
@@ -158,15 +172,15 @@ class StrategyManager:
 
     def apply(self, strat: BaseStrategy | dict | StratsDict | Rules) -> None:
         """Loads a strategy into the manager
-        
+
         This function currently handles all possible instances of strategy, and
         the implementation achieves this by writing to the strategy dictionary
-        or overwriting the dictionary with `Rules`. 
-        
+        or overwriting the dictionary with `Rules`.
+
         If the input strat is `BaseStrategy` then "Sequential" API is in use. If
-        dict (or StratsDict — even though this is not public) then it is the 
+        dict (or StratsDict — even though this is not public) then it is the
         "Dict" API. Else "Rules" API is in use.
-        
+
         Note also that as Rules contains On and combinations of On operated
         with & results in self mutation, need deep copy to allow for
         serialization to Spark workers."""
@@ -265,3 +279,70 @@ class InvalidStrategyError(TypeError):
 
 def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)
+
+
+# PUBLIC ON API:
+
+
+def on(columns: Columns, strat: BaseStrategy, /) -> None:
+    """Unit container for a single strategy in the Rules API
+
+    Operates a "strat" on a "columns". Is provided as comma separated members to
+    `Rules`. Allows for "and" chaining via the `&` operator to logically
+    compose strategy "rules".
+
+    The `&` ("and") operator is the only supplier logical combination operator
+    supplier, as the equivalent to "or" is achieved by comma separating `on`
+    calls inside `Rules`. The results of `&` are interepreted as boolean and
+    whereby the left-hand deduplication strategy must agree with the right-hand
+    strategy for any given pairwise combination.
+
+    Args:
+        columns: the label(s) of a column or columns
+        strat: the strategy to apply
+
+    Returns:
+        None
+
+    Example:
+        single ``on`` strategy:
+
+            from enlace import Dedupe, exact, fuzzy
+            from enlace.rules import Rules, on, isna, str_endswith
+
+            on("address", exact())
+
+        Strategies combined with ``&``:
+
+            on("email", fuzzy(threshold=0.95)) & on("email", str_endswith("UK"))
+
+        Strategies can be combined with ``&`` for different columns
+
+            on("email", fuzzy(threshold=0.95)) & on("address", ~isna())
+
+        The above can be read as "deduplicate email only when the address field
+        is not null". E.g.
+
+            df
+            +------+-----------+---------------------+
+            | id   |  address  |         mail        |
+            +------+-----------+---------------------+
+            |  1   |  london   |  foobar@google.com  |
+            |  2   |   paris   |  Foobar@google.com  |
+            |  3   |   null    |  fooBar@google.com  |
+            +------+-----------+---------------------+
+
+        After deduplication:
+
+            df
+            +------+-----------+---------------------+--------------+
+            | id   |  address  |         mail        | canonical_id |
+            +------+-----------+---------------------+--------------+
+            |  1   |  london   |  foobar@google.com  |       1      |
+            |  2   |   paris   |  Foobar@google.com  |       1      |
+            |  3   |   null    |  fooBar@google.com  |       3      |
+            +------+-----------+---------------------+--------------+
+
+        Where the first two rows are now linked via the same canonical_id.
+    """
+    return On(columns, strat)

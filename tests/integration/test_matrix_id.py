@@ -8,7 +8,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from enlace import Dedupe, exact
+from enlace import Dedupe
+from enlace import exact
 from enlace._constants import CANONICAL_ID
 
 
