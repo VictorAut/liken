@@ -325,24 +325,24 @@ def on(columns: Columns, strat: BaseStrategy, /) -> None:
         The above can be read as "deduplicate email only when the address field
         is not null". E.g.
 
-            df
+            >>> df
             +------+-----------+---------------------+
-            | id   |  address  |         mail        |
+            | id   |  address  |        email        |
             +------+-----------+---------------------+
-            |  1   |  london   |  foobar@google.com  |
-            |  2   |   paris   |  Foobar@google.com  |
-            |  3   |   null    |  fooBar@google.com  |
+            |  1   |  london   |  foobar@gmail.com   |
+            |  2   |   paris   |  Foobar@gmail.com   |
+            |  3   |   null    |  fooBar@gmail.com   |
             +------+-----------+---------------------+
 
         After deduplication:
 
-            df
+            >>> df
             +------+-----------+---------------------+--------------+
-            | id   |  address  |         mail        | canonical_id |
+            | id   |  address  |        email        | canonical_id |
             +------+-----------+---------------------+--------------+
-            |  1   |  london   |  foobar@google.com  |       1      |
-            |  2   |   paris   |  Foobar@google.com  |       1      |
-            |  3   |   null    |  fooBar@google.com  |       3      |
+            |  1   |  london   |  foobar@gmail.com   |       1      |
+            |  2   |   paris   |  Foobar@gmail.com   |       1      |
+            |  3   |   null    |  fooBar@gmail.com   |       3      |
             +------+-----------+---------------------+--------------+
 
         Where the first two rows are now linked via the same canonical_id.
