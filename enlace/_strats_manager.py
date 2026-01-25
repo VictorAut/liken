@@ -1,3 +1,5 @@
+"""Defines containers for strategies"""
+
 from __future__ import annotations
 
 import warnings
@@ -17,8 +19,8 @@ from enlace._constants import SEQUENTIAL_API_DEFAULT_KEY
 from enlace._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from enlace._constants import WARN_RULES_REPLACES_RULES_MSG
 from enlace._strats_library import BaseStrategy
-from enlace._validators import validate_strat_arg
 from enlace._types import Columns
+from enlace._validators import validate_strat_arg
 
 
 # STRATS DICT CONFIG:
@@ -61,7 +63,7 @@ class Rules(tuple):
 
     Example:
         A single strategy is passed:
-    
+
             from enlace import Dedupe, exact
             from enlace.rules import Rules, on
 
@@ -76,7 +78,7 @@ class Rules(tuple):
             from enlace.rules import Rules, on
 
             STRAT = Rules(
-            	on('address', exact()),
+                on('address', exact()),
                 on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
             )
 
@@ -163,7 +165,7 @@ class StrategyManager:
 
     def __init__(self) -> None:
         self._strats: StratsDict | Rules = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
-        self._has_applies: bool = False
+        self.has_applies: bool = False
 
     @property
     def is_sequential_applied(self) -> bool:
@@ -187,7 +189,7 @@ class StrategyManager:
 
         # track that at least one apply made
         # if not, used by `Dedupe` to include an exact deduper by default
-        self._has_applies = True
+        self.has_applies = True
 
         if isinstance(strat, BaseStrategy):
             if not self.is_sequential_applied:

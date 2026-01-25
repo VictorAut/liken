@@ -133,7 +133,7 @@ def test_strategy_manager_apply_single_on_not_rule(s1):
     assert isinstance(result, tuple)
     assert len(result) == 1
     assert isinstance(result[0], On)
-    assert result[0]._column == "a"
+    assert result[0]._columns == "a"
     assert isinstance(result[0]._strat, type(s1))
 
 
@@ -147,7 +147,7 @@ def test_strategy_manager_apply_single_on_as_tuple(s1):
     assert isinstance(result, tuple)
     assert len(result) == 1
     assert isinstance(result[0], On)
-    assert result[0]._column == "a"
+    assert result[0]._columns == "a"
     assert isinstance(result[0]._strat, type(s1))
 
 
@@ -163,7 +163,7 @@ def test_strategy_manager_apply_single_on_as_rule(s1):
     assert isinstance(result, tuple)
     assert len(result) == 1
     assert isinstance(result[0], On)
-    assert result[0]._column == "a"
+    assert result[0]._columns == "a"
     assert isinstance(result[0]._strat, type(s1))
 
 

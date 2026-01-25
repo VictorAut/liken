@@ -51,7 +51,7 @@ class Custom(ThresholdDedupers):
 
     @override
     def validate(self, columns):
-        """No validation such that custom can be applied to single or 
+        """No validation such that custom can be applied to single or
         compound column
         """
         del columns  # Unused
@@ -151,8 +151,7 @@ def register(f: PairGenerator) -> None:
     @wraps(f)
     def wrapper(*args, **kwargs):
         if args:
-            raise TypeError(
-                f"{f.__name__} must be called with keyword arguments only"
-            )
+            raise TypeError(f"{f.__name__} must be called with keyword arguments only")
         return Custom(f, *args, **kwargs)
+
     return wrapper

@@ -1,3 +1,9 @@
+"""Strategy executors
+
+`SparkExecutor` simply calls a partition processor where each partition will
+then be processed with the `LocalExecutor`
+"""
+
 # mypy: disable-error-code="no-redef"
 
 from __future__ import annotations
@@ -64,6 +70,13 @@ class LocalExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
     ) -> LocalDF:
+        """Process a local dataframe accoriding to the strategy collection
+        
+        Processing is defined according to whether the collections of
+        strategies is: 
+            - Rules: in which case "and" combinations are allowed
+            - StratsDict: in which case handles Sequential and Dict API
+        """
 
         call_strat = partial(
             self._call_strat,
