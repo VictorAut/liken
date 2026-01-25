@@ -1,8 +1,4 @@
-"""enlace main entrypoint
-
-This module contains `Dedupe`, at the core of all 'dupe and group'
-functionality provided by enlace.
-"""
+"""enlace main public API"""
 
 from __future__ import annotations
 
@@ -101,7 +97,7 @@ class Dedupe(Generic[DF]):
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
 
         # Allow use of no .apply(), assuming exact deduplication
-        if not self._sm._has_applies:
+        if not self._sm.has_applies:
             self.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 
@@ -135,7 +131,7 @@ class Dedupe(Generic[DF]):
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
 
         # Allow use of no .apply(), assuming exact deduplication
-        if not self._sm._has_applies:
+        if not self._sm.has_applies:
             self._sm.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 

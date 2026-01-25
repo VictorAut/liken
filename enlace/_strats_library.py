@@ -1,9 +1,11 @@
-"""Abstract base class for derived deduplication atrategies
+"""Defines Deduplication strategies:
 
-This module contains `BaseStrategy` which provides
-`propagate_canonical_id()`, which is at the core functionality of `enlace` and is
-used for any deduplication that requires *grouping*. Additionally, the
-overrideable `canonicalize()` is defined.
+Strategies are either:
+    - "Threshold" strategies: deduplication is decided according to a
+        smiilarity. Routed through main package.
+    - "Binary" strategies: deduplication is decided according to discrete
+        outcomes. As this choice is fit for combinations using "and"
+        operations, this is routed via the "rules" sub-package.
 """
 
 from __future__ import annotations
@@ -297,7 +299,7 @@ class _NotNA(
     @private
     Deduplicate all non-NA / non-null values.
     """
-    
+
     name: str = "~isna"
 
     with_na_placeholder: bool = False

@@ -40,7 +40,7 @@ def test_no_apply_still_exact_apply_once(
     df, spark = dataframe
 
     sm = mock_sm.return_value
-    sm._has_applies = False
+    sm.has_applies = False
     sm.is_sequential_applied = True
     sm.get.return_value = {}
     sm.reset.return_value = None
