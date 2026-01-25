@@ -28,10 +28,10 @@ TODO:
 from __future__ import annotations
 
 import warnings
+from collections.abc import Hashable
 from functools import singledispatch
 from typing import Any
 from typing import Generic
-from collections.abc import Hashable
 from typing import Protocol
 from typing import Self
 from typing import TypeAlias
@@ -69,7 +69,7 @@ S = TypeVar("S")  # Series
 
 class Frame(Generic[D, S]):
     """Base class defining a dataframe wrapper
-    
+
     Defines inheritable methods as well as some of the interface
 
     TODO:
@@ -131,8 +131,10 @@ class Frame(Generic[D, S]):
 
 # CANONICAL ID
 
+
 class AddsCanonical(Protocol):
     """Mixin protocol"""
+
     def _df_as_is(self, df): ...
     def _df_overwrite_id(self, df, id: str): ...
     def _df_copy_id(self, df, id: str): ...
@@ -141,17 +143,18 @@ class AddsCanonical(Protocol):
 
 class CanonicalIdMixin(AddsCanonical):
     """Defines creation of canonical id upon wrapping a dataframe
-    
+
     By default a canonical ID is an auto-incrementing numeric field, starting
     from zero.
 
     However, the canonical ID field can also be:
         - already present in the dataframe as "canonical_id"
         - copied from another "id" field
-    
+
     In those other instances the resultant canonical id field can therefore
     also be a string field.
     """
+
     def _add_canonical_id(self, df, id: str | None):
 
         has_canonical: bool = CANONICAL_ID in df.columns
@@ -276,10 +279,10 @@ SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
 @final
 class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
     """Spark DataFrame and Spark RDD wrapper
-    
+
     This wrapper, contrarily to others does not always add a canonical id. When
     canonical ids are to be added the DataFrame is converted to an RDD for
-    downstream processing in Worker nodes. 
+    downstream processing in Worker nodes.
 
     The `is_init` flag is then used, when False, to keep a high-level
     DataFrame such that it is easier to drop the canonical_id if within
@@ -294,7 +297,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
         df: the dataframe
         id: the label of any other id columns used for creation of canonical_id
         is_init: define whether to route the DataFrame to an RDD along with
-            canonical ID creation, or not. 
+            canonical ID creation, or not.
     """
 
     err_msg = "Method is available for spark RDD, not spark DataFrame"
@@ -389,12 +392,13 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 @final
 class SparkRows(Frame[list[spark.Row], list[Any]]):
     """Spark Rows DataFrame
-    
+
     Spark Rows is what are processed by individual Worker nodes.
-    
+
     Thus, the `Dedupe` entrypoint is able to process a Spark Rows as `Dedupe`
     will be instantiated in the worker node.
     """
+
     def __init__(self, df: list[spark.Row]):
         self._df: list[spark.Row] = df
 

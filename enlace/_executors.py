@@ -71,9 +71,9 @@ class LocalExecutor(Executor):
         drop_canonical_id: bool,
     ) -> LocalDF:
         """Process a local dataframe accoriding to the strategy collection
-        
+
         Processing is defined according to whether the collections of
-        strategies is: 
+        strategies is:
             - Rules: in which case "and" combinations are allowed
             - StratsDict: in which case handles Sequential and Dict API
         """
