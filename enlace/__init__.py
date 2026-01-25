@@ -14,9 +14,9 @@ from enlace.dedupe import Dedupe
 __all__ = [
     "Dedupe",
     "exact",
-    "cosine",
     "fuzzy",
-    "jaccard",
     "lsh",
     "tfidf",
+    "cosine",
+    "jaccard",
 ]

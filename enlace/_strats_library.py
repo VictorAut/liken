@@ -69,9 +69,7 @@ class Base(Protocol):
 
 class BaseStrategy(Base):
     """
-    @private
-
-    Defines a deduplication strategy.
+    Base Deduplication class
     """
 
     with_na_placeholder: bool = True  # TODO document this
@@ -150,7 +148,8 @@ class BaseStrategy(Base):
 
 class SingleColumnMixin:
     """
-    @private
+    Validates the column type of deduplication strategy when passed in the
+    columns arg. Only single strings allowed.
     """
 
     def validate(self, columns: Columns) -> None:
@@ -160,7 +159,8 @@ class SingleColumnMixin:
 
 class CompoundValidationMixin:
     """
-    @private
+    Validates the column type of deduplication strategy when passed in the
+    columns arg. Only tuples of strings allowed
     """
 
     def validate(self, columns: Columns) -> None:
@@ -174,7 +174,10 @@ class CompoundValidationMixin:
 @final
 class Exact(BaseStrategy):
     """
-    @private
+    Exact deduper.
+
+    Does not accept a validation mixin (and therefore overrides validation)
+    As the exact deduper can be applied to single, or compound columns.
     """
 
     name: str = "exact"
@@ -206,7 +209,13 @@ class Exact(BaseStrategy):
 
 class BinaryDedupers(BaseStrategy):
     """
-    @private
+    Defines Binary "choice" deduplications, i.e. those that produce a discrete
+    outcome. Any pair of values that satisfies the conditions of a Binary
+    Deduper will be deduplicated.
+
+    For example, if StrStartsWith is used for all strings starting with "a",
+    then all records for the column starting with the character "a" will
+    be canonicalised to the same record.
     """
 
     def __init__(self, **kwargs):
@@ -232,19 +241,22 @@ class BinaryDedupers(BaseStrategy):
 
 class _NegatedBinaryDeduper(BinaryDedupers):
     """
-    Internal strategy that negates another BinaryDedupers.
+    Composable deduplication instance that inverts the results of any binary
+    deduper (except IsNA deduper which follows it's own inversion logic).
     """
 
     def __init__(self, inner: BinaryDedupers):
         self._inner = inner
 
     def _matches(self, value):
+        """simply return the inner classes opposed set of matches"""
         return not self._inner._matches(value)
 
     def __str__(self):
         return f"~{self._inner}"
 
     def validate(self, columns):
+        "Get the inner instances validation mixin method"
         return getattr(self._inner, "validate")(columns)
 
 
@@ -254,12 +266,15 @@ class IsNA(
     BinaryDedupers,
 ):
     """
-    @private
     Deduplicates all missing / null values into a single group.
+
+    Inversion operator here calls it's own negation class
     """
 
     name: str = "isna"
 
+    # do NOT want to placehold Null values
+    # As we are deduping on them and need to keep them to identify them
     with_na_placeholder: bool = False
 
     @override
@@ -293,11 +308,13 @@ class IsNA(
 @final
 class _NotNA(
     SingleColumnMixin,
-    BaseStrategy,
+    BaseStrategy, # TODO, is this correct? Should it not be BinaryDeduper for consistency?
 ):
     """
-    @private
     Deduplicate all non-NA / non-null values.
+
+    "not a match" for not null does not hold like it does for other Binary
+    Dedupers.
     """
 
     name: str = "~isna"
@@ -334,7 +351,8 @@ class StrLen(
     BinaryDedupers,
 ):
     """
-    TODO
+    Deduplicates all instances of strings that satisfy the bounds in
+    (min_len, max_len) where the upper bound can actually be left unbounded.
     """
 
     name: str = "str_len"
@@ -363,7 +381,6 @@ class StrStartsWith(
     BinaryDedupers,
 ):
     """
-    @private
     Strings start with canonicalizer.
 
     Defaults to case sensitive.
@@ -399,7 +416,6 @@ class StrEndsWith(
     BinaryDedupers,
 ):
     """
-    @private
     Strings start with canonicalizer.
 
     Defaults to case sensitive.
@@ -435,7 +451,6 @@ class StrContains(
     BinaryDedupers,
 ):
     """
-    @private
     Strings contains canonicalizer.
 
     Defaults to case sensitive. Supports literal substring or regex search.
@@ -475,7 +490,8 @@ class StrContains(
 
 class ThresholdDedupers(BaseStrategy):
     """
-    @private
+    Base instance of dedupers that implement any similarity comparison
+    mechanism.
     """
 
     def __init__(self, threshold: float = 0.95, **kwargs):
@@ -492,7 +508,7 @@ class Fuzzy(
     ThresholdDedupers,
 ):
     """
-    @private
+    Fuzzy string matching deduper
     """
 
     name: str = "fuzzy"
@@ -519,13 +535,7 @@ class TfIdf(
     ThresholdDedupers,
 ):
     """
-    @private
-    TF-IDF canonicalizer.
-
-    Note: high "top N" numbers at initialisation may cause spurious results.
-    Use with care!
-
-    Note: Whilst powerful, this is computationally intensive: ~*O(n^2)*
+    TF-IDF deduper.
 
     Additional keywords arguments can be passed to parametrise the vectorizer,
     as listed in the [TF-IDF vectorizer documentation](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
@@ -597,7 +607,7 @@ class LSH(
     ThresholdDedupers,
 ):
     """
-    @private
+    Locality Sensitive Hashing deduper
     """
 
     name: str = "lsh"
@@ -664,7 +674,7 @@ class Jaccard(
     ThresholdDedupers,
 ):
     """
-    @private
+    Deduplicate sets where such sets contain categorical data.
     """
 
     name: str = "jaccard"
@@ -698,7 +708,7 @@ class Cosine(
     ThresholdDedupers,
 ):
     """
-    @private
+    Deduplicate sets where such sets contain numeric data.
     """
 
     name: str = "cosine"
@@ -741,12 +751,101 @@ class Cosine(
 
 
 def exact() -> BaseStrategy:
-    """TODO"""
+    """Exact Deduplication.
+    
+    Can deduplicate a single column, or multiple columns.
+
+    If no strategies are applied to `Dedupe`, `exact` is applied by default.
+
+    Returns:
+        Instance of `BaseStrategy`
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+
+            dp = Dedupe(df)
+            dp.apply(exact())
+            df = dp.drop_duplicates("address")
+
+        Applied to multiple columns:
+
+            dp = Dedupe(df)
+            dp.apply(exact())
+            df = dp.drop_duplicates(("address", "email"))
+
+        E.g.
+
+            >>> df
+            +------+-----------+--------------------+
+            | id   |  address  |        email       |
+            +------+-----------+--------------------+
+            |  1   |  london   |  fizzpop@gmail.com |
+            |  2   |   null    |  foobar@gmail.com  |
+            |  3   |   null    |  foobar@gmail.com  |
+            +------+-----------+--------------------+
+
+        After deduplication:
+
+            >>> df
+            +------+-----------+---------------------+
+            | id   |  address  |        email        |
+            +------+-----------+---------------------+
+            |  1   |  london   |  fizzpop@gmail.com  |
+            |  2   |   null    |  foobar@gmail.com   |
+            +------+-----------+---------------------+
+
+        By default `exact` is used when no stratgies are explicitely applied:
+
+            dp = Dedupe(df)
+            dp.drop_duplicates("address")   # OK, still dedupes.
+    """
     return Exact()
 
 
 def fuzzy(threshold: float = 0.95) -> BaseStrategy:
-    """TODO"""
+    """Near string deduplication.
+    
+    Usage is on single columns of a dataframe.
+
+    Args:
+        threshold: the minimum threshold at which similarity between two pairs
+            of values will be considered valid for deduplication.
+    
+    Returns:
+        Instance of `BaseStrategy`
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, fuzzy
+
+            dp = Dedupe(df)
+            dp.apply({"address": fuzzy(threshold=0.8)})
+            df = dp.drop_duplicates(keep="last")
+
+        E.g.
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  2   |   null    |  foobar@gmail.com    |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+
+        After deduplication:
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+    """
     return Fuzzy(threshold=threshold)
 
 
@@ -754,9 +853,66 @@ def tfidf(
     threshold: float = 0.95,
     ngram: int | tuple[int, int] = 3,
     topn: int = 2,
+    **kwargs,
 ) -> BaseStrategy:
-    """TODO"""
-    return TfIdf(threshold=threshold, ngram=ngram, topn=topn)
+    """Near string deduplication using term frequency, inverse document
+    frequency.
+    
+    Usage is on single columns of a dataframe. `tfidf` is a tuneable deduper.
+    Experimentation is required for optimal use.
+
+    Args:
+        threshold: the minimum threshold at which similarity between two pairs
+            of values will be considered valid for deduplication.
+        ngram: the number of character ngrams to consider. For the `tfidf`
+            implementation this is the ngram bounded range. If you pass this as
+            an integer you are saying the bounds are the same. E.g. `ngram=1`
+            is equivalent to the range bounded over (1, 1) (i.e. unigrams 
+            only). `ngram=(1, 2)` is unigrams and bigrams. Increasing ngrams
+            reduces overall deduplication. However, too small an `ngram` may
+            result in false positives.
+        topn: the number of best matches to consider when building similarity
+            matrices.
+        **kwargs: additional kwargs as accepted in sklearn's [Tfidf 
+            Vectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
+    
+    Returns:
+        Instance of `BaseStrategy`
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, tfidf
+
+            dp = Dedupe(df)
+            dp.apply({"address": tfidf(threshold=0.8, ngram=1)})
+            df = dp.drop_duplicates(keep="last")
+
+        E.g.
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  2   |   null    |  foobar@gmail.com    |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+
+        After deduplication:
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+
+        Note that the same deduper with `ngram=2` does not deduplicate any
+        records in the above example.
+    """
+    return TfIdf(threshold=threshold, ngram=ngram, topn=topn, **kwargs)
 
 
 def lsh(
@@ -764,7 +920,57 @@ def lsh(
     ngram: int = 3,
     num_perm: int = 128,
 ) -> BaseStrategy:
-    """TODO"""
+    """Near string deduplication using locality sensitive hashing (LSH).
+    
+    Usage is on single columns of a dataframe. `lsh` is a tuneable deduper.
+    Experimentation is required for optimal use. 
+
+    Args:
+        threshold: the minimum threshold at which similarity between two pairs
+            of values will be considered valid for deduplication.
+        ngram: the number of character ngrams to consider. For `lsh`, and
+            unlike the `tfidf` implementation, this is single integer ngram
+            number. So, `ngram=1` is only unigrams. Increasing ngrams reduces
+            overall deduplication. However, too small an `ngram` may result in false 
+            positives.
+        num_perm: the number of MinHash permutations used to approximate
+            similarity. Increasing this generally produces better matches, at
+            greater computational cost. Very low numbers of permutations (< 64)
+            can produce unreliable results
+    
+    Returns:
+        Instance of `BaseStrategy`
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, lsh
+
+            dp = Dedupe(df)
+            dp.apply({"address": lsh(threshold=0.8, ngram=1)})
+            df = dp.drop_duplicates(keep="last")
+
+        E.g.
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  2   |   null    |  foobar@gmail.com    |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+
+        After deduplication:
+
+            >>> df
+            +------+-----------+----------------------+
+            | id   |  address  |         email        |
+            +------+-----------+----------------------+
+            |  1   |  london   |  fizzpop@gmail.com   |
+            |  3   |  london   |  foobar@gmail.co.uk  |
+            +------+-----------+----------------------+
+    """
     return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
 
 
