@@ -152,6 +152,6 @@ def register(f: PairGenerator) -> None:
     def wrapper(*args, **kwargs):
         if args:
             raise TypeError(f"{f.__name__} must be called with keyword arguments only")
-        return Custom(f, *args, **kwargs)
+        return Custom(f, **kwargs)
 
     return wrapper
