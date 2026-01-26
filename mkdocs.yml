@@ -17,6 +17,9 @@ theme:
     toggle:
       icon: material/brightness-4
       name: Switch to light mode
+  
+  features:
+    - content.code.copy
 
 plugins:
   - mkdocstrings:
@@ -34,11 +37,38 @@ plugins:
 
 markdown_extensions:
 - pymdownx.highlight:
+    use_pygments: true
     default_lang: python
+    anchor_linenums: true
+    line_spans: __span
+    pygments_lang_class: true
+- pymdownx.inlinehilite
+- pymdownx.snippets
+- pymdownx.superfences
+
+# pygmentize -S colorful -f html > docs/stylesheets/test.css
+# extra_css:
+#   - stylesheets/test.css
 
 nav:
   - index.md
-  - tutorials.md
+  - Concepts:
+    - concepts/install.md
+    - concepts/first-steps.md
+    - concepts/strategies.md
+    - Applying Strategies:
+      - concepts/applying-strategies/sequential-api.md
+      - concepts/applying-strategies/dict-api.md
+    - concepts/record-linkage.md
+    - concepts/rules-api.md
+    - concepts/boolean-operators.md
+    - concepts/discrete-strategies.md
+    - concepts/supported-backends.md
+    - concepts/customizing-strategies.md
+    - concepts/using-synthetic-data.md
+
+
+
   - How-To Guides: how-to-guides.md
   - Reference:
     - reference/enlace.md
