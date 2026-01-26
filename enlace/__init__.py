@@ -1,7 +1,3 @@
-"""
-.. include:: ../README.md
-"""
-
 from enlace._strats_library import cosine
 from enlace._strats_library import exact
 from enlace._strats_library import fuzzy

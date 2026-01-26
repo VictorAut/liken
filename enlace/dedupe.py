@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Generic
-from typing import overload
+from typing import overload, TypeAlias
 
 import pandas as pd
 import polars as pl
@@ -21,7 +21,6 @@ from enlace._strats_manager import Rules
 from enlace._strats_manager import StrategyManager
 from enlace._strats_manager import StratsDict
 from enlace._types import Columns
-from enlace._types import DataFrameLike
 from enlace._types import Keep
 from enlace._validators import validate_columns_arg
 from enlace._validators import validate_keep_arg
@@ -32,34 +31,32 @@ from enlace._validators import validate_spark_args
 
 
 class Dedupe(Generic[DF]):
-    """TODO"""
+    """Deduplicate a dataframe given a collection of strategies.
+
+    Args:
+        df: The dataframe to deduplicate.
+        spark_session: optional spark session if initializing with PySpark
+            backend.
+        id: string label identifying a column in the dataframe that can be used
+            to optionally override the values of a default canonical_id
+
+    Attributes:
+        df: Returns the dataframe as currently stored in the `Dedupe` instance's
+            strategy manager.
+        strats: Returns the strategies as currently stored in the strategy
+            manager.
+
+    Raises:
+        ValueError: Initialized with PySpark DataFrame but no Spark Session.
+    """
 
     _df: DF
     _executor: Executor[DF]
 
-    @overload
-    def __init__(
-        self,
-        df: pd.DataFrame | pl.DataFrame | list[spark.Row],
-        /,
-        *,
-        spark_session: None = None,
-        id: str | None = None,
-    ): ...
-
-    @overload
-    def __init__(
-        self,
-        df: spark.DataFrame,
-        /,
-        *,
-        spark_session: SparkSession,
-        id: str,
-    ): ...
 
     def __init__(
         self,
-        df: DataFrameLike,
+        df: pd.DataFrame | pl.DataFrame | spark.DataFrame,
         /,
         *,
         spark_session: SparkSession | None = None,
@@ -76,43 +73,62 @@ class Dedupe(Generic[DF]):
 
         self._df = wrap(df, id)
 
-    def apply(self, strategy: BaseStrategy | StratsDict | dict) -> None:
-        self._sm.apply(strategy)
-
-    def canonicalize(
-        self,
-        columns: Columns | None = None,
-        *,
-        keep: Keep = "first",
-        drop_duplicates: bool = False,
-    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """canonicalize, and group, the data based on the provided attribute
-
+    def apply(self, strategy: BaseStrategy | dict | Rules) -> None:
+        """Apply a strategy or strategies for deduplication.
+        
+        Available for inspection when access with attribute `.strats`. Can be
+        repetitively called if using the Sequential API. Else apply once using 
+        the Dict API or Rules API.
+        
         Args:
-            columns: The attribute to deduplicate. If strategies have been added
-                as a mapping object, this must not passed, as the keys of the
-                mapping object will be used instead
+            strategy: The strategy or strategies to apply
+        
+        Returns:
+            None
+        
+        Raises:
+            InvalidStrategyError: For any invalid strategy or collection of
+                strategies
+        
+        Example:
+            Import and prepate data:
+
+                from enlace import Dedupe, exact, tfidf, lsh
+
+                df = ... # get a dataframe
+            
+            Sequential API:
+
+                dp = Dedupe(df)
+                dp.apply(exact())
+                dp.apply(tfidf()) # Ok, apply more than once
+                df = dp.drop_duplicates("address")
+
+            Dict API:
+
+                dp = Dedupe(df)
+                dp.apply(
+                    {
+                        "address": (exact(), tfidf()),
+                    }
+                )
+                df = dp.drop_duplicates()
+
+            Dict API:
+
+                from enlace.rules import Rules, on
+
+                dp = Dedupe(df)
+                dp.apply(
+                    Rules(
+                        on("address", exact()),
+                        on("address", tfidf()),
+                    )
+                )
+                df = dp.drop_duplicates()
+                
         """
-        keep = validate_keep_arg(keep)
-        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
-
-        # Allow use of no .apply(), assuming exact deduplication
-        if not self._sm.has_applies:
-            self.apply(exact())
-        strats: StratsDict | Rules = self._sm.get()
-
-        self._df = self._executor.execute(
-            self._df,
-            columns=columns,
-            strats=strats,
-            keep=keep,
-            drop_duplicates=drop_duplicates,
-            drop_canonical_id=False,
-        )
-
-        self._sm.reset()
-
-        return self._df.unwrap()
+        self._sm.apply(strategy)
 
     def drop_duplicates(
         self,
@@ -120,12 +136,27 @@ class Dedupe(Generic[DF]):
         *,
         keep: Keep = "first",
     ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """canonicalize, and group, the data based on the provided attribute
+        """Drop duplicates by enacting the applied strategies.
+
+        If no strategies are explicitely provided, will carry out an exact
+        deduplication on any number of columns provided in `columns`.
+        The `.strats` attribute will return None after calling this function.
 
         Args:
-            columns: The attribute to deduplicate. If strategies have been added
-                as a mapping object, this must not passed, as the keys of the
-                mapping object will be used instead
+            columns (str | tuple[str, ...] | None): The attribute(s) of the
+                dataframe to deduplicate.
+            keep: Accepted as "first" or "last". Whether to keep the first intance
+                of a duplicate or the last intance, as found in the DataFrame.
+        
+        Returns:
+            A deduplicated DataFrame.
+
+        Raises:
+            ValueError: Incorrect value to `keep` arg.
+            ValueError: Incorrect use of `columns` arg given API used to apply
+                strategies.
+            ValueError: Incorrect use a single column strategy given multiple
+                columns defined, or vice-versa.
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
@@ -148,10 +179,63 @@ class Dedupe(Generic[DF]):
 
         return self._df.unwrap()
 
+    def canonicalize(
+        self,
+        columns: Columns | None = None,
+        *,
+        keep: Keep = "first",
+        drop_duplicates: bool = False,
+    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """Canonicalize by enacting the applied strategies.
+
+        If no strategies are explicitely provided, will carry out an exact
+        canonicalization on any number of columns provided in `columns`.
+        The `.strats` attribute will return None after calling this function.
+
+        Args:
+            columns (str | tuple[str, ...] | None): The attribute(s) of the
+                dataframe to deduplicate.
+            keep: Accepted as "first" or "last". Whether to keep the first intance
+                of a duplicate or the last intance, as found in the DataFrame.
+            drop_duplicates: Optionally drop duplicates, whilst preserving a
+                canonical_id, contrary to `drop_duplicates`.
+        
+        Returns:
+            A canonicalised DataFrame. By default canonicalization is tracked
+                in a new `canonical_id` field.
+
+        Raises:
+            ValueError: Incorrect value to `keep` arg.
+            ValueError: Incorrect use of `columns` arg given API used to apply
+                strategies.
+            ValueError: Incorrect use a single column strategy given multiple
+                columns defined, or vice-versa.
+        """
+        keep = validate_keep_arg(keep)
+        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+
+        # Allow use of no .apply(), assuming exact deduplication
+        if not self._sm.has_applies:
+            self.apply(exact())
+        strats: StratsDict | Rules = self._sm.get()
+
+        self._df = self._executor.execute(
+            self._df,
+            columns=columns,
+            strats=strats,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            drop_canonical_id=False,
+        )
+
+        self._sm.reset()
+
+        return self._df.unwrap()
+
     @property
     def strats(self) -> str | None:
         """
-        Returns the strategies currently stored in the strategy manager.
+        Returns the strategies as currently stored in the strategy manager.
 
         If no strategies are stored, returns None. Otherwise, returns a string
         representation of the strategies containedtuple
@@ -164,5 +248,8 @@ class Dedupe(Generic[DF]):
         return self._sm.pretty_get()
 
     @property
-    def df(self) -> DataFrameLike:
+    def df(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """Returns the dataframe as currently stored in the `Dedupe` instance's
+        strategy manager.
+        """
         return self._df.unwrap()

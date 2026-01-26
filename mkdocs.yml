@@ -24,20 +24,25 @@ plugins:
           python:
             options:
               show_if_no_docstring: false
+              show_symbol_type_heading: true
               show_symbol_type_toc: true
+              show_object_full_path: false
+              show_docstring_type_aliases: true
+              backlinks: tree
+              docstring_options:
+                warn_missing_types: false
 
 markdown_extensions:
 - pymdownx.highlight:
     default_lang: python
-- pycon
 
 nav:
   - index.md
   - tutorials.md
   - How-To Guides: how-to-guides.md
   - Reference:
-    - Enlace: reference/enlace.md
-    - Custom: reference/custom.md
-    - Datasets: reference/datasets.md
-    - Rules: reference/rules.md
+    - reference/enlace.md
+    - reference/rules.md
+    - reference/custom.md
+    - reference/datasets.md
   - explanation.md

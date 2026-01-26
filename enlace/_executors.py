@@ -243,7 +243,7 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows, id=id)
+        dp = factory(rows, id=id) # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
         dp.apply(strats)  # type: ignore
         dp.canonicalize(
             columns,

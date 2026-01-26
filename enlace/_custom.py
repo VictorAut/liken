@@ -76,7 +76,7 @@ def register(f: PairGenerator) -> None:
     contents of one or more DataFrame columns. The concrete column backing this
     array is resolved only when the strategy is applied.
 
-    The expected function signature is::
+    The expected function signature is:
 
         function(array, **kwargs)
 
