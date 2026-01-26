@@ -2,9 +2,10 @@
 title: Getting Started 
 ---
 
-Enlace is a library for enhanced deduplication tooling.
+Enlace is a library providing enhanced deduplication tooling for DataFrames
 
 The key features are:
+
 - Ability to drop near duplicates from DataFrames
 - Ready-to-use deduplication strategies
 - Advanced rules based deduplication
@@ -19,8 +20,9 @@ pip install enlace
 
 ## Use `enlace` in your code
 
-```python
+```python {hl_lines="1 6 7"}
 from enlace import Dedupe
+import pandas as pd
 
 df = pd.DataFrame(columns = ["name"], data = [...])
 
