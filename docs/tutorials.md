@@ -14,3 +14,11 @@ get started with the code in this project.
 - Show concrete examples, no abstractions
 - Provide the minimum necessary explanation
 - Avoid any distractions
+
+When you use `enlace.Dedupe`, you can also make use of the advanced Rules API.
+
+This API is exposed via [enlace.rules][] and additionally provides a number of
+*discrete* (binary) dedupers, such as `enlace.rules.isna`, which are primarily intended
+for use in rule-based matching.
+
+[enlace.rules.Rules]

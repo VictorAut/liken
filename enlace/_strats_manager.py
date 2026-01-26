@@ -52,13 +52,13 @@ class StratsDict(UserDict):
 
 
 class Rules(tuple):
-    """Tuple-like container of strategies
+    """Tuple-like container of strategies.
 
     Accepts single or multiple strategies where those strategies are passed
-    with the ``on`` function
+    with the ``on`` function.
 
     Args:
-        *strategies: comma separated ``on`` strategies
+        *strategies: comma separated ``on`` strategies.
 
 
     Example:
@@ -86,7 +86,7 @@ class Rules(tuple):
             dp.apply(STRAT)
     """
 
-    def __new__(cls, *strategies):
+    def __new__(cls, *strategies: On):
         if len(strategies) == 1 and isinstance(strategies[0], tuple):
             strategies = strategies[0]
 
@@ -287,7 +287,7 @@ def warn(msg: str) -> None:
 
 
 def on(columns: Columns, strat: BaseStrategy, /) -> None:
-    """Unit container for a single strategy in the Rules API
+    """Unit container for a single strategy in the Rules API.
 
     Operates a "strat" on a "columns". Is provided as comma separated members to
     `Rules`. Allows for "and" chaining via the `&` operator to logically
@@ -300,8 +300,8 @@ def on(columns: Columns, strat: BaseStrategy, /) -> None:
     strategy for any given pairwise combination.
 
     Args:
-        columns: the label(s) of a column or columns
-        strat: the strategy to apply
+        columns: the label(s) of a column or columns.
+        strat: the strategy to apply.
 
     Returns:
         None
@@ -318,14 +318,14 @@ def on(columns: Columns, strat: BaseStrategy, /) -> None:
 
             on("email", fuzzy(threshold=0.95)) & on("email", str_endswith("UK"))
 
-        Strategies can be combined with ``&`` for different columns
+        Strategies can be combined with ``&`` for **different** columns:
 
             on("email", fuzzy(threshold=0.95)) & on("address", ~isna())
 
         The above can be read as "deduplicate email only when the address field
-        is not null". E.g.
+        is not null":
 
-            >>> df
+            >>> df # Before
             +------+-----------+---------------------+
             | id   |  address  |        email        |
             +------+-----------+---------------------+
@@ -334,9 +334,7 @@ def on(columns: Columns, strat: BaseStrategy, /) -> None:
             |  3   |   null    |  fooBar@gmail.com   |
             +------+-----------+---------------------+
 
-        After deduplication:
-
-            >>> df
+            >>> df # After
             +------+-----------+---------------------+--------------+
             | id   |  address  |        email        | canonical_id |
             +------+-----------+---------------------+--------------+

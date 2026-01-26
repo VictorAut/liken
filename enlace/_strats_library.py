@@ -758,7 +758,7 @@ def exact() -> BaseStrategy:
     If no strategies are applied to `Dedupe`, `exact` is applied by default.
 
     Returns:
-        Instance of `BaseStrategy`
+        Instance of `BaseStrategy`..
     
     Example:
         Applied to a single column:
@@ -777,7 +777,7 @@ def exact() -> BaseStrategy:
 
         E.g.
 
-            >>> df
+            >>> df # Before
             +------+-----------+--------------------+
             | id   |  address  |        email       |
             +------+-----------+--------------------+
@@ -786,9 +786,7 @@ def exact() -> BaseStrategy:
             |  3   |   null    |  foobar@gmail.com  |
             +------+-----------+--------------------+
 
-        After deduplication:
-
-            >>> df
+            >>> df # After
             +------+-----------+---------------------+
             | id   |  address  |        email        |
             +------+-----------+---------------------+
@@ -814,7 +812,7 @@ def fuzzy(threshold: float = 0.95) -> BaseStrategy:
             of values will be considered valid for deduplication.
     
     Returns:
-        Instance of `BaseStrategy`
+        Instance of `BaseStrategy`.
     
     Example:
         Applied to a single column:
@@ -827,7 +825,7 @@ def fuzzy(threshold: float = 0.95) -> BaseStrategy:
 
         E.g.
 
-            >>> df
+            >>> df # Before
             +------+-----------+----------------------+
             | id   |  address  |         email        |
             +------+-----------+----------------------+
@@ -836,9 +834,7 @@ def fuzzy(threshold: float = 0.95) -> BaseStrategy:
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
 
-        After deduplication:
-
-            >>> df
+            >>> df # After
             +------+-----------+----------------------+
             | id   |  address  |         email        |
             +------+-----------+----------------------+
@@ -877,7 +873,7 @@ def tfidf(
             Vectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
     
     Returns:
-        Instance of `BaseStrategy`
+        Instance of `BaseStrategy`.
     
     Example:
         Applied to a single column:
@@ -890,7 +886,7 @@ def tfidf(
 
         E.g.
 
-            >>> df
+            >>> df # Before
             +------+-----------+----------------------+
             | id   |  address  |         email        |
             +------+-----------+----------------------+
@@ -899,9 +895,7 @@ def tfidf(
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
 
-        After deduplication:
-
-            >>> df
+            >>> df # After
             +------+-----------+----------------------+
             | id   |  address  |         email        |
             +------+-----------+----------------------+
@@ -936,10 +930,10 @@ def lsh(
         num_perm: the number of MinHash permutations used to approximate
             similarity. Increasing this generally produces better matches, at
             greater computational cost. Very low numbers of permutations (< 64)
-            can produce unreliable results
+            can produce unreliable results.
     
     Returns:
-        Instance of `BaseStrategy`
+        Instance of `BaseStrategy`.
     
     Example:
         Applied to a single column:
@@ -961,9 +955,7 @@ def lsh(
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
 
-        After deduplication:
-
-            >>> df
+            >>> df # After deduplication
             +------+-----------+----------------------+
             | id   |  address  |         email        |
             +------+-----------+----------------------+
@@ -975,35 +967,325 @@ def lsh(
 
 
 def jaccard(threshold: float = 0.95) -> BaseStrategy:
-    """TODO"""
+    """Multi-column deduplication using jaccard similarity.
+    
+    Usage is on multiple columns of a dataframe. Appropriate for categorical
+    data. Null types are handled out-of-box with jaccard, they are simply
+    considered another category of a given field.
+
+    Args:
+        threshold: the minimum threshold at which similarity between two pairs
+            of values will be considered valid for deduplication.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to multiple columns:
+
+            from enlace import Dedupe, jaccard
+
+            dp = Dedupe(df)
+            dp.apply(jaccard())
+            df = dp.drop_duplicates(
+                ("account", "status", "country", "property"),
+                keep="first",
+            )
+
+        E.g.
+
+            >>> df
+            +------+-----------+----------+----------+-----------+
+            | id   |  account  |  status  |  country |  property |
+            +------+-----------+----------+----------+-----------+
+            |  1   |  reddit   |  married |    UK    |  house    |
+            |  2   |  flickr   |  married |    UK    |  house    |
+            |  3   | pinterest |  single  |  Germany |  flat     |
+            +------+-----------+----------+----------+-----------+
+
+            >>> df # After deduplication
+            +------+-----------+----------+----------+-----------+
+            | id   |  account  |  status  |  country |  property |
+            +------+-----------+----------+----------+-----------+
+            |  1   |  reddit   |  married |    UK    |  house    |
+            |  3   | pinterest |  single  |  Germany |  flat     |
+            +------+-----------+----------+----------+-----------+
+    """
     return Jaccard(threshold=threshold)
 
 
 def cosine(threshold: float = 0.95) -> BaseStrategy:
-    """TODO"""
+    """Multi-column deduplication using cosine similarity.
+    
+    Usage is on multiple columns of a dataframe. Appropriate for numerical
+    data.
+
+    Args:
+        threshold: the minimum threshold at which similarity between two pairs
+            of values will be considered valid for deduplication.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+
+    Note:
+        In the case of null types, that column is ignore, and only the
+        similarity is taken of the remaining columns is taken.
+
+        So, if deduplicating columns `col_1`, `col_2` and `col_3` with `cosine`,
+        any similarity is usually the dot product for a given pairwise evaluation
+        i.e.
+
+            (`col_1i`, `col_2i`, `col_3i`) . (`col_1j`, `col_2j`, `col_3j`)
+        
+        However, if `col_1i` is Null then the following is evaluated:
+        
+            (`col_2i`, `col_3i`) . (`col_2j`, `col_3j`)
+
+        Additionally, if `col_j2` is *also* Null then the following is evaluated:
+
+            (`col_3i`) . (`col_3j`)
+
+        Taking this into account you may find it best to avoid cosine similarity
+        calculations for sparse datasets. Alternatively, you may opt to your
+        approach by either preprocessing the Nulls beforehand, or, by 
+        limiting yourself to using the `cosine` deduplicator with the `Rules`
+        API using combinations for non null fields, e.g.
+
+            STRAT = Rules(
+                on(
+                    ("col_1", "col_2", "col_3"),
+                    cosine(),
+                )
+                #
+                & on("col_1", ~isna()),
+            )
+    
+    Warning:
+        Normalization is a standard approach to ensure that the results of
+        cosine similarity are valid. Consider [standard 
+        approaches](https://scikit-learn.org/stable/modules/preprocessing.html#normalization)
+    
+    Example:
+        Applied to multiple columns:
+
+            from enlace import Dedupe, cosine
+
+            dp = Dedupe(df)
+            dp.apply(cosine())
+            df = dp.drop_duplicates(
+                ("surface are", "ceiling height", "building age", "num_rooms"),
+                keep="first",
+            )
+    """
     return Cosine(threshold=threshold)
 
 
 # RULES SUB PKG
 
 
-def isna():
-    """TODO"""
+def isna() -> BaseStrategy:
+    """Discrete deduper on null/None values.
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not null" using inversion operator: `~isna()`.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, isna
+
+            STRAT = Rules(on("email", exact()) & on("address", ~isna()))
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.drop_duplicates(keep="last")
+
+            >>> df # before
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   |  london   |  fizzpop@yahoo.com  |
+            |  2   |  london   |  fizzpop@yahoo.com  |
+            |  3   |   null    |  foobar@gmail.com   |
+            |  4   |   null    |  foobar@gmail.com   |
+            +------+-----------+---------------------+
+
+            >>> df # after
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  2   |  london   |  fizzpop@yahoo.com  |
+            |  3   |   null    |  foobar@gmail.com   |
+            |  4   |   null    |  foobar@gmail.com   | # Not deduped!
+            +------+-----------+---------------------+
+    """
     return IsNA()
 
 
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
-    """TODO"""
+    """Discrete deduper on string length.
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not the defined length" using inversion operator: `~str_len()`.
+
+    Deduplication will happen over the bounded lengths defined by `min_len` and
+    `max_len`. The upper end of the range can be left unbounded. For
+    deduplication over an exact length use `max_len = min_len + 1`.
+
+    Args:
+        min_len: the lower bound of lengths considered
+        max_len: the upper bound of lengths considered. Can be left unbounded.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, isna
+
+            STRAT = Rules(on("email", exact()) & on("email", str_len(min_len=10)))
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.drop_duplicates(keep="last")
+
+            >>> df # before
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   |  london   |  fizzpop@yahoo.com  |
+            |  2   |   tokyo   |  fizzpop@yahoo.com  |
+            |  3   |   paris   |       a@msn.fr      |
+            |  4   |   nice    |       a@msn.fr      |
+            +------+-----------+---------------------+
+
+            >>> df # after
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  2   |   tokyo   |  fizzpop@yahoo.com  |
+            |  3   |   paris   |       a@msn.fr      |
+            |  4   |   nice    |       a@msn.fr      |
+            +------+-----------+---------------------+
+    """
     return StrLen(min_len=min_len, max_len=max_len)
 
 
 def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
-    """TODO"""
+    """Discrete deduper on strings starting with a pattern.
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not starting with pattern" using inversion operator: `~str_startswith()`.
+
+    Deduplication will happen for any pairwise matches that have the same
+    `pattern`. Case sensitive unless optionally removed.
+
+    Args:
+        pattern: the pattern that the string starts with to be deduplicated
+        case: case sensitive, or not.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, str_startswith
+
+            STRAT = Rules(
+                on("email", exact())
+                & on(
+                    "email",
+                    str_startswith(pattern="f", case=True),
+                )
+            )
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.drop_duplicates(keep="first")
+
+            >>> df
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   | new york  |  fizzpop@yahoo.com  |
+            |  2   |   london  |  foobar@gmail.co.uk |
+            |  3   | marseille |   Flipflop@msn.fr   |
+            |  4   |  chicago  |    random@aol.com   |
+            +------+-----------+---------------------+
+
+            >>> df # after
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   | new york  |  fizzpop@yahoo.com  |
+            |  3   | marseille |   Flipflop@msn.fr   |
+            |  4   |  chicago  |    random@aol.com   |
+            +------+-----------+---------------------+
+    """
     return StrStartsWith(pattern=pattern, case=case)
 
 
 def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
-    """TODO"""
+    """Discrete deduper on strings ending with a pattern.
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not ending with pattern" using inversion operator: `~str_endswith()`.
+
+    Deduplication will happen for any pairwise matches that have the same
+    `pattern`. Case sensitive unless optionally removed.
+
+    Args:
+        pattern: the pattern that the string ends with to be deduplicated
+        case: case sensitive, or not.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, str_endswith
+
+            STRAT = Rules(
+                on("email", exact())
+                & on(
+                    "email",
+                    str_endswith(pattern=".com", case=False),
+                )
+            )
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.drop_duplicates(keep="first")
+
+            >>> df
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   | new york  |  fizzpop@yahoo.Com  |
+            |  2   |   london  |  foobar@gmail.co.uk |
+            |  3   | marseille |   Flipflop@msn.fr   |
+            |  4   |  chicago  |    random@aol.com   |
+            +------+-----------+---------------------+
+
+            >>> df # after
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   | new york  |  fizzpop@yahoo.Com  |
+            |  2   |   london  |  foobar@gmail.co.uk |
+            |  3   | marseille |   Flipflop@msn.fr   |
+            +------+-----------+---------------------+
+    """
     return StrEndsWith(pattern=pattern, case=case)
 
 
@@ -1012,5 +1294,59 @@ def str_contains(
     case: bool = True,
     regex: bool = False,
 ) -> BaseStrategy:
-    """TODO"""
+    """Discrete deduper on general string patterns with regex.
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not containing pattern" using inversion operator: `~str_contains()`.
+
+    Deduplication will happen for any pairwise matches that have the same
+    `pattern`. Case sensitive unless optionally removed. Pattern can include
+    regex patterns if passed with `regex` arg.
+
+    Args:
+        pattern: the pattern that the string ends with to be deduplicated
+        case: case sensitive, or not.
+        regex: uses regex patterns, or not.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, str_contains
+
+            STRAT = Rules(
+                on("email", exact())
+                & on(
+                    "email",
+                    str_contains(pattern=r"05\d{3}", regex=True),
+                )
+            )
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.canonicalize(keep="first")
+
+            >>> df
+            +------+-----------------------------+
+            | id   |           address           |
+            +------+-----------------------------+
+            |  1   | 12 calle girona, 05891, ES  |
+            |  2   |  1A avenida palmas, 05562   |
+            |  3   |      901, Spain, 05435      |
+            |  4   |     12, santiago, 09945     |
+            +------+-----------------------------+
+
+            >>> df # after
+            +------+-----------------------------+---------------+
+            | id   |           address           |  canonical_id |
+            +------+-----------------------------+---------------+
+            |  1   | 12 calle girona, 05891, ES  |        1      |
+            |  2   |  1A avenida palmas, 05562   |        1      |
+            |  3   |      901, Spain, 05435      |        1      |
+            |  4   |     12, santiago, 09945     |        4      |
+            +------+-----------------------------+---------------+
+    """
     return StrContains(pattern=pattern, case=case, regex=regex)
