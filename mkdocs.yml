@@ -36,6 +36,8 @@ plugins:
                 warn_missing_types: false
 
 markdown_extensions:
+- admonition
+- pymdownx.details
 - pymdownx.highlight:
     use_pygments: true
     default_lang: python

@@ -1,5 +1,5 @@
 ---
-title: Install Enlace
+title: Install
 ---
 
 
