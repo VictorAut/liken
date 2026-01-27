@@ -2,9 +2,9 @@
 title: First Steps
 ---
 
-## When pandas
+## Where Bears Roam
 
-talk about pandas
+In this tutorial we will assume that you have a basic awareness of at least one DataFrame library in Python. Most likely that library is Pandas, so able to carry out basic manipulation of a Pandas DataFrame.
 
 ## The simplest example
 
