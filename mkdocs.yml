@@ -23,6 +23,7 @@ theme:
     - navigation.tabs
     - navigation.top
     - navigation.footer
+    - navigation.tracking
 
 extra:
   generator: false

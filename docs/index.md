@@ -1,8 +1,8 @@
 ---
-title: Getting Started 
+title: Enlace
 ---
 
-Enlace is a library providing enhanced deduplication tooling for DataFrames
+**Enlace** is a library providing enhanced deduplication tooling for DataFrames
 
 The key features are:
 
