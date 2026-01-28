@@ -10,7 +10,7 @@ Here we will see that **Enlace** comes with ready-to-use strategies.
 
 ## **Enlace**-ready strategies
 
-It's worth taking stock of the fact that when we do any kind of near deduplication process we will have to limit ourselves to applying said near deduplication processes (ahem, **strategies**) to individual columns. Whilst this is generally true, there are some **stratgies** that are built for multiple columns by default.
+It's worth taking stock of the fact that when we do any kind of near deduplication process we will have to limit ourselves to applying said near deduplication processes (**strategies**) to individual columns. Whilst this is generally true, there are some **stratgies** that are built for multiple columns by default.
 
 |               | Strategy                                              | Description                                                                                      |
 | ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
