@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "dupegrouper"
+name = "enlace"
 version = "0.3.1"
-description = "A Python library for grouping duplicate data efficiently."
-authors = ["VictorAutonell-Oiry"]
+description = "A Python library for near deduplication and record linkage."
+authors = ["VictorAut"]
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["duplicates", "deduplication", "grouping"]
+keywords = ["duplicates", "deduplication", "record linkage", "canonicalization"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
 
