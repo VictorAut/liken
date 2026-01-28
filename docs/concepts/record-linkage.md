@@ -2,7 +2,7 @@
 title: Record Linkage
 ---
 
-## What is it
+## What Is It
 
 Up to now you've learnt about the two mechanism for applying strategies, the **Sequantial API** and the **Dict API**.
 
@@ -16,7 +16,7 @@ Enter "record linkage" which conceptually describes the idea that the deduplicat
 
 The idea behind record linkage as explained above is really quite simple. We do, however, need a mechanism to *decide* which of the records we have linked is the best one. That can be expressed as "canonicalization" by which mean the process that chooses a "canonical" record. 
 
-## Enlace implementation
+## Enlace Implementation
 
 You've actually already encountered **Enlace's** canonicalisation when dropping duplicates upon chosing [which `keep` argument to declare](../concepts/applying-strategies/dict-api.md).
 
@@ -24,13 +24,13 @@ Let's look at a dummy dataset again:
 
 ```
 >>> df
-+------+-----------+-----------------------+
-| id   |  address  |          email        |
-+------+-----------+-----------------------+
-|  1   |  london   |   fizzpop@yahoo.com   |
-|  2   |   tokyo   |  fizzpop@yahoo.co.uk  |
-|  3   |   paris   |        a@msn.fr       |
-+------+-----------+-----------------------+
++--------+-----------+-----------------------+
+|  uid   |  address  |          email        |
++--------+-----------+-----------------------+
+|  a001  |  london   |   fizzpop@yahoo.com   |
+|  a002  |   tokyo   |  fizzpop@yahoo.co.uk  |
+|  a003  |   paris   |        a@msn.fr       |
++--------+-----------+-----------------------+
 ```
 
 We're going to aim to link the above email addresses. To do so we're just going to swap `drop_duplicates` with `canonicalize`:
@@ -47,17 +47,52 @@ Now, checkout the outcome:
 
 ```
 >>> df
-+------+-----------+-----------------------+----------------+
-| id   |  address  |          email        |  canonical_id  |
-+------+-----------+-----------------------+----------------+
-|  1   |  london   |   fizzpop@yahoo.com   |        0       |
-|  2   |   tokyo   |  fizzpop@yahoo.co.uk  |        0       |
-|  3   |   paris   |        a@msn.fr       |        2       |
-+------+-----------+-----------------------+----------------+ 
++--------+-----------+-----------------------+----------------+
+|  uid   |  address  |          email        |  canonical_id  |
++--------+-----------+-----------------------+----------------+
+|  a001  |  london   |   fizzpop@yahoo.com   |        0       |
+|  a002  |   tokyo   |  fizzpop@yahoo.co.uk  |        0       |
+|  a003  |   paris   |        a@msn.fr       |        2       |
++--------+-----------+-----------------------+----------------+ 
 ```
 
-## A note on `canonical_id`s
+!!! note
+    The **Sequential API** and **Dict API** are equally valid as means to define strategies, regardless of whether the usecase requires canonicalization, or not.
 
-Above you can see that a new field has been created. It's called `canonical_id` and any repeated id is, in fact, a duplicate.
+## A Note on `canonical_id`s
 
-## Asking the big questions
+Above you can see that a new field has been created. It's called `canonical_id` and any repeated id is, in fact, a duplicate. In that instance that was an auto-incrementing numeric field. As such, the repeated id represents the position in the DataFrame of the *canonical* record.
+
+You can control this behaviour by passing an explicit label to the `id` argument of `Dedupe`. In that case, the `canonical_id` will become a copy of the defined `id`, or simply a reference to itself if it already exists. For example:
+
+```python {hl_lines="3"}
+from enlace import Dedupe, fuzzy
+
+dp = Dedupe(df, id="uid")       # included id arg
+dp.apply(fuzzy(threshold=0.85))
+df = dp.canonicalize("email", keep="first")
+```
+
+Now, checkout the variation:
+
+```
+>>> df
++--------+-----------+-----------------------+----------------+
+|  uid   |  address  |          email        |  canonical_id  |
++--------+-----------+-----------------------+----------------+
+|  a001  |  london   |   fizzpop@yahoo.com   |      a001      |
+|  a002  |   tokyo   |  fizzpop@yahoo.co.uk  |      a001      |
+|  a003  |   paris   |        a@msn.fr       |      a003      |
++--------+-----------+-----------------------+----------------+ 
+```
+
+This can be especially useful if instead of locating canonical records by index position in the DataFrame you want to do it based on pre-existing identifier.
+    
+
+## Recap
+
+Along with the [**Dict API**](../concepts/applying-strategies/dict-api.md) understanding **Record Linkage** will cover the vast majority of users's needs. The next tutorial introduces the third and final [**Rules API**](../concepts/rules-api.md) which exposes **Enlace's** most powerful functionality.
+
+!!! success "You learnt:"
+    - You only have to change `.drop_duplicates` for `.canonicalize` to achieve **Record Linkage** in **Enlace**
+    - Canonicalization creates a `canonical_id` field. Override the default auto-incrementing behaviour by defining the `id` arg of `Dedupe`

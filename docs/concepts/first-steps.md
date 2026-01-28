@@ -17,7 +17,7 @@ import pandas as pd
 df = pd.read_csv("my_handy_dataset.csv")    # we won't be repeating this
 ```
 
-!!! info "Talk about 'handy'..."
+!!! note "Talk about 'handy'..."
     **Enlace** provides synthesised data in the [`datasets` package](../concepts/using-synthetic-data.md). Now and then you may notice we're making reference to it's *handiest* dataset, [`fake_10`](../../reference/datasets/#enlace.datasets.fake_10).
 
 ## The Simplest Example

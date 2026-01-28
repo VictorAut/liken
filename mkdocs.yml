@@ -57,7 +57,10 @@ markdown_extensions:
   - pymdownx.superfences
   - tables
   - toc:
-        title: On this page
+      title: On this page 
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 # pygmentize -S colorful -f html > docs/stylesheets/test.css
 # extra_css:
@@ -73,9 +76,10 @@ nav:
       - concepts/applying-strategies/sequential-api.md
       - concepts/applying-strategies/dict-api.md
     - concepts/record-linkage.md
-    - concepts/rules-api.md
-    - concepts/boolean-operators.md
-    - concepts/discrete-strategies.md
+    - Advanced Strategies:
+      - concepts/advanced-strategies/rules-api.md
+      - concepts/advanced-strategies/boolean-operators.md
+      - concepts/advanced-strategies/discrete-strategies.md
     - concepts/supported-backends.md
     - concepts/customizing-strategies.md
     - concepts/using-synthetic-data.md
