@@ -20,6 +20,12 @@ theme:
   
   features:
     - content.code.copy
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+
+extra:
+  generator: false
 
 plugins:
   - mkdocstrings:
@@ -36,17 +42,21 @@ plugins:
                 warn_missing_types: false
 
 markdown_extensions:
-- admonition
-- pymdownx.details
-- pymdownx.highlight:
-    use_pygments: true
-    default_lang: python
-    anchor_linenums: true
-    line_spans: __span
-    pygments_lang_class: true
-- pymdownx.inlinehilite
-- pymdownx.snippets
-- pymdownx.superfences
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      use_pygments: true
+      default_lang: python
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - tables
+  - toc:
+        title: On this page
 
 # pygmentize -S colorful -f html > docs/stylesheets/test.css
 # extra_css:
@@ -68,9 +78,6 @@ nav:
     - concepts/supported-backends.md
     - concepts/customizing-strategies.md
     - concepts/using-synthetic-data.md
-
-
-
   - How-To Guides: how-to-guides.md
   - Reference:
     - reference/enlace.md
