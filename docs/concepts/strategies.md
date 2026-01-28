@@ -20,3 +20,10 @@ It's worth taking stock of the fact that when we do any kind of near deduplicati
 |*single-column*| [`lsh`](../../reference/enlace/#enlace.lsh)           | String matching with Locality Sensitive Hashing (LSH)                                            |
 |*compound-column*| [`jaccard`](../../reference/enlace/#enlace.jaccard) | Multi column similarity based on intersection of categorical data                                |
 |*compound-column*| [`cosine`](../../reference/enlace/#enlace.cosine)   | Multi column similarity based on dot product of numerical data                                   |
+
+
+## Recap
+
+!!! success "You learnt:"
+    - **Enlace** comes with ready to use **strategies**
+    - Strategies are split into those that have an effect on *single columns* and those that have an effect on *compound columns*
