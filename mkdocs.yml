@@ -20,7 +20,7 @@ theme:
   
   features:
     - content.code.copy
-    - navigation.tabs
+    # - navigation.tabs
     - navigation.top
     - navigation.footer
     - navigation.tracking
@@ -61,32 +61,37 @@ markdown_extensions:
   - def_list
   - pymdownx.tasklist:
       custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
-# pygmentize -S colorful -f html > docs/stylesheets/test.css
-# extra_css:
-#   - stylesheets/test.css
 
 nav:
   - index.md
-  - Concepts:
-    - concepts/install.md
-    - concepts/first-steps.md
-    - concepts/strategies.md
+  - Tutorials:
+    - tutorials/install.md
+    - tutorials/first-steps.md
+    - tutorials/strategies.md
     - Applying Strategies:
-      - concepts/applying-strategies/sequential-api.md
-      - concepts/applying-strategies/dict-api.md
-    - concepts/record-linkage.md
+      - tutorials/applying-strategies/sequential-api.md
+      - tutorials/applying-strategies/dict-api.md
+    - tutorials/record-linkage.md
     - Advanced Strategies:
-      - concepts/advanced-strategies/rules-api.md
-      - concepts/advanced-strategies/boolean-operators.md
-      - concepts/advanced-strategies/discrete-strategies.md
-    - concepts/supported-backends.md
-    - concepts/customizing-strategies.md
-    - concepts/using-synthetic-data.md
-  - How-To Guides: how-to-guides.md
+      - tutorials/advanced-strategies/rules-api.md
+      - tutorials/advanced-strategies/boolean-operators.md
+      - tutorials/advanced-strategies/discrete-strategies.md
+    - tutorials/supported-backends.md
+    - tutorials/customizing-strategies.md
+    - tutorials/using-synthetic-data.md
+  - How-To Guides: 
+    - how-tos/choose-the-right-api.md
+    - how-tos/build-iterative-workloads.md
+  - Explanation:
+    - explanation/what-diff-in-apis.md
+    - explanation/binary-vs-discrete.md
+    - explanation/how-does-it-work.md
   - Reference:
     - reference/enlace.md
     - reference/rules.md
     - reference/custom.md
     - reference/datasets.md
-  - explanation.md
