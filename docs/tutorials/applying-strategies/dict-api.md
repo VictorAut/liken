@@ -2,11 +2,11 @@
 title: Dict API
 ---
 
-## Dictionary based Strategies
+## Dictionary Based Strategies
 
 Earlier we explored the Sequential API. Once you've applied more than just a couple of strategies you're pushing verbosity to the limit — once you need to so for *multiple* columns it's getting really quite impractical.
 
-The **Dict API** solves this with dictionaries. Here you'll only be able to use `apply` once. Additionally, `drop_duplicates` will no longer accept any arguments — columns will now be defined as the keys to the dictionary. Let's deduplicate our persons dataset on more than just `address`:
+The **Dict API** solves this with dictionaries. Here, you'll only be able to use `apply()` once. Additionally, `drop_duplicates()` will no longer accept any arguments — columns will now be defined as the keys to the dictionary. Let's deduplicate our persons dataset on more than just `address`:
 
 ```python
 from enlace import Dedupe, exact, fuzzy, tfidf, jaccard
@@ -21,7 +21,8 @@ STRAT = {
         "marital_status",
         "has_car",
         "flat_or_house",
-    ): jaccard(threshold=0.8),
+        "urban_or_rural",
+    ): jaccard(threshold=0.75),
 }
 
 dp = Dedupe(df)
@@ -29,7 +30,7 @@ dp.apply(STRAT)
 df = dp.drop_duplicates(keep="first")
 ```
 
-Wow! In plain English this now might read as "Deduplicate only exact emails. Then similar addresses. Finally, any records that have 3 out of 4 of those categories matching".
+Wow! In plain English this reads as "Deduplicate only exact emails. Then, similar addresses. Finally, any records that have 3 out of 4 of those categories matching".
 
 !!! note "`keep` arg"
     The `keep` argument accepts the literals "first" or "last" which defines which record will be kept.

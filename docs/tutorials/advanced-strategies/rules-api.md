@@ -42,6 +42,7 @@ As you can see, organised like this, it's not too disimilar to the **Dict API**:
 
 - Each `on` enacts a strategy *on* a column, a bit like key-value pairs in dictionary.
 - Strategies are used in the order in which they are defined.
+- The entire collection is wrapped in a `Rules` object.
 
 We've not done anything new yet with this ability to define strategies, other than to get the minimum requirement that it feels and acts the same as a complex **Dict API** strategy. You may even prefer the look of this.
 
