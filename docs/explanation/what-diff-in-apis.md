@@ -2,19 +2,7 @@
 title: The APIs
 ---
 
-## Sequential, Dict, Rules
-
-Refer to the respective [Sequential API](../tutorials/applying-strategies/sequential-api.md), [Dict API](../tutorials/applying-strategies/dict-api.md) and [Rules API](../tutorials/advanced-strategies/rules-api.md) tutorials if you need to understand them.
-
-### A quick comparison
-
-| API         |  Apply few strats  | Apply many strats | Multiple `.apply` allowed | Multiple columns | Statements with `&` | Discrete strats |
-| ----------- | ------------------ | ---------------- | ---------------- | ---------------- | ---------------- | ---------------- | 
-| Sequential  | :material-check:   | :material-close: | :material-check: | :material-close: | :material-close: | :material-close: |
-| Dict        | :material-check:   | :material-check: | :material-close: | :material-check: | :material-close: | :material-close: |
-| Rules       | :material-check:   | :material-check: | :material-close: | :material-check: | :material-check: | :material-check: |
-
-### Do they Differ?
+## Do they Differ?
 
 The Sequential API is actually a special case of the Dict API. Although multiple `apply` statements can be made with the Sequential API in reality what is happening is that a hidden dictionary is being populated under a "default" key.
 

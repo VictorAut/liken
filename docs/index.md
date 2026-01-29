@@ -6,11 +6,12 @@ title: Enlace
 
 The key features are:
 
-- Ability to drop near duplicates from DataFrames
-- Ready-to-use deduplication strategies
-- Advanced rules based deduplication
-- Record linkage and canonicalization
-- Pandas, Polars and PySpark support
+- Near deduplication :material-check:
+- Ready-to-use deduplication strategies :material-check:
+- Record linkage and canonicalization :material-check:
+- Rules-based deduplication :material-check:
+- Pandas, Polars and PySpark support :material-check:
+- Customizable in pure Python :material-check:
 
 ## Installation
 
