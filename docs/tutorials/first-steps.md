@@ -2,6 +2,14 @@
 title: First Steps
 ---
 
+## Installation
+
+The first step is to install **Enlace**:
+
+```shell
+pip install enlace
+```
+
 ## Where Bears Roam
 
 **Enlace** is fundamentally a deduplication library for DataFrames, so in this tutorial we will assume that you have a basic awareness of at least one DataFrame library in Python. We'll steer clear of too much syntax outside of **Enlace** — but our reference point will be [Pandas](https://pandas.pydata.org/) DataFrames.
