@@ -8,6 +8,7 @@ combined with the `enlace` standard deduplication strategies.
 """
 
 from .._strats_library import isna
+from .._strats_library import isin
 from .._strats_library import str_contains
 from .._strats_library import str_endswith
 from .._strats_library import str_len
@@ -20,6 +21,7 @@ __all__ = [
     "Rules",
     "on",
     "isna",
+    "isin",
     "str_startswith",
     "str_contains",
     "str_endswith",

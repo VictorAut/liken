@@ -11,7 +11,7 @@ import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
 from enlace import exact
-from enlace._dataframe import DF
+from enlace._dataframe import DF, Frame
 from enlace._dataframe import wrap
 from enlace._executors import Executor
 from enlace._executors import LocalExecutor
@@ -37,8 +37,6 @@ class Dedupe(Generic[DF]):
         df: The dataframe to deduplicate.
         spark_session: optional spark session if initializing with PySpark
             backend.
-        id: string label identifying a column in the dataframe that can be used
-            to optionally override the values of a default canonical_id
 
     Attributes:
         df: Returns the dataframe as currently stored in the `Dedupe` instance's
@@ -60,18 +58,17 @@ class Dedupe(Generic[DF]):
         /,
         *,
         spark_session: SparkSession | None = None,
-        id: str | None = None,
     ):
+        self._df = df
+
         self._sm = StrategyManager()
 
         self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
             spark_session = validate_spark_args(spark_session)
-            self._executor = SparkExecutor(spark_session=spark_session, id=id)
+            self._executor = SparkExecutor(spark_session=spark_session)
         else:
             self._executor = LocalExecutor()
-
-        self._df = wrap(df, id)
 
     def apply(self, strategy: BaseStrategy | dict | Rules) -> None:
         """Apply a strategy or strategies for deduplication.
@@ -160,24 +157,26 @@ class Dedupe(Generic[DF]):
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        wdf: Frame = wrap(self._df, None) # canonical id only ever autoincremental for dropping
 
-        # Allow use of no .apply(), assuming exact deduplication
+        # No .apply(), assumes exact deduplication
         if not self._sm.has_applies:
             self._sm.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 
-        self._df = self._executor.execute(
-            self._df,
+        df = self._executor.execute(
+            wdf,
             columns=columns,
             strats=strats,
             keep=keep,
             drop_duplicates=True,
             drop_canonical_id=True,
+            id=None,
         )
 
         self._sm.reset()
 
-        return self._df.unwrap()
+        return df.unwrap()
 
     def canonicalize(
         self,
@@ -185,6 +184,7 @@ class Dedupe(Generic[DF]):
         *,
         keep: Keep = "first",
         drop_duplicates: bool = False,
+        id: str | None = None,
     ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Canonicalize by enacting the applied strategies.
 
@@ -195,10 +195,14 @@ class Dedupe(Generic[DF]):
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
                 dataframe to deduplicate.
-            keep: Accepted as "first" or "last". Whether to keep the first intance
-                of a duplicate or the last intance, as found in the DataFrame.
+            keep: Accepted as "first" or "last". Whether to keep the first
+                intance of a duplicate or the last intance, as found in the
+                DataFrame.
             drop_duplicates: Optionally drop duplicates, whilst preserving a
                 canonical_id, contrary to `drop_duplicates`.
+            id: string label identifying a column in the dataframe that can be
+                used to optionally override the values of a default
+                canonical_id.
         
         Returns:
             A canonicalised DataFrame. By default canonicalization is tracked
@@ -213,24 +217,26 @@ class Dedupe(Generic[DF]):
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        wdf: Frame = wrap(self._df, id)
 
-        # Allow use of no .apply(), assuming exact deduplication
+        # No .apply(), assumes exact deduplication
         if not self._sm.has_applies:
             self.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 
-        self._df = self._executor.execute(
-            self._df,
+        df: Frame = self._executor.execute(
+            wdf,
             columns=columns,
             strats=strats,
             keep=keep,
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
+            id=id,
         )
 
         self._sm.reset()
 
-        return self._df.unwrap()
+        return df.unwrap()
 
     @property
     def strats(self) -> str | None:
@@ -247,9 +253,9 @@ class Dedupe(Generic[DF]):
         """
         return self._sm.pretty_get()
 
-    @property
-    def df(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """Returns the dataframe as currently stored in the `Dedupe` instance's
-        strategy manager.
-        """
-        return self._df.unwrap()
+    # @property
+    # def df(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+    #     """Returns the dataframe as currently stored in the `Dedupe` instance's
+    #     strategy manager.
+    #     """
+    #     return self._df.unwrap()

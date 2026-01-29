@@ -14,17 +14,15 @@ from enlace.dedupe import Dedupe
 
 @patch("enlace.dedupe.LocalExecutor")
 @patch("enlace.dedupe.SparkExecutor")
-@patch("enlace.dedupe.wrap")
-def test_init_uses_executor(mock_wrap, mock_spark_executor, mock_local_executor, dataframe):
+def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe):
     df, spark = dataframe
 
-    mock_wrap.return_value = Mock()
     dupe = Dedupe(df, spark_session=spark)
     if spark:
-        mock_spark_executor.assert_called_once_with(spark_session=spark, id=None)
+        mock_spark_executor.assert_called_once_with(spark_session=spark)
     else:
         mock_local_executor.assert_called_once()
-    mock_wrap.assert_called_once_with(df, None)
+
     assert dupe._executor is not None
 
 
@@ -155,6 +153,7 @@ def test_canonicalize_calls(
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
+        id=None,
     )
     mock_sm.reset.assert_called_once()
 
@@ -191,6 +190,7 @@ def test_drop_duplicate_calls(
         keep="first",
         drop_duplicates=True,
         drop_canonical_id=True,
+        id=None,
     )
     mock_sm.reset.assert_called_once()
 
@@ -207,13 +207,3 @@ def test_strats_property_returns_manager_output(mock_sm, dataframe):
     dupe = Dedupe(df, spark_session=spark)
     dupe._sm = mock_sm
     assert dupe.strats == ("strategy1",)
-
-
-@patch("enlace.dedupe.wrap")
-def test_df_property_returns_unwrapped_df(mock_wrap, df_pandas):
-    mock_df_wrapper = Mock()
-    mock_df_wrapper.unwrap.return_value = df_pandas
-    mock_wrap.return_value = mock_df_wrapper
-
-    dupe = Dedupe(df_pandas)
-    assert_frame_equal(dupe.df, df_pandas)
