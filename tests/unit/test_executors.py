@@ -161,7 +161,7 @@ def test_process_partition_empty_partition_returns_empty(mock_dedupe):
 def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
     dp_instance = Mock()
-    dp_instance.df = ["out"]
+    dp_instance.canonicalize.return_value = ["out"]
 
     mock_dedupe.return_value = dp_instance
 
@@ -177,11 +177,12 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
         )
     )
 
-    mock_dedupe.assert_called_once_with([row], id="id")
+    mock_dedupe.assert_called_once_with([row])
     dp_instance.apply.assert_called_once()
     dp_instance.canonicalize.assert_called_once_with(
         "address",
         keep="last",
         drop_duplicates=False,
+        id="id",
     )
     assert result == ["out"]

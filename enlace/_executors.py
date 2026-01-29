@@ -53,6 +53,7 @@ class Executor(Protocol[DF]):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
+        id: str | None,
     ) -> DF: ...
 
 
@@ -69,14 +70,17 @@ class LocalExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
+        id: str | None = None,
     ) -> LocalDF:
-        """Process a local dataframe accoriding to the strategy collection
+        """Process a local dataframe according to the strategy collection
 
         Processing is defined according to whether the collections of
         strategies is:
             - Rules: in which case "and" combinations are allowed
             - StratsDict: in which case handles Sequential and Dict API
         """
+
+        del id # Unused: here for interface symmetry with SparkExecutor
 
         call_strat = partial(
             self._call_strat,
@@ -171,6 +175,7 @@ class SparkExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
+        id: str | None = None,
     ) -> SparkDF:
         """Spark specific deduplication helper
 
@@ -188,7 +193,6 @@ class SparkExecutor(Executor):
         from enlace.dedupe import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
-        id = self._id
         process_partition = self._process_partition
 
         rdd = df.mapPartitions(
@@ -243,12 +247,13 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows, id=id) # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
+        dp = factory(rows) # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
         dp.apply(strats)  # type: ignore
-        dp.canonicalize(
+        df = dp.canonicalize(
             columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
+            id=id,
         )
 
-        return iter(cast(list[Row], dp.df))
+        return iter(cast(list[Row], df))

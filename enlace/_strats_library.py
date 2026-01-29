@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import Self
 from typing import final
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -344,6 +345,29 @@ class _NotNA(
     def __str__(self):
         return self.str_representation(self.name)
 
+
+@final
+class IsIn(
+    SingleColumnMixin,
+    BinaryDedupers,
+):
+    """
+    Deduplicates all instances of strings that are a member of a defined
+    iterable
+    """
+
+    name: str = "isin"
+
+    def __init__(self, values: Iterable):
+        super().__init__(values=values)
+        self._values = values
+
+    @override
+    def _matches(self, value: str | None) -> bool:
+        return value in self._values
+
+    def __str__(self):
+        return self.str_representation(self.name)
 
 @final
 class StrLen(
@@ -1124,6 +1148,50 @@ def isna() -> BaseStrategy:
             +------+-----------+---------------------+
     """
     return IsNA()
+
+
+def isin(values: Iterable) -> BaseStrategy:
+    """Discrete deduper for membership
+    
+    Usage is on a single column of a dataframe. Available as the inversion, i.e.
+    "not in" using inversion operator: `~isin()`.
+    
+    Returns:
+        Instance of `BaseStrategy`.
+    
+    Example:
+        Applied to a single column:
+
+            from enlace import Dedupe, exact
+            from enlace.rules import Rules, on, isin
+
+            STRAT = Rules(on("address", isin(values="london")))
+
+            dp = Dedupe(df)
+            dp.apply(STRAT)
+            df = dp.drop_duplicates(keep="last")
+
+            >>> df # before
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  1   |  london   |  fizzpop@yahoo.com  |
+            |  2   |  london   |   hello@yahoo.com   |
+            |  3   |   null    |  foobar@gmail.com   |
+            |  4   |   null    |  random@gmail.com   |
+            |  5   |  london   |  butterfly@msn.jp   |
+            +------+-----------+---------------------+
+
+            >>> df # after
+            +------+-----------+---------------------+
+            | id   |  address  |         email       |
+            +------+-----------+---------------------+
+            |  3   |   null    |  foobar@gmail.com   |
+            |  4   |   null    |  random@gmail.com   |
+            |  5   |  london   |  butterfly@msn.jp   |
+            +------+-----------+---------------------+
+    """
+    return IsIn(values=values)
 
 
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
