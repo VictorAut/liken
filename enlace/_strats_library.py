@@ -1151,7 +1151,7 @@ def isna() -> BaseStrategy:
 
 
 def isin(values: Iterable) -> BaseStrategy:
-    """Discrete deduper for membership
+    """Discrete deduper for membership testing.
     
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not in" using inversion operator: `~isin()`.

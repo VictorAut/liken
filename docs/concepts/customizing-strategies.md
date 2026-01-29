@@ -4,6 +4,6 @@ title: Customizing Strategies
 
 ## Bringing your own
 
-what questions might I have
+**Enlace** supports bringing your own strategy 
 
 ## Registering custom strategies

@@ -28,7 +28,7 @@ There's no such thing as an `|` strategy. Take a moment to realise that `|` is c
 
 ```python
 STRAT = Rules(
-    on("address", fuzzy()),        # comma separated 
+    on("address", fuzzy()),        # comma separated *is like* or
     on("address", lsh())
 )
 ```
@@ -41,7 +41,7 @@ fSTRAT = Rules(
 
 ## Recap
 
-This tutorial doesn't *quite* logically end here. [Discrete Strategies](../advanced-strategies/discrete-strategies.md) will close the loop on the power of combinations.
+This tutorial doesn't *quite* logically end here. The [Discrete Strategies concepts tutorial](../advanced-strategies/discrete-strategies.md) will close the loop on the power of combinations.
 
 !!! success "You learnt:"
     - `on` executors can be combined as and statements using the `&` operator.
