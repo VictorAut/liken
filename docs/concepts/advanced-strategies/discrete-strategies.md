@@ -41,6 +41,7 @@ There are several binary (discrete) strategies available. They're listed here, a
 | *Continuous* |*compound-column*| [`jaccard`](../../reference/enlace/#enlace.jaccard) | Multi column similarity based on intersection of categorical data                                |
 | *Continuous* |*compound-column*| [`cosine`](../../reference/enlace/#enlace.cosine)   | Multi column similarity based on dot product of numerical data                                   |
 | *Discrete* |*single-column*| [`isna`](../../reference/rules/#enlace.rules.isna)                | Records where the column value is null/`None`                                        |
+| *Discrete* |*single-column*| [`isin`](../../reference/rules/#enlace.rules.isin)                | Records where the column value is in a list of members                               |
 | *Discrete* |*single-column*| [`fuzzy`](../../reference/rules/#enlace.rules.str_startswith)     | Records where the string starts with a pattern                                       |
 | *Discrete* |*single-column*| [`tfidf`](../../reference/rules/#enlace.rules.str_endswith)       | Records where the string ends with a pattern                                         |
 | *Discrete* |*single-column*| [`lsh`](../../reference/rules/#enlace.rules.str_contains)         | Records where the string contains a pattern. Accepts Regex.                          |

@@ -63,14 +63,14 @@ Now, checkout the outcome:
 
 Above you can see that a new field has been created. It's called `canonical_id` and any repeated id is, in fact, a duplicate. In that instance that was an auto-incrementing numeric field. As such, the repeated id represents the position in the DataFrame of the *canonical* record.
 
-You can control this behaviour by passing an explicit label to the `id` argument of `Dedupe`. In that case, the `canonical_id` will become a copy of the defined `id`, or simply a reference to itself if it already exists. For example:
+You can control this behaviour by passing an explicit label to the `id` argument of `canonicalize`. In that case, the `canonical_id` will become a copy of the defined `id`, or simply a reference to itself if it already exists. For example:
 
-```python {hl_lines="3"}
+```python {hl_lines="5"}
 from enlace import Dedupe, fuzzy
 
-dp = Dedupe(df, id="uid")       # included id arg
+dp = Dedupe(df)
 dp.apply(fuzzy(threshold=0.85))
-df = dp.canonicalize("email", keep="first")
+df = dp.canonicalize("email", keep="first", id="uid") # included id arg
 ```
 
 Now, checkout the variation:
@@ -95,4 +95,4 @@ Along with the [**Dict API**](../concepts/applying-strategies/dict-api.md) under
 
 !!! success "You learnt:"
     - You only have to change `.drop_duplicates` for `.canonicalize` to achieve **Record Linkage** in **Enlace**
-    - Canonicalization creates a `canonical_id` field. Override the default auto-incrementing behaviour by defining the `id` arg of `Dedupe`
+    - Canonicalization creates a `canonical_id` field. Override the default auto-incrementing behaviour by defining an `id` arg.
