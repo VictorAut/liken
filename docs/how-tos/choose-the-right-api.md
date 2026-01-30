@@ -13,3 +13,5 @@ Refer to the respective [Sequential API](../tutorials/applying-strategies/sequen
 | Sequential  | :white_check_mark:   | :material-close: |  :material-close: | :material-close: | :material-close: |
 | Dict        | :material-close:  | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: |
 | Rules       | :material-close:  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+
+If in doubt, default to the **Dict API** — it's flexible and switching to `Rules` for additional power is relatively easy.

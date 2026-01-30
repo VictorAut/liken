@@ -25,3 +25,31 @@ A new canonical ID everytime we instantiate a `Dedupe` class isn't going to be p
 
 !!! warning
     This process is going to be a lot easier with numeric ids. It's possible to use string identifiers but it makes the process of incrementing on append datasets much harder to manage and reason about
+
+## Decision Tree
+
+``` mermaid
+flowchart TD
+
+    df{{"`DataFrame already has a **canonical_id**?`"}}
+    id1{{"`**id** defined in canonicalize()?`"}}
+    id2{{"`**id** defined in canonicalize()?`"}}
+    idiscanonical{{"`**id** is the same as **canonical_id**?`"}}
+
+    autoincrement("`Create a new autoincrementing **canonical_id**`")
+    copy("`Copy **id** to create **canonical_id**`")
+    overwrite("`Copy **id** to overwrite **canonical_id**`")
+    existing("`Use existing **canonical_id**`")
+
+    df-- yes -->id1
+    df-- no -->id2
+
+    id1-- no -->existing
+    id1-- yes -->idiscanonical
+
+    idiscanonical-- yes -->existing
+    idiscanonical-- no -->overwrite
+
+    id2-- no -->autoincrement
+    id2-- yes -->copy
+```

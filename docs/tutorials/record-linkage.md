@@ -20,7 +20,7 @@ The idea behind **Record Linkage** as explained above is really quite simple. We
 
 ## Enlace Implementation
 
-You've actually already encountered **Enlace's** canonicalisation when dropping duplicates upon chosing [which `keep` argument to declare](../concepts/applying-strategies/dict-api.md).
+You've actually already encountered **Enlace's** canonicalisation when dropping duplicates upon chosing [which `keep` argument to declare](../tutorials/applying-strategies/dict-api.md).
 
 Let's look at a dummy dataset again:
 
@@ -93,7 +93,7 @@ This can be especially useful if instead of locating canonical records by index 
 
 ## Recap
 
-Along with the [**Dict API**](../concepts/applying-strategies/dict-api.md) understanding **Record Linkage** will cover the vast majority of users's needs. The next tutorial introduces the third and final [**Rules API**](../concepts/rules-api.md) which exposes **Enlace's** most powerful functionality.
+Along with the [**Dict API**](../tutorials/applying-strategies/dict-api.md) understanding **Record Linkage** will cover the vast majority of users's needs. The next tutorial introduces the third and final [**Rules API**](../tutorials/advanced-strategies/rules-api.md) which exposes **Enlace's** most powerful functionality.
 
 !!! success "You learnt:"
     - You only have to change `drop_duplicates()` for `canonicalize()` to achieve **Record Linkage** in **Enlace**.
