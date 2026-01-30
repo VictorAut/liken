@@ -2,7 +2,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-from pandas.testing import assert_frame_equal
 
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_args
