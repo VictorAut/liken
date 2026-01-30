@@ -26,12 +26,12 @@ jobs:
           poetry install
       
       - run: |
-          poetry run pdoc -t ./docs/templates/ --no-search -d google -o docs/api dupegrouper
+          poetry run mkdocs build --strict
 
       - name: Upload static files as artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/api/
+          path: site/
 
   # Deploy the artifact to GitHub pages; separate job so only actions/deploy-pages has the necessary permissions.
   deploy:
