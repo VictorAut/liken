@@ -1,12 +1,12 @@
-Copyright 2025 dupegrouper developer(s)
+Copyright 2025 liken developer(s)
 
 SPDX-License-Identifier: Apache-2.0
 
 ################################################################################################
 NOTICE: pass-through licensing of bundled components
 
-dupegrouper depends on a number of pre-existing third-party open-source software components.
-These software components are governed by their own licenses which dupegrouper does not
+liken depends on a number of pre-existing third-party open-source software components.
+These software components are governed by their own licenses which liken does not
 modify or supersede, please consult the originating authors.
 These components altogether have a mixture of the following licenses: Apache 2.0, MIT, BSD2,
 BSD3 licenses.
@@ -14,7 +14,7 @@ BSD3 licenses.
 Although we have examined the licenses to verify acceptance of commercial and non-commercial
 use, please see and consult the original licenses or authors.
 
-In particular, dupegrouper makes use of sparse-dot-topn.
+In particular, liken makes use of sparse-dot-topn.
 
 sparse_dot_topn: https://github.com/ing-bank/sparse_dot_topn/blob/master/LICENSE
 License: Apache 2.0
