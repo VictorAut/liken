@@ -15,10 +15,10 @@ from collections import defaultdict
 from collections.abc import Iterator
 from functools import cache
 from typing import TYPE_CHECKING
+from typing import Iterable
 from typing import Protocol
 from typing import Self
 from typing import final
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -309,7 +309,7 @@ class IsNA(
 @final
 class _NotNA(
     SingleColumnMixin,
-    BaseStrategy, # TODO, is this correct? Should it not be BinaryDeduper for consistency?
+    BaseStrategy,  # TODO, is this correct? Should it not be BinaryDeduper for consistency?
 ):
     """
     Deduplicate all non-NA / non-null values.
@@ -368,6 +368,7 @@ class IsIn(
 
     def __str__(self):
         return self.str_representation(self.name)
+
 
 @final
 class StrLen(
@@ -776,14 +777,14 @@ class Cosine(
 
 def exact() -> BaseStrategy:
     """Exact Deduplication.
-    
+
     Can deduplicate a single column, or multiple columns.
 
     If no strategies are applied to `Dedupe`, `exact` is applied by default.
 
     Returns:
         Instance of `BaseStrategy`..
-    
+
     Example:
         Applied to a single column:
 
@@ -828,16 +829,16 @@ def exact() -> BaseStrategy:
 
 def fuzzy(threshold: float = 0.95) -> BaseStrategy:
     """Near string deduplication.
-    
+
     Usage is on single columns of a dataframe.
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -877,7 +878,7 @@ def tfidf(
 ) -> BaseStrategy:
     """Near string deduplication using term frequency, inverse document
     frequency.
-    
+
     Usage is on single columns of a dataframe. `tfidf` is a tuneable deduper.
     Experimentation is required for optimal use.
 
@@ -887,18 +888,18 @@ def tfidf(
         ngram: the number of character ngrams to consider. For the `tfidf`
             implementation this is the ngram bounded range. If you pass this as
             an integer you are saying the bounds are the same. E.g. `ngram=1`
-            is equivalent to the range bounded over (1, 1) (i.e. unigrams 
+            is equivalent to the range bounded over (1, 1) (i.e. unigrams
             only). `ngram=(1, 2)` is unigrams and bigrams. Increasing ngrams
             reduces overall deduplication. However, too small an `ngram` may
             result in false positives.
         topn: the number of best matches to consider when building similarity
             matrices.
-        **kwargs: additional kwargs as accepted in sklearn's [Tfidf 
+        **kwargs: additional kwargs as accepted in sklearn's [Tfidf
             Vectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -939,9 +940,9 @@ def lsh(
     num_perm: int = 128,
 ) -> BaseStrategy:
     """Near string deduplication using locality sensitive hashing (LSH).
-    
+
     Usage is on single columns of a dataframe. `lsh` is a tuneable deduper.
-    Experimentation is required for optimal use. 
+    Experimentation is required for optimal use.
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
@@ -949,16 +950,16 @@ def lsh(
         ngram: the number of character ngrams to consider. For `lsh`, and
             unlike the `tfidf` implementation, this is single integer ngram
             number. So, `ngram=1` is only unigrams. Increasing ngrams reduces
-            overall deduplication. However, too small an `ngram` may result in false 
+            overall deduplication. However, too small an `ngram` may result in false
             positives.
         num_perm: the number of MinHash permutations used to approximate
             similarity. Increasing this generally produces better matches, at
             greater computational cost. Very low numbers of permutations (< 64)
             can produce unreliable results.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -992,7 +993,7 @@ def lsh(
 
 def jaccard(threshold: float = 0.95) -> BaseStrategy:
     """Multi-column deduplication using jaccard similarity.
-    
+
     Usage is on multiple columns of a dataframe. Appropriate for categorical
     data. Null types are handled out-of-box with jaccard, they are simply
     considered another category of a given field.
@@ -1000,10 +1001,10 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
     Args:
         threshold: the minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to multiple columns:
 
@@ -1040,14 +1041,14 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
 
 def cosine(threshold: float = 0.95) -> BaseStrategy:
     """Multi-column deduplication using cosine similarity.
-    
+
     Usage is on multiple columns of a dataframe. Appropriate for numerical
     data.
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
-    
+
     Returns:
         Instance of `BaseStrategy`.
 
@@ -1060,9 +1061,9 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
         i.e.
 
             (`col_1i`, `col_2i`, `col_3i`) . (`col_1j`, `col_2j`, `col_3j`)
-        
+
         However, if `col_1i` is Null then the following is evaluated:
-        
+
             (`col_2i`, `col_3i`) . (`col_2j`, `col_3j`)
 
         Additionally, if `col_j2` is *also* Null then the following is evaluated:
@@ -1071,7 +1072,7 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
 
         Taking this into account you may find it best to avoid cosine similarity
         calculations for sparse datasets. Alternatively, you may opt to your
-        approach by either preprocessing the Nulls beforehand, or, by 
+        approach by either preprocessing the Nulls beforehand, or, by
         limiting yourself to using the `cosine` deduplicator with the `Rules`
         API using combinations for non null fields, e.g.
 
@@ -1083,12 +1084,12 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
                 #
                 & on("col_1", ~isna()),
             )
-    
+
     Warning:
         Normalization is a standard approach to ensure that the results of
-        cosine similarity are valid. Consider [standard 
+        cosine similarity are valid. Consider [standard
         approaches](https://scikit-learn.org/stable/modules/preprocessing.html#normalization)
-    
+
     Example:
         Applied to multiple columns:
 
@@ -1109,13 +1110,13 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
 
 def isna() -> BaseStrategy:
     """Discrete deduper on null/None values.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not null" using inversion operator: `~isna()`.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -1152,13 +1153,13 @@ def isna() -> BaseStrategy:
 
 def isin(values: Iterable) -> BaseStrategy:
     """Discrete deduper for membership testing.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not in" using inversion operator: `~isin()`.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -1196,7 +1197,7 @@ def isin(values: Iterable) -> BaseStrategy:
 
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
     """Discrete deduper on string length.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not the defined length" using inversion operator: `~str_len()`.
 
@@ -1207,10 +1208,10 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
     Args:
         min_len: the lower bound of lengths considered
         max_len: the upper bound of lengths considered. Can be left unbounded.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -1247,7 +1248,7 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
 
 def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     """Discrete deduper on strings starting with a pattern.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not starting with pattern" using inversion operator: `~str_startswith()`.
 
@@ -1257,10 +1258,10 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     Args:
         pattern: the pattern that the string starts with to be deduplicated
         case: case sensitive, or not.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -1303,7 +1304,7 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
 
 def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
     """Discrete deduper on strings ending with a pattern.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not ending with pattern" using inversion operator: `~str_endswith()`.
 
@@ -1313,10 +1314,10 @@ def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
     Args:
         pattern: the pattern that the string ends with to be deduplicated
         case: case sensitive, or not.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 
@@ -1363,7 +1364,7 @@ def str_contains(
     regex: bool = False,
 ) -> BaseStrategy:
     """Discrete deduper on general string patterns with regex.
-    
+
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not containing pattern" using inversion operator: `~str_contains()`.
 
@@ -1375,10 +1376,10 @@ def str_contains(
         pattern: the pattern that the string ends with to be deduplicated
         case: case sensitive, or not.
         regex: uses regex patterns, or not.
-    
+
     Returns:
         Instance of `BaseStrategy`.
-    
+
     Example:
         Applied to a single column:
 

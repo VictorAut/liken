@@ -80,7 +80,7 @@ class LocalExecutor(Executor):
             - StratsDict: in which case handles Sequential and Dict API
         """
 
-        del id # Unused: here for interface symmetry with SparkExecutor
+        del id  # Unused: here for interface symmetry with SparkExecutor
 
         call_strat = partial(
             self._call_strat,
@@ -247,7 +247,7 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows) # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
+        dp = factory(rows)  # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
         dp.apply(strats)  # type: ignore
         df = dp.canonicalize(
             columns,
