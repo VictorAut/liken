@@ -1,6 +1,6 @@
 <p align="center">
-<a href="https://pypi.python.org/pypi/dupegrouper"><img height="20" alt="PyPI Version" src="https://img.shields.io/pypi/v/dupegrouper"></a>
-<img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/dupegrouper">
+<a href="https://pypi.python.org/pypi/liken"><img height="20" alt="PyPI Version" src="https://img.shields.io/pypi/v/liken"></a>
+<img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/liken">
 </p>
 
 # Introduction
@@ -19,7 +19,7 @@ The key features are:
 
 ## A flexible API
 
-Checkout the [API Documentation](https://victorautonell-oiry.me/dupegrouper/dupegrouper.html)
+Checkout the [API Documentation](https://victorautonell-oiry.me/liken/liken.html)
 
 ## Installation
 
