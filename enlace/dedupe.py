@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Generic
-from typing import overload, TypeAlias
 
 import pandas as pd
 import polars as pl
@@ -11,7 +10,8 @@ import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
 from enlace import exact
-from enlace._dataframe import DF, Frame
+from enlace._dataframe import DF
+from enlace._dataframe import Frame
 from enlace._dataframe import wrap
 from enlace._executors import Executor
 from enlace._executors import LocalExecutor
@@ -51,7 +51,6 @@ class Dedupe(Generic[DF]):
     _df: DF
     _executor: Executor[DF]
 
-
     def __init__(
         self,
         df: pd.DataFrame | pl.DataFrame | spark.DataFrame,
@@ -72,28 +71,28 @@ class Dedupe(Generic[DF]):
 
     def apply(self, strategy: BaseStrategy | dict | Rules) -> None:
         """Apply a strategy or strategies for deduplication.
-        
+
         Available for inspection when access with attribute `.strats`. Can be
-        repetitively called if using the Sequential API. Else apply once using 
+        repetitively called if using the Sequential API. Else apply once using
         the Dict API or Rules API.
-        
+
         Args:
             strategy: The strategy or strategies to apply
-        
+
         Returns:
             None
-        
+
         Raises:
             InvalidStrategyError: For any invalid strategy or collection of
                 strategies
-        
+
         Example:
             Import and prepate data:
 
                 from enlace import Dedupe, exact, tfidf, lsh
 
                 df = ... # get a dataframe
-            
+
             Sequential API:
 
                 dp = Dedupe(df)
@@ -123,7 +122,7 @@ class Dedupe(Generic[DF]):
                     )
                 )
                 df = dp.drop_duplicates()
-                
+
         """
         self._sm.apply(strategy)
 
@@ -144,7 +143,7 @@ class Dedupe(Generic[DF]):
                 dataframe to deduplicate.
             keep: Accepted as "first" or "last". Whether to keep the first intance
                 of a duplicate or the last intance, as found in the DataFrame.
-        
+
         Returns:
             A deduplicated DataFrame.
 
@@ -157,7 +156,7 @@ class Dedupe(Generic[DF]):
         """
         keep = validate_keep_arg(keep)
         columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None) # canonical id only ever autoincremental for dropping
+        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._sm.has_applies:
@@ -203,7 +202,7 @@ class Dedupe(Generic[DF]):
             id: string label identifying a column in the dataframe that can be
                 used to optionally override the values of a default
                 canonical_id.
-        
+
         Returns:
             A canonicalised DataFrame. By default canonicalization is tracked
                 in a new `canonical_id` field.

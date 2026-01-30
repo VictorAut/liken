@@ -36,15 +36,15 @@ def fake_10(
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 10 rows.
-    
+
     Args:
         backend: One of "pandas", "polars" or "spark".
-        spark_session: The pyspark spark session if requesting data using 
+        spark_session: The pyspark spark session if requesting data using
             "spark" backend.
-    
+
     Returns:
         A dataframe, in the defined backend.
-    
+
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
     """
@@ -56,72 +56,75 @@ def fake_10(
         if spark_session:
             return spark_session.createDataFrame(schema=COLUMNS, data=DATA10)
         raise ValueError("Spark Session not passed yet 'spark' backend requested")
-    
+
+
 def fake_1K(
     backend: typing.Literal["pandas", "polars", "spark"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1K (one thousand) rows.
-    
+
     Args:
         backend: One of "pandas", "polars" or "spark".
-        spark_session: The pyspark spark session if requesting data using 
+        spark_session: The pyspark spark session if requesting data using
             "spark" backend.
-    
+
     Returns:
         A dataframe, in the defined backend.
-    
+
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-    
+
     Warning: Not Implemented
         Due for implementation in a future version.
     """
-    del backend, spark_session # Unused
+    del backend, spark_session  # Unused
     pass
+
 
 def fake_100K(
     backend: typing.Literal["pandas", "polars", "spark"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 100K (one hundred thousand) rows.
-    
+
     Args:
         backend: One of "pandas", "polars" or "spark".
-        spark_session: The pyspark spark session if requesting data using 
+        spark_session: The pyspark spark session if requesting data using
             "spark" backend.
-    
+
     Returns:
         A dataframe, in the defined backend.
-    
+
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-    
+
     Warning: Not Implemented
         Due for implementation in a future version.
     """
-    del backend, spark_session # Unused
+    del backend, spark_session  # Unused
     pass
+
 
 def fake_1M(
     backend: typing.Literal["pandas", "polars", "spark"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1M (one million) rows.
-    
+
     Args:
         backend: One of "pandas", "polars" or "spark".
-        spark_session: The pyspark spark session if requesting data using 
+        spark_session: The pyspark spark session if requesting data using
             "spark" backend.
-    
+
     Returns:
         A dataframe, in the defined backend.
-    
+
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-    
+
     Warning: Not Implemented
         Due for implementation in a future version.
     """
-    del backend, spark_session # Unused
+    del backend, spark_session  # Unused
     pass

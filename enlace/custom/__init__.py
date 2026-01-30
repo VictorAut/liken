@@ -1,6 +1,7 @@
-"""Capture custom deduplication strategies that can be plugged into 
+"""Capture custom deduplication strategies that can be plugged into
 `enlace.Dedupe`
 """
+
 from .._custom import register
 
 
