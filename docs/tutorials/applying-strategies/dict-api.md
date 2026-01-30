@@ -9,7 +9,7 @@ Earlier we explored the Sequential API. Once you've applied more than just a cou
 The **Dict API** solves this with dictionaries. Here, you'll only be able to use `apply()` once. Additionally, `drop_duplicates()` will no longer accept any arguments — columns will now be defined as the keys to the dictionary. Let's deduplicate our persons dataset on more than just `address`:
 
 ```python
-from enlace import Dedupe, exact, fuzzy, tfidf, jaccard
+from liken import Dedupe, exact, fuzzy, tfidf, jaccard
 
 STRAT = {
     "email": exact(),
@@ -25,9 +25,9 @@ STRAT = {
     ): jaccard(threshold=0.75),
 }
 
-dp = Dedupe(df)
-dp.apply(STRAT)     
-df = dp.drop_duplicates(keep="first")
+lk = Dedupe(df)
+lk.apply(STRAT)     
+df = lk.drop_duplicates(keep="first")
 ```
 
 Wow! In plain English this reads as "Deduplicate only exact emails. Then, similar addresses. Finally, any records that have 3 out of 4 of those categories matching".

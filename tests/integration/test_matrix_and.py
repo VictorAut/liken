@@ -6,13 +6,13 @@ import typing
 
 import pytest
 
-from enlace import Dedupe
-from enlace import fuzzy
-from enlace._constants import CANONICAL_ID
-from enlace.custom import register
-from enlace.rules import Rules
-from enlace.rules import isna
-from enlace.rules import on
+from liken import Dedupe
+from liken import fuzzy
+from liken._constants import CANONICAL_ID
+from liken.custom import register
+from liken.rules import Rules
+from liken.rules import isna
+from liken.rules import on
 
 
 # CONSTANTS:
@@ -68,8 +68,8 @@ def test_matrix_and(strat, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(Rules(strat))
-    df = dp.canonicalize()
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(Rules(strat))
+    df = lk.canonicalize()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

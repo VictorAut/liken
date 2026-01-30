@@ -1,7 +1,7 @@
 import pytest
 
-from enlace._constants import CANONICAL_ID
-from enlace._dataframe import wrap
+from liken._constants import CANONICAL_ID
+from liken._dataframe import wrap
 
 
 @pytest.mark.parametrize(

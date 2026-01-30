@@ -4,16 +4,16 @@ from unittest.mock import patch
 import pytest
 from pandas.testing import assert_frame_equal
 
-from enlace._validators import validate_keep_arg
-from enlace._validators import validate_spark_args
-from enlace.dedupe import Dedupe
+from liken._validators import validate_keep_arg
+from liken._validators import validate_spark_args
+from liken.dedupe import Dedupe
 
 
 # INITIALIZATION:
 
 
-@patch("enlace.dedupe.LocalExecutor")
-@patch("enlace.dedupe.SparkExecutor")
+@patch("liken.dedupe.LocalExecutor")
+@patch("liken.dedupe.SparkExecutor")
 def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe):
     df, spark = dataframe
 
@@ -29,7 +29,7 @@ def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe)
 # No apply still exact dedupes
 
 
-@patch("enlace.dedupe.StrategyManager")
+@patch("liken.dedupe.StrategyManager")
 def test_no_apply_still_exact_apply_once(
     mock_sm,
     dataframe,
@@ -43,8 +43,8 @@ def test_no_apply_still_exact_apply_once(
     sm.get.return_value = {}
     sm.reset.return_value = None
 
-    dp = Dedupe(df, spark_session=spark)
-    dp.canonicalize("address")  # <-- no apply!
+    lk = Dedupe(df, spark_session=spark)
+    lk.canonicalize("address")  # <-- no apply!
 
     sm.apply.assert_called_once()
 
@@ -75,40 +75,40 @@ def test_validate_spark_args_missing_session():
 # Misuse of API:
 
 
-@patch("enlace.dedupe.wrap")
+@patch("liken.dedupe.wrap")
 def test_validate_columns_args_not_used(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns cannot be None"):
-        dp = Dedupe(Mock())
-        dp.apply(strategy_mock)
-        dp.canonicalize()  # <-- shouldn't be empty
+        lk = Dedupe(Mock())
+        lk.apply(strategy_mock)
+        lk.canonicalize()  # <-- shouldn't be empty
 
 
-@patch("enlace.dedupe.wrap")
+@patch("liken.dedupe.wrap")
 def test_validate_columns_args_not_none(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns must be None"):
-        dp = Dedupe(Mock())
-        dp.apply({"address": strategy_mock})  # <-- label here
-        dp.canonicalize("address")  # <-- so should not be used here
+        lk = Dedupe(Mock())
+        lk.apply({"address": strategy_mock})  # <-- label here
+        lk.canonicalize("address")  # <-- so should not be used here
 
 
-@patch("enlace.dedupe.wrap")
+@patch("liken.dedupe.wrap")
 def test_validate_columns_args_repeated(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns labels cannot be repeated"):
-        dp = Dedupe(Mock())
-        dp.apply(strategy_mock)
-        dp.canonicalize(("email", "email"))  # <-- shouldn't be repeated
+        lk = Dedupe(Mock())
+        lk.apply(strategy_mock)
+        lk.canonicalize(("email", "email"))  # <-- shouldn't be repeated
 
 
 # StrategyManager
 
 
-@patch("enlace.dedupe.StrategyManager")
+@patch("liken.dedupe.StrategyManager")
 def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
     df, spark = dataframe
 
@@ -121,9 +121,9 @@ def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
 # canonicalize / drop_duplicates
 
 
-@patch("enlace.dedupe.LocalExecutor")
-@patch("enlace.dedupe.wrap")
-@patch("enlace.dedupe.StrategyManager")
+@patch("liken.dedupe.LocalExecutor")
+@patch("liken.dedupe.wrap")
+@patch("liken.dedupe.StrategyManager")
 def test_canonicalize_calls(
     mock_sm,
     mock_wrap,
@@ -158,9 +158,9 @@ def test_canonicalize_calls(
     mock_sm.reset.assert_called_once()
 
 
-@patch("enlace.dedupe.LocalExecutor")
-@patch("enlace.dedupe.wrap")
-@patch("enlace.dedupe.StrategyManager")
+@patch("liken.dedupe.LocalExecutor")
+@patch("liken.dedupe.wrap")
+@patch("liken.dedupe.StrategyManager")
 def test_drop_duplicate_calls(
     mock_sm,
     mock_wrap,
@@ -198,7 +198,7 @@ def test_drop_duplicate_calls(
 # Property attributes
 
 
-@patch("enlace.dedupe.StrategyManager")
+@patch("liken.dedupe.StrategyManager")
 def test_strats_property_returns_manager_output(mock_sm, dataframe):
     df, spark = dataframe
     mock_sm = mock_sm.return_value

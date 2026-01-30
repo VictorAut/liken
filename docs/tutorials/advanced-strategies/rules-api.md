@@ -16,8 +16,8 @@ title: Rules API
 Let's first use the **Rules API** to replicate the complex strategy we saw as an example earlier in the tutorial on applying strategies as dictionaries in the [**Dict API** tutorial](../applying-strategies/dict-api.md). To do so we will introduce the `rules` sub-package:
 
 ```python {hl_lines="2"}
-from enlace import Dedupe, exact, fuzzy, tfidf, jaccard
-from enlace.rules import Rules, on
+from liken import Dedupe, exact, fuzzy, tfidf, jaccard
+from liken.rules import Rules, on
 
 STRAT = Rules(
     on("email", exact()),
@@ -33,9 +33,9 @@ STRAT = Rules(
     ),
 )
 
-dp = Dedupe(df)
-dp.apply(STRAT)     
-df = dp.drop_duplicates()
+lk = Dedupe(df)
+lk.apply(STRAT)     
+df = lk.drop_duplicates()
 ```
 
 As you can see, organised like this, it's not too disimilar to the **Dict API**:

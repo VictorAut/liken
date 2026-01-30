@@ -1,10 +1,10 @@
 ---
-title: Anatomy of Enlace
+title: Anatomy of Liken
 ---
 
 ## Pandas and Polars
 
-For single node machines, which is to say when the Pandas or Polars backends are in use, **Enlace** carries the simplified following sequence of events:
+For single node machines, which is to say when the Pandas or Polars backends are in use, **Liken** carries the simplified following sequence of events:
 
 ``` mermaid
 sequenceDiagram

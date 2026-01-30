@@ -11,14 +11,14 @@ from typing import Literal
 
 from pyspark.sql import SparkSession
 
-from enlace._constants import INVALID_COLUMNS_EMPTY
-from enlace._constants import INVALID_COLUMNS_NOT_NONE
-from enlace._constants import INVALID_COLUMNS_REPEATED
-from enlace._constants import INVALID_KEEP
-from enlace._constants import INVALID_SPARK
-from enlace._constants import INVALID_STRAT
-from enlace._strats_library import BaseStrategy
-from enlace._types import Columns
+from liken._constants import INVALID_COLUMNS_EMPTY
+from liken._constants import INVALID_COLUMNS_NOT_NONE
+from liken._constants import INVALID_COLUMNS_REPEATED
+from liken._constants import INVALID_KEEP
+from liken._constants import INVALID_SPARK
+from liken._constants import INVALID_STRAT
+from liken._strats_library import BaseStrategy
+from liken._types import Columns
 
 
 def validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:

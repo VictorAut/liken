@@ -6,23 +6,23 @@ title: Boolean Operators
 
 Let's again think about an `address` column. Deduplicating with the `fuzzy` strategy might get some good results and that might equally be true with the `lsh` strategy. But doing that may yield too many false positives and perhaps you find that the results are more accurate when both the `fuzzy` strategy *and* the `lsh` strategy agree.
 
-Combining strategies with "and" statements (using the `&` operator) forms the basis of the motivation for the `enlace.rules` sub-package. And statements are used to combine `on` executors. Above we described a problem statement — let's now translate that into Python code:
+Combining strategies with "and" statements (using the `&` operator) forms the basis of the motivation for the `liken.rules` sub-package. And statements are used to combine `on` executors. Above we described a problem statement — let's now translate that into Python code:
 
 ```python {hl_lines="5 6"}
-from enlace import Dedupe, fuzzy, lsh
-from enlace.rules import Rules, on
+from liken import Dedupe, fuzzy, lsh
+from liken.rules import Rules, on
 
 STRAT = Rules(
     on("address", fuzzy(threshold=0.8)) 
     & on("address", lsh(threshold=0.8, num_perm=256))
 )
 
-dp = Dedupe(df)
-dp.apply(STRAT)     
-df = dp.drop_duplicates()
+lk = Dedupe(df)
+lk.apply(STRAT)     
+df = lk.drop_duplicates()
 ```
 
-Your telling **Enlace** that it can only consider a record to be valid for deduplication if *both* the strategies agree.
+Your telling **Liken** that it can only consider a record to be valid for deduplication if *both* the strategies agree.
 
 ## Or Strategy?
 

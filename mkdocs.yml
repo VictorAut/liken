@@ -1,4 +1,4 @@
-site_name: Enlace
+site_name: Liken
 
 theme:
   name: "material"
@@ -97,7 +97,7 @@ nav:
     - explanation/binary-vs-discrete.md
     - explanation/how-does-it-work.md
   - Reference:
-    - reference/enlace.md
+    - reference/liken.md
     - reference/rules.md
     - reference/custom.md
     - reference/datasets.md

@@ -49,12 +49,12 @@ from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
 from typing_extensions import override
 
-from enlace._constants import CANONICAL_ID
-from enlace._constants import NA_PLACEHOLDER
-from enlace._constants import PYSPARK_TYPES
-from enlace._types import Columns
-from enlace._types import DataFrameLike
-from enlace._types import Keep
+from liken._constants import CANONICAL_ID
+from liken._constants import NA_PLACEHOLDER
+from liken._constants import PYSPARK_TYPES
+from liken._types import Columns
+from liken._types import DataFrameLike
+from liken._types import Keep
 
 
 # TYPES

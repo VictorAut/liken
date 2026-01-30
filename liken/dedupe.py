@@ -1,4 +1,4 @@
-"""enlace main public API"""
+"""liken main public API"""
 
 from __future__ import annotations
 
@@ -9,22 +9,22 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
-from enlace import exact
-from enlace._dataframe import DF
-from enlace._dataframe import Frame
-from enlace._dataframe import wrap
-from enlace._executors import Executor
-from enlace._executors import LocalExecutor
-from enlace._executors import SparkExecutor
-from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import Rules
-from enlace._strats_manager import StrategyManager
-from enlace._strats_manager import StratsDict
-from enlace._types import Columns
-from enlace._types import Keep
-from enlace._validators import validate_columns_arg
-from enlace._validators import validate_keep_arg
-from enlace._validators import validate_spark_args
+from liken import exact
+from liken._dataframe import DF
+from liken._dataframe import Frame
+from liken._dataframe import wrap
+from liken._executors import Executor
+from liken._executors import LocalExecutor
+from liken._executors import SparkExecutor
+from liken._strats_library import BaseStrategy
+from liken._strats_manager import Rules
+from liken._strats_manager import StrategyManager
+from liken._strats_manager import StratsDict
+from liken._types import Columns
+from liken._types import Keep
+from liken._validators import validate_columns_arg
+from liken._validators import validate_keep_arg
+from liken._validators import validate_spark_args
 
 
 # API:
@@ -89,39 +89,39 @@ class Dedupe(Generic[DF]):
         Example:
             Import and prepate data:
 
-                from enlace import Dedupe, exact, tfidf, lsh
+                from liken import Dedupe, exact, tfidf, lsh
 
                 df = ... # get a dataframe
 
             Sequential API:
 
-                dp = Dedupe(df)
-                dp.apply(exact())
-                dp.apply(tfidf()) # Ok, apply more than once
-                df = dp.drop_duplicates("address")
+                lk = Dedupe(df)
+                lk.apply(exact())
+                lk.apply(tfidf()) # Ok, apply more than once
+                df = lk.drop_duplicates("address")
 
             Dict API:
 
-                dp = Dedupe(df)
-                dp.apply(
+                lk = Dedupe(df)
+                lk.apply(
                     {
                         "address": (exact(), tfidf()),
                     }
                 )
-                df = dp.drop_duplicates()
+                df = lk.drop_duplicates()
 
             Dict API:
 
-                from enlace.rules import Rules, on
+                from liken.rules import Rules, on
 
-                dp = Dedupe(df)
-                dp.apply(
+                lk = Dedupe(df)
+                lk.apply(
                     Rules(
                         on("address", exact()),
                         on("address", tfidf()),
                     )
                 )
-                df = dp.drop_duplicates()
+                df = lk.drop_duplicates()
 
         """
         self._sm.apply(strategy)
@@ -251,10 +251,3 @@ class Dedupe(Generic[DF]):
             The stored strategies, formatted
         """
         return self._sm.pretty_get()
-
-    # @property
-    # def df(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-    #     """Returns the dataframe as currently stored in the `Dedupe` instance's
-    #     strategy manager.
-    #     """
-    #     return self._df.unwrap()

@@ -1,4 +1,4 @@
-::: enlace.rules
+::: liken.rules
     options:
       members_order: __all__
       inherited_members: true

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "enlace"
+name = "liken"
 version = "0.3.1"
 description = "A Python library for near deduplication and record linkage."
 authors = ["VictorAut"]
@@ -73,7 +73,7 @@ force_single_line = true
 warn_no_return = false
 
 [[tool.mypy.overrides]]
-module = ["enlace.*"]
+module = ["liken.*"]
 ignore_missing_imports = true
 
 [tool.pylint]

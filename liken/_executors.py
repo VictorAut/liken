@@ -22,20 +22,20 @@ from networkx.utils.union_find import UnionFind
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
 
-from enlace._constants import CANONICAL_ID
-from enlace._dataframe import DF
-from enlace._dataframe import LocalDF
-from enlace._dataframe import SparkDF
-from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from enlace._strats_manager import Rules
-from enlace._strats_manager import StratsDict
-from enlace._types import Columns
-from enlace._types import Keep
+from liken._constants import CANONICAL_ID
+from liken._dataframe import DF
+from liken._dataframe import LocalDF
+from liken._dataframe import SparkDF
+from liken._strats_library import BaseStrategy
+from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
+from liken._strats_manager import Rules
+from liken._strats_manager import StratsDict
+from liken._types import Columns
+from liken._types import Keep
 
 
 if TYPE_CHECKING:
-    from enlace.dedupe import Dedupe
+    from liken.dedupe import Dedupe
 
 
 SingleComponents: TypeAlias = dict[int, list[int]]
@@ -190,7 +190,7 @@ class SparkExecutor(Executor):
         """
 
         # import in worker node
-        from enlace.dedupe import Dedupe
+        from liken.dedupe import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
         process_partition = self._process_partition
@@ -230,7 +230,7 @@ class SparkExecutor(Executor):
 
         This function is functionality mapped to a worker node. For clean
         separation from the driver, strats are re-instantiated and the main
-        enlace API is executed *per* worker node.
+        liken API is executed *per* worker node.
 
         Args:
             paritition_iter: a partition
@@ -247,9 +247,9 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dp = factory(rows)  # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
-        dp.apply(strats)  # type: ignore
-        df = dp.canonicalize(
+        lk = factory(rows)  # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
+        lk.apply(strats)  # type: ignore
+        df = lk.canonicalize(
             columns,
             keep=keep,
             drop_duplicates=drop_duplicates,

@@ -8,19 +8,19 @@ from copy import deepcopy
 from typing import Self
 from typing import final
 
-from enlace._constants import INVALID_DICT_KEY_MSG
-from enlace._constants import INVALID_DICT_MEMBER_MSG
-from enlace._constants import INVALID_DICT_VALUE_MSG
-from enlace._constants import INVALID_FALLBACK_MSG
-from enlace._constants import INVALID_RULE_EMPTY_MSG
-from enlace._constants import INVALID_RULE_MEMBER_MSG
-from enlace._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
-from enlace._constants import SEQUENTIAL_API_DEFAULT_KEY
-from enlace._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
-from enlace._constants import WARN_RULES_REPLACES_RULES_MSG
-from enlace._strats_library import BaseStrategy
-from enlace._types import Columns
-from enlace._validators import validate_strat_arg
+from liken._constants import INVALID_DICT_KEY_MSG
+from liken._constants import INVALID_DICT_MEMBER_MSG
+from liken._constants import INVALID_DICT_VALUE_MSG
+from liken._constants import INVALID_FALLBACK_MSG
+from liken._constants import INVALID_RULE_EMPTY_MSG
+from liken._constants import INVALID_RULE_MEMBER_MSG
+from liken._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
+from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
+from liken._constants import WARN_RULES_REPLACES_RULES_MSG
+from liken._strats_library import BaseStrategy
+from liken._types import Columns
+from liken._validators import validate_strat_arg
 
 
 # STRATS DICT CONFIG:
@@ -58,32 +58,32 @@ class Rules(tuple):
     with the ``on`` function.
 
     Args:
-        *strategies: comma separated ``on`` strategies.
+        *strategies: comma separated ``on`` strategies, unpacked.
 
 
     Example:
         A single strategy is passed:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on
 
             STRAT = Rules(on("address", exact()))
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
+            lk = Dedupe(df)
+            lk.apply(STRAT)
 
         Multiple strategies are passed:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on
 
             STRAT = Rules(
                 on('address', exact()),
                 on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
             )
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
+            lk = Dedupe(df)
+            lk.apply(STRAT)
     """
 
     def __new__(cls, *strategies: On):
@@ -309,8 +309,8 @@ def on(columns: Columns, strat: BaseStrategy, /) -> None:
     Example:
         single ``on`` strategy:
 
-            from enlace import Dedupe, exact, fuzzy
-            from enlace.rules import Rules, on, isna, str_endswith
+            from liken import Dedupe, exact, fuzzy
+            from liken.rules import Rules, on, isna, str_endswith
 
             on("address", exact())
 
