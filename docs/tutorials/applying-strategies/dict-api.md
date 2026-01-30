@@ -41,7 +41,7 @@ Wow! In plain English this reads as "Deduplicate only exact emails. Then, simila
 
 ## Recap
 
-If you're only ever looking to aim to *drop* duplicates then you can skip the next section on [**Record Linkage**](../../concepts/record-linkage.md).
+If you're only ever looking to aim to *drop* duplicates then you can skip the next section on [**Record Linkage**](../../tutorials/record-linkage.md).
 
 If the above is as complex a strategy as you'll ever use, then stop here.
 

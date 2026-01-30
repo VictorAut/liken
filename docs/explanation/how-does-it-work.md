@@ -28,4 +28,4 @@ sequenceDiagram
 
 ## PySpark
 
-For PySpark DataFrames the exact same happens as above, except each the chosen executor is `SparkExecutor` instead of `LocalExecutor`. The Spark executor *re-instantiates* `Dedupe` within each worker node, at which point the `LocalExecutor` takes over again.
+For PySpark DataFrames the exact same happens as above, except the chosen executor is `SparkExecutor` instead of `LocalExecutor`. The Spark executor *re-instantiates* `Dedupe` within each worker node, at which point the `LocalExecutor` takes over again.

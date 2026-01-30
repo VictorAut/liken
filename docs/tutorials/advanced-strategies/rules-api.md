@@ -47,7 +47,7 @@ As you can see, organised like this, it's not too disimilar to the **Dict API**:
 We've not done anything new yet with this ability to define strategies, other than to get the minimum requirement that it feels and acts the same as a complex **Dict API** strategy. You may even prefer the look of this.
 
 !!! note
-    The **Rules API** also enforces the use of a single call to `.apply`. The emphasis is still on you to construct stragegies that appropriate model the deduplication (or canonicalization) needs of your DataFrame.
+    The **Rules API**, just like **Dict API**, also enforces the use of a single call to `apply()`. The emphasis is still on you to construct stragegies that appropriate model the deduplication (or canonicalization) needs of your DataFrame. In these tutorials we repeatedly build a `STRAT` constant to emphasise that fact.
 
 
 ## Collections of `on`
@@ -58,4 +58,4 @@ We've not done anything new yet with this ability to define strategies, other th
 
 !!! success "You learnt:"
     - Multiple strategies for multiple columns can be defined using a single `Rules` with several `on` functions, forming the **Rules API**.
-    - The **Rules API** only allows a single call to `.apply`
+    - The **Rules API** only allows a single call to `apply()`

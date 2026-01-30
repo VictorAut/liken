@@ -40,7 +40,7 @@ df = dp.drop_duplicates("address")
 The repeated use of the `apply()` to define which strategies you'll use on a single column make up the **Sequential API**.
 
 !!! tip "`threshold`"
-    All the strategies defined in the previous tutotial on [Deduplication Strategies](../../../concepts/strategies/#enlace-ready-strategies) have a `threshold` which you can use to **tune** the overall 'strength' of deduplication.
+    All the strategies defined in the previous tutotial on [Deduplication Strategies](../../../tutorials/strategies/#enlace-ready-strategies) have a `threshold` which you can use to **tune** the overall 'strength' of deduplication.
 
 ## Recap
 

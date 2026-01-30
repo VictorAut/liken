@@ -4,7 +4,7 @@ title: The APIs
 
 ## Do they Differ?
 
-The Sequential API is actually a special case of the Dict API. Although multiple `apply` statements can be made with the Sequential API in reality what is happening is that a hidden dictionary is being populated under a "default" key.
+The Sequential API is actually a special case of the Dict API. Although multiple `apply()` calls can be made with the Sequential API, in reality a hidden dictionary is being populated under a "default" key.
 
 The Rules API is entirely different. The `Rules` class is actually a subclass of a Python `tuple` with addtional validation rules that prevent any member being added to it that is not an `on` function. Actually, to be more specific, an instance of an `On` class which the `on` function wraps around.
 

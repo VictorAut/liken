@@ -8,7 +8,7 @@ All the examples we've seen throughout have imagines the use of a Pandas DataFra
 
 ## Polars
 
-No usage change for Polars. E.g.
+No usage difference for Polars:
 
 ```python
 from enlace import Dedupe
@@ -21,7 +21,7 @@ dp = Dedupe(df)     # no change
 
 ## PySpark
 
-**Enlace** supports PySpark DataFrames. This currently means PySpark `DataFrame` instances and *not* PySpark `RDD`. Deduplication will be restricted to the scope of each partition if you are using a distributed dataset. You will have to pass a Spark Session object to `Dedupe`.
+**Enlace** supports PySpark DataFrames. This currently means PySpark `DataFrame` instances and *not* PySpark `RDD`s. Deduplication will be restricted to the scope of each partition if you are using a distributed dataset. You will have to pass a Spark Session object to `Dedupe`.
 
 ```python
 from enlace import Dedupe
@@ -31,7 +31,7 @@ SESSION = SparkSession(...)
 
 df = ...
 
-dp = Dedupe(df, spark_session=SESSION)     # no change
+dp = Dedupe(df, spark_session=SESSION)
 ```
 
 ## Recap
