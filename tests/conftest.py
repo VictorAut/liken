@@ -13,9 +13,9 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
-from enlace._types import DataFrameLike
-from enlace.datasets.synthetic import fake_10
-from enlace.dedupe import BaseStrategy
+from liken._types import DataFrameLike
+from liken.datasets.synthetic import fake_10
+from liken.dedupe import BaseStrategy
 
 
 @pytest.fixture(scope="session")

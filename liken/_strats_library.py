@@ -32,16 +32,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
-from enlace._constants import CANONICAL_ID
+from liken._constants import CANONICAL_ID
 
 
 if TYPE_CHECKING:
-    from enlace._dataframe import LocalDF
-    from enlace._executors import MultiComponents
-    from enlace._executors import SingleComponents
-    from enlace._types import Columns
-    from enlace._types import Keep
-    from enlace._types import SimilarPairIndices
+    from liken._dataframe import LocalDF
+    from liken._executors import MultiComponents
+    from liken._executors import SingleComponents
+    from liken._types import Columns
+    from liken._types import Keep
+    from liken._types import SimilarPairIndices
 
 
 # INTERFACE:
@@ -788,17 +788,17 @@ def exact() -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
+            from liken import Dedupe, exact
 
-            dp = Dedupe(df)
-            dp.apply(exact())
-            df = dp.drop_duplicates("address")
+            lk = Dedupe(df)
+            lk.apply(exact())
+            df = lk.drop_duplicates("address")
 
         Applied to multiple columns:
 
-            dp = Dedupe(df)
-            dp.apply(exact())
-            df = dp.drop_duplicates(("address", "email"))
+            lk = Dedupe(df)
+            lk.apply(exact())
+            df = lk.drop_duplicates(("address", "email"))
 
         E.g.
 
@@ -821,8 +821,8 @@ def exact() -> BaseStrategy:
 
         By default `exact` is used when no stratgies are explicitely applied:
 
-            dp = Dedupe(df)
-            dp.drop_duplicates("address")   # OK, still dedupes.
+            lk = Dedupe(df)
+            lk.drop_duplicates("address")   # OK, still dedupes.
     """
     return Exact()
 
@@ -842,11 +842,11 @@ def fuzzy(threshold: float = 0.95) -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, fuzzy
+            from liken import Dedupe, fuzzy
 
-            dp = Dedupe(df)
-            dp.apply({"address": fuzzy(threshold=0.8)})
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply({"address": fuzzy(threshold=0.8)})
+            df = lk.drop_duplicates(keep="last")
 
         E.g.
 
@@ -903,11 +903,11 @@ def tfidf(
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, tfidf
+            from liken import Dedupe, tfidf
 
-            dp = Dedupe(df)
-            dp.apply({"address": tfidf(threshold=0.8, ngram=1)})
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply({"address": tfidf(threshold=0.8, ngram=1)})
+            df = lk.drop_duplicates(keep="last")
 
         E.g.
 
@@ -963,11 +963,11 @@ def lsh(
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, lsh
+            from liken import Dedupe, lsh
 
-            dp = Dedupe(df)
-            dp.apply({"address": lsh(threshold=0.8, ngram=1)})
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply({"address": lsh(threshold=0.8, ngram=1)})
+            df = lk.drop_duplicates(keep="last")
 
         E.g.
 
@@ -1008,11 +1008,11 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
     Example:
         Applied to multiple columns:
 
-            from enlace import Dedupe, jaccard
+            from liken import Dedupe, jaccard
 
-            dp = Dedupe(df)
-            dp.apply(jaccard())
-            df = dp.drop_duplicates(
+            lk = Dedupe(df)
+            lk.apply(jaccard())
+            df = lk.drop_duplicates(
                 ("account", "status", "country", "property"),
                 keep="first",
             )
@@ -1093,11 +1093,11 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
     Example:
         Applied to multiple columns:
 
-            from enlace import Dedupe, cosine
+            from liken import Dedupe, cosine
 
-            dp = Dedupe(df)
-            dp.apply(cosine())
-            df = dp.drop_duplicates(
+            lk = Dedupe(df)
+            lk.apply(cosine())
+            df = lk.drop_duplicates(
                 ("surface are", "ceiling height", "building age", "num_rooms"),
                 keep="first",
             )
@@ -1120,14 +1120,14 @@ def isna() -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, isna
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, isna
 
             STRAT = Rules(on("email", exact()) & on("address", ~isna()))
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.drop_duplicates(keep="last")
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1163,14 +1163,14 @@ def isin(values: Iterable) -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, isin
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, isin
 
             STRAT = Rules(on("address", isin(values="london")))
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.drop_duplicates(keep="last")
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1215,14 +1215,14 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, isna
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, isna
 
             STRAT = Rules(on("email", exact()) & on("email", str_len(min_len=10)))
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.drop_duplicates(keep="last")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.drop_duplicates(keep="last")
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1265,8 +1265,8 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, str_startswith
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, str_startswith
 
             STRAT = Rules(
                 on("email", exact())
@@ -1276,9 +1276,9 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
                 )
             )
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.drop_duplicates(keep="first")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.drop_duplicates(keep="first")
 
             >>> df
             +------+-----------+---------------------+
@@ -1321,8 +1321,8 @@ def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, str_endswith
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, str_endswith
 
             STRAT = Rules(
                 on("email", exact())
@@ -1332,9 +1332,9 @@ def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
                 )
             )
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.drop_duplicates(keep="first")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.drop_duplicates(keep="first")
 
             >>> df
             +------+-----------+---------------------+
@@ -1383,8 +1383,8 @@ def str_contains(
     Example:
         Applied to a single column:
 
-            from enlace import Dedupe, exact
-            from enlace.rules import Rules, on, str_contains
+            from liken import Dedupe, exact
+            from liken.rules import Rules, on, str_contains
 
             STRAT = Rules(
                 on("email", exact())
@@ -1394,9 +1394,9 @@ def str_contains(
                 )
             )
 
-            dp = Dedupe(df)
-            dp.apply(STRAT)
-            df = dp.canonicalize(keep="first")
+            lk = Dedupe(df)
+            lk.apply(STRAT)
+            df = lk.canonicalize(keep="first")
 
             >>> df
             +------+-----------------------------+

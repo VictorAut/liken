@@ -1,5 +1,5 @@
 """Capture custom deduplication strategies that can be plugged into
-`enlace.Dedupe`
+`liken.Dedupe`
 """
 
 from .._custom import register

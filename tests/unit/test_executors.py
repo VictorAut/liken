@@ -6,11 +6,11 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
-from enlace._executors import LocalExecutor
-from enlace._executors import SparkExecutor
-from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from enlace._strats_manager import StratsDict
+from liken._executors import LocalExecutor
+from liken._executors import SparkExecutor
+from liken._strats_library import BaseStrategy
+from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
+from liken._strats_manager import StratsDict
 
 
 ############################
@@ -139,7 +139,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 ######################
 
 
-@patch("enlace.dedupe.Dedupe")
+@patch("liken.dedupe.Dedupe")
 def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     result = list(
         SparkExecutor._process_partition(
@@ -157,7 +157,7 @@ def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     mock_dedupe.assert_not_called()
 
 
-@patch("enlace.dedupe.Dedupe")
+@patch("liken.dedupe.Dedupe")
 def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
     dp_instance = Mock()

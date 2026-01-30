@@ -9,9 +9,9 @@ from typing import final
 
 from typing_extensions import override
 
-from enlace._strats_library import ThresholdDedupers
-from enlace._types import ArrayLike
-from enlace._types import SimilarPairIndices
+from liken._strats_library import ThresholdDedupers
+from liken._types import ArrayLike
+from liken._types import SimilarPairIndices
 
 
 # TYPES:
@@ -95,17 +95,17 @@ def register(f: PairGenerator) -> None:
     Example:
         Registering a custom strategy
 
-            from enlace import Dedupe
-            from enlace.custom import register
+            from liken import Dedupe
+            from liken.custom import register
 
             @register
             def custom_deduper(array, **kwargs):
                 # your code here
                 yield ...
 
-            dp = Dedupe(df)
-            dp.apply(custom_deduper(**kwargs))
-            df = dp.drop_duplicates("address")
+            lk = Dedupe(df)
+            lk.apply(custom_deduper(**kwargs))
+            df = lk.drop_duplicates("address")
 
         E.g. the following Custom exact string-length deduplication strategy:
 
@@ -119,9 +119,9 @@ def register(f: PairGenerator) -> None:
 
         Applying the strategy:
 
-            dp = Dedupe(df)
-            dp.apply(eq_str_len())  # array arg implicitely passed to Dedupe!
-            dp.drop_duplicates("address")
+            lk = Dedupe(df)
+            lk.apply(eq_str_len())  # array arg implicitely passed to Dedupe!
+            lk.drop_duplicates("address")
 
         Before:
 
@@ -144,8 +144,8 @@ def register(f: PairGenerator) -> None:
 
         Keyword-only enforcement:
 
-            dp.apply(my_func(is_upper_caps=True))  # OK
-            dp.apply(my_func(True))                # Raises TypeError
+            lk.apply(my_func(is_upper_caps=True))  # OK
+            lk.apply(my_func(True))                # Raises TypeError
     """
 
     @wraps(f)

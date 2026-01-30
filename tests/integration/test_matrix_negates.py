@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from enlace import Dedupe
-from enlace._constants import CANONICAL_ID
-from enlace.rules import Rules
-from enlace.rules import isna
-from enlace.rules import on
-from enlace.rules import str_contains
-from enlace.rules import str_endswith
-from enlace.rules import str_len
-from enlace.rules import str_startswith
+from liken import Dedupe
+from liken._constants import CANONICAL_ID
+from liken.rules import Rules
+from liken.rules import isna
+from liken.rules import on
+from liken.rules import str_contains
+from liken.rules import str_endswith
+from liken.rules import str_len
+from liken.rules import str_startswith
 
 
 # fmt: off
@@ -46,8 +46,8 @@ def test_matrix_negates(strategy, col, expected_canonical_id, dataframe, helpers
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(Rules(on(col, strategy)))
-    df = dp.canonicalize()
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(Rules(on(col, strategy)))
+    df = lk.canonicalize()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

@@ -6,20 +6,20 @@ import typing
 
 import pytest
 
-from enlace import Dedupe
-from enlace import cosine
-from enlace import exact
-from enlace import fuzzy
-from enlace import jaccard
-from enlace import lsh
-from enlace import tfidf
-from enlace._constants import CANONICAL_ID
-from enlace.custom import register
-from enlace.rules import Rules
-from enlace.rules import on
-from enlace.rules import str_contains
-from enlace.rules import str_endswith
-from enlace.rules import str_startswith
+from liken import Dedupe
+from liken import cosine
+from liken import exact
+from liken import fuzzy
+from liken import jaccard
+from liken import lsh
+from liken import tfidf
+from liken._constants import CANONICAL_ID
+from liken.custom import register
+from liken.rules import Rules
+from liken.rules import on
+from liken.rules import str_contains
+from liken.rules import str_endswith
+from liken.rules import str_startswith
 
 
 # CONSTANTS:
@@ -111,9 +111,9 @@ def test_matrix_keep_sequence_api(strategy, keep, columns, input_params, expecte
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(strategy(**input_params))
-    df = dp.canonicalize(columns, keep=keep)
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(strategy(**input_params))
+    df = lk.canonicalize(columns, keep=keep)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -123,9 +123,9 @@ def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_ca
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply({columns: [strategy(**input_params)]})
-    df = dp.canonicalize(keep=keep)
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply({columns: [strategy(**input_params)]})
+    df = lk.canonicalize(keep=keep)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -135,8 +135,8 @@ def test_matrix_keep_rules_api(strategy, keep, columns, input_params, expected_c
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(Rules(on(columns, strategy(**input_params))))
-    df = dp.canonicalize(keep=keep)
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(Rules(on(columns, strategy(**input_params))))
+    df = lk.canonicalize(keep=keep)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

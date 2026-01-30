@@ -1,13 +1,13 @@
 import pytest
 
-from enlace._strats_library import BaseStrategy
-from enlace._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from enlace._strats_manager import InvalidStrategyError
-from enlace._strats_manager import On
-from enlace._strats_manager import Rules
-from enlace._strats_manager import StrategyManager
-from enlace._strats_manager import StratsDict
-from enlace._strats_manager import on
+from liken._strats_library import BaseStrategy
+from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
+from liken._strats_manager import InvalidStrategyError
+from liken._strats_manager import On
+from liken._strats_manager import Rules
+from liken._strats_manager import StrategyManager
+from liken._strats_manager import StratsDict
+from liken._strats_manager import on
 
 
 ###########

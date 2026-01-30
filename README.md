@@ -1,5 +1,3 @@
-A Python library for grouping duplicate data efficiently.
-
 <p align="center">
 <a href="https://pypi.python.org/pypi/dupegrouper"><img height="20" alt="PyPI Version" src="https://img.shields.io/pypi/v/dupegrouper"></a>
 <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/dupegrouper">
@@ -7,44 +5,39 @@ A Python library for grouping duplicate data efficiently.
 
 # Introduction
 
-TODO
+**Liken** is a library providing enhanced deduplication tooling for DataFrames.
 
-### Ready-to-use deduplication strategies
+The key features are:
 
-TODO
+- Near deduplication
+- Ready-to-use deduplication strategies
+- Record linkage and canonicalization
+- Rules-based deduplication
+- Pandas, Polars and PySpark support
+- Customizable in pure Python
 
-### Multiple backends support
-Enlace aims to scale in line with your usecase. The following backends are currently support:
-- Pandas
-- Polars
-- PySpark
 
-
-### A flexible API
+## A flexible API
 
 Checkout the [API Documentation](https://victorautonell-oiry.me/dupegrouper/dupegrouper.html)
-
 
 ## Installation
 
 ```shell
-pip install enlace
+pip install liken
 ```
 
 ## Example
 
 ```python
-from enlace import Dedupe, fuzzy
+from liken import Dedupe, fuzzy
 
-dp = enlace.Dedupe(df)
+lk = liken.Dedupe(df)
 
-dp.apply(fuzzy())
+lk.apply(fuzzy())
 
-df = dp.drop_duplicates("address")
+df = lk.drop_duplicates("address")
 ```
-
-
-# About
 
 ## License
 This project is licensed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.html). See the [LICENSE](LICENSE) file for more details.

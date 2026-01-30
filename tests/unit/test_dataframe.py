@@ -8,13 +8,13 @@ import pytest
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
 
-from enlace._constants import CANONICAL_ID
-from enlace._dataframe import CanonicalIdMixin
-from enlace._dataframe import PandasDF
-from enlace._dataframe import PolarsDF
-from enlace._dataframe import SparkDF
-from enlace._dataframe import SparkRows
-from enlace._dataframe import wrap
+from liken._constants import CANONICAL_ID
+from liken._dataframe import CanonicalIdMixin
+from liken._dataframe import PandasDF
+from liken._dataframe import PolarsDF
+from liken._dataframe import SparkDF
+from liken._dataframe import SparkRows
+from liken._dataframe import wrap
 
 
 # FIXTURES:

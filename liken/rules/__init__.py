@@ -1,10 +1,10 @@
-"""The Rules API defines enlace's most flexible and powerful approach.
+"""The Rules API defines liken's most flexible and powerful approach.
 
 With this API you can construct rules that combine strategies using and
 statements.
 
 Additional boolean choice strategies are defined here — they can be powerfully
-combined with the `enlace` standard deduplication strategies.
+combined with the `liken` standard deduplication strategies.
 """
 
 from .._strats_library import isin

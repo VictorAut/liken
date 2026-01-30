@@ -6,22 +6,22 @@ import typing
 
 import pytest
 
-from enlace import Dedupe
-from enlace import cosine
-from enlace import exact
-from enlace import fuzzy
-from enlace import jaccard
-from enlace import lsh
-from enlace import tfidf
-from enlace._constants import CANONICAL_ID
-from enlace.custom import register
-from enlace.rules import Rules
-from enlace.rules import isna
-from enlace.rules import on
-from enlace.rules import str_contains
-from enlace.rules import str_endswith
-from enlace.rules import str_len
-from enlace.rules import str_startswith
+from liken import Dedupe
+from liken import cosine
+from liken import exact
+from liken import fuzzy
+from liken import jaccard
+from liken import lsh
+from liken import tfidf
+from liken._constants import CANONICAL_ID
+from liken.custom import register
+from liken.rules import Rules
+from liken.rules import isna
+from liken.rules import on
+from liken.rules import str_contains
+from liken.rules import str_endswith
+from liken.rules import str_len
+from liken.rules import str_startswith
 
 
 # CONSTANTS:
@@ -174,9 +174,9 @@ def test_matrix_strats_sequence_api(strategy, columns, strat_kwarg, expected_can
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(strategy(**strat_kwarg))
-    df = dp.canonicalize(columns)
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(strategy(**strat_kwarg))
+    df = lk.canonicalize(columns)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -186,9 +186,9 @@ def test_matrix_strats_dict_api(strategy, columns, strat_kwarg, expected_canonic
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply({columns: [strategy(**strat_kwarg)]})
-    df = dp.canonicalize()
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply({columns: [strategy(**strat_kwarg)]})
+    df = lk.canonicalize()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -198,8 +198,8 @@ def test_matrix_strats_rules_api(strategy, columns, strat_kwarg, expected_canoni
 
     df, spark_session = dataframe
 
-    dp = Dedupe(df, spark_session=spark_session)
-    dp.apply(Rules(on(columns, strategy(**strat_kwarg))))
-    df = dp.canonicalize()
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(Rules(on(columns, strategy(**strat_kwarg))))
+    df = lk.canonicalize()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

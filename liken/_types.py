@@ -1,4 +1,4 @@
-"""Shared enlace types"""
+"""Shared liken types"""
 
 from __future__ import annotations
 
