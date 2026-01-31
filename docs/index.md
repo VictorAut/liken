@@ -2,6 +2,12 @@
 title: Liken
 ---
 
+
+***
+**Source Code**: [https://github.com/VictorAut/liken](https://github.com/VictorAut/liken)
+
+***
+
 **Liken** is a library providing enhanced deduplication tooling for DataFrames.
 
 The key features are:
@@ -34,4 +40,4 @@ df = lk.drop_duplicates()
 
 ## Licence
 
-**Liken** is licensed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.html). See the LICENSE file for more details.
+**Liken** is licensed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.html). See the [LICENSE](https://github.com/VictorAut/liken/blob/main/LICENSE) file for more details.
