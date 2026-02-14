@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Generic
-
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
-from liken import exact
-from liken._dataframe import DF
 from liken._dataframe import Frame
 from liken._dataframe import wrap
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
 from liken._strats_library import BaseStrategy
+from liken._strats_library import exact
 from liken._strats_manager import Rules
 from liken._strats_manager import StrategyManager
 from liken._strats_manager import StratsDict
@@ -30,7 +27,7 @@ from liken._validators import validate_spark_args
 # API:
 
 
-class Dedupe(Generic[DF]):
+class Dedupe:
     """Deduplicate a dataframe given a collection of strategies.
 
     Args:
@@ -48,8 +45,7 @@ class Dedupe(Generic[DF]):
         ValueError: Initialized with PySpark DataFrame but no Spark Session.
     """
 
-    _df: DF
-    _executor: Executor[DF]
+    _executor: Executor
 
     def __init__(
         self,
@@ -110,7 +106,7 @@ class Dedupe(Generic[DF]):
                 )
                 df = lk.drop_duplicates()
 
-            Dict API:
+            Rules API:
 
                 from liken.rules import Rules, on
 
@@ -154,8 +150,8 @@ class Dedupe(Generic[DF]):
             ValueError: Incorrect use a single column strategy given multiple
                 columns defined, or vice-versa.
         """
-        keep = validate_keep_arg(keep)
-        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        keep: Keep = validate_keep_arg(keep)
+        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
         wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
@@ -214,8 +210,8 @@ class Dedupe(Generic[DF]):
             ValueError: Incorrect use a single column strategy given multiple
                 columns defined, or vice-versa.
         """
-        keep = validate_keep_arg(keep)
-        columns = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        keep: Keep = validate_keep_arg(keep)
+        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication

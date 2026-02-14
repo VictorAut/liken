@@ -32,7 +32,7 @@ pip install liken
 ```python
 from liken import Dedupe, fuzzy
 
-lk = liken.Dedupe(df)
+lk = Dedupe(df)
 
 lk.apply(fuzzy())
 

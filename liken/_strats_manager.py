@@ -214,7 +214,7 @@ class StrategyManager:
             # `On` operated on with `&` results in modified `On`
             # Of which only the first one is preserved
             # To guarantee repeated use of the base class, require deepcopy
-            self._strats = Rules(deepcopy(strat))
+            self._strats = Rules(deepcopy(strat))  # type: ignore
             return
 
         raise InvalidStrategyError(INVALID_FALLBACK_MSG.format(type(strat).__name__))
@@ -286,7 +286,7 @@ def warn(msg: str) -> None:
 # PUBLIC ON API:
 
 
-def on(columns: Columns, strat: BaseStrategy, /) -> None:
+def on(columns: Columns, strat: BaseStrategy, /) -> On:
     """Unit container for a single strategy in the Rules API.
 
     Operates a "strat" on a "columns". Is provided as comma separated members to

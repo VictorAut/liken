@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import Type
 from typing import TypeAlias
+from typing import TypeVar
 from typing import cast
 from typing import final
 
@@ -23,7 +24,7 @@ from pyspark.sql import Row
 from pyspark.sql import SparkSession
 
 from liken._constants import CANONICAL_ID
-from liken._dataframe import DF
+from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
 from liken._strats_library import BaseStrategy
@@ -40,12 +41,13 @@ if TYPE_CHECKING:
 
 SingleComponents: TypeAlias = dict[int, list[int]]
 MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
+F = TypeVar("F", bound=Frame)
 
 
-class Executor(Protocol[DF]):
+class Executor(Protocol[F]):
     def execute(
         self,
-        df: DF,
+        df: F,
         /,
         *,
         columns: Columns | None,
@@ -54,7 +56,7 @@ class Executor(Protocol[DF]):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         id: str | None,
-    ) -> DF: ...
+    ) -> F: ...
 
 
 @final
@@ -218,7 +220,7 @@ class SparkExecutor(Executor):
     @staticmethod
     def _process_partition(
         *,
-        factory: Type[Dedupe[SparkDF]],
+        factory: Type[Dedupe],
         partition: Iterator[Row],
         strats: StratsDict | Rules,
         id: str | None,
@@ -247,7 +249,7 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        lk = factory(rows)  # TODO: typing needs to be thought about here for `Dedupe` given `Rows`
+        lk = factory(rows)  # type: ignore
         lk.apply(strats)  # type: ignore
         df = lk.canonicalize(
             columns,

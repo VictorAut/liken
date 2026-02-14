@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "liken"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python library for near deduplication and record linkage."
 authors = ["VictorAut"]
 readme = "README.md"
@@ -19,6 +19,14 @@ classifiers = [
 ]
 repository = "https://github.com/VictorAut/liken/"
 documentation = "https://victorautonell-oiry.me/liken/liken.html"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+# DEPENDENCIES:
+
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
@@ -55,10 +63,12 @@ pytest-cov = "^6.1.1"
 [tool.poetry.group.docs.dependencies]
 pdoc = "^15.0.1"
 mkdocs = "^1.6.1"
-mkdocstrings = {extras = ["python"], version = "^1.0.0"}
+mkdocstrings = { extras = ["python"], version = "^1.0.0" }
 mkdocs-material = "^9.7.1"
 markdown-pycon = "^1.0.1"
 
+
+# LINTING
 
 
 [tool.black]
@@ -71,16 +81,12 @@ force_single_line = true
 
 [tool.mypy]
 warn_no_return = false
+allow_redefinition = true
+
 
 [[tool.mypy.overrides]]
-module = ["liken.*"]
+module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*"]
 ignore_missing_imports = true
 
 [tool.pylint]
-max-line-length=120
-
-# build system
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+max-line-length = 120
