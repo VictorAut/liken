@@ -66,7 +66,7 @@ class Custom(ThresholdDedupers):
         return self.__repr__()
 
 
-def register(f: PairGenerator) -> None:
+def register(f: PairGenerator) -> Callable:
     """Register a custom function as a deduplication strategy.
 
     Custom functions can be registered for use as strategies recognised by the
@@ -86,7 +86,7 @@ def register(f: PairGenerator) -> None:
             generators, where generators are preferred.
 
     Returns:
-        None
+        Callable
 
     Raises:
         TypeError: If any positional arguments are used when calling the
