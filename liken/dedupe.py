@@ -54,7 +54,7 @@ class Dedupe:
         *,
         spark_session: SparkSession | None = None,
     ):
-        self._df = df
+        self._df = df  # TODO: add validation.
 
         self._sm = StrategyManager()
 
