@@ -151,9 +151,6 @@ def fake_1K(
 
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-
-    Warning: Not Implemented
-        Due for implementation in a future version.
     """
     data = [fake_row() for _ in range(999)]
     # TODO: remove, and increment above by 1
@@ -183,9 +180,6 @@ def fake_100K(
 
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-
-    Warning: Not Implemented
-        Due for implementation in a future version.
     """
     data = [fake_row() for _ in range(99_999)]
     # TODO: remove, and increment above by 1
@@ -215,9 +209,6 @@ def fake_1M(
 
     Raises:
         ValueError: if no spark session passed when requesting a spark dataframe.
-
-    Warning: Not Implemented
-        Due for implementation in a future version.
     """
     data = [fake_row() for _ in range(999_999)]
     # TODO: remove, and increment above by 1
