@@ -39,9 +39,15 @@ if TYPE_CHECKING:
     from liken.dedupe import Dedupe
 
 
+# TYPES:
+
+
 SingleComponents: TypeAlias = dict[int, list[int]]
 MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
 F = TypeVar("F", bound=Frame)
+
+
+# EXECUTORS:
 
 
 class Executor(Protocol[F]):
@@ -249,7 +255,7 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        lk = factory(rows)  # type: ignore
+        lk = factory._from_rows(rows)  # type: ignore
         lk.apply(strats)  # type: ignore
         df = lk.canonicalize(
             columns,

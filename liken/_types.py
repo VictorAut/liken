@@ -12,9 +12,12 @@ import polars as pl
 import pyspark.sql as spark
 
 
-DataFrameLike: TypeAlias = "pd.DataFrame | pl.DataFrame | spark.DataFrame | list[spark.Row]"
-SeriesLike: TypeAlias = "pd.Series | pl.Series | list[Any]"
-ArrayLike: TypeAlias = "np.ndarray | pd.Series | pl.Series | list[Any]"
+# TYPES:
+
+UserDataFrame: TypeAlias = pd.DataFrame | pl.DataFrame | spark.DataFrame
+DataFrameLike: TypeAlias = pd.DataFrame | pl.DataFrame | spark.DataFrame | list[spark.Row]
+SeriesLike: TypeAlias = pd.Series | pl.Series | list[Any]
+ArrayLike: TypeAlias = np.ndarray | pd.Series | pl.Series | list[Any]
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
 Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule
 SimilarPairIndices: TypeAlias = tuple[int, int]

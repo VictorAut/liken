@@ -163,7 +163,7 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
     dp_instance = Mock()
     dp_instance.canonicalize.return_value = ["out"]
 
-    mock_dedupe.return_value = dp_instance
+    mock_dedupe._from_rows.return_value = dp_instance
 
     result = list(
         SparkExecutor._process_partition(
@@ -177,7 +177,7 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
         )
     )
 
-    mock_dedupe.assert_called_once_with([row])
+    mock_dedupe._from_rows.assert_called_once_with([row])
     dp_instance.apply.assert_called_once()
     dp_instance.canonicalize.assert_called_once_with(
         "address",

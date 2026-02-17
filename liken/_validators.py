@@ -6,7 +6,6 @@ However, some validations exist for other private classes
 """
 
 from collections import Counter
-from typing import Any
 from typing import Literal
 
 from pyspark.sql import SparkSession
@@ -14,14 +13,23 @@ from pyspark.sql import SparkSession
 from liken._constants import INVALID_COLUMNS_EMPTY
 from liken._constants import INVALID_COLUMNS_NOT_NONE
 from liken._constants import INVALID_COLUMNS_REPEATED
+from liken._constants import INVALID_DF
 from liken._constants import INVALID_KEEP
 from liken._constants import INVALID_SPARK
 from liken._constants import INVALID_STRAT
+from liken._constants import SUPPORTED_DFS
 from liken._strats_library import BaseStrategy
 from liken._types import Columns
+from liken._types import UserDataFrame
 
 
-def validate_spark_args(spark_session: SparkSession | None = None, /) -> SparkSession:
+def validate_df_arg(df: UserDataFrame) -> UserDataFrame:
+    if not isinstance(df, SUPPORTED_DFS):
+        raise ValueError(INVALID_DF.format(type(df).__name__))
+    return df
+
+
+def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSession:
     """Validates Spark arg in the 'Dedupe' class"""
     if not spark_session:
         raise ValueError(INVALID_SPARK)
@@ -36,7 +44,7 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return keep
 
 
-def validate_strat_arg(strat: Any):
+def validate_strat_arg(strat: BaseStrategy) -> BaseStrategy:
     """Validates that the given 'strategy' is in fact a `BaseStrategy`.
 
     As used by the strategy manager
