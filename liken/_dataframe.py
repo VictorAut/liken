@@ -34,7 +34,6 @@ from typing import Any
 from typing import Generic
 from typing import Protocol
 from typing import Self
-from typing import TypeAlias
 from typing import TypeVar
 from typing import final
 
@@ -273,7 +272,7 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
         return self
 
 
-SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
+type SparkObject = spark.DataFrame | RDD[Row]
 
 
 @final
@@ -477,5 +476,5 @@ def _(df: list[spark.Row], id: str | None) -> SparkRows:
 # ACCESSIBLE TYPES
 
 
-LocalDF: TypeAlias = PandasDF | PolarsDF | SparkRows
+type LocalDF = PandasDF | PolarsDF | SparkRows
 DF = TypeVar("DF", SparkDF, LocalDF)

@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from collections.abc import Iterator
 from functools import wraps
 from typing import Callable
-from typing import TypeAlias
 from typing import final
 
 from typing_extensions import override
@@ -17,7 +16,7 @@ from liken._types import SimilarPairIndices
 # TYPES:
 
 
-PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
+type PairGenerator = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
 
 
 # CUSTOM:

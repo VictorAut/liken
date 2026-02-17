@@ -18,10 +18,13 @@ from liken._strats_manager import Rules
 from liken._strats_manager import StrategyManager
 from liken._strats_manager import StratsDict
 from liken._types import Columns
+from liken._types import DataFrameLike
 from liken._types import Keep
+from liken._types import UserDataFrame
 from liken._validators import validate_columns_arg
+from liken._validators import validate_df_arg
 from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_args
+from liken._validators import validate_spark_arg
 
 
 # API:
@@ -49,21 +52,35 @@ class Dedupe:
 
     def __init__(
         self,
-        df: pd.DataFrame | pl.DataFrame | spark.DataFrame,
+        df: UserDataFrame,
         /,
         *,
         spark_session: SparkSession | None = None,
     ):
-        self._df = df  # TODO: add validation.
+        self._df: DataFrameLike = validate_df_arg(df)
 
         self._sm = StrategyManager()
 
-        self._executor: LocalExecutor | SparkExecutor
         if isinstance(df, spark.DataFrame):
-            spark_session = validate_spark_args(spark_session)
+            spark_session = validate_spark_arg(spark_session)
             self._executor = SparkExecutor(spark_session=spark_session)
         else:
             self._executor = LocalExecutor()
+
+    @classmethod
+    def _from_rows(
+        cls,
+        rows: list[spark.Row],
+    ) -> Dedupe:
+        """bypass initialization and initialize explicitely with no validation.
+
+        Use as internal constructor with spark `Rows`.
+        """
+        self = cls.__new__(cls)
+        self._df = rows
+        self._sm = StrategyManager()
+        self._executor = LocalExecutor()
+        return self
 
     def apply(self, strategy: BaseStrategy | dict | Rules) -> None:
         """Apply a strategy or strategies for deduplication.

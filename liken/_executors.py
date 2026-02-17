@@ -14,7 +14,6 @@ from functools import partial
 from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import Type
-from typing import TypeAlias
 from typing import TypeVar
 from typing import cast
 from typing import final
@@ -39,9 +38,15 @@ if TYPE_CHECKING:
     from liken.dedupe import Dedupe
 
 
-SingleComponents: TypeAlias = dict[int, list[int]]
-MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
+# TYPES:
+
+
+type SingleComponents = dict[int, list[int]]
+type MultiComponents = dict[tuple[int, ...], list[int]]
 F = TypeVar("F", bound=Frame)
+
+
+# EXECUTORS:
 
 
 class Executor(Protocol[F]):
@@ -249,7 +254,7 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        lk = factory(rows)  # type: ignore
+        lk = factory._from_rows(rows)  # type: ignore
         lk.apply(strats)  # type: ignore
         df = lk.canonicalize(
             columns,
