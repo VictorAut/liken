@@ -14,6 +14,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import Type
+from typing import TypeAlias
 from typing import TypeVar
 from typing import cast
 from typing import final
@@ -41,8 +42,8 @@ if TYPE_CHECKING:
 # TYPES:
 
 
-type SingleComponents = dict[int, list[int]]
-type MultiComponents = dict[tuple[int, ...], list[int]]
+SingleComponents: TypeAlias = dict[int, list[int]]
+MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
 F = TypeVar("F", bound=Frame)
 
 
