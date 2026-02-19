@@ -20,6 +20,7 @@ from typing import Protocol
 from typing import Self
 from typing import final
 
+import pyarrow as pa
 import numpy as np
 import pandas as pd
 from datasketch import MinHash
@@ -97,7 +98,7 @@ class BaseStrategy(Base):
         uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
-
+        
         return uf, n
 
     def canonicalizer(
@@ -118,14 +119,12 @@ class BaseStrategy(Base):
             elif keep == "last":
                 rep = max(members)
 
-            for i in members:
-                rep_index[i] = rep
+            for member in members:
+                rep_index[member] = rep
 
-        new_canonicals = np.array(
-            [canonicals[rep_index[i]] for i in range(n)],
-            dtype=object,
-        )
-
+        
+        new_canonicals = [canonicals[rep_index[i]].as_py() for i in range(n)]
+        
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 
         if not drop_duplicates:
@@ -193,7 +192,7 @@ class Exact(BaseStrategy):
         buckets = defaultdict(list)
 
         for i, v in enumerate(array):
-            key = v if array.ndim == 1 else tuple(v.tolist())
+            key = v #if array.ndim == 1 else tuple(v.tolist())
             buckets[key].append(i)
 
         for indices in buckets.values():
@@ -227,7 +226,9 @@ class BinaryDedupers(BaseStrategy):
         pass
 
     @override
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
+        array: list = array.to_pylist()
+
         n = len(array)
         for i in range(n):
             if not self._matches(array[i]):
@@ -279,7 +280,7 @@ class IsNA(
     with_na_placeholder: bool = False
 
     @override
-    def _gen_similarity_pairs(self, array: np.ndarray):
+    def _gen_similarity_pairs(self, array: pa.Array):
         indices: list[int] = []
 
         for i, v in enumerate(array):
@@ -323,7 +324,7 @@ class _NotNA(
     with_na_placeholder: bool = False
 
     @override
-    def _gen_similarity_pairs(self, array: np.ndarray):
+    def _gen_similarity_pairs(self, array: pa.Array):
         indices: list[int] = []
 
         for i, v in enumerate(array):
@@ -543,7 +544,9 @@ class Fuzzy(
     def _fuzz_ratio(s1, s2) -> float:
         return fuzz.ratio(s1, s2) / 100
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
+        array: list = array.to_pylist()
+
         n = len(array)
         for i in range(n):
             for j in range(i + 1, n):
@@ -595,7 +598,7 @@ class TfIdf(
             **self._kwargs,
         )
 
-    def _get_sparse_matrix(self, array: np.ndarray) -> csr_matrix:
+    def _get_sparse_matrix(self, array: list) -> csr_matrix:
         """sparse matrix of similarities, given the top N best matches"""
 
         vectorizer = self._vectorize()
@@ -608,11 +611,13 @@ class TfIdf(
             sort=True,
         )
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         """Extract arrays based on similarity scores
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
         loads up results into a tuple of arrays"""
+        array: list = array.to_pylist()
+
         sparse = self._get_sparse_matrix(array)
 
         sparse_coo = sparse.tocoo()
@@ -652,7 +657,7 @@ class LSH(
         self._threshold = threshold
         self._num_perm = num_perm
 
-    def _gen_token(self, text) -> Iterator:
+    def _gen_token(self, text: pa.Scalar) -> Iterator:
         for i in range(len(text) - self._ngram + 1):
             yield text[i : i + self._ngram]
 
@@ -676,7 +681,8 @@ class LSH(
 
         return lsh
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
+        array: list = array.to_pylist()
 
         minhashes: list[MinHash] = self._build_minhashes(array)
         lsh: MinHashLSH = self._lsh(minhashes)
@@ -704,10 +710,18 @@ class Jaccard(
 
     name: str = "jaccard"
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
-        sets = [set(row) for row in array]
+    def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
+        columns: list = [
+            array[col].to_numpy(zero_copy_only=False)
+            for col in array.column_names
+        ]
 
-        n = len(array)
+        matrix = np.column_stack(columns)
+
+        sets = [set(row) for row in matrix]
+
+        n = len(matrix)
+
         for idx in range(n):
             for idy in range(idx + 1, n):
                 intersection = sets[idx] & sets[idy]
@@ -738,21 +752,34 @@ class Cosine(
 
     name: str = "cosine"
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
-        n = len(array)
+    def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
+        # TODO mixin?
+        columns: list = [
+            array[col].to_numpy(zero_copy_only=False)
+            for col in array.column_names
+        ]
+
+        matrix = np.column_stack(columns)
+
+
+        n = len(matrix)
+        
         for idx in range(n):
             for idy in range(idx + 1, n):
-                arrx = array[idx]
-                arry = array[idy]
-                mask = [
-                    (
-                        x is not None
-                        and y is not None
-                        and not (isinstance(x, float) and np.isnan(x))
-                        and not (isinstance(y, float) and np.isnan(y))
-                    )
-                    for x, y in zip(arrx, arry)
-                ]
+                arrx = matrix[idx]
+                arry = matrix[idy]
+                # TODO: test different mask
+                # mask = [
+                #     (
+                #         x is not None
+                #         and y is not None
+                #         and not (isinstance(x, float) and np.isnan(x))
+                #         and not (isinstance(y, float) and np.isnan(y))
+                #     )
+                #     for x, y in zip(arrx, arry)
+                # ]
+                mask = ~np.isnan(arrx) & ~np.isnan(arry)
+
                 arrx_masked = arrx[mask]
                 arry_masked = arry[mask]
                 product = np.dot(arrx_masked, arry_masked)

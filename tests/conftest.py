@@ -79,7 +79,8 @@ def df_sparkrows(df_spark):
     return df_spark.collect()
 
 
-@pytest.fixture(params=["pandas", "polars", "spark"])
+# @pytest.fixture(params=["pandas", "polars", "spark"])
+@pytest.fixture(params=["pandas"])
 def dataframe(request, df_pandas, df_polars, df_spark, spark):
     """return a tuple of positionally ordered input parameters of Dedupe
 

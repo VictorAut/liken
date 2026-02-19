@@ -23,8 +23,6 @@ TODO:
     - A full interface can then be defined
 """
 
-# mypy: disable-error-code="no-redef"
-
 from __future__ import annotations
 
 import warnings
@@ -41,6 +39,8 @@ from typing import final
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
+from pyarrow.compute import coalesce
 import pyspark.sql as spark
 from pyspark.rdd import RDD
 from pyspark.sql import Row
@@ -104,28 +104,23 @@ class Frame(Generic[D, S]):
         del columns
         raise NotImplementedError
 
-    @staticmethod
-    def _fill_na(series: S, value: str) -> S:
-        del series, value
-        raise NotImplementedError
-
-    def get_array(self, columns: Columns, with_na: bool = False) -> np.ndarray:
+    def get_array(self, columns: Columns, with_na: bool = False) -> pa.Array | pa.Table:
         """Generalise the getting of a column, or columns of a df to an array.
 
         Handles single column and multicolumn. For instances of single column
         the initial column can initially be filled null placeholders, to allow
-        for use my strategies. This is optional so that specific strategies
+        for use by strategies. This is optional so that specific strategies
         that do care about nulls are not affected (e.g. IsNA).
         """
         if isinstance(columns, str):
-            cols: S = self._get_col(columns)
+            col: S = self._get_col(columns)
             if with_na:
-                return np.asarray(self._fill_na(cols, NA_PLACEHOLDER), dtype=object)
-            return np.asarray(cols, dtype=object)
-        return np.asarray(self._get_cols(columns), dtype=object)
+                return coalesce(col, NA_PLACEHOLDER)
+            return col
+        return self._get_cols(columns)
 
-    def get_canonical(self) -> np.ndarray:
-        """convenience method for clean use"""
+    def get_canonical(self) -> pa.Array:
+        """Convenience method"""
         return self.get_array(CANONICAL_ID)
 
 
@@ -208,11 +203,11 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
     def _fill_na(series: pd.Series, value: str) -> pd.Series:
         return series.fillna(value)
 
-    def _get_col(self, column: str) -> pd.Series:
-        return self._df[column]
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array(self._df[column])
 
-    def _get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
-        return self._df[list(columns)]
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return pa.Table.from_pandas(self._df[list(columns)])
 
     def put_col(self, column: str, array) -> Self:
         self._df = self._df.assign(**{column: array})
