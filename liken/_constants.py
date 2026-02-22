@@ -3,6 +3,9 @@ from __future__ import annotations
 import os
 from typing import Final
 
+import pandas as pd
+import polars as pl
+import pyspark.sql as spark
 from pyspark.sql.types import BooleanType
 from pyspark.sql.types import DataType
 from pyspark.sql.types import DateType
@@ -16,6 +19,9 @@ from pyspark.sql.types import TimestampType
 
 # CONSTANTS:
 
+# This must be manually maintained in sync with the `UserDataFrame` type
+# E.g. if new backend support is added (from a user point of view)
+SUPPORTED_DFS = pd.DataFrame | pl.DataFrame | spark.DataFrame
 
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
@@ -45,6 +51,7 @@ PYSPARK_TYPES: Final[dict[str, DataType]] = {
 # For argument validations
 
 INVALID: Final[str] = "Invalid arg: "
+INVALID_DF: Final[str] = INVALID + "df must be istance of Pandas, Polars of Spark DataFrames, got {}"
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
 INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got '{}'"
 INVALID_STRAT: Final[str] = INVALID + "strat must be instance of BaseStrategy, got {}"

@@ -2,9 +2,10 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+import pandas as pd
 
 from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_args
+from liken._validators import validate_spark_arg
 from liken.dedupe import Dedupe
 
 
@@ -61,17 +62,22 @@ def test_validate_keep_arg_invalid():
         validate_keep_arg("middle")
 
 
-def test_validate_spark_args_valid(mock_spark_session):
-    session = validate_spark_args(mock_spark_session)
+def test_validate_spark_arg_valid(mock_spark_session):
+    session = validate_spark_arg(mock_spark_session)
     assert session == mock_spark_session
 
 
-def test_validate_spark_args_missing_session():
+def test_validate_spark_arg_missing_session():
     with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
-        validate_spark_args(None)
+        validate_spark_arg(None)
 
 
-# Misuse of API:
+# Misuse of public API:
+
+
+def test_validate_df_arg():
+    with pytest.raises(ValueError, match="Invalid arg: df must be istance of Pandas, Polars of Spark DataFrames"):
+        Dedupe(Mock())  # mock not specced to a df
 
 
 @patch("liken.dedupe.wrap")
@@ -79,7 +85,7 @@ def test_validate_columns_args_not_used(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns cannot be None"):
-        lk = Dedupe(Mock())
+        lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply(strategy_mock)
         lk.canonicalize()  # <-- shouldn't be empty
 
@@ -89,7 +95,7 @@ def test_validate_columns_args_not_none(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns must be None"):
-        lk = Dedupe(Mock())
+        lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply({"address": strategy_mock})  # <-- label here
         lk.canonicalize("address")  # <-- so should not be used here
 
@@ -99,7 +105,7 @@ def test_validate_columns_args_repeated(mock_wrap, strategy_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns labels cannot be repeated"):
-        lk = Dedupe(Mock())
+        lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply(strategy_mock)
         lk.canonicalize(("email", "email"))  # <-- shouldn't be repeated
 
