@@ -21,7 +21,6 @@ from typing import Self
 from typing import final
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 from datasketch import MinHash
 from datasketch import MinHashLSH
@@ -299,14 +298,9 @@ class IsNA(
         indices: list[int] = []
 
         for i, v in enumerate(array):
-            # Spark & Polars
             if v is None:
                 indices.append(i)
                 continue
-
-            if v is pd.NA:
-                indices.append(i)
-                continue  # important! next line would break otherwise.
 
             if v != v:
                 indices.append(i)
@@ -348,8 +342,7 @@ class _NotNA(
             notna = True
             if v is None:
                 notna = False
-            if v is pd.NA:
-                notna = False
+
             elif v != v:
                 notna = False
 
