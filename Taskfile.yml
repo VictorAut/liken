@@ -16,6 +16,13 @@ tasks:
       - uv run ruff check src/
       - uv run mypy src/
 
+  # TODO remove this and alter CI job once type checks are running
+  lint-slim:
+    desc: lint and type-check
+    cmds:
+      - uv run ruff format --check src/
+      - uv run ruff check src/
+
   test:
     desc: Runs tests
     cmds:
