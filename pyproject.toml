@@ -1,84 +1,89 @@
-[tool.poetry]
+[project]
 name = "liken"
 version = "0.3.0"
 description = "A Python library for near deduplication and record linkage."
-authors = ["VictorAut"]
+authors = [{ name = "VictorAut" }]
+requires-python = ">=3.11,<3.14"
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["duplicates", "deduplication", "record linkage", "canonicalization"]
-classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
-
-  "Intended Audience :: Developers",
-  "Intended Audience :: Science/Research",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
+keywords = [
+    "duplicates",
+    "deduplication",
+    "record linkage",
+    "canonicalization",
 ]
-repository = "https://github.com/VictorAut/liken/"
-documentation = "https://victorautonell-oiry.me/liken/liken.html"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pandas>=2.2.3,<3",
+    "polars>=1.24.0,<2",
+    "rapidfuzz>=3.12.2,<4",
+    "scikit-learn>=1.6.1,<2",
+    "sparse-dot-topn>=1.1.5,<2",
+    "typing-extensions>=4.13.0,<5",
+    "pyspark>=3.5.5,<4",
+    "datasketch>=1.8.0,<2",
+    "networkx>=3.6.1,<4",
+    "pyarrow>=23.0.1,<24",
+    "faker>=37.12.0",
+]
+
+[project.urls]
+Repository = "https://github.com/VictorAut/liken/"
+Documentation = "https://victorautonell-oiry.me/liken/liken.html"
+
+[dependency-groups]
+dev = [
+    "ipython>=9.0.2,<10 ; python_full_version >= '3.11'",
+    "ipykernel>=6.29.5,<7",
+]
+lint = [
+    "mypy>=1.15.0,<2",
+    "pandas-stubs>=2.2.3.250308,<3 ; python_full_version >= '3.10'",
+    "ruff>=0.15.2",
+    "scipy-stubs>=1.15.2.1,<2 ; python_full_version >= '3.10'",
+    "types-networkx>=3.6.1.20251220,<4",
+]
+test = [
+    "pytest>=8.3.5,<9",
+    "pytest-cov>=6.1.1,<7",
+]
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocstrings[python]>=1.0.0,<2",
+    "mkdocs-material>=9.7.1,<10",
+    "markdown-pycon>=1.0.1,<2",
+]
+
+
+[tool.uv]
+default-groups = "all"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-
-# DEPENDENCIES:
-
-
-[tool.poetry.dependencies]
-python = ">=3.11,<3.14"
-pandas = "^2.2.3"
-polars = "^1.24.0"
-rapidfuzz = "^3.12.2"
-scikit-learn = "^1.6.1"
-sparse-dot-topn = "^1.1.5"
-typing-extensions = "^4.13.0"
-pyspark = "^3.5.5"
-datasketch = "^1.8.0"
-networkx = "^3.6.1"
-pyarrow = "^23.0.1"
-
-
-[tool.poetry.group.dev.dependencies]
-faker = "^37.0.0"
-ipython = { version = "^9.0.2", python = ">=3.11" }
-ipykernel = "^6.29.5"
-black = "^25.1.0"
-ruff = "^0.11.2"
-mypy = "^1.15.0"
-pandas-stubs = { version = "^2.2.3.250308", python = ">=3.10" }
-scipy-stubs = { version = "^1.15.2.1", python = ">=3.10" }
-pyinstrument = "^5.0.1"
-types-networkx = "^3.6.1.20251220"
-isort = "^7.0.0"
-pylint = "^4.0.4"
-
-
-[tool.poetry.group.test.dependencies]
-pytest = "^8.3.5"
-pytest-cov = "^6.1.1"
-
-[tool.poetry.group.docs.dependencies]
-pdoc = "^15.0.1"
-mkdocs = "^1.6.1"
-mkdocstrings = { extras = ["python"], version = "^1.0.0" }
-mkdocs-material = "^9.7.1"
-markdown-pycon = "^1.0.1"
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
 
 
 # LINTING
 
 
-[tool.black]
+[tool.ruff]
 line-length = 120
 
-[tool.isort]
-profile = "black"
-lines_after_imports = 2
-force_single_line = true
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+lines-after-imports = 2
 
 [tool.mypy]
 warn_no_return = false

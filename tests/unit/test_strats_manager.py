@@ -9,7 +9,6 @@ from liken._strats_manager import StrategyManager
 from liken._strats_manager import StratsDict
 from liken._strats_manager import on
 
-
 ###########
 # Helpers #
 ###########

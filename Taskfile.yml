@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  format:
+    desc: Format code
+    cmds:
+      - uv run ruff format src/
+      - uv run ruff check src/ --fix
+
+  lint:
+    desc: lint and type-check
+    cmds:
+      - uv run ruff format --check src/
+      - uv run ruff check src/
+      - uv run mypy src/
+
+  test:
+    desc: Runs tests
+    cmds:
+      - uv run pytest tests/
+
+  docs:
+    desc: locally build and serve MkDocs
+    cmds:
+      - uv run mkdocs build
+      - uv run mkdocs serve

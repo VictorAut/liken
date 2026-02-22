@@ -67,7 +67,6 @@ class Executor(Protocol[F]):
 
 @final
 class LocalExecutor(Executor):
-
     def execute(
         self,
         df: LocalDF,
@@ -168,7 +167,6 @@ class LocalExecutor(Executor):
 
 @final
 class SparkExecutor(Executor):
-
     def __init__(self, spark_session: SparkSession, id: str | None = None):
         self._spark_session = spark_session
         self._id = id

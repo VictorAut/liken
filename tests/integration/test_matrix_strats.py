@@ -23,7 +23,6 @@ from liken.rules import str_endswith
 from liken.rules import str_len
 from liken.rules import str_startswith
 
-
 # CONSTANTS:
 
 

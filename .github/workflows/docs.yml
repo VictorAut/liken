@@ -15,18 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      
+      - name: python | setup
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version-file: "pyproject.toml"
 
-      - name: Install Dependencies
+      - name: uv | install
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.4"
+
+      - name: liken | project install
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install
+          uv sync --locked --all-extras --docs
       
       - run: |
-          poetry run mkdocs build
+          uv run mkdocs build
 
       - name: Upload static files as artifact
         uses: actions/upload-pages-artifact@v3

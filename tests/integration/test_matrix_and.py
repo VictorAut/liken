@@ -14,7 +14,6 @@ from liken.rules import Rules
 from liken.rules import isna
 from liken.rules import on
 
-
 # CONSTANTS:
 
 
