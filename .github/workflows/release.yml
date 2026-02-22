@@ -30,6 +30,12 @@ jobs:
 
       - name: uv | build package wheel
         run: uv build
+
+      - name: Store artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
   
 
   publish-to-testpypi:
