@@ -188,12 +188,26 @@ class Exact(BaseStrategy):
         pass
 
     @override
-    def _gen_similarity_pairs(self, array: np.ndarray):
+    def _gen_similarity_pairs(self, array: pa.Array | pa.Table):
         buckets = defaultdict(list)
 
-        for i, v in enumerate(array):
-            key = v #if array.ndim == 1 else tuple(v.tolist())
-            buckets[key].append(i)
+        # single column
+        if isinstance(array, pa.Array):
+            for i, key in enumerate(array):
+                buckets[key].append(i)
+        
+        # multi column
+        if isinstance(array, pa.Table):
+            columns = [
+                array[col]
+                for col in array.column_names
+            ]
+
+            n = array.num_rows
+
+            for i in range(n):
+                key = tuple(col[i].as_py() for col in columns)
+                buckets[key].append(i)
 
         for indices in buckets.values():
             for i in range(len(indices)):
