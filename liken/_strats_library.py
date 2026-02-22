@@ -20,9 +20,9 @@ from typing import Protocol
 from typing import Self
 from typing import final
 
-import pyarrow as pa
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from datasketch import MinHash
 from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
@@ -53,7 +53,7 @@ class Base(Protocol):
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]: ...
+    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
     def build_union_find(self, columns: Columns) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
@@ -72,9 +72,12 @@ class Base(Protocol):
 class BaseStrategy(Base):
     """
     Base Deduplication class
+
+    By default all dedupers will operate on filled nulls, thus treating them
+    as identical instances within a column(s) of values,
     """
 
-    with_na_placeholder: bool = True  # TODO document this
+    with_na_placeholder: bool = True
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -85,20 +88,20 @@ class BaseStrategy(Base):
         self.wdf: LocalDF = wdf
         return self
 
-    def _gen_similarity_pairs(self, array: np.ndarray) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
     def build_union_find(self: Base, columns: Columns) -> tuple[UnionFind[int], int]:
         self.validate(columns)
-        array = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
         n = len(array)
 
         uf = UnionFind(range(n))
         for i, j in self._gen_similarity_pairs(array):
             uf.union(i, j)
-        
+
         return uf, n
 
     def canonicalizer(
@@ -122,9 +125,8 @@ class BaseStrategy(Base):
             for member in members:
                 rep_index[member] = rep
 
-        
-        new_canonicals = [canonicals[rep_index[i]].as_py() for i in range(n)]
-        
+        new_canonicals: list = [canonicals[rep_index[i]].as_py() for i in range(n)]
+
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 
         if not drop_duplicates:
@@ -157,7 +159,7 @@ class SingleColumnMixin:
             raise ValueError("For single column strategies, `columns` must be defined as a string")
 
 
-class CompoundValidationMixin:
+class CompoundColumnMixin:
     """
     Validates the column type of deduplication strategy when passed in the
     columns arg. Only tuples of strings allowed
@@ -195,13 +197,10 @@ class Exact(BaseStrategy):
         if isinstance(array, pa.Array):
             for i, key in enumerate(array):
                 buckets[key].append(i)
-        
+
         # multi column
         if isinstance(array, pa.Table):
-            columns = [
-                array[col]
-                for col in array.column_names
-            ]
+            columns = [array[col] for col in array.column_names]
 
             n = array.num_rows
 
@@ -295,6 +294,8 @@ class IsNA(
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
+        array: list = array.to_pylist()
+
         indices: list[int] = []
 
         for i, v in enumerate(array):
@@ -324,7 +325,7 @@ class IsNA(
 @final
 class _NotNA(
     SingleColumnMixin,
-    BaseStrategy,  # TODO, is this correct? Should it not be BinaryDeduper for consistency?
+    BinaryDedupers,
 ):
     """
     Deduplicate all non-NA / non-null values.
@@ -339,6 +340,8 @@ class _NotNA(
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
+        array: list = array.to_pylist()
+
         indices: list[int] = []
 
         for i, v in enumerate(array):
@@ -510,7 +513,7 @@ class StrContains(
 
     @override
     def _matches(self, value: str) -> bool:
-        if value is None or (isinstance(value, float) and np.isnan(value)):
+        if value is None:
             return False
 
         if self._regex:
@@ -675,7 +678,7 @@ class LSH(
         for i in range(len(text) - self._ngram + 1):
             yield text[i : i + self._ngram]
 
-    def _build_minhashes(self, array: np.ndarray) -> list[MinHash]:
+    def _build_minhashes(self, array: list) -> list[MinHash]:
         minhashes: list[MinHash] = []
         for value in array:
             m = MinHash(num_perm=self._num_perm)
@@ -715,7 +718,7 @@ class LSH(
 
 @final
 class Jaccard(
-    CompoundValidationMixin,
+    CompoundColumnMixin,
     ThresholdDedupers,
 ):
     """
@@ -725,16 +728,11 @@ class Jaccard(
     name: str = "jaccard"
 
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
-        columns: list = [
-            array[col].to_numpy(zero_copy_only=False)
-            for col in array.column_names
-        ]
+        columns = [array[col] for col in array.column_names]
+        n = array.num_rows
 
-        matrix = np.column_stack(columns)
-
-        sets = [set(row) for row in matrix]
-
-        n = len(matrix)
+        # Build row sets directly
+        sets = [{col[i].as_py() for col in columns if col[i].as_py() is not None} for i in range(n)]
 
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -757,7 +755,7 @@ class Jaccard(
 
 @final
 class Cosine(
-    CompoundValidationMixin,
+    CompoundColumnMixin,
     ThresholdDedupers,
 ):
     """
@@ -767,31 +765,20 @@ class Cosine(
     name: str = "cosine"
 
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
-        # TODO mixin?
-        columns: list = [
-            array[col].to_numpy(zero_copy_only=False)
-            for col in array.column_names
-        ]
+
+        # TODO: See Jaccard implementation for consideration in not using numpy here.
+        # For the meantime OK, as no portability issues, plus we get vectorization.
+        columns: list = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
 
         matrix = np.column_stack(columns)
 
-
         n = len(matrix)
-        
+
         for idx in range(n):
             for idy in range(idx + 1, n):
                 arrx = matrix[idx]
                 arry = matrix[idy]
-                # TODO: test different mask
-                # mask = [
-                #     (
-                #         x is not None
-                #         and y is not None
-                #         and not (isinstance(x, float) and np.isnan(x))
-                #         and not (isinstance(y, float) and np.isnan(y))
-                #     )
-                #     for x, y in zip(arrx, arry)
-                # ]
+
                 mask = ~np.isnan(arrx) & ~np.isnan(arry)
 
                 arrx_masked = arrx[mask]

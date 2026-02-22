@@ -153,7 +153,6 @@ def fake_1K(
         ValueError: if no spark session passed when requesting a spark dataframe.
     """
     data = [fake_row() for _ in range(999)]
-    # TODO: remove, and increment above by 1
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(
@@ -182,7 +181,6 @@ def fake_100K(
         ValueError: if no spark session passed when requesting a spark dataframe.
     """
     data = [fake_row() for _ in range(99_999)]
-    # TODO: remove, and increment above by 1
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(
@@ -211,7 +209,6 @@ def fake_1M(
         ValueError: if no spark session passed when requesting a spark dataframe.
     """
     data = [fake_row() for _ in range(999_999)]
-    # TODO: remove, and increment above by 1
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(

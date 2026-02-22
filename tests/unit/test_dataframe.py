@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 from unittest.mock import create_autospec
 
-import pandas as pd
+import pyarrow as pa
 import pytest
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
@@ -48,33 +48,34 @@ def test_wrapper_methods_pandas(df_pandas, new_col):
     assert "new_col" in wdf.unwrap().columns
 
     series = wdf._get_col("new_col")
-    assert isinstance(series, pd.Series)
+    assert isinstance(series, pa.Array)
 
     dropped = result.drop_col("new_col")
     assert dropped is wdf
     assert "new_col" not in wdf.unwrap().columns
 
     df_subset = wdf._get_cols(("email", "account"))
-    assert isinstance(df_subset, pd.DataFrame)
-    assert list(df_subset.columns) == ["email", "account"]
+    assert isinstance(df_subset, pa.Table)
+    assert df_subset.column_names == ["email", "account"]
 
 
 def test_wrapper_methods_polars(df_polars, new_col):
     wdf = PolarsDF(df_polars)
 
-    result = wdf.put_col("test_col", new_col)
+    result = wdf.put_col("new_col", new_col)
     assert result is wdf
-    assert "test_col" in wdf.unwrap().columns
+    assert "new_col" in wdf.unwrap().columns
 
-    series = wdf._get_col("test_col")
-    assert hasattr(series, "dtype")  # basic polars Series check
+    series = wdf._get_col("new_col")
+    assert isinstance(series, pa.Array)
 
-    dropped = result.drop_col("test_col")
+    dropped = result.drop_col("new_col")
     assert dropped is wdf
-    assert "test_col" not in wdf.unwrap().columns
+    assert "new_col" not in wdf.unwrap().columns
 
     df_subset = wdf._get_cols(("email", "account"))
-    assert hasattr(df_subset, "columns")
+    assert isinstance(df_subset, pa.Table)
+    assert df_subset.column_names == ["email", "account"]
 
 
 def test_wrapper_methods_spark(df_spark):
@@ -100,11 +101,12 @@ def test_wrapper_methods_sparkrows(df_sparkrows, new_col):
     result = wdf.put_col("new_col", new_col)
     assert result is wdf
 
-    col_values = wdf._get_col("new_col")
-    assert col_values == new_col
+    series = wdf._get_col("new_col")
+    assert isinstance(series, pa.Array)
 
-    cols_values = wdf._get_cols(("email", "account"))
-    assert all(isinstance(c, list) for c in cols_values)
+    df_subset = wdf._get_cols(("email", "account"))
+    assert isinstance(df_subset, pa.Table)
+    assert df_subset.column_names == ["email", "account"]
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-"""TODO"""
+"""Integration tests for output when dropping or not"""
 
 from __future__ import annotations
 
@@ -46,8 +46,6 @@ NUMERICAL_COMPOUND_COL = (
 
 @register
 def strings_same_len(array: typing.Iterable, min_len: int = 3):
-    array: list = array.to_pylist()
-    
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
@@ -152,27 +150,27 @@ def test_matrix_strats_sequence_api(
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-# @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-# def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
+def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
-#     df, spark_session = dataframe
+    df, spark_session = dataframe
 
-#     lk = Dedupe(df, spark_session=spark_session)
+    lk = Dedupe(df, spark_session=spark_session)
 
-#     # dictionary strategy addition
-#     lk.apply({columns: [strategy(**strat_kwarg)]})
-#     df = lk.canonicalize(**drop_kwarg)
+    # dictionary strategy addition
+    lk.apply({columns: [strategy(**strat_kwarg)]})
+    df = lk.canonicalize(**drop_kwarg)
 
-#     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-# @pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-# def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
+def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
 
-#     df, spark_session = dataframe
+    df, spark_session = dataframe
 
-#     lk = Dedupe(df, spark_session=spark_session)
-#     lk.apply(Rules(on(columns, strategy(**strat_kwarg))))
-#     df = lk.canonicalize(**drop_kwarg)
+    lk = Dedupe(df, spark_session=spark_session)
+    lk.apply(Rules(on(columns, strategy(**strat_kwarg))))
+    df = lk.canonicalize(**drop_kwarg)
 
-#     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

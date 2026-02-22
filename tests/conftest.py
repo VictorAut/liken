@@ -13,7 +13,6 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
-from liken._types import DataFrameLike
 from liken.datasets.synthetic import fake_10
 from liken.dedupe import BaseStrategy
 
@@ -79,8 +78,7 @@ def df_sparkrows(df_spark):
     return df_spark.collect()
 
 
-# @pytest.fixture(params=["pandas", "polars", "spark"])
-@pytest.fixture(params=["pandas"])
+@pytest.fixture(params=["pandas", "polars", "spark"])
 def dataframe(request, df_pandas, df_polars, df_spark, spark):
     """return a tuple of positionally ordered input parameters of Dedupe
 
@@ -113,7 +111,7 @@ def mock_spark_session():
 class Helpers:
 
     @staticmethod
-    def get_column_as_list(df: DataFrameLike, col: str):
+    def get_column_as_list(df, col: str):
         if isinstance(df, pd.DataFrame) or isinstance(df, pl.DataFrame):
             return list(df[col])
         if isinstance(df, SparkDataFrame):
@@ -140,7 +138,6 @@ class Helpers:
             df = df.withColumn(label, labels_udf("num_id"))
             return df.drop("num_id")
         if isinstance(df, list):  # i.e. list[Row]
-            # TODO
             pass
 
 

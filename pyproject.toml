@@ -86,7 +86,7 @@ allow_redefinition = true
 
 
 [[tool.mypy.overrides]]
-module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*"]
+module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [tool.pylint]

@@ -10,14 +10,13 @@ from typing import final
 from typing_extensions import override
 
 from liken._strats_library import ThresholdDedupers
-from liken._types import ArrayLike
 from liken._types import SimilarPairIndices
 
 
 # TYPES:
 
 
-PairGenerator: TypeAlias = Callable[[ArrayLike], Iterable[SimilarPairIndices]]
+PairGenerator: TypeAlias = Callable[[Iterable], Iterable[SimilarPairIndices]]
 
 
 # CUSTOM:
@@ -60,6 +59,7 @@ class Custom(ThresholdDedupers):
     @override
     def _gen_similarity_pairs(self, array) -> Iterator[SimilarPairIndices]:
         """generator or function implementation"""
+        array: list = array.to_pylist()
         yield from self._pair_fn(array, *self._args, **self._kwargs)
 
     def __str__(self):
