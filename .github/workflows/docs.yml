@@ -28,7 +28,7 @@ jobs:
 
       - name: liken | project install
         run: |
-          uv sync --locked --all-extras --docs
+          uv sync --locked --all-extras --group docs
       
       - run: |
           uv run mkdocs build
