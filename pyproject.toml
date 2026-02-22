@@ -1,6 +1,6 @@
 [project]
 name = "liken"
-version = "0.3.1rc1"
+version = "0.3.1"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
 requires-python = ">=3.11,<3.14"
