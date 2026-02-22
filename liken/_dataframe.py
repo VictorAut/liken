@@ -23,8 +23,6 @@ TODO:
     - A full interface can then be defined
 """
 
-# mypy: disable-error-code="no-redef"
-
 from __future__ import annotations
 
 import warnings
@@ -38,10 +36,11 @@ from typing import TypeAlias
 from typing import TypeVar
 from typing import final
 
-import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pyspark.sql as spark
+from pyarrow.compute import coalesce
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 from pyspark.sql.types import LongType
@@ -53,7 +52,6 @@ from liken._constants import CANONICAL_ID
 from liken._constants import NA_PLACEHOLDER
 from liken._constants import PYSPARK_TYPES
 from liken._types import Columns
-from liken._types import DataFrameLike
 from liken._types import Keep
 
 
@@ -104,28 +102,23 @@ class Frame(Generic[D, S]):
         del columns
         raise NotImplementedError
 
-    @staticmethod
-    def _fill_na(series: S, value: str) -> S:
-        del series, value
-        raise NotImplementedError
-
-    def get_array(self, columns: Columns, with_na: bool = False) -> np.ndarray:
+    def get_array(self, columns: Columns, with_na: bool = False) -> pa.Array | pa.Table:
         """Generalise the getting of a column, or columns of a df to an array.
 
         Handles single column and multicolumn. For instances of single column
         the initial column can initially be filled null placeholders, to allow
-        for use my strategies. This is optional so that specific strategies
+        for use by strategies. This is optional so that specific strategies
         that do care about nulls are not affected (e.g. IsNA).
         """
         if isinstance(columns, str):
-            cols: S = self._get_col(columns)
+            col: S = self._get_col(columns)
             if with_na:
-                return np.asarray(self._fill_na(cols, NA_PLACEHOLDER), dtype=object)
-            return np.asarray(cols, dtype=object)
-        return np.asarray(self._get_cols(columns), dtype=object)
+                return coalesce(col, NA_PLACEHOLDER)
+            return col
+        return self._get_cols(columns)
 
-    def get_canonical(self) -> np.ndarray:
-        """convenience method for clean use"""
+    def get_canonical(self) -> pa.Array:
+        """Convenience method"""
         return self.get_array(CANONICAL_ID)
 
 
@@ -189,6 +182,8 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
         self._df: pd.DataFrame = self._add_canonical_id(df, id)
         self._id = id
 
+    # CANONICAL ID HELPERS:
+
     def _df_as_is(self, df: pd.DataFrame) -> pd.DataFrame:
         return df
 
@@ -201,20 +196,17 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
 
+    # ARROW BACKEND:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array(self._df[column])
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return pa.Table.from_pandas(self._df[list(columns)])
+
     # WRAPPER METHODS:
 
-    @staticmethod
-    @override
-    def _fill_na(series: pd.Series, value: str) -> pd.Series:
-        return series.fillna(value)
-
-    def _get_col(self, column: str) -> pd.Series:
-        return self._df[column]
-
-    def _get_cols(self, columns: tuple[str, ...]) -> pd.DataFrame:
-        return self._df[list(columns)]
-
-    def put_col(self, column: str, array) -> Self:
+    def put_col(self, column: str, array: list) -> Self:
         self._df = self._df.assign(**{column: array})
         return self
 
@@ -235,6 +227,8 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
         self._df: pl.DataFrame = self._add_canonical_id(df, id)
         self._id = id
 
+    # CANONICAL ID HELPERS:
+
     def _df_as_is(self, df: pl.DataFrame) -> pl.DataFrame:
         return df
 
@@ -247,20 +241,18 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
 
+    # ARROW BACKEND:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array(self._df.get_column(column))
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return self._df.select(columns).to_arrow()
+
     # WRAPPER METHODS:
 
-    @staticmethod
-    def _fill_na(series: pl.Series, value: str) -> pl.Series:
-        return series.fill_null(value)
-
-    def _get_col(self, column: str) -> pl.Series:
-        return self._df.get_column(column)
-
-    def _get_cols(self, columns: tuple[str, ...]) -> pl.DataFrame:
-        return self._df.select(columns)
-
-    def put_col(self, column: str, array) -> Self:
-        array = pl.Series(array)  # important; allow list to be assigned to column
+    def put_col(self, column: str, array: list) -> Self:
+        array = pl.Series(array)  # IMPORTANT; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
         return self
 
@@ -300,7 +292,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
             canonical ID creation, or not.
     """
 
-    err_msg = "Method is available for spark RDD, not spark DataFrame"
+    err_msg = "Method is available for spark Rows only, not spark DataFrame"
 
     def __init__(
         self,
@@ -313,11 +305,13 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 
         self._df: SparkObject
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, id)
+            self._df: RDD[Row] = self._add_canonical_id(df, id)  # type: ignore[no-redef]
         else:
-            self._df: spark.DataFrame = df
+            self._df: spark.DataFrame = df  # type: ignore[no-redef]
 
         self._id = id
+
+    # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: spark.DataFrame) -> RDD[Row]:
         self._schema = df.schema
@@ -373,8 +367,10 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 
     def drop_col(self, column: str) -> Self:
         """Only applies to Spark DataFrame to remove canonical ID"""
-        self._df = self._df.drop(column)
-        return self
+        if isinstance(self._df, spark.DataFrame):
+            self._df = self._df.drop(column)
+            return self
+        raise NotImplementedError("Cannot drop columns on spark RDD")
 
     def put_col(self):
         raise NotImplementedError(self.err_msg)
@@ -402,20 +398,20 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
     def __init__(self, df: list[spark.Row]):
         self._df: list[spark.Row] = df
 
+    # ARROW BACKEND:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array([row[column] for row in self._df])
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        # return [[row[c] for c in columns] for row in self._df]
+        data = {col: [row[col] for row in self._df] for col in columns}
+
+        return pa.table(data)
+
     # WRAPPER METHODS:
 
-    @staticmethod
-    def _fill_na(series: list, value: str) -> list:
-        return [value if v is None else v for v in series]
-
-    def _get_col(self, column: str) -> list[Any]:
-        return [row[column] for row in self._df]
-
-    def _get_cols(self, columns: tuple[str, ...]) -> list[spark.Row]:
-        return [[row[c] for c in columns] for row in self._df]
-
-    def put_col(self, column: str, array) -> Self:
-        array = [i.item() if isinstance(i, np.generic) else i for i in array]
+    def put_col(self, column: str, array: list) -> Self:
         self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
@@ -443,7 +439,10 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
 
 
 @singledispatch
-def wrap(df: DataFrameLike, id: str | None = None):
+def wrap(
+    df: pd.DataFrame | pl.DataFrame | spark.DataFrame | list[spark.Row],
+    id: str | None = None,
+):
     """
     Wrap the dataframe with instance of `Frame`, for a generic interface
     allowing use of selected methods such as "dropping columns",

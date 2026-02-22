@@ -1,4 +1,4 @@
-"""TODO"""
+"""Integration tests for output when dropping or not"""
 
 from __future__ import annotations
 

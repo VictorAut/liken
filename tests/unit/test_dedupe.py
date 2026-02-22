@@ -1,8 +1,8 @@
 from unittest.mock import Mock
 from unittest.mock import patch
 
-import pytest
 import pandas as pd
+import pytest
 
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg

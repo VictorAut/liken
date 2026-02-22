@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "liken"
-version = "0.2.2"
+version = "0.3.0"
 description = "A Python library for near deduplication and record linkage."
 authors = ["VictorAut"]
 readme = "README.md"
@@ -39,6 +39,7 @@ typing-extensions = "^4.13.0"
 pyspark = "^3.5.5"
 datasketch = "^1.8.0"
 networkx = "^3.6.1"
+pyarrow = "^23.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -85,7 +86,7 @@ allow_redefinition = true
 
 
 [[tool.mypy.overrides]]
-module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*"]
+module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [tool.pylint]

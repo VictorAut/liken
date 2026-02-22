@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-import numpy as np
+import pyarrow as pa
 import pytest
 
 from liken import cosine
@@ -35,10 +35,10 @@ def mock_df():
     Minimal LocalDF. Only methods used by strategies defined.
     """
     df = Mock()
-    df._get_col.return_value = np.array([1, 2, 3], dtype=object)
-    df._get_cols.return_value = np.array([[1], [2], [3]], dtype=object)
+    df._get_col.return_value = pa.array([1, 2, 3])
+    df._get_cols.return_value = pa.array([[1], [2], [3]])
     df.put_col.return_value = df
-    df.get_array.return_value = np.array([1, 2, 3], dtype=object)  # here as a placeholder
+    df.get_array.return_value = pa.array([1, 2, 3])  # here as a placeholder
     return df
 
 
@@ -57,7 +57,7 @@ def test_set_frame_sets_wrapped_df(mock_df):
 def test_gen_similarity_pairs_not_implemented():
     strat = BaseStrategy()
     with pytest.raises(NotImplementedError):
-        list(strat._gen_similarity_pairs(np.array([])))
+        list(strat._gen_similarity_pairs(pa.array([])))
 
 
 ################
@@ -71,12 +71,12 @@ def test_canonicalize_puts_canonical_id(mock_df):
 
     strat.wdf.get_array = Mock(
         side_effect=[
-            np.array([10, 20, 30], dtype=object),
-            np.array(["a", "a", "b"], dtype=object),
+            pa.array([10, 20, 30]),
+            pa.array(["a", "a", "b"]),
         ]
     )
 
-    strat.wdf.get_canonical = Mock(side_effect=[np.array([10, 20, 30], dtype=object)])
+    strat.wdf.get_canonical = Mock(side_effect=[pa.array([10, 20, 30])])
 
     components = {
         0: [0, 1],
@@ -98,14 +98,14 @@ def test_column_array_mixin_str_column(mock_df):
     strat = Exact().set_frame(mock_df)
     arr = strat.wdf.get_array("a")
     mock_df.get_array.assert_called_once_with("a")
-    assert isinstance(arr, np.ndarray)
+    assert isinstance(arr, pa.Array)
 
 
 def test_column_array_mixin_tuple_column(mock_df):
     strat = Exact().set_frame(mock_df)
     arr = strat.wdf.get_array(("a", "b"))
     mock_df.get_array.assert_called_once_with(("a", "b"))
-    assert isinstance(arr, np.ndarray)
+    assert isinstance(arr, pa.Array)
 
 
 #####################

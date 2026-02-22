@@ -69,7 +69,10 @@ Registering your function means it can be *applied* to `Dedupe` with the `apply(
 See how `array` isn't passed? `Dedupe` will retrieve an array representation of the `address` column in your DataFrame by itself, ensuring that the end usage of your custom strategy is as clean as simple as the rest of **Liken's** strategies.
 
 !!! note
-    Custom strategies can be combined using `&` in the **Rules API**. The negated form of your custom function will not be available using the `~` operator. This most likely means you'd have to define an additional custom strategy. In the above case, maybe a `not_str_same_len`.
+    Custom strategies can be combined using `&` in the **Rules API**. However, the negated form of your custom function will not be available using the `~` operator. Define an additional custom strategy in order to achieved that, for example, in the above case a `not_str_same_len` function.
+
+!!! warning
+    Currently only custom single column strategies are supported.
 
 ## Recap
 !!! success "You learnt:"
