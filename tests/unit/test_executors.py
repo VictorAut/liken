@@ -12,7 +12,6 @@ from liken._strats_library import BaseStrategy
 from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
 from liken._strats_manager import StratsDict
 
-
 ############################
 # Fixtures
 ############################

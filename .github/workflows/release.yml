@@ -18,27 +18,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: python | setup
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
-      - name: Install poetry
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
+          python-version-file: "pyproject.toml"
 
-      - name: Install dependencies
-        run: |
-          poetry install
-
-      - name: Build a binary wheel and a source tarball
-        run: poetry build
-
-      - name: Store the distribution packages
-        uses: actions/upload-artifact@v4
+      - name: uv | install
+        uses: astral-sh/setup-uv@v7
         with:
-          name: python-package-distributions
-          path: dist/
+          version: "0.10.4"
+
+      - name: uv | build package wheel
+        run: uv build
   
 
   publish-to-testpypi:
@@ -51,23 +42,22 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/liken
 
-    permissions:
-      id-token: write # mandatory for trusted publishing
-
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
-      - name: Publish distribution to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Publish to TestPyPI
+        run: uv publish --publish-url https://test.pypi.org/legacy/
 
   publish-to-pypi:
     name: Package | Publish to PyPI
-    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI on tag pushes
+    if: startsWith(github.ref, 'refs/tags/') # only publish to PyPI with tags
     needs:
       - build
     runs-on: ubuntu-latest
@@ -76,17 +66,18 @@ jobs:
       name: pypi
       url: https://pypi.org/p/liken
 
-    permissions:
-      id-token: write # mandatory for trusted publishing
-
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Publish to PyPI
+        run: uv publish
 
   docs:
     name: Docs

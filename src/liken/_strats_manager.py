@@ -239,7 +239,6 @@ class StrategyManager:
         if isinstance(strats, StratsDict):
             # added as BaseStrategy (Sequential API)
             if self.is_sequential_applied:
-
                 # short-circuit; nothing yet applied.
                 if not strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     return None

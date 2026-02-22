@@ -11,7 +11,6 @@ from liken import exact
 from liken._constants import CANONICAL_ID
 from liken.rules import isna
 
-
 # CONSTANTS:
 
 
