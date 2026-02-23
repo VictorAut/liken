@@ -34,6 +34,8 @@ from liken._strats_manager import StratsDict
 from liken._types import Columns
 from liken._types import Keep
 
+import networkx as nx
+
 
 if TYPE_CHECKING:
     from liken.dedupe import Dedupe
@@ -112,9 +114,24 @@ class LocalExecutor(Executor):
         if isinstance(strats, Rules):
             for stage in strats:
                 ufs = []
+                indices = set()
                 for col, strat in stage.and_strats:
-                    uf, n = self._build_uf(strat, df, col)
+                    uf, n = self._build_uf(strat, df, col, predicate=indices)
                     ufs.append(uf)
+
+                    # TESTING
+                    cmps = defaultdict(list)
+                    for i in range(n):
+                        cmps[uf[i]].append(i)
+                    for c in cmps.values():
+                        if len(c) > 1:
+                            indices = indices.union(set(c))
+                    
+                    print(cmps)
+                    print(sorted(indices))
+
+                    # END TESTING
+                
                 components: MultiComponents = self._get_multi_components(ufs, n)
                 df = call_strat(strat, components)
 
@@ -127,8 +144,9 @@ class LocalExecutor(Executor):
         strat: BaseStrategy,
         df: LocalDF,
         columns: Columns,
+        predicate: set = set()
     ) -> tuple[UnionFind[int], int]:
-        return strat.set_frame(df).build_union_find(columns)
+        return strat.set_frame(df).build_union_find(columns, predicate=predicate)
 
     @staticmethod
     def _get_components(

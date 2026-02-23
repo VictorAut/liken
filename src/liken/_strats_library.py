@@ -52,7 +52,9 @@ class Base(Protocol):
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
-    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
+    def _gen_similarity_pairs(
+        self, array: pa.Array | pa.Table
+    ) -> Iterator[SimilarPairIndices]: ...
     def build_union_find(self, columns: Columns) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
@@ -87,14 +89,27 @@ class BaseStrategy(Base):
         self.wdf: LocalDF = wdf
         return self
 
-    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(
+        self, array: pa.Array | pa.Table
+    ) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
-    def build_union_find(self: Base, columns: Columns) -> tuple[UnionFind[int], int]:
+    def build_union_find(
+        self: Base,
+        columns: Columns,
+        predicate: set = set(),
+    ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
-        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
+        array: pa.Array | pa.Table = self.wdf.get_array(
+            columns, with_na=self.with_na_placeholder
+        )
+
+        if predicate:
+            # subsets the array on predicate indice list
+            array: pa.Array | pa.Table = array.take(sorted(predicate))
+        print(array)
         n = len(array)
 
         uf = UnionFind(range(n))
@@ -155,7 +170,9 @@ class SingleColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, str):
-            raise ValueError("For single column strategies, `columns` must be defined as a string")
+            raise ValueError(
+                "For single column strategies, `columns` must be defined as a string"
+            )
 
 
 class CompoundColumnMixin:
@@ -166,7 +183,9 @@ class CompoundColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, tuple):
-            raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
+            raise ValueError(
+                "For compound columns strategies, `columns` must be defined as a tuple"
+            )
 
 
 # EXACT DEDUPER:
@@ -535,7 +554,9 @@ class ThresholdDedupers(BaseStrategy):
         self._threshold = threshold
 
         if not (0 <= threshold < 1):
-            raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
+            raise ValueError(
+                "The threshold value must be greater or equal to 0 and less than 1"
+            )
 
 
 @final
@@ -600,7 +621,9 @@ class TfIdf(
         self._kwargs = kwargs
 
     def _vectorize(self) -> TfidfVectorizer:
-        ngram_range = (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
+        ngram_range = (
+            (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
+        )
 
         return TfidfVectorizer(
             analyzer="char",
@@ -725,7 +748,10 @@ class Jaccard(
         n = array.num_rows
 
         # Build row sets directly
-        sets = [{col[i].as_py() for col in columns if col[i].as_py() is not None} for i in range(n)]
+        sets = [
+            {col[i].as_py() for col in columns if col[i].as_py() is not None}
+            for i in range(n)
+        ]
 
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -761,7 +787,9 @@ class Cosine(
 
         # TODO: See Jaccard implementation for consideration in not using numpy here.
         # For the meantime OK, as no portability issues, plus we get vectorization.
-        columns: list = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
+        columns: list = [
+            array[col].to_numpy(zero_copy_only=False) for col in array.column_names
+        ]
 
         matrix = np.column_stack(columns)
 
