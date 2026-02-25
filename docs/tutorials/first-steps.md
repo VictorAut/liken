@@ -54,21 +54,21 @@ df = lk.drop_duplicates(columns=["address", "email"])
 
 Great! You've done what Pandas can do, at the cost of an additional line of code. However, things get sticky when your records aren't quite *exactly* the same. Look at the following instances of emails in this dummy dataset:
 
-```
-+------+-----------+---------------------+
-| id   |  address  |         email       |
-+------+-----------+---------------------+
-|  1   |  london   |  fizzpop@yahoo.com  |
-|  2   |   tokyo   |  FizzPop@yahoo.com  |
-|  3   |   paris   |       a@msn.fr      |
-+------+-----------+---------------------+
-```
 
+ id   |  address  |         email       
+------|-----------|---------------------
+  1   |  london   |  fizzpop@yahoo.com  
+  2   |   tokyo   |  FizzPop@yahoo.com  
+  3   |   paris   |       a@msn.fr      
+
+/// caption
 Unfortunately "fizzpop" and "FizzPop" just aren't the same...
+///
 
 ## Near Deduplication
 
 When things aren't *exactly* the same, you can still deduplicate data — it's just going to be harder and it's going to fall to you to define how "near" two things are. **Liken** is built so that you can focus on defining *what* you want out of a near deduplication process. The goal will be to be able to define neat and clear-cut ways to deduplicate data with the least amount of code possible. To that end, any near deduplication process from here-on-out will be called a deduplication **strategy**, and in the next tutorial you'll find out how to use **Liken's** native **strategies**.
+
 
 ## Recap
 

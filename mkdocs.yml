@@ -1,6 +1,11 @@
 site_name: Liken
 
+copyright: Copyright &copy; 2025 - 2026 The Liken Author
+repo_url: https://github.com/VictorAut/liken
+
 theme:
+  favicon: images/favicon.png
+  logo: images/logo.png
   font:
     code: Source Code Pro
   name: "material"
@@ -28,11 +33,10 @@ extra_css:
   - stylesheets/extra.css
 
 extra:
-  generator: false
-
-repo_url: https://github.com/VictorAut/liken
+  generator: True
 
 plugins:
+  - search
   - mkdocstrings:
       handlers:
           python:
@@ -50,6 +54,7 @@ markdown_extensions:
   - attr_list
   - admonition
   - pymdownx.details
+  - pymdownx.blocks.caption
   - pymdownx.highlight:
       use_pygments: true
       default_lang: python
@@ -105,3 +110,4 @@ nav:
     - reference/rules.md
     - reference/custom.md
     - reference/datasets.md
+
