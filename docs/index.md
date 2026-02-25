@@ -1,7 +1,14 @@
----
+<!-- ---
 title: Liken
----
+--- -->
 
+<style>
+.md-content .md-typeset h1 { display: none; }
+</style>
+
+<p align="center">
+  <a href="https://victoraut.github.io/liken/"><img src="images/logo-name-transparent.png" alt="Liken"></a>
+</p>
 
 ***
 **Source Code**: [https://github.com/VictorAut/liken](https://github.com/VictorAut/liken)
