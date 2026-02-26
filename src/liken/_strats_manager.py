@@ -19,6 +19,7 @@ from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 from liken._strats_library import BaseStrategy
+from liken._strats_library import BinaryDedupers
 from liken._types import Columns
 from liken._validators import validate_strat_arg
 
@@ -38,11 +39,15 @@ class StratsDict(UserDict):
         if not isinstance(key, str | tuple):
             raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
         if not isinstance(value, list | tuple | BaseStrategy):
-            raise InvalidStrategyError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
+            raise InvalidStrategyError(
+                INVALID_DICT_VALUE_MSG.format(type(value).__name__)
+            )
         if not isinstance(value, BaseStrategy):
             for i, member in enumerate(value):
                 if not isinstance(member, BaseStrategy):
-                    raise InvalidStrategyError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
+                    raise InvalidStrategyError(
+                        INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__)
+                    )
         else:
             value = (value,)
         super().__setitem__(key, value)
@@ -95,7 +100,9 @@ class Rules(tuple):
 
         for i, item in enumerate(strategies):
             if not isinstance(item, On):
-                raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
+                raise InvalidStrategyError(
+                    INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__)
+                )
 
         return super().__new__(cls, strategies)
 
@@ -128,7 +135,12 @@ class On:
 
     @property
     def and_strats(self) -> list[tuple[Columns, BaseStrategy]]:
-        return self._strats
+        # return self._strats
+
+        # sorts the output so that it's binary dedupers firs
+        # TODO
+
+        return sorted(self._strats, key=lambda x: not isinstance(x[1], BinaryDedupers))
 
     def __str__(self):
         """string representation

@@ -7,6 +7,7 @@ import typing
 import pytest
 
 from liken import Dedupe
+from liken import exact
 from liken import fuzzy
 from liken._constants import CANONICAL_ID
 from liken.custom import register
@@ -57,6 +58,9 @@ PARAMS = [
     # single column
     ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     ((on("address", fuzzy(0.70)) & on("address", ~isna()),), [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
+    # single column
+    ((on("email", exact()),), [0, 1, 2, 3, 4, 4, 6, 7, 8, 9]),
+    ((on("email", exact()) & on("account", exact()),), [0, 1, 2, 3, 4, 4, 6, 7, 8, 9]),
 ]
 
 # fmt: on

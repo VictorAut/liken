@@ -109,7 +109,7 @@ class BaseStrategy(Base):
         if predicate:
             # subsets the array on predicate indice list
             array: pa.Array | pa.Table = array.take(sorted(predicate))
-        print(array)
+
         n = len(array)
 
         uf = UnionFind(range(n))
@@ -138,8 +138,9 @@ class BaseStrategy(Base):
 
             for member in members:
                 rep_index[member] = rep
-
-        new_canonicals: list = [canonicals[rep_index[i]].as_py() for i in range(n)]
+        
+        # TODO: finish testing .get!!
+        new_canonicals: list = [canonicals[rep_index.get(i, i)].as_py() for i in range(n)]
 
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 

@@ -27,7 +27,7 @@ from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
-from liken._strats_library import BaseStrategy
+from liken._strats_library import BaseStrategy, BinaryDedupers
 from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
 from liken._strats_manager import Rules
 from liken._strats_manager import StratsDict
@@ -115,24 +115,33 @@ class LocalExecutor(Executor):
             for stage in strats:
                 ufs = []
                 indices = set()
+                print(stage.and_strats)
                 for col, strat in stage.and_strats:
                     uf, n = self._build_uf(strat, df, col, predicate=indices)
                     ufs.append(uf)
 
                     # TESTING
                     cmps = defaultdict(list)
+                    idx = sorted(indices)
                     for i in range(n):
-                        cmps[uf[i]].append(i)
+                        if not indices:
+                            cmps[uf[i]].append(i)
+                        else:
+                            cmps[idx[uf[i]]].append(idx[i])
                     for c in cmps.values():
                         if len(c) > 1:
                             indices = indices.union(set(c))
                     
+                    print(isinstance(strat, BinaryDedupers), str(strat))
                     print(cmps)
                     print(sorted(indices))
 
                     # END TESTING
                 
-                components: MultiComponents = self._get_multi_components(ufs, n)
+                # USE LAST CMPS
+                components = cmps
+                print(self._get_multi_components(ufs, n))
+                # components: MultiComponents = self._get_multi_components(ufs, n)
                 df = call_strat(strat, components)
 
         if drop_canonical_id:
