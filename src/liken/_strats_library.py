@@ -109,6 +109,7 @@ class BaseStrategy(Base):
         if predicate:
             # subsets the array on predicate indice list
             array: pa.Array | pa.Table = array.take(sorted(predicate))
+        print(array)
 
         n = len(array)
 

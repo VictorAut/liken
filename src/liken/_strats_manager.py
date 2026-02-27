@@ -142,6 +142,11 @@ class On:
 
         return sorted(self._strats, key=lambda x: not isinstance(x[1], BinaryDedupers))
 
+    @property
+    def has_any_binary_strat(self) -> bool:
+        # TODO:
+        return any([isinstance(x[1], BinaryDedupers) for x in self._strats])
+
     def __str__(self):
         """string representation
 
@@ -290,6 +295,7 @@ class InvalidStrategyError(TypeError):
         super().__init__(msg)
 
 
+# TODO: these warnings come up was "UserWarning". Can we do better?
 def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)
 
