@@ -6,7 +6,7 @@ title: Dict API
 
 Earlier we explored the Sequential API. Once you've applied more than just a couple of strategies you're pushing verbosity to the limit — once you need to so for *multiple* columns it's getting really quite impractical.
 
-The **Dict API** solves this with dictionaries. Here, you'll only be able to use `apply()` once. Additionally, `drop_duplicates()` will no longer accept any arguments — columns will now be defined as the keys to the dictionary. Let's deduplicate our persons dataset on more than just `address`:
+The **Dict API** solves this with dictionaries. Here, you'll only be able to use `apply` once. Additionally, `drop_duplicates()` will no longer accept any arguments — columns will now be defined as the keys to the dictionary. Let's deduplicate our persons dataset on more than just `address`:
 
 ```python
 from liken import Dedupe, exact, fuzzy, tfidf, jaccard
@@ -30,13 +30,13 @@ lk.apply(STRAT)
 df = lk.drop_duplicates(keep="first")
 ```
 
-Wow! In plain English this reads as "Deduplicate only exact emails. Then, similar addresses. Finally, any records that have 3 out of 4 of those categories matching".
+The above is now starting to look more complex. In plain speak this reads as "Deduplicate only exact emails. Then, similar addresses. Finally, any records that have 3 out of 4 of those categories matching".
 
 !!! note "`keep` arg"
     The `keep` argument accepts the literals "first" or "last" which defines which record will be kept.
 
 !!! tip
-    In the example above we defined the strategy as a constant so it's clear that not much is going on with the `Dedupe` class. Hopefully this helps to highlight that it's on *you* to define the best strategy possible given your dataset — and that with the **Dict API**, that is remarkably easy.
+    In the example above we defined the strategy as a constant, `STRAT` so it's clear that not much is going on with the `Dedupe` class. Hopefully this helps to highlight that it's on *you* to define the best strategy possible given your dataset — and that with the **Dict API**, that is remarkably easy.
 
 
 ## Recap

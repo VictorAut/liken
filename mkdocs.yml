@@ -102,6 +102,7 @@ nav:
   - How-To Guides: 
     - how-tos/choose-the-right-api.md
     - how-tos/build-iterative-workloads.md
+    - how-tos/optimise-for-performance.md
   - Explanation:
     - explanation/what-diff-in-apis.md
     - explanation/binary-vs-discrete.md

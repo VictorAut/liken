@@ -26,17 +26,17 @@ Your telling **Liken** that it can only consider a record to be valid for dedupl
 
 ## Or Strategy?
 
-There's no such thing as an `|` strategy. Take a moment to realise that `|` is captured by comma separation in the `Rules API` in the same way that it is in the **Dict API**. No explicit functionality is provisioned for "or" statements. Note that the following two strategies are **not equivalent** and will produce **different results**:
+There's no such thing as an `|` strategy. Take a moment to realise that `|` is captured by comma separation in the **Rules API** in the same way that it is in the **Dict API**. No explicit functionality is provisioned for "or" statements. Note that the following two strategies are **not equivalent** and will produce **different results**:
 
 ```python
 STRAT = Rules(
-    on("address", fuzzy()),        # comma separated *is like* or
+    on("address", fuzzy()), # comma separated *is like* or
     on("address", lsh())
 )
 ```
 ```python
 STRAT = Rules(
-    on("address", fuzzy())         # and combined
+    on("address", fuzzy()) # and combined
     & on("address", lsh())
 )
 ```

@@ -8,9 +8,9 @@ Earlier, in [Boolean Operators](../advanced-strategies/boolean-operators.md) we 
 
 ## Discrete Outputs
 
-Boolean algebra by combining strategies using `&` statements would work best if we could *modify* the behaviour of a strategy against a binary (discrete output). The strategies that we have so far used are "at threshold" deduplication strategies, namely, strategies that will deduplicate upon exceeding a minimum similarity threshold.
+Boolean algebra by combining strategies using `&` statements would work best if we could *modify* the behaviour of a strategy against a binary (discrete output). The strategies that we have so far used are "at threshold" deduplication strategies, namely, strategies that will deduplicate upon exceeding a minimum similarity threshold (controlled using thre `threshold` argument).
 
-We can imagine an altogether different class of strategy that actually deduplicates based on a binary (discrete) decisions. For example, imagine that we deduplicate an `address` column based on whether or not the length of the address string exceeded 20 characters. Not super useful by itself — it's hard to see the value in doing that — but a powerful approach when combined with our "traditional" near deduplication strategies. This binary deduper, [`str_len`](../../reference/rules.md/#liken.rules.str_len) is actually available as part of the `enalce.rules` sub-package and more widely the **Rules API**:
+We can imagine an altogether different class of strategy that actually deduplicates based on a binary (discrete) decision. For example, imagine that we deduplicate an `address` column based on whether or not the length of the address string exceeded 20 characters. Not super useful by itself — it's hard to see the value in doing that — but a powerful approach when combined with our "threshold" near-deduplication strategies. This binary deduper, [`str_len`](../../reference/rules.md/#liken.rules.str_len) is actually available as part of the `enalce.rules` sub-package and more widely the **Rules API**. Let's see it in action:
 
 ```python {hl_lines="2 5"}
 from liken import Dedupe, fuzzy
@@ -29,7 +29,7 @@ df = lk.drop_duplicates()
 Great! That strategy now let's you achieve near deduplication for addresses fields that *also* have the requirement of having a minimum length!
 
 !!! tip
-    Combining similarity ("at threshold") strategies with binary choice strategies is an especially useful combination. Consider above a dataset that may have had a feature engineered field for `address` that contained some very short addresses. The likelyhood of false positives when tuning a strategy to work well for "real" addresses is all to real, given what may be a plethora of short addresses. But the *modification* of that approach by using a binary choice strategy makes your deduplication robust.
+    Combining similarity ("at threshold") strategies with binary choice strategies is an especially useful combination. Consider above a dataset that may have had a feature-engineered field for `address` that contained some very short addresses. The likelihood of false positives when tuning a strategy to work well for "real" addresses is all too real, given what may be a plethora of short addresses. But the *modification* of that approach by using a binary choice strategy makes your deduplication robust.
 
 
 ## Inversions
@@ -78,14 +78,8 @@ df = lk.drop_duplicates()
 Great! Well done! You can now build highly customizable deduplication (or canonicalization) pipelines!
 
 !!! tip
-    Again, note that `&` combinations can chain any number of `on` executors. Also, note that the respective `on`s do not need to be acting on the same column. In the above example, the `address` column was only deduplicated when the `email` was not null, for example.
+    Again, note that `&` combinations can chain any number of `on` executors. Also, note that the respective `on`s do not need to be acting on the same column. In the above example, the `address` column was only deduplicated when the `email` was not null, for example. Additionally, note that and statements are commutative — they can be defined in **any order**.
 
-## Performance
-
-Deduplicating a dataset can be a compute-intensive task so there might be a balance to strike when adding strategies, as each added strategy is additional compute time. The next tutorial on [Supported Backends](../supported-backends.md) might offer a path forwards for very large datasets or other optimisation needs you might have.
-
-!!! warning
-    It's worth noting that discrete strategies are a bit like a `WHERE` statement. However, they do not currently work like that — if they did then you would have the guarantee that a subsequent strategy, especially a similarity at threshold one would operate on a subset of the dataset. This is due for a future implementation. For the time being **Liken** will have to handle the workload of a deduplicating the dataset twice (or more).
 
 ## All of **Liken's** Strategies
 

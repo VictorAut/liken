@@ -39,15 +39,11 @@ class StratsDict(UserDict):
         if not isinstance(key, str | tuple):
             raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
         if not isinstance(value, list | tuple | BaseStrategy):
-            raise InvalidStrategyError(
-                INVALID_DICT_VALUE_MSG.format(type(value).__name__)
-            )
+            raise InvalidStrategyError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
         if not isinstance(value, BaseStrategy):
             for i, member in enumerate(value):
                 if not isinstance(member, BaseStrategy):
-                    raise InvalidStrategyError(
-                        INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__)
-                    )
+                    raise InvalidStrategyError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
         else:
             value = (value,)
         super().__setitem__(key, value)
@@ -100,9 +96,7 @@ class Rules(tuple):
 
         for i, item in enumerate(strategies):
             if not isinstance(item, On):
-                raise InvalidStrategyError(
-                    INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__)
-                )
+                raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
 
         return super().__new__(cls, strategies)
 
@@ -135,16 +129,16 @@ class On:
 
     @property
     def and_strats(self) -> list[tuple[Columns, BaseStrategy]]:
-        # return self._strats
-
-        # sorts the output so that it's binary dedupers firs
-        # TODO
-
+        """return strategies, sorted such that binary strategies are first.
+        This is used for predication.
+        """
         return sorted(self._strats, key=lambda x: not isinstance(x[1], BinaryDedupers))
 
     @property
     def has_any_binary_strat(self) -> bool:
-        # TODO:
+        """whether or not the Rule set of strategies has at least one
+        Binary strategy.
+        """
         return any([isinstance(x[1], BinaryDedupers) for x in self._strats])
 
     def __str__(self):
@@ -295,7 +289,7 @@ class InvalidStrategyError(TypeError):
         super().__init__(msg)
 
 
-# TODO: these warnings come up was "UserWarning". Can we do better?
+# TODO: these warnings come up was "UserWarning". Change.
 def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)
 
