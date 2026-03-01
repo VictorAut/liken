@@ -90,7 +90,7 @@ class LocalExecutor(Executor):
         For Rules, predication is implemented if an and combination contains at
         least one Binary Deduper. In that case the binary dedupers are proxy
         WHERE filters that propagate a set of dataframe indice positions to the
-        next deduper (most likely a threshold deduper, but optionally binary 
+        next deduper (most likely a threshold deduper, but optionally binary
         also.)
         """
 
