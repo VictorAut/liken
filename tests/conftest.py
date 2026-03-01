@@ -109,7 +109,6 @@ def mock_spark_session():
 
 
 class Helpers:
-
     @staticmethod
     def get_column_as_list(df, col: str):
         if isinstance(df, pd.DataFrame) or isinstance(df, pl.DataFrame):

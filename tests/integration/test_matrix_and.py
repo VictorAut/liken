@@ -7,12 +7,14 @@ import typing
 import pytest
 
 from liken import Dedupe
+from liken import exact
 from liken import fuzzy
 from liken._constants import CANONICAL_ID
 from liken.custom import register
 from liken.rules import Rules
 from liken.rules import isna
 from liken.rules import on
+
 
 # CONSTANTS:
 
@@ -57,6 +59,11 @@ PARAMS = [
     # single column
     ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     ((on("address", fuzzy(0.70)) & on("address", ~isna()),), [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
+    # single column
+    ((on("account", exact()),), [0, 0, 2, 3, 4, 0, 0, 2, 8, 8]),
+    ((on("property_height", isna()) & on("account", exact()),), [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
+    # two threshold dedupers
+    ((on("birth_country", exact()) & on("marital_status", exact()),), [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
 ]
 
 # fmt: on

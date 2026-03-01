@@ -28,6 +28,7 @@ from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
 from liken._strats_library import BaseStrategy
+from liken._strats_library import BinaryDedupers
 from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
 from liken._strats_manager import Rules
 from liken._strats_manager import StratsDict
@@ -85,6 +86,12 @@ class LocalExecutor(Executor):
         strategies is:
             - Rules: in which case "and" combinations are allowed
             - StratsDict: in which case handles Sequential and Dict API
+
+        For Rules, predication is implemented if an and combination contains at
+        least one Binary Deduper. In that case the binary dedupers are proxy
+        WHERE filters that propagate a set of dataframe indice positions to the
+        next deduper (most likely a threshold deduper, but optionally binary
+        also.)
         """
 
         del id  # Unused: here for interface symmetry with SparkExecutor
@@ -103,7 +110,7 @@ class LocalExecutor(Executor):
                         components: SingleComponents = self._get_components(uf, n)
                         df = call_strat(strat, components)
             else:
-                # For sequence calls e.g.`.canonicalize("address")`
+                # For sequential API calls e.g.`.canonicalize("address")`
                 for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
                     uf, n = self._build_uf(strat, df, columns)
                     components: SingleComponents = self._get_components(uf, n)
@@ -111,11 +118,36 @@ class LocalExecutor(Executor):
 
         if isinstance(strats, Rules):
             for stage in strats:
-                ufs = []
-                for col, strat in stage.and_strats:
-                    uf, n = self._build_uf(strat, df, col)
-                    ufs.append(uf)
-                components: MultiComponents = self._get_multi_components(ufs, n)
+                has_any_binary: bool = stage.has_any_binary_strat
+
+                # predication only if at least one binary strategy
+                if has_any_binary:
+                    indices = set()
+
+                    for col, strat in stage.and_strats:
+                        uf, n = self._build_uf(strat, df, col, predicate=indices)
+
+                        components = defaultdict(list)
+                        idx: list = sorted(indices)
+                        for i in range(n):
+                            if not indices:
+                                components[uf[i]].append(i)
+                            else:
+                                components[idx[uf[i]]].append(idx[i])
+
+                        if isinstance(strat, BinaryDedupers):
+                            for c in components.values():
+                                if len(c) > 1:
+                                    indices = indices.union(set(c))
+
+                else:
+                    ufs = []
+
+                    for col, strat in stage.and_strats:
+                        uf, n = self._build_uf(strat, df, col)
+                        ufs.append(uf)
+                    components: MultiComponents = self._get_multi_components(ufs, n)
+
                 df = call_strat(strat, components)
 
         if drop_canonical_id:
@@ -124,11 +156,9 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _build_uf(
-        strat: BaseStrategy,
-        df: LocalDF,
-        columns: Columns,
+        strat: BaseStrategy, df: LocalDF, columns: Columns, predicate: set = set()
     ) -> tuple[UnionFind[int], int]:
-        return strat.set_frame(df).build_union_find(columns)
+        return strat.set_frame(df).build_union_find(columns, predicate=predicate)
 
     @staticmethod
     def _get_components(

@@ -91,9 +91,18 @@ class BaseStrategy(Base):
         del array  # Unused
         raise NotImplementedError
 
-    def build_union_find(self: Base, columns: Columns) -> tuple[UnionFind[int], int]:
+    def build_union_find(
+        self: Base,
+        columns: Columns,
+        predicate: set = set(),
+    ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
+
         array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+
+        if predicate:
+            # subsets the array on predicate indice list
+            array: pa.Array | pa.Table = array.take(sorted(predicate))
 
         n = len(array)
 
@@ -124,7 +133,8 @@ class BaseStrategy(Base):
             for member in members:
                 rep_index[member] = rep
 
-        new_canonicals: list = [canonicals[rep_index[i]].as_py() for i in range(n)]
+        # for predicated components, default to ith index for non deduplicated rows
+        new_canonicals: list = [canonicals[rep_index.get(i, i)].as_py() for i in range(n)]
 
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 

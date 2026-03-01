@@ -12,6 +12,7 @@ from liken._strats_library import BaseStrategy
 from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
 from liken._strats_manager import StratsDict
 
+
 ############################
 # Fixtures
 ############################
@@ -77,9 +78,6 @@ def test_localexecutor_canonicalize_dict_calls(mock_strategy, local_df):
 
     mock_strategy.set_frame.assert_called()
     assert mock_strategy.canonicalizer.call_count == 3
-
-
-# TODO: test_localexecutor_canonicalize_rules_calls
 
 
 #################

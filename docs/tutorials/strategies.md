@@ -4,13 +4,9 @@ title: Deduplication Strategies
 
 ## Defining Strategies
 
-A **strategy** is **Liken's** term for a deduplication method. In the previous section we saw how we can use the *exact* strategy to get parity with Pandas's implementation.
-
-Here we will see that **Liken** comes with ready-to-use strategies.
+A **strategy** is **Liken's** term for a deduplication method. In the previous section we saw how we can use the *exact* strategy to get parity with Pandas's implementation. In fact, **Liken** comes with many more strategies to deduplicate data. 
 
 ## **Liken**-Ready Strategies
-
-It's worth taking stock of the fact that when we do any kind of near deduplication process we will have to limit ourselves to applying said near deduplication processes (**strategies**) to individual columns. Whilst this is generally true, there are some **stratgies** that are built for multiple columns by default.
 
 |               | Strategy                                              | Description                                                                                      |
 | ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -21,6 +17,9 @@ It's worth taking stock of the fact that when we do any kind of near deduplicati
 |*compound-column*| [`jaccard`](../reference/liken.md/#liken.jaccard) | Multi column similarity based on intersection of categorical data                                |
 |*compound-column*| [`cosine`](../reference/liken.md/#liken.cosine)   | Multi column similarity based on dot product of numerical data                                   |
 
+/// caption
+*single-column* strategies apply to single columns and are implementation of near string matching. *compound-column* strategies are set operations where the values of the set are the values of the columns in a given record.
+///
 
 ## Recap
 

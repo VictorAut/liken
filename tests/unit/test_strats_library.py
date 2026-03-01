@@ -23,6 +23,7 @@ from liken.rules import str_contains
 from liken.rules import str_endswith
 from liken.rules import str_startswith
 
+
 ############
 # Fixtures #
 ###########

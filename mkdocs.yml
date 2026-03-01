@@ -1,18 +1,22 @@
 site_name: Liken
 
+copyright: Copyright &copy; 2025 - 2026 The Liken Author
+repo_url: https://github.com/VictorAut/liken
+
 theme:
+  favicon: images/favicon.png
+  logo: images/logo.png
+  font:
+    code: Source Code Pro
   name: "material"
   palette:
-
-  # Palette toggle for light mode
+  # light mode
   - scheme: default
-    # primary: green
-    # accent: orange
     toggle:
       icon: material/brightness-7 
       name: Switch to dark mode
 
-  # Palette toggle for dark mode
+  # dark mode
   - scheme: slate
     toggle:
       icon: material/brightness-4
@@ -25,10 +29,14 @@ theme:
     - navigation.footer
     - navigation.tracking
 
+extra_css:
+  - stylesheets/extra.css
+
 extra:
-  generator: false
+  generator: True
 
 plugins:
+  - search
   - mkdocstrings:
       handlers:
           python:
@@ -45,7 +53,14 @@ plugins:
 markdown_extensions:
   - attr_list
   - admonition
+  - def_list
+  - md_in_html
+  - pymdownx.blocks.caption
+  - pymdownx.caret
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       use_pygments: true
       default_lang: python
@@ -54,16 +69,6 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
-  - tables
-  - toc:
-      title: On this page 
-  - def_list
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -71,7 +76,11 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - toc:
+      title: On this page 
 
 nav:
   - index.md
@@ -92,6 +101,7 @@ nav:
   - How-To Guides: 
     - how-tos/choose-the-right-api.md
     - how-tos/build-iterative-workloads.md
+    - how-tos/optimise-for-performance.md
   - Explanation:
     - explanation/what-diff-in-apis.md
     - explanation/binary-vs-discrete.md
@@ -101,3 +111,4 @@ nav:
     - reference/rules.md
     - reference/custom.md
     - reference/datasets.md
+

@@ -19,6 +19,7 @@ from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 from liken._strats_library import BaseStrategy
+from liken._strats_library import BinaryDedupers
 from liken._types import Columns
 from liken._validators import validate_strat_arg
 
@@ -128,7 +129,17 @@ class On:
 
     @property
     def and_strats(self) -> list[tuple[Columns, BaseStrategy]]:
-        return self._strats
+        """return strategies, sorted such that binary strategies are first.
+        This is used for predication.
+        """
+        return sorted(self._strats, key=lambda x: not isinstance(x[1], BinaryDedupers))
+
+    @property
+    def has_any_binary_strat(self) -> bool:
+        """whether or not the Rule set of strategies has at least one
+        Binary strategy.
+        """
+        return any([isinstance(x[1], BinaryDedupers) for x in self._strats])
 
     def __str__(self):
         """string representation
@@ -278,6 +289,7 @@ class InvalidStrategyError(TypeError):
         super().__init__(msg)
 
 
+# TODO: these warnings come up was "UserWarning". Change.
 def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)
 

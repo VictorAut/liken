@@ -6,12 +6,14 @@ tasks:
   format:
     desc: Format code
     cmds:
+      - uv run ruff check --select I --fix # sorts imports
       - uv run ruff format src/
       - uv run ruff check src/ --fix
 
   lint:
     desc: lint and type-check
     cmds:
+      - uv run ruff check --select I src/
       - uv run ruff format --check src/
       - uv run ruff check src/
       - uv run mypy src/
@@ -20,6 +22,7 @@ tasks:
   lint-slim:
     desc: lint and type-check
     cmds:
+      - uv run ruff check --select I src/
       - uv run ruff format --check src/
       - uv run ruff check src/
 
