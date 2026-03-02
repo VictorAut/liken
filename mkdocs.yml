@@ -4,7 +4,7 @@ copyright: Copyright &copy; 2025 - 2026 The Liken Author
 repo_url: https://github.com/VictorAut/liken
 
 theme:
-  favicon: images/favicon.png
+  favicon: images/favicon-transparent.png
   logo: images/logo.png
   font:
     code: Source Code Pro
