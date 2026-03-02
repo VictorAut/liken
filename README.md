@@ -19,7 +19,7 @@ The key features are:
 
 ## A flexible API
 
-Checkout the [API Documentation](https://github.com/VictorAut/liken)
+Checkout the [API Documentation](https://victoraut.github.io/liken/)
 
 ## Installation
 
