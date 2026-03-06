@@ -13,7 +13,6 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from collections.abc import Iterator
-from functools import cache
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Protocol
@@ -560,7 +559,6 @@ class Fuzzy(
     name: str = "fuzzy"
 
     @staticmethod
-    @cache
     def _fuzz_ratio(s1, s2) -> float:
         return fuzz.ratio(s1, s2) / 100
 
