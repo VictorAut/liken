@@ -525,7 +525,7 @@ wheels = [
 
 [[package]]
 name = "liken"
-version = "0.4.2"
+version = "0.4.3"
 source = { editable = "." }
 dependencies = [
     { name = "datasketch" },
@@ -569,7 +569,7 @@ requires-dist = [
     { name = "datasketch", specifier = ">=1.8.0,<2" },
     { name = "faker", specifier = ">=37.12.0" },
     { name = "networkx", specifier = ">=3.6.1,<4" },
-    { name = "pandas", specifier = ">=2.2.3,<3" },
+    { name = "pandas", specifier = ">=1,<4" },
     { name = "polars", specifier = ">=1.24.0,<2" },
     { name = "pyarrow", specifier = ">=23.0.1,<24" },
     { name = "pyspark", specifier = ">=3.5.5,<4" },
