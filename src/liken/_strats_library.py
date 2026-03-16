@@ -25,7 +25,7 @@ from datasketch import MinHash
 from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
 from numpy.linalg import norm
-from rapidfuzz import fuzz
+from rapidfuzz import fuzz, process
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
@@ -558,18 +558,25 @@ class Fuzzy(
 
     name: str = "fuzzy"
 
-    @staticmethod
-    def _fuzz_ratio(s1, s2) -> float:
-        return fuzz.ratio(s1, s2) / 100
-
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         array: list = array.to_pylist()
-
         n = len(array)
-        for i in range(n):
-            for j in range(i + 1, n):
-                if self._fuzz_ratio(array[i], array[j]) > self._threshold:
-                    yield i, j
+
+        threshold = 100 * self._threshold
+
+        for i, s1 in enumerate(array):
+            if i + 1 >= n:
+                break
+
+            scores = process.cdist(
+                [s1],
+                array[i + 1 :],
+                scorer=fuzz.ratio,
+            )[0]
+
+            for offset, score in enumerate(scores):
+                if score > threshold:
+                    yield i, i + 1 + offset
 
     def __str__(self):
         return self.str_representation(self.name)
@@ -1419,7 +1426,7 @@ def str_contains(
                 on("email", exact())
                 & on(
                     "email",
-                    str_contains(pattern=r"05\d{3}", regex=True),
+                    str_contains(pattern=r"05\\d{3}", regex=True),
                 )
             )
 
