@@ -813,37 +813,28 @@ class Cosine(
 
     name: str = "cosine"
 
+    @override
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
 
-        # TODO: See Jaccard implementation for consideration in not using numpy here.
-        # For the meantime OK, as no portability issues, plus we get vectorization.
-        columns: list = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
-
+        columns = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
         matrix = np.column_stack(columns)
 
-        n = len(matrix)
+        matrix = np.nan_to_num(matrix, nan=0.0)
 
-        for idx in range(n):
-            for idy in range(idx + 1, n):
-                arrx = matrix[idx]
-                arry = matrix[idy]
+        norms = np.linalg.norm(matrix, axis=1)
 
-                mask = ~np.isnan(arrx) & ~np.isnan(arry)
+        norms[norms == 0] = 1
 
-                arrx_masked = arrx[mask]
-                arry_masked = arry[mask]
-                product = np.dot(arrx_masked, arry_masked)
+        normalized = matrix / norms[:, None]
 
-                if not product:
-                    continue  # no match
+        sim = normalized @ normalized.T
 
-                norms = norm(arrx_masked) * norm(arry_masked)
+        n = sim.shape[0]
 
-                if not norms:
-                    continue  # zero div: guardrail
-
-                if product / norms > self._threshold:
-                    yield idx, idy
+        for i in range(n):
+            for j in range(i + 1, n):
+                if sim[i, j] > self._threshold:
+                    yield i, j
 
     def __str__(self):
         return self.str_representation(self.name)
