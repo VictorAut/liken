@@ -21,6 +21,7 @@ from typing import final
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 from datasketch import MinHash
 from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
@@ -246,8 +247,32 @@ class BinaryDedupers(BaseStrategy):
         del value  # Unused
         pass
 
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+        """
+        Optional vectorised implementation.
+        
+        Should return a boolean Arrow array if supported, otherwise None.
+        """
+        return None
+
     @override
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
+
+        # try vectorized approach, if available
+
+        mask: pa.Array | None = self._vectorized_matches(array)
+
+        if mask:
+            indices = pc.indices_nonzero(mask).to_pylist()
+
+            n = len(indices)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    yield indices[i], indices[j]
+            return
+        
+        # fallback to non vectorized, i.e. "Python" matching:
+
         array: list = array.to_pylist()
 
         n = len(array)
@@ -274,6 +299,17 @@ class _NegatedBinaryDeduper(BinaryDedupers):
     def _matches(self, value):
         """simply return the inner classes opposed set of matches"""
         return not self._inner._matches(value)
+    
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+        """
+        invert the resulting mask for a match.
+        """
+        mask = self._inner._vectorized_matches(array)
+
+        if mask is None:
+            return None
+
+        return pc.invert(mask)
 
     def __str__(self):
         return f"~{self._inner}"
@@ -439,16 +475,16 @@ class StrStartsWith(
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
-
+    
     @override
-    def _matches(self, value: str | None) -> bool:
-        if value is None:
-            return False
-        return (
-            value.startswith(self._pattern)
-            #
-            if self._case
-            else value.lower().startswith(self._pattern.lower())
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
+
+        if self._case:
+            return pc.starts_with(array, self._pattern)
+
+        return pc.starts_with(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
         )
 
     def __str__(self):
@@ -474,16 +510,16 @@ class StrEndsWith(
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
-
+    
     @override
-    def _matches(self, value: str | None) -> bool:
-        if value is None:
-            return False
-        return (
-            value.endswith(self._pattern)
-            #
-            if self._case
-            else value.lower().endswith(self._pattern.lower())
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
+
+        if self._case:
+            return pc.ends_with(array, self._pattern)
+
+        return pc.ends_with(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
         )
 
     def __str__(self):
@@ -513,18 +549,23 @@ class StrContains(
             flags = 0 if self._case else re.IGNORECASE
             self._compiled_pattern = re.compile(self._pattern, flags)
 
+            
     @override
-    def _matches(self, value: str) -> bool:
-        if value is None:
-            return False
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
         if self._regex:
-            return bool(self._compiled_pattern.search(value))
-        else:
             if self._case:
-                return self._pattern in value
+                return pc.match_substring_regex(array, self._pattern)
             else:
-                return self._pattern.lower() in value.lower()
+                return pc.match_substring_regex(array, self._pattern, ignore_case=True)
+
+        if self._case:
+            return pc.match_substring(array, self._pattern)
+
+        return pc.match_substring(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
+        )
 
     def __str__(self):
         return self.str_representation(self.name)
