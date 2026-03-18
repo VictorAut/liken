@@ -25,8 +25,8 @@ import pyarrow.compute as pc
 from datasketch import MinHash
 from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
-from numpy.linalg import norm
-from rapidfuzz import fuzz, process
+from rapidfuzz import fuzz
+from rapidfuzz import process
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
@@ -250,7 +250,7 @@ class BinaryDedupers(BaseStrategy):
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
         """
         Optional vectorised implementation.
-        
+
         Should return a boolean Arrow array if supported, otherwise None.
         """
         return None
@@ -270,7 +270,7 @@ class BinaryDedupers(BaseStrategy):
                 for j in range(i + 1, n):
                     yield indices[i], indices[j]
             return
-        
+
         # fallback to non vectorized, i.e. "Python" matching:
 
         array: list = array.to_pylist()
@@ -299,7 +299,7 @@ class _NegatedBinaryDeduper(BinaryDedupers):
     def _matches(self, value):
         """simply return the inner classes opposed set of matches"""
         return not self._inner._matches(value)
-    
+
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
         """
         invert the resulting mask for a match.
@@ -475,7 +475,7 @@ class StrStartsWith(
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
-    
+
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
@@ -510,7 +510,7 @@ class StrEndsWith(
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
-    
+
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
@@ -549,7 +549,6 @@ class StrContains(
             flags = 0 if self._case else re.IGNORECASE
             self._compiled_pattern = re.compile(self._pattern, flags)
 
-            
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
@@ -829,13 +828,11 @@ class Cosine(
         n = normalized.shape[0]
 
         for i in range(n):
-
-            sims = normalized[i] @ normalized[i+1:].T
+            sims = normalized[i] @ normalized[i + 1 :].T
 
             for offset, val in enumerate(sims):
                 if val > self._threshold:
                     yield i, i + 1 + offset
-
 
     def __str__(self):
         return self.str_representation(self.name)
