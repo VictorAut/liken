@@ -4,7 +4,6 @@
 <img height="20" alt="PyPI Downloads" src="https://static.pepy.tech/badge/liken">
 <img height="20" alt="Tests" src="https://img.shields.io/github/actions/workflow/status/VictorAut/liken/python-validation.yml?label=CI">
 <img height="20" alt="Coverage" src="https://img.shields.io/codecov/c/github/VictorAut/liken">
-<img src="https://codecov.io/github/VictorAut/liken/graph/badge.svg">
 <img height="20" alt="License" src="https://img.shields.io/github/license/VictorAut/liken">
 </p>
 
