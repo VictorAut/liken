@@ -1,6 +1,10 @@
 <p align="center">
 <a href="https://pypi.python.org/pypi/liken"><img height="20" alt="PyPI Version" src="https://img.shields.io/pypi/v/liken"></a>
 <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/liken">
+<img height="20" alt="PyPI Downloads" src="https://static.pepy.tech/badge/liken">
+<img height="20" alt="Tests" src="https://img.shields.io/github/actions/workflow/status/VictorAut/liken/python-validation.yml?label=CI">
+<img height="20" alt="Coverage" src="https://img.shields.io/codecov/c/github/VictorAut/liken">
+<img height="20" alt="License" src="https://img.shields.io/github/license/VictorAut/liken">
 </p>
 
 # Introduction
