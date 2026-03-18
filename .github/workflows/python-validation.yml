@@ -2,6 +2,8 @@ name: python | validation
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 permissions:
   pull-requests: write
