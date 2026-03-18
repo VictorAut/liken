@@ -822,19 +822,20 @@ class Cosine(
         matrix = np.nan_to_num(matrix, nan=0.0)
 
         norms = np.linalg.norm(matrix, axis=1)
-
         norms[norms == 0] = 1
 
         normalized = matrix / norms[:, None]
 
-        sim = normalized @ normalized.T
-
-        n = sim.shape[0]
+        n = normalized.shape[0]
 
         for i in range(n):
-            for j in range(i + 1, n):
-                if sim[i, j] > self._threshold:
-                    yield i, j
+
+            sims = normalized[i] @ normalized[i+1:].T
+
+            for offset, val in enumerate(sims):
+                if val > self._threshold:
+                    yield i, i + 1 + offset
+
 
     def __str__(self):
         return self.str_representation(self.name)

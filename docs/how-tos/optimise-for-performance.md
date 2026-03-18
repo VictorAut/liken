@@ -49,6 +49,8 @@ id| address                  | email
 
 The LSH strategy is faster than *O(n^2^)* (but slower than *O(n)*). In fact it is approximately *O(nk)* where *k << n*. LSH, however, requires extensive testing and must be tuned.
 
+Use the [performance benchmarks](../explanation/performance.md) and computational scaling explanations to get an idea of where you can obtain a performance boost.
+
 ## Use Partitioned Data
 
 **Liken** [supports the use of PySpark](../tutorials/supported-backends.md/#pyspark). Liken will execute the `Dedupe` class in every Spark worker node, where each worker node recieves a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.

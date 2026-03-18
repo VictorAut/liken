@@ -106,6 +106,7 @@ nav:
     - explanation/what-diff-in-apis.md
     - explanation/binary-vs-discrete.md
     - explanation/how-does-it-work.md
+    - explanation/performance.md
   - Reference:
     - reference/liken.md
     - reference/rules.md

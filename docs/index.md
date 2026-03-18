@@ -6,9 +6,6 @@ title: Liken
 .md-content .md-typeset h1 { display: none; }
 </style>
 
-<!-- <p align="center">
-  <a href="https://victoraut.github.io/liken/"><img src="images/logo-name-transparent2.png" alt="Liken"></a>
-</p> -->
 <p align="center">
   <a href="https://victoraut.github.io/liken/">
     <img src="images/logo-name-dark.png#only-dark" alt="Liken">
