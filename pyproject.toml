@@ -1,6 +1,6 @@
 [project]
 name = "liken"
-version = "0.4.3"
+version = "0.4.4"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
 requires-python = ">=3.11,<3.14"
@@ -44,6 +44,7 @@ Documentation = "https://victorautonell-oiry.me/liken/liken.html"
 dev = [
     "ipython>=9.0.2,<10 ; python_full_version >= '3.11'",
     "ipykernel>=6.29.5,<7",
+    "matplotlib>=3.10.8",
 ]
 lint = [
     "mypy>=1.15.0,<2",

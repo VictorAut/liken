@@ -21,11 +21,12 @@ from typing import final
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 from datasketch import MinHash
 from datasketch import MinHashLSH
 from networkx.utils.union_find import UnionFind
-from numpy.linalg import norm
 from rapidfuzz import fuzz
+from rapidfuzz import process
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sparse_dot_topn import sp_matmul_topn
@@ -246,8 +247,32 @@ class BinaryDedupers(BaseStrategy):
         del value  # Unused
         pass
 
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+        """
+        Optional vectorised implementation.
+
+        Should return a boolean Arrow array if supported, otherwise None.
+        """
+        return None
+
     @override
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
+
+        # try vectorized approach, if available
+
+        mask: pa.Array | None = self._vectorized_matches(array)
+
+        if mask:
+            indices = pc.indices_nonzero(mask).to_pylist()
+
+            n = len(indices)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    yield indices[i], indices[j]
+            return
+
+        # fallback to non vectorized, i.e. "Python" matching:
+
         array: list = array.to_pylist()
 
         n = len(array)
@@ -274,6 +299,17 @@ class _NegatedBinaryDeduper(BinaryDedupers):
     def _matches(self, value):
         """simply return the inner classes opposed set of matches"""
         return not self._inner._matches(value)
+
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+        """
+        invert the resulting mask for a match.
+        """
+        mask = self._inner._vectorized_matches(array)
+
+        if mask is None:
+            return None
+
+        return pc.invert(mask)
 
     def __str__(self):
         return f"~{self._inner}"
@@ -441,14 +477,14 @@ class StrStartsWith(
         self._case = case
 
     @override
-    def _matches(self, value: str | None) -> bool:
-        if value is None:
-            return False
-        return (
-            value.startswith(self._pattern)
-            #
-            if self._case
-            else value.lower().startswith(self._pattern.lower())
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
+
+        if self._case:
+            return pc.starts_with(array, self._pattern)
+
+        return pc.starts_with(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
         )
 
     def __str__(self):
@@ -476,14 +512,14 @@ class StrEndsWith(
         self._case = case
 
     @override
-    def _matches(self, value: str | None) -> bool:
-        if value is None:
-            return False
-        return (
-            value.endswith(self._pattern)
-            #
-            if self._case
-            else value.lower().endswith(self._pattern.lower())
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
+
+        if self._case:
+            return pc.ends_with(array, self._pattern)
+
+        return pc.ends_with(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
         )
 
     def __str__(self):
@@ -514,17 +550,21 @@ class StrContains(
             self._compiled_pattern = re.compile(self._pattern, flags)
 
     @override
-    def _matches(self, value: str) -> bool:
-        if value is None:
-            return False
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
         if self._regex:
-            return bool(self._compiled_pattern.search(value))
-        else:
             if self._case:
-                return self._pattern in value
+                return pc.match_substring_regex(array, self._pattern)
             else:
-                return self._pattern.lower() in value.lower()
+                return pc.match_substring_regex(array, self._pattern, ignore_case=True)
+
+        if self._case:
+            return pc.match_substring(array, self._pattern)
+
+        return pc.match_substring(
+            pc.utf8_lower(array),
+            self._pattern.lower(),
+        )
 
     def __str__(self):
         return self.str_representation(self.name)
@@ -558,18 +598,25 @@ class Fuzzy(
 
     name: str = "fuzzy"
 
-    @staticmethod
-    def _fuzz_ratio(s1, s2) -> float:
-        return fuzz.ratio(s1, s2) / 100
-
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         array: list = array.to_pylist()
-
         n = len(array)
-        for i in range(n):
-            for j in range(i + 1, n):
-                if self._fuzz_ratio(array[i], array[j]) > self._threshold:
-                    yield i, j
+
+        threshold = 100 * self._threshold
+
+        for i, s1 in enumerate(array):
+            if i + 1 >= n:
+                break
+
+            scores = process.cdist(
+                [s1],
+                array[i + 1 :],
+                scorer=fuzz.ratio,
+            )[0]
+
+            for offset, score in enumerate(scores):
+                if score > threshold:
+                    yield i, i + 1 + offset
 
     def __str__(self):
         return self.str_representation(self.name)
@@ -765,37 +812,27 @@ class Cosine(
 
     name: str = "cosine"
 
+    @override
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
 
-        # TODO: See Jaccard implementation for consideration in not using numpy here.
-        # For the meantime OK, as no portability issues, plus we get vectorization.
-        columns: list = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
-
+        columns = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
         matrix = np.column_stack(columns)
 
-        n = len(matrix)
+        matrix = np.nan_to_num(matrix, nan=0.0)
 
-        for idx in range(n):
-            for idy in range(idx + 1, n):
-                arrx = matrix[idx]
-                arry = matrix[idy]
+        norms = np.linalg.norm(matrix, axis=1)
+        norms[norms == 0] = 1
 
-                mask = ~np.isnan(arrx) & ~np.isnan(arry)
+        normalized = matrix / norms[:, None]
 
-                arrx_masked = arrx[mask]
-                arry_masked = arry[mask]
-                product = np.dot(arrx_masked, arry_masked)
+        n = normalized.shape[0]
 
-                if not product:
-                    continue  # no match
+        for i in range(n):
+            sims = normalized[i] @ normalized[i + 1 :].T
 
-                norms = norm(arrx_masked) * norm(arry_masked)
-
-                if not norms:
-                    continue  # zero div: guardrail
-
-                if product / norms > self._threshold:
-                    yield idx, idy
+            for offset, val in enumerate(sims):
+                if val > self._threshold:
+                    yield i, i + 1 + offset
 
     def __str__(self):
         return self.str_representation(self.name)
@@ -1419,7 +1456,7 @@ def str_contains(
                 on("email", exact())
                 & on(
                     "email",
-                    str_contains(pattern=r"05\d{3}", regex=True),
+                    str_contains(pattern=r"05\\d{3}", regex=True),
                 )
             )
 
