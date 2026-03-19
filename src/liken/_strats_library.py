@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from typing import Iterable
+from typing import Literal
 from typing import Protocol
 from typing import Self
 from typing import final
@@ -598,11 +599,50 @@ class Fuzzy(
 
     name: str = "fuzzy"
 
+    def __init__(
+        self,
+        threshold: float = 0.95,
+        scorer: Literal[
+            "simple_ratio",
+            "partial_ratio",
+            "token_sort_ratio",
+            "token_set_ratio",
+            "weighted_ratio",
+            "quick_ratio",
+        ] = "simple",
+    ):
+        super().__init__(
+            threshold=threshold,
+            scorer=scorer,
+        )
+        self._threshold = threshold
+        self._scorer = scorer
+
+    def get_scorer(self):
+        match self._scorer:
+            case "simple_ratio":
+                return fuzz.ratio
+            case "partial_ratio":
+                return fuzz.partial_ratio
+            case "token_sort_ratio":
+                return fuzz.token_sort_ratio
+            case "token_set_ratio":
+                return fuzz.token_set_ratio
+            case "weighted_ratio":
+                return fuzz.WRatio
+            case "quick_ratio":
+                return fuzz.QRatio
+            # fallback to default
+            case _:
+                return fuzz.ratio
+
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         array: list = array.to_pylist()
         n = len(array)
 
         threshold = 100 * self._threshold
+
+        scorer = self.get_scorer()
 
         for i, s1 in enumerate(array):
             if i + 1 >= n:
@@ -611,7 +651,7 @@ class Fuzzy(
             scores = process.cdist(
                 [s1],
                 array[i + 1 :],
-                scorer=fuzz.ratio,
+                scorer=scorer,
             )[0]
 
             for offset, score in enumerate(scores):
@@ -893,14 +933,17 @@ def exact() -> BaseStrategy:
     return Exact()
 
 
-def fuzzy(threshold: float = 0.95) -> BaseStrategy:
+def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseStrategy:
     """Near string deduplication.
 
     Usage is on single columns of a dataframe.
 
     Args:
-        threshold: the minimum threshold at which similarity between two pairs
+        threshold: The minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
+        scorer: The fuzzy scorer. Defaults to "simple ratio". Options are
+            "simple_ratio", "partial_ratio", "token_sort_ratio",
+            "token_set_ratio", "weighted_ratio", "quick_ratio".
 
     Returns:
         Instance of `BaseStrategy`.
@@ -933,7 +976,7 @@ def fuzzy(threshold: float = 0.95) -> BaseStrategy:
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
     """
-    return Fuzzy(threshold=threshold)
+    return Fuzzy(threshold=threshold, scorer=scorer)
 
 
 def tfidf(

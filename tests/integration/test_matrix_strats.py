@@ -74,6 +74,7 @@ PARAMS = [
     #
     # FUZZY:
     (fuzzy, SINGLE_COL, {"threshold": 0.95}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 2, 5, 6, 0, 2, 9]),
     (fuzzy, SINGLE_COL, {"threshold": 0.85}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (fuzzy, SINGLE_COL, {"threshold": 0.75}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     (fuzzy, SINGLE_COL, {"threshold": 0.65}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
