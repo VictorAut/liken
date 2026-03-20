@@ -62,8 +62,8 @@ def strings_same_len(array: typing.Iterable, min_len: int = 3):
 
 PARAMS = [
     # CUSTOM:
-    # (strings_same_len, "email", {"drop_duplicates": False}, {"min_len": 3}, [0, 1, 2, 3, 2, 2, 6, 3, 8, 9]),
-    # (strings_same_len, "email", {"drop_duplicates": True}, {"min_len": 3}, [0, 1, 2, 3, 6, 8, 9]),
+    (strings_same_len, "email", {"drop_duplicates": False}, {"min_len": 3}, [0, 1, 2, 3, 2, 2, 6, 3, 8, 9]),
+    (strings_same_len, "email", {"drop_duplicates": True}, {"min_len": 3}, [0, 1, 2, 3, 6, 8, 9]),
     # EXACT:
     # on single column
     (exact, SINGLE_COL, {"drop_duplicates": False}, {}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),

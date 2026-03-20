@@ -36,6 +36,7 @@ from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
 from liken._constants import CANONICAL_ID
+from liken._registry import registry
 
 
 if TYPE_CHECKING:
@@ -898,6 +899,7 @@ class Cosine(
 # PUBLIC PKG:
 
 
+@registry.register("exact")
 def exact() -> BaseDeduper:
     """Exact Deduplication.
 
@@ -950,6 +952,7 @@ def exact() -> BaseDeduper:
     return Exact()
 
 
+@registry.register("fuzzy")
 def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
     """Near string deduplication.
 
@@ -996,6 +999,7 @@ def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
     return Fuzzy(threshold=threshold, scorer=scorer)
 
 
+@registry.register("tfidf")
 def tfidf(
     threshold: float = 0.95,
     ngram: int | tuple[int, int] = 3,
@@ -1060,6 +1064,7 @@ def tfidf(
     return TfIdf(threshold=threshold, ngram=ngram, topn=topn, **kwargs)
 
 
+@registry.register("lsh")
 def lsh(
     threshold: float = 0.95,
     ngram: int = 3,
@@ -1117,6 +1122,7 @@ def lsh(
     return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
 
 
+@registry.register("jaccard")
 def jaccard(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using jaccard similarity.
 
@@ -1165,6 +1171,7 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
     return Jaccard(threshold=threshold)
 
 
+@registry.register("cosine")
 def cosine(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using cosine similarity.
 
@@ -1234,6 +1241,7 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
 # RULES SUB PKG
 
 
+@registry.register("isna")
 def isna() -> BaseDeduper:
     """Discrete deduper on null/None values.
 
@@ -1277,6 +1285,7 @@ def isna() -> BaseDeduper:
     return IsNA()
 
 
+@registry.register("isin")
 def isin(values: Iterable) -> BaseDeduper:
     """Discrete deduper for membership testing.
 
@@ -1321,6 +1330,7 @@ def isin(values: Iterable) -> BaseDeduper:
     return IsIn(values=values)
 
 
+@registry.register("str_len")
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     """Discrete deduper on string length.
 
@@ -1372,6 +1382,7 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     return StrLen(min_len=min_len, max_len=max_len)
 
 
+@registry.register("str_startswith")
 def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings starting with a pattern.
 
@@ -1428,6 +1439,7 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     return StrStartsWith(pattern=pattern, case=case)
 
 
+@registry.register("str_endswith")
 def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings ending with a pattern.
 
@@ -1484,6 +1496,7 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     return StrEndsWith(pattern=pattern, case=case)
 
 
+@registry.register("str_contains")
 def str_contains(
     pattern: str,
     case: bool = True,

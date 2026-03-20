@@ -11,6 +11,7 @@ from typing_extensions import override
 
 from liken._dedupers import ThresholdDedupers
 from liken._types import SimilarPairIndices
+from liken._registry import registry
 
 
 # TYPES:
@@ -148,10 +149,14 @@ def register(f: PairGenerator) -> Callable:
             lk.apply(my_func(True))                # Raises TypeError
     """
 
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         if args:
             raise TypeError(f"{f.__name__} must be called with keyword arguments only")
         return Custom(f, **kwargs)
+
+    # Add to registry
+    registry.register(f"{f.__name__}", func=wrapper)
 
     return wrapper

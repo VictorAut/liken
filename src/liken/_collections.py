@@ -7,6 +7,7 @@ from collections import UserDict
 from copy import deepcopy
 from typing import Self
 from typing import final
+from typing import Protocol
 
 from liken._constants import INVALID_DICT_KEY_MSG
 from liken._constants import INVALID_DICT_MEMBER_MSG
@@ -19,6 +20,7 @@ from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 import liken._dedupers
+from liken._registry import registry
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
 from liken._types import Columns
@@ -102,15 +104,41 @@ class Rules(tuple):
 
         return super().__new__(cls, strategies)
 
-
 @final
 class On:
     """Unit container for a single strategy in the Rules API"""
 
-    def __init__(self, columns: Columns): #, strat: BaseDeduper):
+    # for IDE autocompletion only!
+    # must be manually maintained
+    # add a new dummy method here upon adding a new deduper.
+    def exact(self, *args, **kwargs) -> On:
+        return self.__getattr__("exact")(*args, **kwargs)
+    def fuzzy(self, *args, **kwargs) -> On:
+        return self.__getattr__("fuzzy")(*args, **kwargs)
+    def tfidf(self, *args, **kwargs) -> On:
+        return self.__getattr__("tfidf")(*args, **kwargs)
+    def lsh(self, *args, **kwargs) -> On:
+        return self.__getattr__("lsh")(*args, **kwargs)
+    def jaccard(self, *args, **kwargs) -> On:
+        return self.__getattr__("jaccard")(*args, **kwargs)
+    def cosine(self, *args, **kwargs) -> On:
+        return self.__getattr__("cosine")(*args, **kwargs)
+    def isin(self, *args, **kwargs) -> On:
+        return self.__getattr__("isin")(*args, **kwargs)
+    def isna(self, *args, **kwargs) -> On:
+        return self.__getattr__("isna")(*args, **kwargs)
+    def str_startswith(self, *args, **kwargs) -> On:
+        return self.__getattr__("str_startswith")(*args, **kwargs)
+    def str_endswith(self, *args, **kwargs) -> On:
+        return self.__getattr__("str_endswith")(*args, **kwargs)
+    def str_contains(self, *args, **kwargs) -> On:
+        return self.__getattr__("str_contains")(*args, **kwargs)
+    def str_len(self, *args, **kwargs) -> On:
+        return self.__getattr__("str_len")(*args, **kwargs)
+
+    def __init__(self, columns: Columns):
+        
         self._columns = columns
-        # self._strat = validate_strat_arg(strat)
-        # self._strats: list[tuple[Columns, BaseDeduper]] = [(columns, strat)]
         self._strats: list[tuple[Columns, BaseDeduper]] = []
 
     def __and__(self, other: On) -> Self:
@@ -118,7 +146,13 @@ class On:
         self._strats.extend(other._strats)
         return self
     
-    def __invert__(self):
+    def __invert__(self) -> On:
+        """Propagate inverstion to the deduper Allows for following syntax:
+        
+        ~on("email").isna()
+        
+        Where the inversion get's propagated to act on isna().
+        """
 
         columns, strat = self._strats[0]
 
@@ -127,14 +161,20 @@ class On:
         return new_on
 
     def __getattr__(self, attr):
-        # dynamically resolve deduper functions from liken._dedupers
-        func = getattr(liken._dedupers, attr, None)
-        if func is None:
-            raise AttributeError(f"{attr} is not a valid deduper")
+        """Makes deduper functions available as method calls to On.
+
+        Functions are retrieved from registry. Includes any prior custom
+        dedupers that have been registered. 
+        """
+
+        # don't intercept Python internals
+        if attr.startswith("__"):
+            raise AttributeError(attr)
+
+        func = registry.get(f"{attr}")
 
         def wrapper(*args, **kwargs):
             strat = func(*args, **kwargs)
-            # overwrite _strats with this new strategy
             self._strats = [(self._columns, strat)]
             return self
 
@@ -155,7 +195,7 @@ class On:
         """
         return any([isinstance(x[1], PredicateDedupers) for x in self._strats])
 
-    def __str__(self):
+    def __str__(self) -> str:
         """string representation
 
         Parses a single On or combinations of On operated with `&`
