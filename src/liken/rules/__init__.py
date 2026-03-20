@@ -7,14 +7,14 @@ Additional boolean choice strategies are defined here — they can be powerfully
 combined with the `liken` standard deduplication strategies.
 """
 
-from .._strats_library import isin
-from .._strats_library import isna
-from .._strats_library import str_contains
-from .._strats_library import str_endswith
-from .._strats_library import str_len
-from .._strats_library import str_startswith
-from .._strats_manager import Rules
-from .._strats_manager import on
+from .._collections import Rules
+from .._collections import on
+from .._dedupers import isin
+from .._dedupers import isna
+from .._dedupers import str_contains
+from .._dedupers import str_endswith
+from .._dedupers import str_len
+from .._dedupers import str_startswith
 
 
 __all__ = [

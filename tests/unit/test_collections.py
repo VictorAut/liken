@@ -1,13 +1,13 @@
 import pytest
 
-from liken._strats_library import BaseStrategy
-from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from liken._strats_manager import InvalidStrategyError
-from liken._strats_manager import On
-from liken._strats_manager import Rules
-from liken._strats_manager import StrategyManager
-from liken._strats_manager import StratsDict
-from liken._strats_manager import on
+from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
+from liken._collections import InvalidStrategyError
+from liken._collections import On
+from liken._collections import Rules
+from liken._collections import StrategyManager
+from liken._collections import StratsDict
+from liken._collections import on
+from liken._dedupers import BaseDeduper
 
 
 ###########
@@ -15,7 +15,7 @@ from liken._strats_manager import on
 ###########
 
 
-class DummyStrategy(BaseStrategy):
+class DummyStrategy(BaseDeduper):
     def __str__(self):
         return self.str_representation("dummy_strategy")
 
@@ -43,10 +43,10 @@ def s3():
 @pytest.mark.parametrize(
     "columns, strat",
     [
-        ("address", [BaseStrategy()]),
-        ("address", (BaseStrategy(),)),
-        (("address", "email"), [BaseStrategy()]),
-        (("address", "email"), (BaseStrategy(),)),
+        ("address", [BaseDeduper()]),
+        ("address", (BaseDeduper(),)),
+        (("address", "email"), [BaseDeduper()]),
+        (("address", "email"), (BaseDeduper(),)),
     ],
 )
 def test_stratsconfig_accepts_inputs(columns, strat):
@@ -187,13 +187,13 @@ def test_strategy_manager_apply_rejects_invalid_type():
 def test_strategy_manager_apply_rejects_sequence_after_dict(s1, s2, s3):
     sm = StrategyManager()
     sm.apply({"a": (s1,), "b": (s1, s2)})  # legal
-    with pytest.raises(InvalidStrategyError, match="Cannot apply a 'BaseStrategy' after a strategy mapping"):
+    with pytest.raises(InvalidStrategyError, match="Cannot apply a 'BaseDeduper' after a strategy mapping"):
         sm.apply(s3)
 
 
 def test_strategy_manager_apply_warns_dict_after_sequence():
     sm = StrategyManager()
-    strat = BaseStrategy()
+    strat = BaseDeduper()
 
     sm.apply(strat)
 

@@ -9,7 +9,7 @@ from typing import final
 
 from typing_extensions import override
 
-from liken._strats_library import ThresholdDedupers
+from liken._dedupers import ThresholdDedupers
 from liken._types import SimilarPairIndices
 
 

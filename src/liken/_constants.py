@@ -54,7 +54,7 @@ INVALID: Final[str] = "Invalid arg: "
 INVALID_DF: Final[str] = INVALID + "df must be istance of Pandas, Polars of Spark DataFrames, got {}"
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
 INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got '{}'"
-INVALID_STRAT: Final[str] = INVALID + "strat must be instance of BaseStrategy, got {}"
+INVALID_STRAT: Final[str] = INVALID + "strat must be instance of BaseDeduper, got {}"
 INVALID_COLUMNS_EMPTY: Final[str] = (
     INVALID
     + "columns cannot be None, a column label of tuple of column labels must be provided when using sequential API."
@@ -67,17 +67,17 @@ INVALID_COLUMNS_NOT_NONE: Final[str] = (
 # strategy collection errors
 
 INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
-INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseStrategy', got '{}'"
+INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseDeduper', got '{}'"
 INVALID_DICT_MEMBER_MSG: Final[str] = (
-    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseStrategy', got '{}'"
+    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseDeduper', got '{}'"
 )
 INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
-    "Cannot apply a 'BaseStrategy' after a strategy mapping (dict) has been set. "
-    "Use either individual 'BaseStrategy' instances or a dict of strategies, not both."
+    "Cannot apply a 'BaseDeduper' after a strategy mapping (dict) has been set. "
+    "Use either individual 'BaseDeduper' instances or a dict of strategies, not both."
 )
 INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
 INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
-INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseStrategy', a dict or 'Rules', got '{}'"
+INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseDeduper', a dict or 'Rules', got '{}'"
 
 # strategy collection warnings
 

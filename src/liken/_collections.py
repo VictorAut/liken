@@ -18,8 +18,9 @@ from liken._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
 from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
-from liken._strats_library import BaseStrategy
-from liken._strats_library import BinaryDedupers
+import liken._dedupers
+from liken._dedupers import BaseDeduper
+from liken._dedupers import PredicateDedupers
 from liken._types import Columns
 from liken._validators import validate_strat_arg
 
@@ -38,11 +39,11 @@ class StratsDict(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
             raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
-        if not isinstance(value, list | tuple | BaseStrategy):
+        if not isinstance(value, list | tuple | BaseDeduper):
             raise InvalidStrategyError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
-        if not isinstance(value, BaseStrategy):
+        if not isinstance(value, BaseDeduper):
             for i, member in enumerate(value):
-                if not isinstance(member, BaseStrategy):
+                if not isinstance(member, BaseDeduper):
                     raise InvalidStrategyError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
         else:
             value = (value,)
@@ -88,6 +89,7 @@ class Rules(tuple):
     """
 
     def __new__(cls, *strategies: On):
+        
         if len(strategies) == 1 and isinstance(strategies[0], tuple):
             strategies = strategies[0]
 
@@ -105,41 +107,53 @@ class Rules(tuple):
 class On:
     """Unit container for a single strategy in the Rules API"""
 
-    def __init__(self, columns: Columns, strat: BaseStrategy):
+    def __init__(self, columns: Columns): #, strat: BaseDeduper):
         self._columns = columns
-        self._strat = validate_strat_arg(strat)
-        self._strats: list[tuple[Columns, BaseStrategy]] = [(columns, strat)]
+        # self._strat = validate_strat_arg(strat)
+        # self._strats: list[tuple[Columns, BaseDeduper]] = [(columns, strat)]
+        self._strats: list[tuple[Columns, BaseDeduper]] = []
 
     def __and__(self, other: On) -> Self:
-        """Overloads `&` operator
-
-        Mutates first instance of On in chain of `&` operates On instances.
-        Collectes the combinations of strategies into a single iterable for
-        that step. The executor will then apply all these combined strategies
-        and select union find components that satisfy all the combinations.
-
-        Usage:
-            On("address", exact) & On("email", isna())
-
-        Returns:
-            Self, specifically Self of the first On.
-        """
-        self._strats.append((other._columns, other._strat))
+        """Combine multiple On instances with AND."""
+        self._strats.extend(other._strats)
         return self
+    
+    def __invert__(self):
+
+        columns, strat = self._strats[0]
+
+        new_on = On(columns)
+        new_on._strats = [(columns, ~strat)]
+        return new_on
+
+    def __getattr__(self, attr):
+        # dynamically resolve deduper functions from liken._dedupers
+        func = getattr(liken._dedupers, attr, None)
+        if func is None:
+            raise AttributeError(f"{attr} is not a valid deduper")
+
+        def wrapper(*args, **kwargs):
+            strat = func(*args, **kwargs)
+            # overwrite _strats with this new strategy
+            self._strats = [(self._columns, strat)]
+            return self
+
+        return wrapper
+        
 
     @property
-    def and_strats(self) -> list[tuple[Columns, BaseStrategy]]:
+    def and_strats(self) -> list[tuple[Columns, BaseDeduper]]:
         """return strategies, sorted such that binary strategies are first.
         This is used for predication.
         """
-        return sorted(self._strats, key=lambda x: not isinstance(x[1], BinaryDedupers))
+        return sorted(self._strats, key=lambda x: not isinstance(x[1], PredicateDedupers))
 
     @property
     def has_any_binary_strat(self) -> bool:
         """whether or not the Rule set of strategies has at least one
         Binary strategy.
         """
-        return any([isinstance(x[1], BinaryDedupers) for x in self._strats])
+        return any([isinstance(x[1], PredicateDedupers) for x in self._strats])
 
     def __str__(self):
         """string representation
@@ -165,7 +179,7 @@ class StrategyManager:
     - Dict
     - Rules
 
-    For Sequential strategies, as instances of `BaseStrategy` are sequentially
+    For Sequential strategies, as instances of `BaseDeduper` are sequentially
     to an idential structure of the Dict API but under a single default
     dictionary key. Keys are columns names, and values are iterables of
     strategies.
@@ -183,14 +197,14 @@ class StrategyManager:
         """checks to see if stratgies are loaded under the default key"""
         return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
 
-    def apply(self, strat: BaseStrategy | dict | StratsDict | Rules) -> None:
+    def apply(self, strat: BaseDeduper | dict | StratsDict | Rules) -> None:
         """Loads a strategy into the manager
 
         This function currently handles all possible instances of strategy, and
         the implementation achieves this by writing to the strategy dictionary
         or overwriting the dictionary with `Rules`.
 
-        If the input strat is `BaseStrategy` then "Sequential" API is in use. If
+        If the input strat is `BaseDeduper` then "Sequential" API is in use. If
         dict (or StratsDict — even though this is not public) then it is the
         "Dict" API. Else "Rules" API is in use.
 
@@ -202,7 +216,7 @@ class StrategyManager:
         # if not, used by `Dedupe` to include an exact deduper by default
         self.has_applies = True
 
-        if isinstance(strat, BaseStrategy):
+        if isinstance(strat, BaseDeduper):
             if not self.is_sequential_applied:
                 raise InvalidStrategyError(INVALID_SEQUENCE_AFTER_DICT_MSG)
             self._strats[SEQUENTIAL_API_DEFAULT_KEY].append(strat)
@@ -238,7 +252,7 @@ class StrategyManager:
 
         Output string must be formatted approximately such that it can be used
         with .apply(), i.e. a string representation of one of:
-            - BaseStrategy
+            - BaseDeduper
             - StratsDict
             - Rules
         The seuqneital API with numerous additions of BaseStraegy means there
@@ -248,7 +262,7 @@ class StrategyManager:
         strats = self.get()
 
         if isinstance(strats, StratsDict):
-            # added as BaseStrategy (Sequential API)
+            # added as BaseDeduper (Sequential API)
             if self.is_sequential_applied:
                 # short-circuit; nothing yet applied.
                 if not strats[SEQUENTIAL_API_DEFAULT_KEY]:
@@ -297,7 +311,7 @@ def warn(msg: str) -> None:
 # PUBLIC ON API:
 
 
-def on(columns: Columns, strat: BaseStrategy, /) -> On:
+def on(columns: Columns, /) -> On:
     """Unit container for a single strategy in the Rules API.
 
     Operates a "strat" on a "columns". Is provided as comma separated members to
@@ -356,4 +370,4 @@ def on(columns: Columns, strat: BaseStrategy, /) -> On:
 
         Where the first two rows are now linked via the same canonical_id.
     """
-    return On(columns, strat)
+    return On(columns)

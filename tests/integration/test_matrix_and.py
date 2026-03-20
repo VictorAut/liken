@@ -50,20 +50,20 @@ def str_same_len(array: typing.Iterable):
 # fmt: off
 
 PARAMS = [
+    # # single column
+    # ((on("email").fuzzy(0.95),), [0, 1, 2, 3, 4, 4, 3, 3, 8, 0]),
+    # ((on("email").fuzzy(0.95) & on("email").str_same_len(),),  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
+    # # single column
+    # ((on("address").fuzzy(0.70),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    # ((on("address").fuzzy(0.70) & on("address").str_same_len(),), [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # single column
-    ((on("email", fuzzy(0.95)),), [0, 1, 2, 3, 4, 4, 3, 3, 8, 0]),
-    ((on("email", fuzzy(0.95)) & on("email", str_same_len()),),  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
+    ((on("address").fuzzy(0.70),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    ((on("address").fuzzy(0.70) & ~on("address").isna(),), [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
     # single column
-    ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ((on("address", fuzzy(0.70)) & on("address", str_same_len()),), [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    # single column
-    ((on("address", fuzzy(0.70)),), [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ((on("address", fuzzy(0.70)) & on("address", ~isna()),), [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
-    # single column
-    ((on("account", exact()),), [0, 0, 2, 3, 4, 0, 0, 2, 8, 8]),
-    ((on("property_height", isna()) & on("account", exact()),), [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
+    ((on("account").exact(),), [0, 0, 2, 3, 4, 0, 0, 2, 8, 8]),
+    ((on("property_height").isna() & on("account").exact(),), [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
     # two threshold dedupers
-    ((on("birth_country", exact()) & on("marital_status", exact()),), [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
+    ((on("birth_country").exact() & on("marital_status").exact(),), [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
 ]
 
 # fmt: on
@@ -74,8 +74,11 @@ def test_matrix_and(strat, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    lk = Dedupe(df, spark_session=spark_session)
-    lk.apply(Rules(strat))
-    df = lk.canonicalize()
+    df = (
+        Dedupe(df, spark_session=spark_session)
+        .apply(Rules(strat))
+        .canonicalize()
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

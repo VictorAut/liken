@@ -106,37 +106,58 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_sequence_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize(
+    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+)
+def test_matrix_keep_sequence_api(
+    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+):
 
     df, spark_session = dataframe
 
-    lk = Dedupe(df, spark_session=spark_session)
-    lk.apply(strategy(**input_params))
-    df = lk.canonicalize(columns, keep=keep)
+    df = (
+        Dedupe(df, spark_session=spark_session)
+        .apply(strategy(**input_params))
+        .canonicalize(columns, keep=keep)
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_dict_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize(
+    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+)
+def test_matrix_keep_dict_api(
+    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+):
 
     df, spark_session = dataframe
 
-    lk = Dedupe(df, spark_session=spark_session)
-    lk.apply({columns: [strategy(**input_params)]})
-    df = lk.canonicalize(keep=keep)
+    df = (
+        Dedupe(df, spark_session=spark_session)
+        .apply({columns: [strategy(**input_params)]})
+        .canonicalize(keep=keep)
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize("strategy, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_rules_api(strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize(
+    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+)
+def test_matrix_keep_rules_api(
+    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+):
 
     df, spark_session = dataframe
 
-    lk = Dedupe(df, spark_session=spark_session)
-    lk.apply(Rules(on(columns, strategy(**input_params))))
-    df = lk.canonicalize(keep=keep)
+    df = (
+        Dedupe(df, spark_session=spark_session)
+        .apply(Rules(getattr(on(columns), strategy.__name__)(**input_params)))
+        .canonicalize(keep=keep)
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

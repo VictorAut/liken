@@ -9,16 +9,16 @@ from liken import fuzzy
 from liken import jaccard
 from liken import lsh
 from liken import tfidf
-from liken._strats_library import LSH
-from liken._strats_library import BaseStrategy
-from liken._strats_library import Cosine
-from liken._strats_library import Exact
-from liken._strats_library import Fuzzy
-from liken._strats_library import Jaccard
-from liken._strats_library import StrContains
-from liken._strats_library import StrEndsWith
-from liken._strats_library import StrStartsWith
-from liken._strats_library import TfIdf
+from liken._dedupers import LSH
+from liken._dedupers import BaseDeduper
+from liken._dedupers import Cosine
+from liken._dedupers import Exact
+from liken._dedupers import Fuzzy
+from liken._dedupers import Jaccard
+from liken._dedupers import StrContains
+from liken._dedupers import StrEndsWith
+from liken._dedupers import StrStartsWith
+from liken._dedupers import TfIdf
 from liken.rules import str_contains
 from liken.rules import str_endswith
 from liken.rules import str_startswith
@@ -43,19 +43,19 @@ def mock_df():
 
 
 ##############################
-# BaseStrategy core behavior #
+# BaseDeduper core behavior #
 ##############################
 
 
 def test_set_frame_sets_wrapped_df(mock_df):
-    strat = BaseStrategy()
+    strat = BaseDeduper()
     returned = strat.set_frame(mock_df)
     assert returned is strat
     assert strat.wdf is mock_df
 
 
 def test_gen_similarity_pairs_not_implemented():
-    strat = BaseStrategy()
+    strat = BaseDeduper()
     with pytest.raises(NotImplementedError):
         list(strat._gen_similarity_pairs(pa.array([])))
 
@@ -66,7 +66,7 @@ def test_gen_similarity_pairs_not_implemented():
 
 
 def test_canonicalize_puts_canonical_id(mock_df):
-    strat = BaseStrategy()
+    strat = BaseDeduper()
     strat.set_frame(mock_df)
 
     strat.wdf.get_array = Mock(

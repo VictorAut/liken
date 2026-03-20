@@ -1,22 +1,22 @@
 """liken main public API"""
 
 from __future__ import annotations
-
+from typing import Self
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
+from liken._collections import Rules
+from liken._collections import StrategyManager
+from liken._collections import StratsDict
 from liken._dataframe import Frame
 from liken._dataframe import wrap
+from liken._dedupers import BaseDeduper
+from liken._dedupers import exact
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
-from liken._strats_library import BaseStrategy
-from liken._strats_library import exact
-from liken._strats_manager import Rules
-from liken._strats_manager import StrategyManager
-from liken._strats_manager import StratsDict
 from liken._types import Columns
 from liken._types import DataFrameLike
 from liken._types import Keep
@@ -82,7 +82,7 @@ class Dedupe:
         self._executor = LocalExecutor()
         return self
 
-    def apply(self, strategy: BaseStrategy | dict | Rules) -> None:
+    def apply(self, strategy: BaseDeduper | dict | Rules) -> Self:
         """Apply a strategy or strategies for deduplication.
 
         Available for inspection when access with attribute `.strats`. Can be
@@ -138,13 +138,14 @@ class Dedupe:
 
         """
         self._sm.apply(strategy)
+        return self
 
     def drop_duplicates(
         self,
         columns: Columns | None = None,
         *,
         keep: Keep = "first",
-    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+    ) -> Self:
         """Drop duplicates by enacting the applied strategies.
 
         If no strategies are explicitely provided, will carry out an exact
@@ -168,15 +169,19 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        columns: Columns | None = validate_columns_arg(
+            columns, self._sm.is_sequential_applied
+        )
+        wdf: Frame = wrap(
+            self._df, None
+        )  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._sm.has_applies:
             self._sm.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 
-        df = self._executor.execute(
+        self._df: DataFrameLike = self._executor.execute(
             wdf,
             columns=columns,
             strats=strats,
@@ -184,11 +189,11 @@ class Dedupe:
             drop_duplicates=True,
             drop_canonical_id=True,
             id=None,
-        )
+        ).unwrap()
 
         self._sm.reset()
 
-        return df.unwrap()
+        return self
 
     def canonicalize(
         self,
@@ -197,7 +202,7 @@ class Dedupe:
         keep: Keep = "first",
         drop_duplicates: bool = False,
         id: str | None = None,
-    ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+    ) -> Self:
         """Canonicalize by enacting the applied strategies.
 
         If no strategies are explicitely provided, will carry out an exact
@@ -228,7 +233,9 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        columns: Columns | None = validate_columns_arg(
+            columns, self._sm.is_sequential_applied
+        )
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
@@ -236,7 +243,7 @@ class Dedupe:
             self.apply(exact())
         strats: StratsDict | Rules = self._sm.get()
 
-        df: Frame = self._executor.execute(
+        self._df: DataFrameLike = self._executor.execute(
             wdf,
             columns=columns,
             strats=strats,
@@ -244,11 +251,15 @@ class Dedupe:
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
             id=id,
-        )
+        ).unwrap()
 
         self._sm.reset()
 
-        return df.unwrap()
+        return self
+
+    def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """TODO"""
+        return self._df
 
     @property
     def strats(self) -> str | None:

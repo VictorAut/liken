@@ -14,7 +14,7 @@ from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
 from liken.datasets.synthetic import fake_10
-from liken.dedupe import BaseStrategy
+from liken.dedupe import BaseDeduper
 
 
 @pytest.fixture(scope="session")
@@ -97,7 +97,7 @@ def dataframe(request, df_pandas, df_polars, df_spark, spark):
 
 @pytest.fixture
 def strategy_mock():
-    return Mock(spec=BaseStrategy)
+    return Mock(spec=BaseDeduper)
 
 
 @pytest.fixture

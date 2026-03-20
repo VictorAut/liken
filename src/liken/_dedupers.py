@@ -14,6 +14,8 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
+from typing import ClassVar
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
@@ -53,7 +55,9 @@ class Base(Protocol):
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
-    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
+    def _gen_similarity_pairs(
+        self, array: pa.Array | pa.Table
+    ) -> Iterator[SimilarPairIndices]: ...
     def build_union_find(self, columns: Columns) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
@@ -69,7 +73,7 @@ class Base(Protocol):
 # BASE STRATEGY:
 
 
-class BaseStrategy(Base):
+class BaseDeduper(Base):
     """
     Base Deduplication class
 
@@ -88,7 +92,9 @@ class BaseStrategy(Base):
         self.wdf: LocalDF = wdf
         return self
 
-    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(
+        self, array: pa.Array | pa.Table
+    ) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
@@ -99,7 +105,9 @@ class BaseStrategy(Base):
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
-        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+        array: pa.Array | pa.Table = self.wdf.get_array(
+            columns, with_na=self.with_na_placeholder
+        )
 
         if predicate:
             # subsets the array on predicate indice list
@@ -135,7 +143,9 @@ class BaseStrategy(Base):
                 rep_index[member] = rep
 
         # for predicated components, default to ith index for non deduplicated rows
-        new_canonicals: list = [canonicals[rep_index.get(i, i)].as_py() for i in range(n)]
+        new_canonicals: list = [
+            canonicals[rep_index.get(i, i)].as_py() for i in range(n)
+        ]
 
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 
@@ -166,7 +176,9 @@ class SingleColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, str):
-            raise ValueError("For single column strategies, `columns` must be defined as a string")
+            raise ValueError(
+                "For single column strategies, `columns` must be defined as a string"
+            )
 
 
 class CompoundColumnMixin:
@@ -177,14 +189,16 @@ class CompoundColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, tuple):
-            raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
+            raise ValueError(
+                "For compound columns strategies, `columns` must be defined as a tuple"
+            )
 
 
 # EXACT DEDUPER:
 
 
 @final
-class Exact(BaseStrategy):
+class Exact(BaseDeduper):
     """
     Exact deduper.
 
@@ -192,7 +206,7 @@ class Exact(BaseStrategy):
     As the exact deduper can be applied to single, or compound columns.
     """
 
-    name: str = "exact"
+    _NAME: ClassVar[str] = "exact"
 
     @override
     def validate(self, columns):
@@ -224,13 +238,13 @@ class Exact(BaseStrategy):
                     yield indices[i], indices[j]
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 # BINARY DEDUPERS:
 
 
-class BinaryDedupers(BaseStrategy):
+class PredicateDedupers(BaseDeduper):
     """
     Defines Binary "choice" deduplications, i.e. those that produce a discrete
     outcome. Any pair of values that satisfies the conditions of a Binary
@@ -288,13 +302,13 @@ class BinaryDedupers(BaseStrategy):
         return _NegatedBinaryDeduper(self)
 
 
-class _NegatedBinaryDeduper(BinaryDedupers):
+class _NegatedBinaryDeduper(PredicateDedupers):
     """
     Composable deduplication instance that inverts the results of any binary
     deduper (except IsNA deduper which follows it's own inversion logic).
     """
 
-    def __init__(self, inner: BinaryDedupers):
+    def __init__(self, inner: PredicateDedupers):
         self._inner = inner
 
     def _matches(self, value):
@@ -323,7 +337,7 @@ class _NegatedBinaryDeduper(BinaryDedupers):
 @final
 class IsNA(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Deduplicates all missing / null values into a single group.
@@ -331,7 +345,7 @@ class IsNA(
     Inversion operator here calls it's own negation class
     """
 
-    name: str = "isna"
+    _NAME: ClassVar[str] = "isna"
 
     # do NOT want to placehold Null values
     # As we are deduping on them and need to keep them to identify them
@@ -356,7 +370,7 @@ class IsNA(
                 yield indices[i], indices[j]
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
     def __invert__(self):
         return _NotNA()
@@ -365,7 +379,7 @@ class IsNA(
 @final
 class _NotNA(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Deduplicate all non-NA / non-null values.
@@ -374,7 +388,7 @@ class _NotNA(
     Dedupers.
     """
 
-    name: str = "~isna"
+    _NAME: ClassVar[str] = "~isna"
 
     with_na_placeholder: bool = False
 
@@ -400,20 +414,20 @@ class _NotNA(
                 yield indices[i], indices[j]
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
 class IsIn(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Deduplicates all instances of strings that are a member of a defined
     iterable
     """
 
-    name: str = "isin"
+    _NAME: ClassVar[str] = "isin"
 
     def __init__(self, values: Iterable):
         super().__init__(values=values)
@@ -424,20 +438,20 @@ class IsIn(
         return value in self._values
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
 class StrLen(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Deduplicates all instances of strings that satisfy the bounds in
     (min_len, max_len) where the upper bound can actually be left unbounded.
     """
 
-    name: str = "str_len"
+    _NAME: ClassVar[str] = "str_len"
 
     def __init__(self, min_len: int = 0, max_len: int | None = None):
         super().__init__(min_len=min_len, max_len=max_len)
@@ -454,13 +468,13 @@ class StrLen(
         return len_val > self._min_len and len_val <= self._max_len
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
 class StrStartsWith(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Strings start with canonicalizer.
@@ -470,7 +484,7 @@ class StrStartsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    name: str = "str_startswith"
+    _NAME: ClassVar[str] = "str_startswith"
 
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
@@ -489,13 +503,13 @@ class StrStartsWith(
         )
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
 class StrEndsWith(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Strings start with canonicalizer.
@@ -505,7 +519,7 @@ class StrEndsWith(
     Regex is not supported, please use `StrContains` otherwise.
     """
 
-    name: str = "str_endswith"
+    _NAME: ClassVar[str] = "str_endswith"
 
     def __init__(self, pattern: str, case: bool = True):
         super().__init__(pattern=pattern, case=case)
@@ -524,13 +538,13 @@ class StrEndsWith(
         )
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
 class StrContains(
     SingleColumnMixin,
-    BinaryDedupers,
+    PredicateDedupers,
 ):
     """
     Strings contains canonicalizer.
@@ -538,7 +552,7 @@ class StrContains(
     Defaults to case sensitive. Supports literal substring or regex search.
     """
 
-    name: str = "str_contains"
+    _NAME: ClassVar[str] = "str_contains"
 
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
         super().__init__(pattern=pattern, case=case, regex=regex)
@@ -568,13 +582,13 @@ class StrContains(
         )
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 # THRESHOLD DEDUPERS:
 
 
-class ThresholdDedupers(BaseStrategy):
+class ThresholdDedupers(BaseDeduper):
     """
     Base instance of dedupers that implement any similarity comparison
     mechanism.
@@ -585,7 +599,9 @@ class ThresholdDedupers(BaseStrategy):
         self._threshold = threshold
 
         if not (0 <= threshold < 1):
-            raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
+            raise ValueError(
+                "The threshold value must be greater or equal to 0 and less than 1"
+            )
 
 
 @final
@@ -597,7 +613,16 @@ class Fuzzy(
     Fuzzy string matching deduper
     """
 
-    name: str = "fuzzy"
+    _NAME: ClassVar[str] = "fuzzy"
+
+    _SCORERS: dict[str, Callable] = {
+        "simple_ratio": fuzz.ratio,
+        "partial_ratio": fuzz.partial_ratio,
+        "token_sort_ratio": fuzz.token_sort_ratio,
+        "token_set_ratio": fuzz.token_set_ratio,
+        "weighted_ratio": fuzz.WRatio,
+        "quick_ratio": fuzz.QRatio,
+    }
 
     def __init__(
         self,
@@ -609,7 +634,7 @@ class Fuzzy(
             "token_set_ratio",
             "weighted_ratio",
             "quick_ratio",
-        ] = "simple",
+        ] = "simple_ratio",
     ):
         super().__init__(
             threshold=threshold,
@@ -619,22 +644,7 @@ class Fuzzy(
         self._scorer = scorer
 
     def get_scorer(self):
-        match self._scorer:
-            case "simple_ratio":
-                return fuzz.ratio
-            case "partial_ratio":
-                return fuzz.partial_ratio
-            case "token_sort_ratio":
-                return fuzz.token_sort_ratio
-            case "token_set_ratio":
-                return fuzz.token_set_ratio
-            case "weighted_ratio":
-                return fuzz.WRatio
-            case "quick_ratio":
-                return fuzz.QRatio
-            # fallback to default
-            case _:
-                return fuzz.ratio
+        return self._SCORERS.get(self._scorer, fuzz.ratio)
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         array: list = array.to_pylist()
@@ -659,7 +669,7 @@ class Fuzzy(
                     yield i, i + 1 + offset
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
@@ -674,7 +684,7 @@ class TfIdf(
     as listed in the [TF-IDF vectorizer documentation](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
     """
 
-    name: str = "tfidf"
+    _NAME: ClassVar[str] = "tfidf"
 
     def __init__(
         self,
@@ -695,7 +705,9 @@ class TfIdf(
         self._kwargs = kwargs
 
     def _vectorize(self) -> TfidfVectorizer:
-        ngram_range = (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
+        ngram_range = (
+            (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
+        )
 
         return TfidfVectorizer(
             analyzer="char",
@@ -733,7 +745,7 @@ class TfIdf(
             yield rows[i], cols[i]
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
@@ -745,7 +757,7 @@ class LSH(
     Locality Sensitive Hashing deduper
     """
 
-    name: str = "lsh"
+    _NAME: ClassVar[str] = "lsh"
 
     def __init__(
         self,
@@ -798,7 +810,7 @@ class LSH(
                     yield idx, idy
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 # COMPOUND COLUMN:
@@ -813,14 +825,17 @@ class Jaccard(
     Deduplicate sets where such sets contain categorical data.
     """
 
-    name: str = "jaccard"
+    _NAME: ClassVar[str] = "jaccard"
 
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
         columns = [array[col] for col in array.column_names]
         n = array.num_rows
 
         # Build row sets directly
-        sets = [{col[i].as_py() for col in columns if col[i].as_py() is not None} for i in range(n)]
+        sets = [
+            {col[i].as_py() for col in columns if col[i].as_py() is not None}
+            for i in range(n)
+        ]
 
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -838,7 +853,7 @@ class Jaccard(
                     yield idx, idy
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 @final
@@ -850,12 +865,14 @@ class Cosine(
     Deduplicate sets where such sets contain numeric data.
     """
 
-    name: str = "cosine"
+    _NAME: ClassVar[str] = "cosine"
 
     @override
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
 
-        columns = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
+        columns = [
+            array[col].to_numpy(zero_copy_only=False) for col in array.column_names
+        ]
         matrix = np.column_stack(columns)
 
         matrix = np.nan_to_num(matrix, nan=0.0)
@@ -875,13 +892,13 @@ class Cosine(
                     yield i, i + 1 + offset
 
     def __str__(self):
-        return self.str_representation(self.name)
+        return self.str_representation(self._NAME)
 
 
 # PUBLIC PKG:
 
 
-def exact() -> BaseStrategy:
+def exact() -> BaseDeduper:
     """Exact Deduplication.
 
     Can deduplicate a single column, or multiple columns.
@@ -889,7 +906,7 @@ def exact() -> BaseStrategy:
     If no strategies are applied to `Dedupe`, `exact` is applied by default.
 
     Returns:
-        Instance of `BaseStrategy`..
+        Instance of `BaseDeduper`..
 
     Example:
         Applied to a single column:
@@ -933,7 +950,7 @@ def exact() -> BaseStrategy:
     return Exact()
 
 
-def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseStrategy:
+def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
     """Near string deduplication.
 
     Usage is on single columns of a dataframe.
@@ -946,7 +963,7 @@ def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseStrategy:
             "token_set_ratio", "weighted_ratio", "quick_ratio".
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -984,7 +1001,7 @@ def tfidf(
     ngram: int | tuple[int, int] = 3,
     topn: int = 2,
     **kwargs,
-) -> BaseStrategy:
+) -> BaseDeduper:
     """Near string deduplication using term frequency, inverse document
     frequency.
 
@@ -1007,7 +1024,7 @@ def tfidf(
             Vectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1047,7 +1064,7 @@ def lsh(
     threshold: float = 0.95,
     ngram: int = 3,
     num_perm: int = 128,
-) -> BaseStrategy:
+) -> BaseDeduper:
     """Near string deduplication using locality sensitive hashing (LSH).
 
     Usage is on single columns of a dataframe. `lsh` is a tuneable deduper.
@@ -1067,7 +1084,7 @@ def lsh(
             can produce unreliable results.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1100,7 +1117,7 @@ def lsh(
     return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
 
 
-def jaccard(threshold: float = 0.95) -> BaseStrategy:
+def jaccard(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using jaccard similarity.
 
     Usage is on multiple columns of a dataframe. Appropriate for categorical
@@ -1112,7 +1129,7 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
             of values will be considered valid for deduplication.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to multiple columns:
@@ -1148,7 +1165,7 @@ def jaccard(threshold: float = 0.95) -> BaseStrategy:
     return Jaccard(threshold=threshold)
 
 
-def cosine(threshold: float = 0.95) -> BaseStrategy:
+def cosine(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using cosine similarity.
 
     Usage is on multiple columns of a dataframe. Appropriate for numerical
@@ -1159,7 +1176,7 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
             of values will be considered valid for deduplication.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Note:
         In the case of null types, that column is ignore, and only the
@@ -1217,14 +1234,14 @@ def cosine(threshold: float = 0.95) -> BaseStrategy:
 # RULES SUB PKG
 
 
-def isna() -> BaseStrategy:
+def isna() -> BaseDeduper:
     """Discrete deduper on null/None values.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not null" using inversion operator: `~isna()`.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1260,14 +1277,14 @@ def isna() -> BaseStrategy:
     return IsNA()
 
 
-def isin(values: Iterable) -> BaseStrategy:
+def isin(values: Iterable) -> BaseDeduper:
     """Discrete deduper for membership testing.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not in" using inversion operator: `~isin()`.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1304,7 +1321,7 @@ def isin(values: Iterable) -> BaseStrategy:
     return IsIn(values=values)
 
 
-def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
+def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     """Discrete deduper on string length.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
@@ -1319,7 +1336,7 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
         max_len: the upper bound of lengths considered. Can be left unbounded.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1355,7 +1372,7 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseStrategy:
     return StrLen(min_len=min_len, max_len=max_len)
 
 
-def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
+def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings starting with a pattern.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
@@ -1369,7 +1386,7 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
         case: case sensitive, or not.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1411,7 +1428,7 @@ def str_startswith(pattern: str, case: bool = True) -> BaseStrategy:
     return StrStartsWith(pattern=pattern, case=case)
 
 
-def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
+def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings ending with a pattern.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
@@ -1425,7 +1442,7 @@ def str_endswith(pattern: str, case: bool = True) -> BaseStrategy:
         case: case sensitive, or not.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:
@@ -1471,7 +1488,7 @@ def str_contains(
     pattern: str,
     case: bool = True,
     regex: bool = False,
-) -> BaseStrategy:
+) -> BaseDeduper:
     """Discrete deduper on general string patterns with regex.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
@@ -1487,7 +1504,7 @@ def str_contains(
         regex: uses regex patterns, or not.
 
     Returns:
-        Instance of `BaseStrategy`.
+        Instance of `BaseDeduper`.
 
     Example:
         Applied to a single column:

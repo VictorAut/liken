@@ -1,9 +1,9 @@
-from liken._strats_library import cosine
-from liken._strats_library import exact
-from liken._strats_library import fuzzy
-from liken._strats_library import jaccard
-from liken._strats_library import lsh
-from liken._strats_library import tfidf
+from liken._dedupers import cosine
+from liken._dedupers import exact
+from liken._dedupers import fuzzy
+from liken._dedupers import jaccard
+from liken._dedupers import lsh
+from liken._dedupers import tfidf
 from liken.dedupe import Dedupe
 
 

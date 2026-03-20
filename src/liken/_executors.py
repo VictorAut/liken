@@ -23,15 +23,15 @@ from networkx.utils.union_find import UnionFind
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
 
+from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
+from liken._collections import Rules
+from liken._collections import StratsDict
 from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
-from liken._strats_library import BaseStrategy
-from liken._strats_library import BinaryDedupers
-from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from liken._strats_manager import Rules
-from liken._strats_manager import StratsDict
+from liken._dedupers import BaseDeduper
+from liken._dedupers import PredicateDedupers
 from liken._types import Columns
 from liken._types import Keep
 
@@ -135,7 +135,7 @@ class LocalExecutor(Executor):
                             else:
                                 components[idx[uf[i]]].append(idx[i])
 
-                        if isinstance(strat, BinaryDedupers):
+                        if isinstance(strat, PredicateDedupers):
                             for c in components.values():
                                 if len(c) > 1:
                                     indices = indices.union(set(c))
@@ -156,7 +156,7 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _build_uf(
-        strat: BaseStrategy, df: LocalDF, columns: Columns, predicate: set = set()
+        strat: BaseDeduper, df: LocalDF, columns: Columns, predicate: set = set()
     ) -> tuple[UnionFind[int], int]:
         return strat.set_frame(df).build_union_find(columns, predicate=predicate)
 
@@ -183,7 +183,7 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _call_strat(
-        strat: BaseStrategy,
+        strat: BaseDeduper,
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
@@ -245,7 +245,9 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = SparkDF(
+            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
+        )
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -283,13 +285,16 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        lk = factory._from_rows(rows)  # type: ignore
-        lk.apply(strats)  # type: ignore
-        df = lk.canonicalize(
-            columns,
-            keep=keep,
-            drop_duplicates=drop_duplicates,
-            id=id,
+        df = (
+            factory._from_rows(rows)
+            .apply(strats)
+            .canonicalize(
+                columns,
+                keep=keep,
+                drop_duplicates=drop_duplicates,
+                id=id,
+            )
+            .collect()
         )
 
         return iter(cast(list[Row], df))

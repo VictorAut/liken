@@ -6,11 +6,11 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
+from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
+from liken._collections import StratsDict
+from liken._dedupers import BaseDeduper
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
-from liken._strats_library import BaseStrategy
-from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from liken._strats_manager import StratsDict
 
 
 ############################
@@ -20,7 +20,7 @@ from liken._strats_manager import StratsDict
 
 @pytest.fixture
 def mock_strategy():
-    strat = Mock(spec=BaseStrategy)
+    strat = Mock(spec=BaseDeduper)
     strat.set_frame.return_value = strat
     strat.canonicalizer.return_value = "df_out"
     return strat
@@ -157,10 +157,12 @@ def test_process_partition_empty_partition_returns_empty(mock_dedupe):
 @patch("liken.dedupe.Dedupe")
 def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
-    dp_instance = Mock()
-    dp_instance.canonicalize.return_value = ["out"]
+    instance = Mock()
+    instance.apply.return_value = instance
+    instance.canonicalize.return_value = instance
+    instance.collect.return_value = ["out"]
 
-    mock_dedupe._from_rows.return_value = dp_instance
+    mock_dedupe._from_rows.return_value = instance
 
     result = list(
         SparkExecutor._process_partition(
@@ -175,11 +177,12 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
     )
 
     mock_dedupe._from_rows.assert_called_once_with([row])
-    dp_instance.apply.assert_called_once()
-    dp_instance.canonicalize.assert_called_once_with(
+    instance.apply.assert_called_once()
+    instance.canonicalize.assert_called_once_with(
         "address",
         keep="last",
         drop_duplicates=False,
         id="id",
     )
+    instance.collect.assert_called_once()
     assert result == ["out"]

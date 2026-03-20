@@ -53,9 +53,7 @@ def test_matrix_exact_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    lk = Dedupe(df)
-    lk.apply(exact())
-    df_deduped = lk.canonicalize("address", id="id")
+    df_deduped = Dedupe(df).apply(exact()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
 
@@ -65,9 +63,7 @@ def test_matrix_isna_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    lk = Dedupe(df)
-    lk.apply(isna())
-    df_deduped = lk.canonicalize("address", id="id")
+    df_deduped = Dedupe(df).apply(isna()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
 
@@ -77,8 +73,6 @@ def test_matrix_notna_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    lk = Dedupe(df)
-    lk.apply(~isna())
-    df_deduped = lk.canonicalize("address", id="id")
+    df_deduped = Dedupe(df).apply(~isna()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 2, 3]

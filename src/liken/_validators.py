@@ -18,7 +18,7 @@ from liken._constants import INVALID_KEEP
 from liken._constants import INVALID_SPARK
 from liken._constants import INVALID_STRAT
 from liken._constants import SUPPORTED_DFS
-from liken._strats_library import BaseStrategy
+from liken._dedupers import BaseDeduper
 from liken._types import Columns
 from liken._types import UserDataFrame
 
@@ -44,12 +44,12 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return keep
 
 
-def validate_strat_arg(strat: BaseStrategy) -> BaseStrategy:
-    """Validates that the given 'strategy' is in fact a `BaseStrategy`.
+def validate_strat_arg(strat: BaseDeduper) -> BaseDeduper:
+    """Validates that the given 'strategy' is in fact a `BaseDeduper`.
 
     As used by the strategy manager
     """
-    if not isinstance(strat, BaseStrategy):
+    if not isinstance(strat, BaseDeduper):
         raise TypeError(INVALID_STRAT.format(type(strat).__name__))
     return strat
 
