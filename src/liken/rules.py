@@ -1,20 +1,19 @@
 from liken._rules import On
 from liken._rules import Pipeline
+from liken._rules import Builder
+from liken._processors import Processor
 from liken._types import Columns
 
 
 # PUBLIC ON API:
 
+def builder(processors: Processor | list[Processor] = []) -> Builder:
+    """TODO"""
+    return Builder(processors)
 
 def pipeline(*dedupers) -> Pipeline:
     """TODO"""
     return Pipeline(*dedupers)
-
-
-def step():
-    """TODO"""
-    pass
-
 
 def on(columns: Columns, /) -> On:
     """Unit container for a single strategy in the Pipeline API.

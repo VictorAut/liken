@@ -12,6 +12,7 @@ from liken._dedupers import PredicateDedupers
 from liken._exceptions import InvalidStrategyError
 from liken._registry import registry
 from liken._types import Columns
+from liken._processors import Processor
 
 
 # STRATS RULES CONFIG
@@ -62,7 +63,9 @@ class Pipeline(tuple):
 
         for i, item in enumerate(strategies):
             if not isinstance(item, On):
-                raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
+                raise InvalidStrategyError(
+                    INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__)
+                )
 
         return super().__new__(cls, strategies)
 
@@ -114,14 +117,17 @@ class On:
     def str_len(self, *args, **kwargs) -> On:
         return self.__getattr__("str_len")(*args, **kwargs)
 
-    def __init__(self, columns: Columns):
+    def __init__(self, columns: Columns, processors: Processor | list[Processor] = []):
 
         self._columns = columns
-        self._strats: list[tuple[Columns, BaseDeduper]] = []
+        self._dedupers: list[tuple[Columns, BaseDeduper]] = []
+        self._processors: list[Processor] = (
+            [processors] if isinstance(processors, Processor) else processors
+        )
 
     def __and__(self, other: On) -> Self:
         """Combine multiple On instances with AND."""
-        self._strats.extend(other._strats)
+        self._dedupers.extend(other._dedupers)
         return self
 
     def __invert__(self) -> On:
@@ -132,10 +138,10 @@ class On:
         Where the inversion get's propagated to act on isna().
         """
 
-        columns, strat = self._strats[0]
+        columns, strat = self._dedupers[0]
 
         new_on = On(columns)
-        new_on._strats = [(columns, ~strat)]
+        new_on._dedupers = [(columns, ~strat)]
         return new_on
 
     def __getattr__(self, attr):
@@ -153,24 +159,26 @@ class On:
 
         def wrapper(*args, **kwargs):
             strat = func(*args, **kwargs)
-            self._strats = [(self._columns, strat)]
+            self._dedupers = [(self._columns, strat)]
             return self
 
         return wrapper
 
     @property
-    def and_strats(self) -> list[tuple[Columns, BaseDeduper]]:
+    def and_dedupers(self) -> list[tuple[Columns, BaseDeduper]]:
         """return strategies, sorted such that binary strategies are first.
         This is used for predication.
         """
-        return sorted(self._strats, key=lambda x: not isinstance(x[1], PredicateDedupers))
+        return sorted(
+            self._dedupers, key=lambda x: not isinstance(x[1], PredicateDedupers)
+        )
 
     @property
     def has_any_binary_strat(self) -> bool:
         """whether or not the Rule set of strategies has at least one
         Binary strategy.
         """
-        return any([isinstance(x[1], PredicateDedupers) for x in self._strats])
+        return any([isinstance(x[1], PredicateDedupers) for x in self._dedupers])
 
     def __str__(self) -> str:
         """string representation
@@ -178,7 +186,7 @@ class On:
         Parses a single On or combinations of On operated with `&`
         """
         rep = ""
-        for cs in self._strats:
+        for cs in self._dedupers:
             column: str = cs[0]
             deduper: str = str(cs[1])
             on = "on"
@@ -187,3 +195,30 @@ class On:
                 on = "~" + on
             rep += f"{on}('{column}').{deduper} & "
         return rep[:-3]
+
+
+class Builder:
+
+    def __init__(self, processors: Processor | list[Processor] = []):
+        self._processors: list[Processor] = (
+            [processors] if isinstance(processors, Processor) else processors
+        )
+        self._dedupers: list[On] = []
+
+    def step(
+        self,
+        dedupers: On | list[On],
+        /,
+        *,
+        processors: Processor | list[Processor] = [],
+    ) -> Self:
+        self._processors: list[Processor] = (
+            [processors] if isinstance(processors, Processor) else processors
+        )
+
+        if isinstance(dedupers, On):
+            self._dedupers.append([dedupers])
+        else:
+            self._dedupers.append(dedupers)
+
+        return self

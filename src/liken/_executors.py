@@ -124,7 +124,7 @@ class LocalExecutor(Executor):
                 if has_any_binary:
                     indices = set()
 
-                    for col, strat in stage.and_strats:
+                    for col, strat in stage.and_dedupers:
                         uf, n = self._build_uf(strat, df, col, predicate=indices)
 
                         components = defaultdict(list)
@@ -143,7 +143,7 @@ class LocalExecutor(Executor):
                 else:
                     ufs = []
 
-                    for col, strat in stage.and_strats:
+                    for col, strat in stage.and_dedupers:
                         uf, n = self._build_uf(strat, df, col)
                         ufs.append(uf)
                     components: MultiComponents = self._get_multi_components(ufs, n)
