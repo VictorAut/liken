@@ -24,7 +24,7 @@ from pyspark.sql import Row
 from pyspark.sql import SparkSession
 
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
-from liken._collections import Rules
+from liken._collections import Pipeline
 from liken._collections import StratsDict
 from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
@@ -58,7 +58,7 @@ class Executor(Protocol[F]):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        strats: StratsDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -74,7 +74,7 @@ class LocalExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        strats: StratsDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -84,10 +84,10 @@ class LocalExecutor(Executor):
 
         Processing is defined according to whether the collections of
         strategies is:
-            - Rules: in which case "and" combinations are allowed
+            - Pipeline: in which case "and" combinations are allowed
             - StratsDict: in which case handles Sequential and Dict API
 
-        For Rules, predication is implemented if an and combination contains at
+        For Pipeline, predication is implemented if an and combination contains at
         least one Binary Deduper. In that case the binary dedupers are proxy
         WHERE filters that propagate a set of dataframe indice positions to the
         next deduper (most likely a threshold deduper, but optionally binary
@@ -116,7 +116,7 @@ class LocalExecutor(Executor):
                     components: SingleComponents = self._get_components(uf, n)
                     df = call_strat(strat, components)
 
-        if isinstance(strats, Rules):
+        if isinstance(strats, Pipeline):
             for stage in strats:
                 has_any_binary: bool = stage.has_any_binary_strat
 
@@ -207,7 +207,7 @@ class SparkExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        strats: StratsDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -245,9 +245,7 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(
-            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
-        )
+        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -258,7 +256,7 @@ class SparkExecutor(Executor):
         *,
         factory: Type[Dedupe],
         partition: Iterator[Row],
-        strats: StratsDict | Rules,
+        strats: StratsDict | Pipeline,
         id: str | None,
         columns: Columns | None,
         drop_duplicates: bool,

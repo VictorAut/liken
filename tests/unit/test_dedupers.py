@@ -8,6 +8,9 @@ from liken import exact
 from liken import fuzzy
 from liken import jaccard
 from liken import lsh
+from liken import str_contains
+from liken import str_endswith
+from liken import str_startswith
 from liken import tfidf
 from liken._dedupers import LSH
 from liken._dedupers import BaseDeduper
@@ -19,9 +22,6 @@ from liken._dedupers import StrContains
 from liken._dedupers import StrEndsWith
 from liken._dedupers import StrStartsWith
 from liken._dedupers import TfIdf
-from liken.rules import str_contains
-from liken.rules import str_endswith
-from liken.rules import str_startswith
 
 
 ############

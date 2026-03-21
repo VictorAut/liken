@@ -6,10 +6,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from liken import Dedupe
-from liken import exact
+import liken as lk
 from liken._constants import CANONICAL_ID
-from liken.rules import isna
 
 
 # CONSTANTS:
@@ -53,7 +51,7 @@ def test_matrix_exact_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    df_deduped = Dedupe(df).apply(exact()).canonicalize("address", id="id").collect()
+    df_deduped = lk.Dedupe(df).apply(lk.exact()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
 
@@ -63,7 +61,7 @@ def test_matrix_isna_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    df_deduped = Dedupe(df).apply(isna()).canonicalize("address", id="id").collect()
+    df_deduped = lk.Dedupe(df).apply(lk.isna()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
 
@@ -73,6 +71,6 @@ def test_matrix_notna_on_na(data, helpers):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    df_deduped = Dedupe(df).apply(~isna()).canonicalize("address", id="id").collect()
+    df_deduped = lk.Dedupe(df).apply(~lk.isna()).canonicalize("address", id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 2, 3]

@@ -2,29 +2,23 @@
 
 from __future__ import annotations
 
-import warnings
 from collections import UserDict
 from copy import deepcopy
-from typing import Self
 from typing import final
-from typing import Protocol
 
 from liken._constants import INVALID_DICT_KEY_MSG
 from liken._constants import INVALID_DICT_MEMBER_MSG
 from liken._constants import INVALID_DICT_VALUE_MSG
 from liken._constants import INVALID_FALLBACK_MSG
-from liken._constants import INVALID_RULE_EMPTY_MSG
-from liken._constants import INVALID_RULE_MEMBER_MSG
 from liken._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
 from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
-import liken._dedupers
-from liken._registry import registry
 from liken._dedupers import BaseDeduper
-from liken._dedupers import PredicateDedupers
-from liken._types import Columns
-from liken._validators import validate_strat_arg
+from liken._exceptions import InvalidStrategyError
+from liken._exceptions import warn
+from liken.rules import On
+from liken.rules import Pipeline
 
 
 # STRATS DICT CONFIG:
@@ -51,159 +45,14 @@ class StratsDict(UserDict):
             value = (value,)
         super().__setitem__(key, value)
 
-
-# STRATS RULES CONFIG
-
-
-class Rules(tuple):
-    """Tuple-like container of strategies.
-
-    Accepts single or multiple strategies where those strategies are passed
-    with the ``on`` function.
-
-    Args:
-        *strategies: comma separated ``on`` strategies, unpacked.
-
-
-    Example:
-        A single strategy is passed:
-
-            from liken import Dedupe, exact
-            from liken.rules import Rules, on
-
-            STRAT = Rules(on("address", exact()))
-
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-
-        Multiple strategies are passed:
-
-            from liken import Dedupe, exact
-            from liken.rules import Rules, on
-
-            STRAT = Rules(
-                on('address', exact()),
-                on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
-            )
-
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-    """
-
-    def __new__(cls, *strategies: On):
-        
-        if len(strategies) == 1 and isinstance(strategies[0], tuple):
-            strategies = strategies[0]
-
-        if not strategies:
-            raise InvalidStrategyError(INVALID_RULE_EMPTY_MSG)
-
-        for i, item in enumerate(strategies):
-            if not isinstance(item, On):
-                raise InvalidStrategyError(INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__))
-
-        return super().__new__(cls, strategies)
-
-@final
-class On:
-    """Unit container for a single strategy in the Rules API"""
-
-    # for IDE autocompletion only!
-    # must be manually maintained
-    # add a new dummy method here upon adding a new deduper.
-    def exact(self, *args, **kwargs) -> On:
-        return self.__getattr__("exact")(*args, **kwargs)
-    def fuzzy(self, *args, **kwargs) -> On:
-        return self.__getattr__("fuzzy")(*args, **kwargs)
-    def tfidf(self, *args, **kwargs) -> On:
-        return self.__getattr__("tfidf")(*args, **kwargs)
-    def lsh(self, *args, **kwargs) -> On:
-        return self.__getattr__("lsh")(*args, **kwargs)
-    def jaccard(self, *args, **kwargs) -> On:
-        return self.__getattr__("jaccard")(*args, **kwargs)
-    def cosine(self, *args, **kwargs) -> On:
-        return self.__getattr__("cosine")(*args, **kwargs)
-    def isin(self, *args, **kwargs) -> On:
-        return self.__getattr__("isin")(*args, **kwargs)
-    def isna(self, *args, **kwargs) -> On:
-        return self.__getattr__("isna")(*args, **kwargs)
-    def str_startswith(self, *args, **kwargs) -> On:
-        return self.__getattr__("str_startswith")(*args, **kwargs)
-    def str_endswith(self, *args, **kwargs) -> On:
-        return self.__getattr__("str_endswith")(*args, **kwargs)
-    def str_contains(self, *args, **kwargs) -> On:
-        return self.__getattr__("str_contains")(*args, **kwargs)
-    def str_len(self, *args, **kwargs) -> On:
-        return self.__getattr__("str_len")(*args, **kwargs)
-
-    def __init__(self, columns: Columns):
-        
-        self._columns = columns
-        self._strats: list[tuple[Columns, BaseDeduper]] = []
-
-    def __and__(self, other: On) -> Self:
-        """Combine multiple On instances with AND."""
-        self._strats.extend(other._strats)
-        return self
-    
-    def __invert__(self) -> On:
-        """Propagate inverstion to the deduper Allows for following syntax:
-        
-        ~on("email").isna()
-        
-        Where the inversion get's propagated to act on isna().
-        """
-
-        columns, strat = self._strats[0]
-
-        new_on = On(columns)
-        new_on._strats = [(columns, ~strat)]
-        return new_on
-
-    def __getattr__(self, attr):
-        """Makes deduper functions available as method calls to On.
-
-        Functions are retrieved from registry. Includes any prior custom
-        dedupers that have been registered. 
-        """
-
-        # don't intercept Python internals
-        if attr.startswith("__"):
-            raise AttributeError(attr)
-
-        func = registry.get(f"{attr}")
-
-        def wrapper(*args, **kwargs):
-            strat = func(*args, **kwargs)
-            self._strats = [(self._columns, strat)]
-            return self
-
-        return wrapper
-        
-
-    @property
-    def and_strats(self) -> list[tuple[Columns, BaseDeduper]]:
-        """return strategies, sorted such that binary strategies are first.
-        This is used for predication.
-        """
-        return sorted(self._strats, key=lambda x: not isinstance(x[1], PredicateDedupers))
-
-    @property
-    def has_any_binary_strat(self) -> bool:
-        """whether or not the Rule set of strategies has at least one
-        Binary strategy.
-        """
-        return any([isinstance(x[1], PredicateDedupers) for x in self._strats])
-
-    def __str__(self) -> str:
-        """string representation
-
-        Parses a single On or combinations of On operated with `&`
-        """
+    def __str__(self):
         rep = ""
-        for cs in self._strats:
-            rep += f"on('{cs[0]}', {str(cs[1])}) & "
-        return rep[:-3]
+        for k, values in self.items():
+            krep = ""
+            for v in values:
+                krep += "\n\t\t" + str(v) + ","
+            rep += f"\n\t'{k}': ({krep[:-1]},\n\t\t),"
+        return "{" + rep + "\n}"
 
 
 # STRATS MANAGER:
@@ -217,7 +66,7 @@ class StrategyManager:
     Supports addition of strategies as part of the three APIs:
     - Sequential
     - Dict
-    - Rules
+    - Pipeline
 
     For Sequential strategies, as instances of `BaseDeduper` are sequentially
     to an idential structure of the Dict API but under a single default
@@ -229,7 +78,7 @@ class StrategyManager:
     """
 
     def __init__(self) -> None:
-        self._strats: StratsDict | Rules = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        self._strats: StratsDict | Pipeline = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
         self.has_applies: bool = False
 
     @property
@@ -237,18 +86,18 @@ class StrategyManager:
         """checks to see if stratgies are loaded under the default key"""
         return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
 
-    def apply(self, strat: BaseDeduper | dict | StratsDict | Rules) -> None:
+    def apply(self, strat: BaseDeduper | dict | StratsDict | Pipeline) -> None:
         """Loads a strategy into the manager
 
         This function currently handles all possible instances of strategy, and
         the implementation achieves this by writing to the strategy dictionary
-        or overwriting the dictionary with `Rules`.
+        or overwriting the dictionary with `Pipeline`.
 
         If the input strat is `BaseDeduper` then "Sequential" API is in use. If
         dict (or StratsDict — even though this is not public) then it is the
-        "Dict" API. Else "Rules" API is in use.
+        "Dict" API. Else "Pipeline" API is in use.
 
-        Note also that as Rules contains On and combinations of On operated
+        Note also that as Pipeline contains On and combinations of On operated
         with & results in self mutation, need deep copy to allow for
         serialization to Spark workers."""
 
@@ -271,20 +120,20 @@ class StrategyManager:
         if isinstance(strat, On):
             strat = (strat,)
 
-        if isinstance(strat, Rules | tuple):
-            if isinstance(self._strats, Rules):
+        if isinstance(strat, Pipeline | tuple):
+            if isinstance(self._strats, Pipeline):
                 warn(WARN_RULES_REPLACES_RULES_MSG)
 
-            # Contents of Rules is mutable!
+            # Contents of Pipeline is mutable!
             # `On` operated on with `&` results in modified `On`
             # Of which only the first one is preserved
             # To guarantee repeated use of the base class, require deepcopy
-            self._strats = Rules(deepcopy(strat))  # type: ignore
+            self._strats = Pipeline(deepcopy(strat))  # type: ignore
             return
 
         raise InvalidStrategyError(INVALID_FALLBACK_MSG.format(type(strat).__name__))
 
-    def get(self) -> StratsDict | Rules:
+    def get(self) -> StratsDict | Pipeline:
         return self._strats
 
     def pretty_get(self) -> None | str:
@@ -294,7 +143,7 @@ class StrategyManager:
         with .apply(), i.e. a string representation of one of:
             - BaseDeduper
             - StratsDict
-            - Rules
+            - Pipeline
         The seuqneital API with numerous additions of BaseStraegy means there
         is not good way to retried this such that is available to "apply". So,
         default to returning it as a list representation.
@@ -302,112 +151,14 @@ class StrategyManager:
         strats = self.get()
 
         if isinstance(strats, StratsDict):
-            # added as BaseDeduper (Sequential API)
             if self.is_sequential_applied:
-                # short-circuit; nothing yet applied.
-                if not strats[SEQUENTIAL_API_DEFAULT_KEY]:
+                deduper: list = strats[SEQUENTIAL_API_DEFAULT_KEY]
+                if not deduper:
                     return None
-
-                rep = ""
-                for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
-                    rep += str(strat) + ",\n\t"
-                return f"[\n\t{rep[:-3]}\n]"
-
-            # Normal dict API
-            rep = ""
-            for k, values in strats.items():
-                krep = ""
-                for v in values:
-                    krep += str(v) + ",\n\t"
-                rep += f"\n\t'{k}': ({krep[:-3]},),"
-            return "{" + rep + "\n}"
-
-        # Rules API
-        if isinstance(strats, tuple):
-            rep = ""
-            for ons in strats:
-                rep += str(ons) + ",\n\t"
-            return f"Rules(\n\t{rep[:-3]}\n)"
+                return str(*deduper)
+            return str(strats)
+        return str(strats)
 
     def reset(self):
         """Reset strategy collection to empty defaultdict"""
         self._strats = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
-
-
-# EXCEPTIONS:
-
-
-@final
-class InvalidStrategyError(TypeError):
-    def __init__(self, msg):
-        super().__init__(msg)
-
-
-# TODO: these warnings come up was "UserWarning". Change.
-def warn(msg: str) -> None:
-    return warnings.warn(msg, category=UserWarning)
-
-
-# PUBLIC ON API:
-
-
-def on(columns: Columns, /) -> On:
-    """Unit container for a single strategy in the Rules API.
-
-    Operates a "strat" on a "columns". Is provided as comma separated members to
-    `Rules`. Allows for "and" chaining via the `&` operator to logically
-    compose strategy "rules".
-
-    The `&` ("and") operator is the only supplier logical combination operator
-    supplier, as the equivalent to "or" is achieved by comma separating `on`
-    calls inside `Rules`. The results of `&` are interepreted as boolean and
-    whereby the left-hand deduplication strategy must agree with the right-hand
-    strategy for any given pairwise combination.
-
-    Args:
-        columns: the label(s) of a column or columns.
-        strat: the strategy to apply.
-
-    Returns:
-        None
-
-    Example:
-        single ``on`` strategy:
-
-            from liken import Dedupe, exact, fuzzy
-            from liken.rules import Rules, on, isna, str_endswith
-
-            on("address", exact())
-
-        Strategies combined with ``&``:
-
-            on("email", fuzzy(threshold=0.95)) & on("email", str_endswith("UK"))
-
-        Strategies can be combined with ``&`` for **different** columns:
-
-            on("email", fuzzy(threshold=0.95)) & on("address", ~isna())
-
-        The above can be read as "deduplicate email only when the address field
-        is not null":
-
-            >>> df # Before
-            +------+-----------+---------------------+
-            | id   |  address  |        email        |
-            +------+-----------+---------------------+
-            |  1   |  london   |  foobar@gmail.com   |
-            |  2   |   paris   |  Foobar@gmail.com   |
-            |  3   |   null    |  fooBar@gmail.com   |
-            +------+-----------+---------------------+
-
-            >>> df # After
-            +------+-----------+---------------------+--------------+
-            | id   |  address  |        email        | canonical_id |
-            +------+-----------+---------------------+--------------+
-            |  1   |  london   |  foobar@gmail.com   |       1      |
-            |  2   |   paris   |  Foobar@gmail.com   |       1      |
-            |  3   |   null    |  fooBar@gmail.com   |       3      |
-            +------+-----------+---------------------+--------------+
-
-        Where the first two rows are now linked via the same canonical_id.
-    """
-    return On(columns)

@@ -14,8 +14,8 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import ClassVar
 from typing import Callable
+from typing import ClassVar
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
@@ -56,9 +56,7 @@ class Base(Protocol):
     with_na_placeholder: bool
 
     def set_frame(self, wdf: LocalDF) -> Self: ...
-    def _gen_similarity_pairs(
-        self, array: pa.Array | pa.Table
-    ) -> Iterator[SimilarPairIndices]: ...
+    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
     def build_union_find(self, columns: Columns) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
@@ -93,9 +91,7 @@ class BaseDeduper(Base):
         self.wdf: LocalDF = wdf
         return self
 
-    def _gen_similarity_pairs(
-        self, array: pa.Array | pa.Table
-    ) -> Iterator[SimilarPairIndices]:
+    def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
 
@@ -106,9 +102,7 @@ class BaseDeduper(Base):
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
-        array: pa.Array | pa.Table = self.wdf.get_array(
-            columns, with_na=self.with_na_placeholder
-        )
+        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
         if predicate:
             # subsets the array on predicate indice list
@@ -144,9 +138,7 @@ class BaseDeduper(Base):
                 rep_index[member] = rep
 
         # for predicated components, default to ith index for non deduplicated rows
-        new_canonicals: list = [
-            canonicals[rep_index.get(i, i)].as_py() for i in range(n)
-        ]
+        new_canonicals: list = [canonicals[rep_index.get(i, i)].as_py() for i in range(n)]
 
         self.wdf.put_col(CANONICAL_ID, new_canonicals)
 
@@ -177,9 +169,7 @@ class SingleColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, str):
-            raise ValueError(
-                "For single column strategies, `columns` must be defined as a string"
-            )
+            raise ValueError("For single column strategies, `columns` must be defined as a string")
 
 
 class CompoundColumnMixin:
@@ -190,9 +180,7 @@ class CompoundColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, tuple):
-            raise ValueError(
-                "For compound columns strategies, `columns` must be defined as a tuple"
-            )
+            raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
 
 
 # EXACT DEDUPER:
@@ -600,9 +588,7 @@ class ThresholdDedupers(BaseDeduper):
         self._threshold = threshold
 
         if not (0 <= threshold < 1):
-            raise ValueError(
-                "The threshold value must be greater or equal to 0 and less than 1"
-            )
+            raise ValueError("The threshold value must be greater or equal to 0 and less than 1")
 
 
 @final
@@ -706,9 +692,7 @@ class TfIdf(
         self._kwargs = kwargs
 
     def _vectorize(self) -> TfidfVectorizer:
-        ngram_range = (
-            (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
-        )
+        ngram_range = (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram
 
         return TfidfVectorizer(
             analyzer="char",
@@ -833,10 +817,7 @@ class Jaccard(
         n = array.num_rows
 
         # Build row sets directly
-        sets = [
-            {col[i].as_py() for col in columns if col[i].as_py() is not None}
-            for i in range(n)
-        ]
+        sets = [{col[i].as_py() for col in columns if col[i].as_py() is not None} for i in range(n)]
 
         for idx in range(n):
             for idy in range(idx + 1, n):
@@ -871,9 +852,7 @@ class Cosine(
     @override
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
 
-        columns = [
-            array[col].to_numpy(zero_copy_only=False) for col in array.column_names
-        ]
+        columns = [array[col].to_numpy(zero_copy_only=False) for col in array.column_names]
         matrix = np.column_stack(columns)
 
         matrix = np.nan_to_num(matrix, nan=0.0)
@@ -1206,10 +1185,10 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
         Taking this into account you may find it best to avoid cosine similarity
         calculations for sparse datasets. Alternatively, you may opt to your
         approach by either preprocessing the Nulls beforehand, or, by
-        limiting yourself to using the `cosine` deduplicator with the `Rules`
+        limiting yourself to using the `cosine` deduplicator with the `Pipeline`
         API using combinations for non null fields, e.g.
 
-            STRAT = Rules(
+            STRAT = Pipeline(
                 on(
                     ("col_1", "col_2", "col_3"),
                     cosine(),
@@ -1255,9 +1234,9 @@ def isna() -> BaseDeduper:
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, isna
+            from liken.rules import Pipeline, on, isna
 
-            STRAT = Rules(on("email", exact()) & on("address", ~isna()))
+            STRAT = Pipeline(on("email", exact()) & on("address", ~isna()))
 
             lk = Dedupe(df)
             lk.apply(STRAT)
@@ -1299,9 +1278,9 @@ def isin(values: Iterable) -> BaseDeduper:
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, isin
+            from liken.rules import Pipeline, on, isin
 
-            STRAT = Rules(on("address", isin(values="london")))
+            STRAT = Pipeline(on("address", isin(values="london")))
 
             lk = Dedupe(df)
             lk.apply(STRAT)
@@ -1352,9 +1331,9 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, isna
+            from liken.rules import Pipeline, on, isna
 
-            STRAT = Rules(on("email", exact()) & on("email", str_len(min_len=10)))
+            STRAT = Pipeline(on("email", exact()) & on("email", str_len(min_len=10)))
 
             lk = Dedupe(df)
             lk.apply(STRAT)
@@ -1403,9 +1382,9 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, str_startswith
+            from liken.rules import Pipeline, on, str_startswith
 
-            STRAT = Rules(
+            STRAT = Pipeline(
                 on("email", exact())
                 & on(
                     "email",
@@ -1460,9 +1439,9 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, str_endswith
+            from liken.rules import Pipeline, on, str_endswith
 
-            STRAT = Rules(
+            STRAT = Pipeline(
                 on("email", exact())
                 & on(
                     "email",
@@ -1523,9 +1502,9 @@ def str_contains(
         Applied to a single column:
 
             from liken import Dedupe, exact
-            from liken.rules import Rules, on, str_contains
+            from liken.rules import Pipeline, on, str_contains
 
-            STRAT = Rules(
+            STRAT = Pipeline(
                 on("email", exact())
                 & on(
                     "email",

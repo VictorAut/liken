@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from liken import exact
+import liken as lk
 from liken._constants import CANONICAL_ID
-from liken.dedupe import Dedupe
 
 
 @pytest.mark.parametrize(
@@ -24,9 +23,9 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
     df = df.repartition(num_partitions, "blocking_key")
 
     strategies = {
-        "address": (exact(),),
-        "email": (exact(),),
+        "address": (lk.exact(),),
+        "email": (lk.exact(),),
     }
-    df = Dedupe(df, spark_session=spark).apply(strategies).canonicalize().collect()
+    df = lk.Dedupe(df, spark_session=spark).apply(strategies).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids

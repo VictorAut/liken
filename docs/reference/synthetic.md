@@ -1,8 +1,8 @@
 ---
-title: "liken.rules"
+title: "liken.synthetic"
 ---
 
-::: liken.rules
+::: liken.synthetic
     options:
       inherited_members: false
       members_order: __all__

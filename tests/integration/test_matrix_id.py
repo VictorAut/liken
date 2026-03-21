@@ -8,8 +8,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from liken import Dedupe
-from liken import exact
+import liken as lk
 from liken._constants import CANONICAL_ID
 
 
@@ -171,8 +170,8 @@ def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, help
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         df = (
-            Dedupe(df, spark_session=spark)
-            .apply(exact())
+            lk.Dedupe(df, spark_session=spark)
+            .apply(lk.exact())
             .canonicalize(SINGLE_COL, id=id)
             .collect()
         )

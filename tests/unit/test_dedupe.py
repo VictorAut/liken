@@ -211,4 +211,4 @@ def test_strats_property_returns_manager_output(mock_sm, dataframe):
 
     dupe = Dedupe(df, spark_session=spark)
     dupe._sm = mock_sm
-    assert dupe.strats == ("strategy1",)
+    assert dupe.explain() == ("strategy1",)

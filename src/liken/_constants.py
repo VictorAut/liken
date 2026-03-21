@@ -75,11 +75,13 @@ INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
     "Cannot apply a 'BaseDeduper' after a strategy mapping (dict) has been set. "
     "Use either individual 'BaseDeduper' instances or a dict of strategies, not both."
 )
-INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
-INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
-INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseDeduper', a dict or 'Rules', got '{}'"
+INVALID_RULE_EMPTY_MSG: Final[str] = "Pipeline cannot be empty"
+INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Pipeline element at index {} is not an instance of On, got '{}'"
+INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseDeduper', a dict or 'Pipeline', got '{}'"
 
 # strategy collection warnings
 
 WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence strategy with a dict strategy"
-WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
+WARN_RULES_REPLACES_RULES_MSG: Final[str] = (
+    "Replacing previously added 'Pipeline' strategy with a new 'Pipeline' strategy"
+)

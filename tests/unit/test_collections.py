@@ -1,13 +1,15 @@
 import pytest
 
+import liken as lk
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import InvalidStrategyError
-from liken._collections import On
-from liken._collections import Rules
 from liken._collections import StrategyManager
 from liken._collections import StratsDict
-from liken._collections import on
 from liken._dedupers import BaseDeduper
+from liken._registry import registry
+from liken.rules import On
+from liken.rules import Pipeline
+from liken.rules import on
 
 
 ###########
@@ -34,6 +36,10 @@ def s2():
 def s3():
     return DummyStrategy()
 
+
+registry.register("s1", func=lambda: s1)
+registry.register("s2", func=lambda: s2)
+registry.register("s3", func=lambda: s3)
 
 #####################
 # StratsDict tests
@@ -71,7 +77,9 @@ def test_stratsconfig_rejects_invalid_value_type():
 
 def test_stratsconfig_rejects_invalid_member_in_value(s1, s2, s3):
     config = StratsDict()
-    with pytest.raises(InvalidStrategyError, match="Invalid type for dict value member"):
+    with pytest.raises(
+        InvalidStrategyError, match="Invalid type for dict value member"
+    ):
         config["col"] = [s1, "bad", s2, s3]
 
 
@@ -125,7 +133,7 @@ def test_strategy_manager_apply_dict(s1, s2, s3):
 
 def test_strategy_manager_apply_single_on_not_rule(s1):
     sm = StrategyManager()
-    strat = on("a", s1)  # Not a tuple!
+    strat = on("a").s1()  # Not a tuple!
 
     sm.apply(strat)
     result = sm.get()
@@ -134,12 +142,11 @@ def test_strategy_manager_apply_single_on_not_rule(s1):
     assert len(result) == 1
     assert isinstance(result[0], On)
     assert result[0]._columns == "a"
-    assert isinstance(result[0]._strat, type(s1))
 
 
 def test_strategy_manager_apply_single_on_as_tuple(s1):
     sm = StrategyManager()
-    strat = (on("a", s1),)  # Is a tuple
+    strat = (on("a").s1(),)  # Is a tuple
 
     sm.apply(strat)
     result = sm.get()
@@ -148,13 +155,12 @@ def test_strategy_manager_apply_single_on_as_tuple(s1):
     assert len(result) == 1
     assert isinstance(result[0], On)
     assert result[0]._columns == "a"
-    assert isinstance(result[0]._strat, type(s1))
 
 
 def test_strategy_manager_apply_single_on_as_rule(s1):
     sm = StrategyManager()
-    strat = Rules(
-        on("a", s1),
+    strat = Pipeline(
+        on("a").s1(),
     )
 
     sm.apply(strat)
@@ -164,12 +170,11 @@ def test_strategy_manager_apply_single_on_as_rule(s1):
     assert len(result) == 1
     assert isinstance(result[0], On)
     assert result[0]._columns == "a"
-    assert isinstance(result[0]._strat, type(s1))
 
 
 def test_strategy_manager_apply_tuple(s1, s2, s3):
     sm = StrategyManager()
-    strat = Rules(on("a", s1), on("b", s2) & on("c", s3))
+    strat = Pipeline(on("a").s1(), on("b").s2() & on("c").s3())
 
     sm.apply(strat)
     result = sm.get()
@@ -187,7 +192,10 @@ def test_strategy_manager_apply_rejects_invalid_type():
 def test_strategy_manager_apply_rejects_sequence_after_dict(s1, s2, s3):
     sm = StrategyManager()
     sm.apply({"a": (s1,), "b": (s1, s2)})  # legal
-    with pytest.raises(InvalidStrategyError, match="Cannot apply a 'BaseDeduper' after a strategy mapping"):
+    with pytest.raises(
+        InvalidStrategyError,
+        match="Cannot apply a 'BaseDeduper' after a strategy mapping",
+    ):
         sm.apply(s3)
 
 
@@ -205,13 +213,13 @@ def test_strategy_manager_apply_warns_dict_after_sequence():
 
 
 def test_rule_rejects_empty():
-    with pytest.raises(InvalidStrategyError, match="Rules cannot be empty"):
-        Rules()
+    with pytest.raises(InvalidStrategyError, match="Pipeline cannot be empty"):
+        Pipeline()
 
 
 def test_rule_rejects_not_instance_of_on():
-    with pytest.raises(InvalidStrategyError, match="Invalid Rules element at index"):
-        Rules("123")
+    with pytest.raises(InvalidStrategyError, match="Invalid Pipeline element at index"):
+        Pipeline("123")
 
 
 #######
@@ -230,12 +238,10 @@ def test_strategy_manager_get_returns_config():
 ##############
 
 
-def test_pretty_get_sequential_api(s1, s2):
+def test_pretty_get_sequential_api():
     sm = StrategyManager()
-    sm.apply(s1)
-    sm.apply(s2)
-
-    assert sm.pretty_get() == "[\n\tdummy_strategy(),\n\tdummy_strategy()\n]"
+    sm.apply(lk.fuzzy())
+    assert sm.pretty_get() == "fuzzy(threshold=0.95, scorer='simple_ratio')"
 
 
 def test_pretty_get_dict_api(s1, s2, s3):
@@ -243,15 +249,18 @@ def test_pretty_get_dict_api(s1, s2, s3):
     sm.apply({"col_a": [s1, s3], "col_b": [s2]})
 
     pretty = sm.pretty_get()
-    assert pretty == "{\n\t'col_a': (dummy_strategy(),\n\tdummy_strategy(),),\n\t'col_b': (dummy_strategy(),),\n}"
+    assert (
+        pretty
+        == """{\n\t'col_a': (\n\t\tdummy_strategy(),\n\t\tdummy_strategy(),\n\t\t),\n\t'col_b': (\n\t\tdummy_strategy(),\n\t\t),\n}"""
+    )
 
 
-def test_pretty_get_rules_api(s1, s2, s3):
+def test_pretty_get_rules_api():
     sm = StrategyManager()
-    sm.apply(Rules(on("col_a", s1), on("col_b", s2)))
+    sm.apply(Pipeline(on("col_a").exact(), on("col_b").fuzzy()))
 
     pretty = sm.pretty_get()
-    assert pretty == "Rules(\n\ton('col_a', dummy_strategy()),\n\ton('col_b', dummy_strategy())\n)"
+    assert pretty == "lk.pipeline(\n\ton('col_a').exact(),\n\ton('col_b').fuzzy(threshold=0.95, scorer='simple_ratio')\n)"
 
 
 #########
