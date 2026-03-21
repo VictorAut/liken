@@ -116,6 +116,7 @@ nav:
   - API Reference:
     - reference/liken.md
     - reference/rules.md
+    - reference/processors.md
     - reference/custom.md
     - reference/synthetic.md
 

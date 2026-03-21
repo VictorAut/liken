@@ -31,6 +31,7 @@ __all__ = [
     "str_len",
     "str_startswith",
     "custom",
+    "processors",
     "rules",
     "synthetic",
 ]
