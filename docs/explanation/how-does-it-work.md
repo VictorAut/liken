@@ -9,7 +9,7 @@ For single node machines, which is to say when the Pandas or Polars backends are
 ``` mermaid
 sequenceDiagram
     participant D as Dedupe
-    participant SM as StrategyManager
+    participant SM as CollectionsManager
     participant E as LocalExecutor
     participant C as Canonicalizer
 

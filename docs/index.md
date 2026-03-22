@@ -33,7 +33,7 @@ title: Liken
 The key features are:
 
 - Near deduplication
-- Ready-to-use deduplication strategies
+- Ready-to-use deduplication methods
 - Record linkage and canonicalization
 - Rules-based deduplication
 - Pandas, Polars and PySpark support

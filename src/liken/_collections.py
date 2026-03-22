@@ -1,4 +1,4 @@
-"""Defines containers for strategies"""
+"""Defines collections of dedupers"""
 
 from __future__ import annotations
 
@@ -15,32 +15,32 @@ from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 from liken._dedupers import BaseDeduper
-from liken._exceptions import InvalidStrategyError
+from liken._exceptions import InvalidDeduperError
 from liken._exceptions import warn
 from liken.rules import On
 from liken.rules import Pipeline
 
 
-# STRATS DICT CONFIG:
+# DICT CONFIG:
 
 
 @final
-class StratsDict(UserDict):
-    """Container for combnations of strategies in the Sequential and Dict APIs
+class DeduplicationDict(UserDict):
+    """Dict collection for dedupers in the Sequential and Dict APIs
 
-    For Sequential API all values (strategies) are added under a default key.
+    For Sequential API all values (dedupers) are added under a default key.
 
     For Dict API column label(s) (i.e. str or tuple) are the keys."""
 
     def __setitem__(self, key, value):
         if not isinstance(key, str | tuple):
-            raise InvalidStrategyError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
+            raise InvalidDeduperError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
         if not isinstance(value, list | tuple | BaseDeduper):
-            raise InvalidStrategyError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
+            raise InvalidDeduperError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
         if not isinstance(value, BaseDeduper):
             for i, member in enumerate(value):
                 if not isinstance(member, BaseDeduper):
-                    raise InvalidStrategyError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
+                    raise InvalidDeduperError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
         else:
             value = (value,)
         super().__setitem__(key, value)
@@ -55,49 +55,48 @@ class StratsDict(UserDict):
         return "{" + rep + "\n}"
 
 
-# STRATS MANAGER:
+# COLLECTIONS MANAGER:
 
 
 @final
-class StrategyManager:
+class CollectionsManager:
     """
-    Manage and validate collection(s) of deduplication strategies.
+    Manage and validate collection(s) of dedupers.
 
-    Supports addition of strategies as part of the three APIs:
+    Supports addition of dedupers as part of the three APIs:
     - Sequential
     - Dict
     - Pipeline
 
-    For Sequential strategies, as instances of `BaseDeduper` are sequentially
+    For Sequential dedupers, as instances of `BaseDeduper` are sequentially
     to an idential structure of the Dict API but under a single default
     dictionary key. Keys are columns names, and values are iterables of
-    strategies.
+    dedupers.
 
     Raises:
-        InvalidStrategyError for any misconfigured strategy
+        InvalidDeduperError for any misconfigured addition of a deduper.
     """
 
     def __init__(self) -> None:
-        self._strats: StratsDict | Pipeline = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        self._dedupers: DeduplicationDict | Pipeline = DeduplicationDict({SEQUENTIAL_API_DEFAULT_KEY: []})
         self.has_applies: bool = False
 
     @property
     def is_sequential_applied(self) -> bool:
-        """checks to see if stratgies are loaded under the default key"""
-        if isinstance(self._strats, Pipeline):
+        """checks to see if any dedupers exist in the default key"""
+        if isinstance(self._dedupers, Pipeline):
             return False
-        return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
-        
+        return set(self._dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}
 
-    def apply(self, strat: BaseDeduper | dict | StratsDict | Pipeline) -> None:
-        """Loads a strategy into the manager
+    def apply(self, deduper: BaseDeduper | dict | DeduplicationDict | Pipeline) -> None:
+        """Loads a deduper / collection of dedupers into the manager
 
-        This function currently handles all possible instances of strategy, and
-        the implementation achieves this by writing to the strategy dictionary
-        or overwriting the dictionary with `Pipeline`.
+        This function currently handles all possible instances of dedupers, and
+        the implementation achieves this by writing to the deduplication
+        dictionary or overwriting the dictionary with `Pipeline`.
 
-        If the input strat is `BaseDeduper` then "Sequential" API is in use. If
-        dict (or StratsDict — even though this is not public) then it is the
+        If the input deduper is `BaseDeduper` then "Sequential" API is in use. If
+        dict (or DeduplicationDict — even though this is not public) then it is the
         "Dict" API. Else "Pipeline" API is in use.
 
         Note also that as Pipeline contains On and combinations of On operated
@@ -108,56 +107,56 @@ class StrategyManager:
         # if not, used by `Dedupe` to include an exact deduper by default
         self.has_applies = True
 
-        if isinstance(strat, BaseDeduper):
+        if isinstance(deduper, BaseDeduper):
             if not self.is_sequential_applied:
-                raise InvalidStrategyError(INVALID_SEQUENCE_AFTER_DICT_MSG)
-            self._strats[SEQUENTIAL_API_DEFAULT_KEY].append(strat)
+                raise InvalidDeduperError(INVALID_SEQUENCE_AFTER_DICT_MSG)
+            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)
             return
 
-        if isinstance(strat, dict | StratsDict):
-            if self._strats[SEQUENTIAL_API_DEFAULT_KEY]:
+        if isinstance(deduper, dict | DeduplicationDict):
+            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
                 warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
-            self._strats = StratsDict(strat)
+            self._dedupers = DeduplicationDict(deduper)
             return
 
-        if isinstance(strat, On):
-            strat = Pipeline.step(strat)
+        if isinstance(deduper, On):
+            deduper = Pipeline().step(deduper)
 
-        if isinstance(strat, Pipeline):
-            if isinstance(self._strats, Pipeline):
+        if isinstance(deduper, Pipeline):
+            if isinstance(self._dedupers, Pipeline):
                 warn(WARN_RULES_REPLACES_RULES_MSG)
             # required for spark serialization
-            self._strats = deepcopy(strat)  # type: ignore
+            self._dedupers = deepcopy(deduper)  # type: ignore
             return
 
-        raise InvalidStrategyError(INVALID_FALLBACK_MSG.format(type(strat).__name__))
+        raise InvalidDeduperError(INVALID_FALLBACK_MSG.format(type(deduper).__name__))
 
-    def get(self) -> StratsDict | Pipeline:
-        return self._strats
+    def get(self) -> DeduplicationDict | Pipeline:
+        return self._dedupers
 
     def pretty_get(self) -> None | str:
-        """string representation of strats.
+        """string representation of dedupers.
 
         Output string must be formatted approximately such that it can be used
         with .apply(), i.e. a string representation of one of:
             - BaseDeduper
-            - StratsDict
+            - DeduplicationDict
             - Pipeline
         The seuqneital API with numerous additions of BaseStraegy means there
         is not good way to retried this such that is available to "apply". So,
         default to returning it as a list representation.
         """
-        strats = self.get()
+        dedupers = self.get()
 
-        if isinstance(strats, StratsDict):
+        if isinstance(dedupers, DeduplicationDict):
             if self.is_sequential_applied:
-                deduper: list = strats[SEQUENTIAL_API_DEFAULT_KEY]
+                deduper: list = dedupers[SEQUENTIAL_API_DEFAULT_KEY]
                 if not deduper:
                     return None
                 return str(*deduper)
-            return str(strats)
-        return str(strats)
+            return str(dedupers)
+        return str(dedupers)
 
     def reset(self):
-        """Reset strategy collection to empty defaultdict"""
-        self._strats = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        """Reset collection to empty defaultdict"""
+        self._dedupers = DeduplicationDict({SEQUENTIAL_API_DEFAULT_KEY: []})

@@ -1,11 +1,13 @@
-"""Defines Deduplication strategies:
+"""Defines Deduplication classes:
 
-Strategies are either:
-    - "Threshold" strategies: deduplication is decided according to a
+E.g. "fuzzy"
+
+Dedupers are either:
+    - "Threshold" dedupers: deduplication is decided according to a
         smiilarity. Routed through main package.
-    - "Binary" strategies: deduplication is decided according to discrete
+    - "Predicate" dedupers: deduplication is decided according to discrete
         outcomes. As this choice is fit for combinations using "and"
-        operations, this is routed via the "rules" sub-package.
+        operations, this is routed via the "rules" module.
 """
 
 from __future__ import annotations
@@ -69,7 +71,7 @@ class Base(Protocol):
     def validate(self, columns: Columns) -> None: ...
 
 
-# BASE STRATEGY:
+# BASE DEDUPER:
 
 
 class BaseDeduper(Base):
@@ -163,24 +165,24 @@ class BaseDeduper(Base):
 
 class SingleColumnMixin:
     """
-    Validates the column type of deduplication strategy when passed in the
-    columns arg. Only single strings allowed.
+    Validates the type of `columns` param as passed to the deduper.
+    Only single strings allowed.
     """
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, str):
-            raise ValueError("For single column strategies, `columns` must be defined as a string")
+            raise ValueError("For single column dedupers, `columns` must be defined as a string")
 
 
 class CompoundColumnMixin:
     """
-    Validates the column type of deduplication strategy when passed in the
-    columns arg. Only tuples of strings allowed
+    Validates the column of of `columns` param as passed to the deduper.
+    Only tuples of strings allowed.
     """
 
     def validate(self, columns: Columns) -> None:
         if not isinstance(columns, tuple):
-            raise ValueError("For compound columns strategies, `columns` must be defined as a tuple")
+            raise ValueError("For compound columns dedupers, `columns` must be defined as a tuple")
 
 
 # EXACT DEDUPER:
@@ -230,13 +232,13 @@ class Exact(BaseDeduper):
         return self.str_representation(self._NAME)
 
 
-# BINARY DEDUPERS:
+# PREDICATE DEDUPERS:
 
 
 class PredicateDedupers(BaseDeduper):
     """
-    Defines Binary "choice" deduplications, i.e. those that produce a discrete
-    outcome. Any pair of values that satisfies the conditions of a Binary
+    Defines predicate, "choice", deduplications, i.e. those that produce a discrete
+    outcome. Any pair of values that satisfies the conditions of a predicate
     Deduper will be deduplicated.
 
     For example, if StrStartsWith is used for all strings starting with "a",
@@ -288,12 +290,12 @@ class PredicateDedupers(BaseDeduper):
                     yield i, j
 
     def __invert__(self):
-        return _NegatedBinaryDeduper(self)
+        return _NegatedPredicateDeduper(self)
 
 
-class _NegatedBinaryDeduper(PredicateDedupers):
+class _NegatedPredicateDeduper(PredicateDedupers):
     """
-    Composable deduplication instance that inverts the results of any binary
+    Composable deduplication instance that inverts the results of any predicate
     deduper (except IsNA deduper which follows it's own inversion logic).
     """
 
@@ -373,7 +375,7 @@ class _NotNA(
     """
     Deduplicate all non-NA / non-null values.
 
-    "not a match" for not null does not hold like it does for other Binary
+    "not a match" for not null does not hold like it does for other predicate
     Dedupers.
     """
 
@@ -884,7 +886,7 @@ def exact() -> BaseDeduper:
 
     Can deduplicate a single column, or multiple columns.
 
-    If no strategies are applied to `Dedupe`, `exact` is applied by default.
+    If no dedupers are applied to `Dedupe`, `exact` is applied by default.
 
     Returns:
         Instance of `BaseDeduper`..
@@ -892,17 +894,23 @@ def exact() -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply(exact())
-            df = lk.drop_duplicates("address")
+            df = (
+                lk.dedupe(df)
+                .apply(exact())
+                .drop_duplicates("address")
+                .collect()
+            )
 
         Applied to multiple columns:
 
-            lk = Dedupe(df)
-            lk.apply(exact())
-            df = lk.drop_duplicates(("address", "email"))
+            df = (
+                lk.dedupe(df)
+                .apply(exact())
+                .drop_duplicates(("address", "email"))
+                .collect()
+            )
 
         E.g.
 
@@ -923,10 +931,10 @@ def exact() -> BaseDeduper:
             |  2   |   null    |  foobar@gmail.com   |
             +------+-----------+---------------------+
 
-        By default `exact` is used when no stratgies are explicitely applied:
+        By default `exact` is used when no dedupers are explicitely applied:
 
-            lk = Dedupe(df)
-            lk.drop_duplicates("address")   # OK, still dedupes.
+            # OK, still dedupes.
+            df = Dedupe(df).drop_duplicates("address").collect()
     """
     return Exact()
 
@@ -950,11 +958,14 @@ def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, fuzzy
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply({"address": fuzzy(threshold=0.8)})
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply({"address": fuzzy(threshold=0.8)})
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
         E.g.
 
@@ -1012,11 +1023,14 @@ def tfidf(
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, tfidf
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply({"address": tfidf(threshold=0.8, ngram=1)})
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply({"address": tfidf(threshold=0.8, ngram=1)})
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
         E.g.
 
@@ -1073,11 +1087,14 @@ def lsh(
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, lsh
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply({"address": lsh(threshold=0.8, ngram=1)})
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply({"address": lsh(threshold=0.8, ngram=1)})
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
         E.g.
 
@@ -1119,13 +1136,16 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
     Example:
         Applied to multiple columns:
 
-            from liken import Dedupe, jaccard
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply(jaccard())
-            df = lk.drop_duplicates(
-                ("account", "status", "country", "property"),
-                keep="first",
+            df = (
+                lk.dedupe(df)
+                .apply(jaccard())
+                .drop_duplicates(
+                    ("account", "status", "country", "property"),
+                    keep="first",
+                )
+                .collect()
             )
 
         E.g.
@@ -1186,16 +1206,7 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
         calculations for sparse datasets. Alternatively, you may opt to your
         approach by either preprocessing the Nulls beforehand, or, by
         limiting yourself to using the `cosine` deduplicator with the `Pipeline`
-        API using combinations for non null fields, e.g.
-
-            STRAT = Pipeline(
-                on(
-                    ("col_1", "col_2", "col_3"),
-                    cosine(),
-                )
-                #
-                & on("col_1", ~isna()),
-            )
+        API using combinations for non null fields.
 
     Warning:
         Normalization is a standard approach to ensure that the results of
@@ -1205,13 +1216,16 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
     Example:
         Applied to multiple columns:
 
-            from liken import Dedupe, cosine
+            import liken as lk
 
-            lk = Dedupe(df)
-            lk.apply(cosine())
-            df = lk.drop_duplicates(
-                ("surface are", "ceiling height", "building age", "num_rooms"),
-                keep="first",
+            df = (
+                lk.dedupe(df)
+                .apply(cosine())
+                .drop_duplicates(
+                    ("surface are", "ceiling height", "building age", "num_rooms"),
+                    keep="first",
+                )
+                .collect()
             )
     """
     return Cosine(threshold=threshold)
@@ -1233,14 +1247,21 @@ def isna() -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, isna
+            import liken as lk
 
-            STRAT = Pipeline(on("email", exact()) & on("address", ~isna()))
+            pipeline = lk.rules.pipeline().step(
+                [
+                    lk.rules.on("email").exact(),
+                    ~lk.rules.on("address").isna(),
+                ]
+            )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1277,14 +1298,18 @@ def isin(values: Iterable) -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, isin
+            import liken as lk
 
-            STRAT = Pipeline(on("address", isin(values="london")))
+            pipeline = lk.rules.pipeline().step(
+                lk.rules.on("address").isin(values="london")
+            )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1330,14 +1355,21 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, isna
+            import liken as lk
 
-            STRAT = Pipeline(on("email", exact()) & on("email", str_len(min_len=10)))
+            pipeline = lk.rules.pipeline().step(
+                [
+                    lk.rules.on("email").exact(),
+                    lk.rules.on("email").str_len(min_len=10),
+                ]
+            )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.drop_duplicates(keep="last")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .drop_duplicates(keep="last")
+                .collect()
+            )
 
             >>> df # before
             +------+-----------+---------------------+
@@ -1381,20 +1413,21 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, str_startswith
+            import liken as lk
 
-            STRAT = Pipeline(
-                on("email", exact())
-                & on(
-                    "email",
-                    str_startswith(pattern="f", case=True),
-                )
+            pipeline = lk.rules.pipeline().step(
+                [
+                    lk.rules.on("email").exact(),
+                    lk.rules.on("email").str_startswith(pattern="f", case=True),
+                ]
             )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.drop_duplicates(keep="first")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .drop_duplicates(keep="first")
+                .collect()
+            )
 
             >>> df
             +------+-----------+---------------------+
@@ -1438,20 +1471,21 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, str_endswith
+            import liken as lk
 
-            STRAT = Pipeline(
-                on("email", exact())
-                & on(
-                    "email",
-                    str_endswith(pattern=".com", case=False),
-                )
+            pipeline = lk.rules.pipeline().step(
+                [
+                    lk.rules.on("email").exact(),
+                    lk.rules.on("email").str_endswith(pattern=".com", case=False),
+                ]
             )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.drop_duplicates(keep="first")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .drop_duplicates(keep="first")
+                .collect()
+            )
 
             >>> df
             +------+-----------+---------------------+
@@ -1501,20 +1535,21 @@ def str_contains(
     Example:
         Applied to a single column:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on, str_contains
+            import liken as lk
 
-            STRAT = Pipeline(
-                on("email", exact())
-                & on(
-                    "email",
-                    str_contains(pattern=r"05\\d{3}", regex=True),
-                )
+            pipeline = lk.rules.pipeline().step(
+                [
+                    lk.rules.on("email").exact(),
+                    lk.rules.on("email").str_contains(pattern=r"05\\d{3}", regex=True),
+                ]
             )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-            df = lk.canonicalize(keep="first")
+            df = (
+                lk.dedupe(df)
+                .apply(pipeline)
+                .canonicalize(keep="first")
+                .collect()
+            )
 
             >>> df
             +------+-----------------------------+

@@ -1,4 +1,4 @@
-"""Narrow integration tests for specific behaviour of individual stratgies"""
+"""Narrow integration tests for creation of canonical ID column"""
 
 from __future__ import annotations
 
@@ -170,7 +170,7 @@ def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, help
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         df = (
-            lk.Dedupe(df, spark_session=spark)
+            lk.dedupe(df, spark_session=spark)
             .apply(lk.exact())
             .canonicalize(SINGLE_COL, id=id)
             .collect()

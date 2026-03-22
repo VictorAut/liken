@@ -1,5 +1,5 @@
 ---
-title: Types of Strategies
+title: Types of Dedupers
 ---
 
 ## Continuous vs Discrete

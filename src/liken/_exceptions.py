@@ -6,7 +6,7 @@ from typing import final
 
 
 @final
-class InvalidStrategyError(TypeError):
+class InvalidDeduperError(TypeError):
     def __init__(self, msg):
         super().__init__(msg)
 

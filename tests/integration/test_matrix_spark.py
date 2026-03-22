@@ -22,10 +22,10 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
 
     df = df.repartition(num_partitions, "blocking_key")
 
-    strategies = {
+    dedupers = {
         "address": (lk.exact(),),
         "email": (lk.exact(),),
     }
-    df = lk.Dedupe(df, spark_session=spark).apply(strategies).canonicalize().collect()
+    df = lk.dedupe(df, spark_session=spark).apply(dedupers).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids

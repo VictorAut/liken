@@ -9,14 +9,14 @@ from liken._registry import registry
 
 
 def register(f: PairGenerator) -> Callable:
-    """Register a custom function as a deduplication strategy.
+    """Register a custom function as a deduper.
 
-    Custom functions can be registered for use as strategies recognised by the
+    Custom functions can be registered for use as dedupers recognised by the
     ``Dedupe`` class. Use ``register`` as a decorator around the custom callable.
 
     The custom callable must accept a generic array-like object representing the
     contents of one or more DataFrame columns. The concrete column backing this
-    array is resolved only when the strategy is applied.
+    array is resolved only when the deduper is applied.
 
     The expected function signature is:
 
@@ -32,26 +32,28 @@ def register(f: PairGenerator) -> Callable:
 
     Raises:
         TypeError: If any positional arguments are used when calling the
-            registered strategy.
+            registered deduper.
 
     Example:
-        Registering a custom strategy
+        Registering a custom deduper
 
-            from liken import Dedupe
-            from liken.custom import register
+            import liken as lk
 
-            @register
+            @lk.custom.register
             def custom_deduper(array, **kwargs):
                 # your code here
                 yield ...
 
-            lk = Dedupe(df)
-            lk.apply(custom_deduper(**kwargs))
-            df = lk.drop_duplicates("address")
+            df = (
+                lk.dedupe(df)
+                .apply(custom_deduper(**kwargs))
+                .drop_duplicates("address")
+                .collect()
+            )
 
-        E.g. the following Custom exact string-length deduplication strategy:
+        E.g. the following Custom exact string-length deduplication deduper:
 
-            @register
+            @lk.custom.register
             def eq_str_len(array):
                 n = len(array)
                 for i in range(n):
@@ -59,11 +61,14 @@ def register(f: PairGenerator) -> Callable:
                         if len(array[i]) == len(array[j]):
                             yield i, j
 
-        Applying the strategy:
+        Applying the deduper:
 
-            lk = Dedupe(df)
-            lk.apply(eq_str_len())  # array arg implicitely passed to Dedupe!
-            lk.drop_duplicates("address")
+            df = (
+                lk.dedupe(df)
+                .apply(eq_str_len()) # array arg implicitely passed
+                .drop_duplicates("address")
+                .collect()
+            )
 
         Before:
 
@@ -86,8 +91,8 @@ def register(f: PairGenerator) -> Callable:
 
         Keyword-only enforcement:
 
-            lk.apply(my_func(is_upper_caps=True))  # OK
-            lk.apply(my_func(True))                # Raises TypeError
+            Deduper(df).apply(my_func(is_upper_caps=True))  # OK
+            Deduper(df).apply(my_func(True))                # Raises TypeError
     """
 
     @wraps(f)

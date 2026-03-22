@@ -1,4 +1,5 @@
-"""Narrow integration tests for specific behaviour of individual stratgies"""
+"""Narrow integration tests for specific behaviour of individual dedupers
+when used as and combinations in a pipeline step."""
 
 from __future__ import annotations
 
@@ -69,7 +70,7 @@ def test_matrix_and(step, expected_canonical_id, dataframe, helpers):
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
+        lk.dedupe(df, spark_session=spark_session)
         .apply(lk.rules.pipeline().step(step))
         .canonicalize()
         .collect()

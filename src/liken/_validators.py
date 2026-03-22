@@ -13,10 +13,10 @@ from pyspark.sql import SparkSession
 from liken._constants import INVALID_COLUMNS_EMPTY
 from liken._constants import INVALID_COLUMNS_NOT_NONE
 from liken._constants import INVALID_COLUMNS_REPEATED
+from liken._constants import INVALID_DEDUPER
 from liken._constants import INVALID_DF
 from liken._constants import INVALID_KEEP
 from liken._constants import INVALID_SPARK
-from liken._constants import INVALID_STRAT
 from liken._constants import SUPPORTED_DFS
 from liken._dedupers import BaseDeduper
 from liken._types import Columns
@@ -44,14 +44,14 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return keep
 
 
-def validate_strat_arg(strat: BaseDeduper) -> BaseDeduper:
-    """Validates that the given 'strategy' is in fact a `BaseDeduper`.
+def validate_deduper_arg(deduper: BaseDeduper) -> BaseDeduper:
+    """Validates that the given 'deduper' is in fact a `BaseDeduper`.
 
-    As used by the strategy manager
+    As used by the collections manager
     """
-    if not isinstance(strat, BaseDeduper):
-        raise TypeError(INVALID_STRAT.format(type(strat).__name__))
-    return strat
+    if not isinstance(deduper, BaseDeduper):
+        raise TypeError(INVALID_DEDUPER.format(type(deduper).__name__))
+    return deduper
 
 
 def validate_columns_arg(

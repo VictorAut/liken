@@ -1,4 +1,4 @@
-"""Narrow integration tests for specific behaviour of individual stratgies"""
+"""Narrow integration tests for specific behaviour of individual dedupers"""
 
 from __future__ import annotations
 
@@ -157,17 +157,17 @@ PARAMS = [
 
 
 @pytest.mark.parametrize(
-    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
 )
-def test_matrix_strats_sequence_api(
-    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+def test_matrix_dedupers_sequence_api(
+    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
-        .apply(deduper(**strat_kwarg))
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(deduper(**dedup_kwarg))
         .canonicalize(columns)
         .collect()
     )
@@ -176,17 +176,17 @@ def test_matrix_strats_sequence_api(
 
 
 @pytest.mark.parametrize(
-    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
 )
-def test_matrix_strats_dict_api(
-    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+def test_matrix_dedupers_dict_api(
+    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
-        .apply({columns: [deduper(**strat_kwarg)]})
+        lk.dedupe(df, spark_session=spark_session)
+        .apply({columns: [deduper(**dedup_kwarg)]})
         .canonicalize()
         .collect()
     )
@@ -195,17 +195,17 @@ def test_matrix_strats_dict_api(
 
 
 @pytest.mark.parametrize(
-    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
 )
-def test_matrix_strats_rules_api(
-    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+def test_matrix_dedupers_rules_api(
+    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**strat_kwarg)))
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**dedup_kwarg)))
         .canonicalize()
         .collect()
     )

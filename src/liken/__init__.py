@@ -13,10 +13,12 @@ from liken._dedupers import str_endswith
 from liken._dedupers import str_len
 from liken._dedupers import str_startswith
 from liken._dedupers import tfidf
-from liken.dedupe import Dedupe
+from liken.liken import dedupe
+from liken.liken import Dedupe
 
 
 __all__ = [
+    "dedupe",
     "Dedupe",
     "exact",
     "fuzzy",

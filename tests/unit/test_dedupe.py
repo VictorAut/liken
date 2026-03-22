@@ -6,14 +6,14 @@ import pytest
 
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg
-from liken.dedupe import Dedupe
+from liken.liken import Dedupe
 
 
 # INITIALIZATION:
 
 
-@patch("liken.dedupe.LocalExecutor")
-@patch("liken.dedupe.SparkExecutor")
+@patch("liken.liken.LocalExecutor")
+@patch("liken.liken.SparkExecutor")
 def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe):
     df, spark = dataframe
 
@@ -29,7 +29,7 @@ def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe)
 # No apply still exact dedupes
 
 
-@patch("liken.dedupe.StrategyManager")
+@patch("liken.liken.CollectionsManager")
 def test_no_apply_still_exact_apply_once(
     mock_sm,
     dataframe,
@@ -80,61 +80,61 @@ def test_validate_df_arg():
         Dedupe(Mock())  # mock not specced to a df
 
 
-@patch("liken.dedupe.wrap")
-def test_validate_columns_args_not_used(mock_wrap, strategy_mock):
+@patch("liken.liken.wrap")
+def test_validate_columns_args_not_used(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns cannot be None"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
-        lk.apply(strategy_mock)
+        lk.apply(deduplication_mock)
         lk.canonicalize()  # <-- shouldn't be empty
 
 
-@patch("liken.dedupe.wrap")
-def test_validate_columns_args_not_none(mock_wrap, strategy_mock):
+@patch("liken.liken.wrap")
+def test_validate_columns_args_not_none(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns must be None"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
-        lk.apply({"address": strategy_mock})  # <-- label here
+        lk.apply({"address": deduplication_mock})  # <-- label here
         lk.canonicalize("address")  # <-- so should not be used here
 
 
-@patch("liken.dedupe.wrap")
-def test_validate_columns_args_repeated(mock_wrap, strategy_mock):
+@patch("liken.liken.wrap")
+def test_validate_columns_args_repeated(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="Invalid arg: columns labels cannot be repeated"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
-        lk.apply(strategy_mock)
+        lk.apply(deduplication_mock)
         lk.canonicalize(("email", "email"))  # <-- shouldn't be repeated
 
 
-# StrategyManager
+# CollectionsManager
 
 
-@patch("liken.dedupe.StrategyManager")
-def test_apply_delegates_to_strategy_manager(mock, dataframe, strategy_mock):
+@patch("liken.liken.CollectionsManager")
+def test_apply_delegates_to_collections_manager(mock, dataframe, deduplication_mock):
     df, spark = dataframe
 
     mock_sm = mock.return_value
     dupe = Dedupe(df, spark_session=spark)
-    dupe.apply({"address": strategy_mock})
-    mock_sm.apply.assert_called_once_with({"address": strategy_mock})
+    dupe.apply({"address": deduplication_mock})
+    mock_sm.apply.assert_called_once_with({"address": deduplication_mock})
 
 
 # canonicalize / drop_duplicates
 
 
-@patch("liken.dedupe.LocalExecutor")
-@patch("liken.dedupe.wrap")
-@patch("liken.dedupe.StrategyManager")
+@patch("liken.liken.LocalExecutor")
+@patch("liken.liken.wrap")
+@patch("liken.liken.CollectionsManager")
 def test_canonicalize_calls(
     mock_sm,
     mock_wrap,
     mock_local,
     dataframe,
-    strategy_mock,
+    deduplication_mock,
 ):
 
     df, spark = dataframe
@@ -142,7 +142,7 @@ def test_canonicalize_calls(
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
-    mock_sm.get.return_value = {"address": strategy_mock}
+    mock_sm.get.return_value = {"address": deduplication_mock}
 
     dupe = Dedupe(df, spark_session=spark)
     dupe._executor = mock_executor
@@ -154,7 +154,7 @@ def test_canonicalize_calls(
     mock_executor.execute.assert_called_once_with(
         mock_wrap.return_value,
         columns="address",
-        strats={"address": strategy_mock},
+        dedupers={"address": deduplication_mock},
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
@@ -163,15 +163,15 @@ def test_canonicalize_calls(
     mock_sm.reset.assert_called_once()
 
 
-@patch("liken.dedupe.LocalExecutor")
-@patch("liken.dedupe.wrap")
-@patch("liken.dedupe.StrategyManager")
+@patch("liken.liken.LocalExecutor")
+@patch("liken.liken.wrap")
+@patch("liken.liken.CollectionsManager")
 def test_drop_duplicate_calls(
     mock_sm,
     mock_wrap,
     mock_local,
     dataframe,
-    strategy_mock,
+    deduplication_mock,
 ):
 
     df, spark = dataframe
@@ -179,7 +179,7 @@ def test_drop_duplicate_calls(
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
-    mock_sm.get.return_value = {"address": strategy_mock}
+    mock_sm.get.return_value = {"address": deduplication_mock}
 
     dupe = Dedupe(df, spark_session=spark)
     dupe._executor = mock_executor
@@ -191,7 +191,7 @@ def test_drop_duplicate_calls(
     mock_executor.execute.assert_called_once_with(
         mock_wrap.return_value,
         columns="address",
-        strats={"address": strategy_mock},
+        dedupers={"address": deduplication_mock},
         keep="first",
         drop_duplicates=True,
         drop_canonical_id=True,
@@ -203,12 +203,12 @@ def test_drop_duplicate_calls(
 # Property attributes
 
 
-@patch("liken.dedupe.StrategyManager")
-def test_strats_property_returns_manager_output(mock_sm, dataframe):
+@patch("liken.liken.CollectionsManager")
+def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
     df, spark = dataframe
     mock_sm = mock_sm.return_value
-    mock_sm.pretty_get.return_value = ("strategy1",)
+    mock_sm.pretty_get.return_value = ("deduper1",)
 
     dupe = Dedupe(df, spark_session=spark)
     dupe._sm = mock_sm
-    assert dupe.explain() == ("strategy1",)
+    assert dupe.explain() == ("deduper1",)

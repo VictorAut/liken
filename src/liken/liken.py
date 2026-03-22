@@ -9,8 +9,8 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 
-from liken._collections import StrategyManager
-from liken._collections import StratsDict
+from liken._collections import CollectionsManager
+from liken._collections import DeduplicationDict
 from liken._dataframe import Frame
 from liken._dataframe import wrap
 from liken._dedupers import BaseDeduper
@@ -29,25 +29,27 @@ from liken._validators import validate_spark_arg
 from liken.rules import Pipeline
 
 
-# API:
-
-
 class Dedupe:
-    """Deduplicate a dataframe given a collection of strategies.
+    """Deduplicate a dataframe given a collection of dedupers.
+
+    Apply a deduper as a method call
 
     Args:
         df: The dataframe to deduplicate.
         spark_session: optional spark session if initializing with PySpark
             backend.
 
-    Attributes:
-        df: Returns the dataframe as currently stored in the `Dedupe` instance's
-            strategy manager.
-        strats: Returns the strategies as currently stored in the strategy
-            manager.
+    Returns:
+        An Dedupe object with which to "apply" a deduper
 
     Raises:
         ValueError: Initialized with PySpark DataFrame but no Spark Session.
+
+    Examples:
+
+        import liken as lk
+
+        lk.dedupe(df).apply(exact()).drop_duplicates().collect()
     """
 
     _executor: Executor
@@ -61,7 +63,7 @@ class Dedupe:
     ):
         self._df: DataFrameLike = validate_df_arg(df)
 
-        self._sm = StrategyManager()
+        self._collection = CollectionsManager()
 
         if isinstance(df, spark.DataFrame):
             spark_session = validate_spark_arg(spark_session)
@@ -80,66 +82,50 @@ class Dedupe:
         """
         self = cls.__new__(cls)
         self._df = rows
-        self._sm = StrategyManager()
+        self._collection = CollectionsManager()
         self._executor = LocalExecutor()
         return self
 
-    def apply(self, strategy: BaseDeduper | dict | Pipeline) -> Self:
-        """Apply a strategy or strategies for deduplication.
+    def apply(self, deduper: BaseDeduper | dict | Pipeline) -> Self:
+        """Apply a deduper or dedupers for deduplication.
 
-        Available for inspection when access with attribute `.strats`. Can be
+        Available for inspection when accessed with `.explain()`. Can be
         repetitively called if using the Sequential API. Else apply once using
         the Dict API or Pipeline API.
 
         Args:
-            strategy: The strategy or strategies to apply
+            deduper: The deduper or dedupers to apply
 
         Returns:
             None
 
         Raises:
-            InvalidStrategyError: For any invalid strategy or collection of
-                strategies
+            InvalidDeduperError: For any invalid deduper or collection of
+                dedupers
 
         Example:
             Import and prepate data:
 
-                from liken import Dedupe, exact, tfidf, lsh
+                import liken as lk
 
-                df = ... # get a dataframe
+            Simple API:
 
-            Sequential API:
-
-                lk = Dedupe(df)
-                lk.apply(exact())
-                lk.apply(tfidf()) # Ok, apply more than once
-                df = lk.drop_duplicates("address")
+                lk.dedupe(df).apply(lk.exact())
 
             Dict API:
 
-                lk = Dedupe(df)
-                lk.apply(
-                    {
-                        "address": (exact(), tfidf()),
-                    }
-                )
-                df = lk.drop_duplicates()
+                lk.dedupe(df).apply({"address": (exact(), tfidf())}
 
             Pipeline API:
 
-                from liken.rules import Pipeline, on
-
-                lk = Dedupe(df)
-                lk.apply(
-                    Pipeline(
-                        on("address", exact()),
-                        on("address", tfidf()),
-                    )
+                lk.dedupe(df).apply(
+                    lk.rules.pipeline()
+                    .step(lk.rules.on("address").exact())
+                    .step(lk.rules.on("address").tfidf())
                 )
-                df = lk.drop_duplicates()
 
         """
-        self._sm.apply(strategy)
+        self._collection.apply(deduper)
         return self
 
     def drop_duplicates(
@@ -148,11 +134,10 @@ class Dedupe:
         *,
         keep: Keep = "first",
     ) -> Self:
-        """Drop duplicates by enacting the applied strategies.
+        """Drop duplicates by enacting the applied dedupers.
 
-        If no strategies are explicitely provided, will carry out an exact
+        If no dedupers are explicitely provided, will carry out an exact
         deduplication on any number of columns provided in `columns`.
-        The `.strats` attribute will return None after calling this function.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
@@ -166,30 +151,34 @@ class Dedupe:
         Raises:
             ValueError: Incorrect value to `keep` arg.
             ValueError: Incorrect use of `columns` arg given API used to apply
-                strategies.
-            ValueError: Incorrect use a single column strategy given multiple
+                dedupers.
+            ValueError: Incorrect use a single column deduper given multiple
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        columns: Columns | None = validate_columns_arg(
+            columns, self._collection.is_sequential_applied
+        )
+        wdf: Frame = wrap(
+            self._df, None
+        )  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
-        if not self._sm.has_applies:
-            self._sm.apply(exact())
-        strats: StratsDict | Pipeline = self._sm.get()
+        if not self._collection.has_applies:
+            self._collection.apply(exact())
+        dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
         self._df: DataFrameLike = self._executor.execute(
             wdf,
             columns=columns,
-            strats=strats,
+            dedupers=dedupers,
             keep=keep,
             drop_duplicates=True,
             drop_canonical_id=True,
             id=None,
         ).unwrap()
 
-        self._sm.reset()
+        self._collection.reset()
 
         return self
 
@@ -201,11 +190,10 @@ class Dedupe:
         drop_duplicates: bool = False,
         id: str | None = None,
     ) -> Self:
-        """Canonicalize by enacting the applied strategies.
+        """Canonicalize by enacting the applied dedupers.
 
-        If no strategies are explicitely provided, will carry out an exact
+        If no dedupers are explicitely provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
-        The `.strats` attribute will return None after calling this function.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
@@ -226,40 +214,42 @@ class Dedupe:
         Raises:
             ValueError: Incorrect value to `keep` arg.
             ValueError: Incorrect use of `columns` arg given API used to apply
-                strategies.
-            ValueError: Incorrect use a single column strategy given multiple
+                dedupers.
+            ValueError: Incorrect use of a single column deduper given multiple
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._sm.is_sequential_applied)
+        columns: Columns | None = validate_columns_arg(
+            columns, self._collection.is_sequential_applied
+        )
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
-        if not self._sm.has_applies:
+        if not self._collection.has_applies:
             self.apply(exact())
-        strats: StratsDict | Pipeline = self._sm.get()
+        dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
         self._df: DataFrameLike = self._executor.execute(
             wdf,
             columns=columns,
-            strats=strats,
+            dedupers=dedupers,
             keep=keep,
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
             id=id,
         ).unwrap()
 
-        self._sm.reset()
+        self._collection.reset()
 
         return self
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """TODO"""
+        """Collect results and return the dataframe."""
         return self._df
 
     def explain(self):
         """
-        Returns the dedupers as currently stored in the strategy manager.
+        Returns the dedupers as currently stored in the collections manager.
 
         If no dedupers are stored, returns None. Otherwise, returns a string
         representation of the dedupers collection
@@ -271,7 +261,7 @@ class Dedupe:
 
             >>> pipeline = {"address": (lk.exact(), lk.tfidf()), "email": lk.fuzzy()}
 
-            >>> print(lk.Dedupe(df).apply(pipeline).explain())
+            >>> print(lk.dedupe(df).apply(pipeline).explain())
 
             {
                 'address': (
@@ -283,4 +273,14 @@ class Dedupe:
                     ),
             }
         """
-        return self._sm.pretty_get()
+        return self._collection.pretty_get()
+
+
+# API:
+
+
+def dedupe(
+    df: UserDataFrame, /, *, spark_session: SparkSession | None = None
+) -> Dedupe:
+    """Convenience function for `Dedupe` entrypoint."""
+    return Dedupe(df, spark_session=spark_session)

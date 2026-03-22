@@ -1,4 +1,6 @@
-"""Narrow integration tests for specific behaviour of individual stratgies"""
+"""Narrow integration tests for of individual dedupers under varying 
+parametrisation of `keep`
+"""
 
 from __future__ import annotations
 
@@ -105,7 +107,7 @@ def test_matrix_keep_sequence_api(
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
+        lk.dedupe(df, spark_session=spark_session)
         .apply(deduper(**input_params))
         .canonicalize(columns, keep=keep)
         .collect()
@@ -124,7 +126,7 @@ def test_matrix_keep_dict_api(
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
+        lk.dedupe(df, spark_session=spark_session)
         .apply({columns: [deduper(**input_params)]})
         .canonicalize(keep=keep)
         .collect()
@@ -143,7 +145,7 @@ def test_matrix_keep_rules_api(
     df, spark_session = dataframe
 
     df = (
-        lk.Dedupe(df, spark_session=spark_session)
+        lk.dedupe(df, spark_session=spark_session)
         .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**input_params)))
         .canonicalize(keep=keep)
         .collect()

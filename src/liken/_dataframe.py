@@ -107,7 +107,7 @@ class Frame(Generic[D, S]):
 
         Handles single column and multicolumn. For instances of single column
         the initial column can initially be filled null placeholders, to allow
-        for use by strategies. This is optional so that specific strategies
+        for use by dedupers. This is optional so that specific dedupers
         that do care about nulls are not affected (e.g. IsNA).
         """
         if isinstance(columns, str):
@@ -358,7 +358,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
         returned as a DataFrame even if no canonicalisation has been applied
         yet. For example this would be needed if inspecting the dataframe as
         contained in an instance of Dedupe having yet to call the canonicalizer
-        on the set of strategies"""
+        on the collection of dedupers."""
         if isinstance(self._df, RDD):
             return self._df.toDF()
         return self._df

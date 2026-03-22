@@ -28,7 +28,7 @@ class Custom(ThresholdDedupers):
 
     Overrides _gen_similarity_pairs to accept a custom callable, which albeit
     this class being derived from the ThresholdDeduper class, can nevertheless
-    be implemented such that it produces binary results.
+    be implemented such that it produces predicate results.
     """
 
     def __init__(
