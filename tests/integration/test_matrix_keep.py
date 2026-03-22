@@ -96,17 +96,17 @@ PARAMS = [
 
 
 @pytest.mark.parametrize(
-    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
 )
 def test_matrix_keep_sequence_api(
-    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(strategy(**input_params))
+        .apply(deduper(**input_params))
         .canonicalize(columns, keep=keep)
         .collect()
     )
@@ -115,17 +115,17 @@ def test_matrix_keep_sequence_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
 )
 def test_matrix_keep_dict_api(
-    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply({columns: [strategy(**input_params)]})
+        .apply({columns: [deduper(**input_params)]})
         .canonicalize(keep=keep)
         .collect()
     )
@@ -134,17 +134,17 @@ def test_matrix_keep_dict_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, keep, columns, input_params, expected_canonical_id", PARAMS
+    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
 )
 def test_matrix_keep_rules_api(
-    strategy, keep, columns, input_params, expected_canonical_id, dataframe, helpers
+    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline(getattr(lk.rules.on(columns), strategy.__name__)(**input_params)))
+        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**input_params)))
         .canonicalize(keep=keep)
         .collect()
     )

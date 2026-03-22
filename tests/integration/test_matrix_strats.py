@@ -157,17 +157,17 @@ PARAMS = [
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
 )
 def test_matrix_strats_sequence_api(
-    strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(strategy(**strat_kwarg))
+        .apply(deduper(**strat_kwarg))
         .canonicalize(columns)
         .collect()
     )
@@ -176,17 +176,17 @@ def test_matrix_strats_sequence_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
 )
 def test_matrix_strats_dict_api(
-    strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply({columns: [strategy(**strat_kwarg)]})
+        .apply({columns: [deduper(**strat_kwarg)]})
         .canonicalize()
         .collect()
     )
@@ -195,18 +195,17 @@ def test_matrix_strats_dict_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, strat_kwarg, expected_canonical_id", PARAMS
+    "deduper, columns, strat_kwarg, expected_canonical_id", PARAMS
 )
 def test_matrix_strats_rules_api(
-    strategy, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
+    deduper, columns, strat_kwarg, expected_canonical_id, dataframe, helpers
 ):
 
     df, spark_session = dataframe
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        # .apply(Pipeline(on(columns, strategy(**strat_kwarg))))
-        .apply(lk.rules.pipeline(getattr(lk.rules.on(columns), strategy.__name__)(**strat_kwarg)))
+        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**strat_kwarg)))
         .canonicalize()
         .collect()
     )

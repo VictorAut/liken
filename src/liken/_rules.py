@@ -18,60 +18,60 @@ from liken._processors import Processor
 # STRATS RULES CONFIG
 
 
-class Pipeline(tuple):
-    """Tuple-like container of strategies.
+# class Pipeline(tuple):
+#     """Tuple-like container of strategies.
 
-    Accepts single or multiple strategies where those strategies are passed
-    with the ``on`` function.
+#     Accepts single or multiple strategies where those strategies are passed
+#     with the ``on`` function.
 
-    Args:
-        *strategies: comma separated ``on`` strategies, unpacked.
+#     Args:
+#         *strategies: comma separated ``on`` strategies, unpacked.
 
 
-    Example:
-        A single strategy is passed:
+#     Example:
+#         A single strategy is passed:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on
+#             from liken import Dedupe, exact
+#             from liken.rules import Pipeline, on
 
-            STRAT = Pipeline(on("address", exact()))
+#             STRAT = Pipeline(on("address", exact()))
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
+#             lk = Dedupe(df)
+#             lk.apply(STRAT)
 
-        Multiple strategies are passed:
+#         Multiple strategies are passed:
 
-            from liken import Dedupe, exact
-            from liken.rules import Pipeline, on
+#             from liken import Dedupe, exact
+#             from liken.rules import Pipeline, on
 
-            STRAT = Pipeline(
-                on('address', exact()),
-                on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
-            )
+#             STRAT = Pipeline(
+#                 on('address', exact()),
+#                 on('email', fuzzy(threshold=0.95)) & on('address', ~isna()),
+#             )
 
-            lk = Dedupe(df)
-            lk.apply(STRAT)
-    """
+#             lk = Dedupe(df)
+#             lk.apply(STRAT)
+#     """
 
-    def __new__(cls, *strategies: On):
+#     def __new__(cls, *strategies: On):
 
-        if len(strategies) == 1 and isinstance(strategies[0], tuple):
-            strategies = strategies[0]
+#         if len(strategies) == 1 and isinstance(strategies[0], tuple):
+#             strategies = strategies[0]
 
-        if not strategies:
-            raise InvalidStrategyError(INVALID_RULE_EMPTY_MSG)
+#         if not strategies:
+#             raise InvalidStrategyError(INVALID_RULE_EMPTY_MSG)
 
-        for i, item in enumerate(strategies):
-            if not isinstance(item, On):
-                raise InvalidStrategyError(
-                    INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__)
-                )
+#         for i, item in enumerate(strategies):
+#             if not isinstance(item, On):
+#                 raise InvalidStrategyError(
+#                     INVALID_RULE_MEMBER_MSG.format(i, type(item).__name__)
+#                 )
 
-        return super().__new__(cls, strategies)
+#         return super().__new__(cls, strategies)
 
-    def __str__(self) -> str:
-        inner = ",\n\t".join(str(s) for s in self)
-        return f"lk.pipeline(\n\t{inner}\n)"
+#     def __str__(self) -> str:
+#         inner = ",\n\t".join(str(s) for s in self)
+#         return f"lk.pipeline(\n\t{inner}\n)"
 
 
 @final
@@ -118,17 +118,16 @@ class On:
         return self.__getattr__("str_len")(*args, **kwargs)
 
     def __init__(self, columns: Columns, processors: Processor | list[Processor] = []):
-
-        self._columns = columns
-        self._dedupers: list[tuple[Columns, BaseDeduper]] = []
+        self._columns: Columns = columns
+        self._dedupers: tuple[Columns, BaseDeduper] = ()
         self._processors: list[Processor] = (
             [processors] if isinstance(processors, Processor) else processors
         )
 
-    def __and__(self, other: On) -> Self:
-        """Combine multiple On instances with AND."""
-        self._dedupers.extend(other._dedupers)
-        return self
+    # def __and__(self, other: On) -> Self:
+    #     """Combine multiple On instances with AND."""
+    #     self._dedupers.extend(other._dedupers)
+    #     return self
 
     def __invert__(self) -> On:
         """Propagate inverstion to the deduper Allows for following syntax:
@@ -138,20 +137,20 @@ class On:
         Where the inversion get's propagated to act on isna().
         """
 
-        columns, strat = self._dedupers[0]
+        columns, deduper = self._dedupers
 
         new_on = On(columns)
-        new_on._dedupers = [(columns, ~strat)]
+        new_on._dedupers = (columns, ~deduper)
         return new_on
 
     def __getattr__(self, attr):
-        """Makes deduper functions available as method calls to On.
+        """Make deduper functions available as method calls to On.
 
         Functions are retrieved from registry. Includes any prior custom
         dedupers that have been registered.
         """
 
-        # don't intercept Python internals
+        # No intercept: Python internals
         if attr.startswith("__"):
             raise AttributeError(attr)
 
@@ -159,10 +158,14 @@ class On:
 
         def wrapper(*args, **kwargs):
             strat = func(*args, **kwargs)
-            self._dedupers = [(self._columns, strat)]
+            self._dedupers = (self._columns, strat)
             return self
 
         return wrapper
+
+    @property
+    def dedupers(self) -> tuple[Columns, BaseDeduper]:
+        return self._dedupers
 
     @property
     def and_dedupers(self) -> list[tuple[Columns, BaseDeduper]]:
@@ -185,40 +188,74 @@ class On:
 
         Parses a single On or combinations of On operated with `&`
         """
+        on: str = "lk.rules.on"
+
         rep = ""
-        for cs in self._dedupers:
-            column: str = cs[0]
-            deduper: str = str(cs[1])
-            on = "on"
-            if deduper.startswith("~"):
-                deduper = deduper[1:]
-                on = "~" + on
-            rep += f"{on}('{column}').{deduper} & "
-        return rep[:-3]
+        columns, deduper = self._dedupers
+        deduper: str = str(deduper)
+        if deduper.startswith("~"):
+            deduper = deduper[1:]
+            on = "~" + on
+        rep += f"{on}('{columns}').{deduper}"
+        return rep
 
 
-class Builder:
+class Pipeline:
 
     def __init__(self, processors: Processor | list[Processor] = []):
         self._processors: list[Processor] = (
             [processors] if isinstance(processors, Processor) else processors
         )
-        self._dedupers: list[On] = []
+        self._ons: list[list[On]] = []
+        self._dedupers: list[list[tuple[Columns, BaseDeduper]]] = []
 
     def step(
         self,
-        dedupers: On | list[On],
+        ons: On | list[On],
         /,
         *,
         processors: Processor | list[Processor] = [],
     ) -> Self:
-        self._processors: list[Processor] = (
+
+        processors: list[Processor] = (
             [processors] if isinstance(processors, Processor) else processors
         )
 
-        if isinstance(dedupers, On):
-            self._dedupers.append([dedupers])
-        else:
-            self._dedupers.append(dedupers)
+        if isinstance(ons, On):
+            ons: list[On] = [ons]
+        self._ons.append(ons)
+
+        dedupers = [on.dedupers for on in ons]
+        # predicates sorted to first for "rule predication"
+        dedupers = sorted(
+            dedupers, key=lambda x: not isinstance(x[1], PredicateDedupers)
+        )
+
+        self._dedupers.append(dedupers)
 
         return self
+
+    def __str__(self) -> str:
+        pros = ""
+        if processors := self._processors:
+            pros = "processors=" + f"{[str(p) for p in processors]}"
+
+        inner = ""
+        for step in self._ons:
+            inner += "\n\t\t" + ".step(["
+            for on in step:
+                inner += "\n\t\t\t" + str(on) + ","
+            inner += "\n\t\t" + "])"
+        return f"(\n\tlk.rules.builder({pros}){inner}\n)"
+
+    @staticmethod
+    def has_any_predicate(step: list[tuple[Columns, BaseDeduper]]) -> bool:
+        """whether or not the Rule set of strategies has at least one
+        Binary strategy.
+        """
+        return any([isinstance(x[1], PredicateDedupers) for x in step])
+
+    @property
+    def dedupers(self):
+        return self._dedupers
+    

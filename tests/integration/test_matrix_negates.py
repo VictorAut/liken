@@ -41,7 +41,7 @@ def test_matrix_negates(deduper, expected_canonical_id, dataframe, helpers):
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline(deduper))
+        .apply(lk.rules.pipeline().step(deduper))
         .canonicalize()
         .collect()
     )

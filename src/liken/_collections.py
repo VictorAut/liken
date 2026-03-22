@@ -84,7 +84,10 @@ class StrategyManager:
     @property
     def is_sequential_applied(self) -> bool:
         """checks to see if stratgies are loaded under the default key"""
+        if isinstance(self._strats, Pipeline):
+            return False
         return set(self._strats) == {SEQUENTIAL_API_DEFAULT_KEY}
+        
 
     def apply(self, strat: BaseDeduper | dict | StratsDict | Pipeline) -> None:
         """Loads a strategy into the manager
@@ -118,17 +121,13 @@ class StrategyManager:
             return
 
         if isinstance(strat, On):
-            strat = (strat,)
+            strat = Pipeline.step(strat)
 
-        if isinstance(strat, Pipeline | tuple):
+        if isinstance(strat, Pipeline):
             if isinstance(self._strats, Pipeline):
                 warn(WARN_RULES_REPLACES_RULES_MSG)
-
-            # Contents of Pipeline is mutable!
-            # `On` operated on with `&` results in modified `On`
-            # Of which only the first one is preserved
-            # To guarantee repeated use of the base class, require deepcopy
-            self._strats = Pipeline(deepcopy(strat))  # type: ignore
+            # required for spark serialization
+            self._strats = deepcopy(strat)  # type: ignore
             return
 
         raise InvalidStrategyError(INVALID_FALLBACK_MSG.format(type(strat).__name__))

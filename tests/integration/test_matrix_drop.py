@@ -123,10 +123,10 @@ IDS = [
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
+    "deduper, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
 )
 def test_matrix_strats_sequence_api(
-    strategy,
+    deduper,
     columns,
     drop_kwarg,
     strat_kwarg,
@@ -139,7 +139,7 @@ def test_matrix_strats_sequence_api(
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(strategy(**strat_kwarg))
+        .apply(deduper(**strat_kwarg))
         .canonicalize(columns, **drop_kwarg)
         .collect()
     )
@@ -148,10 +148,10 @@ def test_matrix_strats_sequence_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
+    "deduper, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
 )
 def test_matrix_strats_dict_api(
-    strategy,
+    deduper,
     columns,
     drop_kwarg,
     strat_kwarg,
@@ -164,7 +164,7 @@ def test_matrix_strats_dict_api(
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply({columns: [strategy(**strat_kwarg)]})
+        .apply({columns: [deduper(**strat_kwarg)]})
         .canonicalize(**drop_kwarg)
         .collect()
     )
@@ -173,10 +173,10 @@ def test_matrix_strats_dict_api(
 
 
 @pytest.mark.parametrize(
-    "strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
+    "deduper, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS
 )
 def test_matrix_strats_rules_api(
-    strategy,
+    deduper,
     columns,
     drop_kwarg,
     strat_kwarg,
@@ -189,7 +189,7 @@ def test_matrix_strats_rules_api(
 
     df = (
         lk.Dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline(getattr(lk.rules.on(columns), strategy.__name__)(**strat_kwarg)))
+        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**strat_kwarg)))
         .canonicalize(**drop_kwarg)
         .collect()
     )

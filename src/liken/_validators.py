@@ -63,8 +63,8 @@ def validate_columns_arg(
     Allowed combinations are:
 
     - Sequential API: .canonicalize with columns defined
-    - Dict API: .canonicalize with no columns defined
-    - Pipeline API: .canonicalize with no columns defined
+    - Dict API: .canonicalize with NO columns defined
+    - Pipeline API: .canonicalize with NO columns defined
 
     Any other combination/repetion raises a value error
     """

@@ -117,14 +117,14 @@ class LocalExecutor(Executor):
                     df = call_strat(strat, components)
 
         if isinstance(strats, Pipeline):
-            for stage in strats:
-                has_any_binary: bool = stage.has_any_binary_strat
+            for stage in strats.dedupers:
+                has_any_binary: bool = strats.has_any_predicate(stage)
 
                 # predication only if at least one binary strategy
                 if has_any_binary:
                     indices = set()
 
-                    for col, strat in stage.and_dedupers:
+                    for col, strat in stage:
                         uf, n = self._build_uf(strat, df, col, predicate=indices)
 
                         components = defaultdict(list)
@@ -143,7 +143,7 @@ class LocalExecutor(Executor):
                 else:
                     ufs = []
 
-                    for col, strat in stage.and_dedupers:
+                    for col, strat in stage:
                         uf, n = self._build_uf(strat, df, col)
                         ufs.append(uf)
                     components: MultiComponents = self._get_multi_components(ufs, n)
