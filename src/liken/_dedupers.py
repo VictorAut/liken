@@ -120,7 +120,6 @@ class BaseDeduper(Base):
         array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
         array: pa.Array | pa.Table = self.preprocess(array, preprocessors)
-        print(array)
 
         if predicate:
             # subsets the array on predicate indice list
