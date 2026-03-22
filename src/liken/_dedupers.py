@@ -39,6 +39,7 @@ from typing_extensions import override
 
 from liken._constants import CANONICAL_ID
 from liken._registry import registry
+from liken._preprocessors import Preprocessor
 
 
 if TYPE_CHECKING:
@@ -69,6 +70,7 @@ class Base(Protocol):
     ) -> LocalDF: ...
     def str_representation(self, name: str) -> str: ...
     def validate(self, columns: Columns) -> None: ...
+    def preprocess() -> pa.Array | pa.Table: ...
 
 
 # BASE DEDUPER:
@@ -96,15 +98,29 @@ class BaseDeduper(Base):
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
+    
+    @staticmethod
+    def preprocess(array: pa.Array | pa.Table, preprocessors: list[Preprocessor]) -> pa.Array | pa.Table:
+        """apply a sequence of preprocessors"""
+        if isinstance(array, pa.Table):
+            return array
+        for processor in preprocessors:
+            processor.from_array(array)
+            array = processor.process()
+        return array
 
     def build_union_find(
         self: Base,
         columns: Columns,
+        preprocessors: list[Preprocessor],
         predicate: set = set(),
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
         array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+
+        array: pa.Array | pa.Table = self.preprocess(array, preprocessors)
+        print(array)
 
         if predicate:
             # subsets the array on predicate indice list

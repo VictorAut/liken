@@ -47,14 +47,12 @@ pip install liken
 
 ## Use `liken` In Your Code
 
-```python {hl_lines="1 6 7"}
-from liken import Dedupe
-import pandas as pd
+```python
+import liken as lk
 
-df = pd.DataFrame(columns = ["name"], data = [...])
+df = ... # e.g. read data
 
-lk = Dedupe(df)
-df = lk.drop_duplicates()
+df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("name").collect()
 ```
 
 

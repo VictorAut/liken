@@ -1,4 +1,5 @@
 from liken import custom
+from liken import preprocessors
 from liken import rules
 from liken import synthetic
 from liken._dedupers import cosine
@@ -33,7 +34,7 @@ __all__ = [
     "str_len",
     "str_startswith",
     "custom",
-    "processors",
+    "preprocessors",
     "rules",
     "synthetic",
 ]

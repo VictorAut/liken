@@ -34,6 +34,7 @@ from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
 from liken._types import Columns
 from liken._types import Keep
+from liken._preprocessors import Preprocessor
 
 
 if TYPE_CHECKING:
@@ -117,15 +118,15 @@ class LocalExecutor(Executor):
                     df = call_deduper(deduper, components)
 
         if isinstance(dedupers, Pipeline):
-            for stage in dedupers.dedupers:
-                any_predicate: bool = dedupers._has_any_predicate(stage)
+            for step in dedupers.steps:
+                any_predicate: bool = dedupers._has_any_predicate(step)
 
                 # predication only if at least one predicate deduper
                 if any_predicate:
                     indices = set()
 
-                    for col, deduper in stage:
-                        uf, n = self._build_uf(deduper, df, col, predicate=indices)
+                    for col, deduper, preprocessor in step:
+                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
 
                         components = defaultdict(list)
                         idx: list = sorted(indices)
@@ -143,8 +144,8 @@ class LocalExecutor(Executor):
                 else:
                     ufs = []
 
-                    for col, deduper in stage:
-                        uf, n = self._build_uf(deduper, df, col)
+                    for col, deduper, preprocessor in step:
+                        uf, n = self._build_uf(deduper, df, col, preprocessor)
                         ufs.append(uf)
                     components: MultiComponents = self._get_multi_components(ufs, n)
 
@@ -156,9 +157,13 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _build_uf(
-        deduper: BaseDeduper, df: LocalDF, columns: Columns, predicate: set = set()
+        deduper: BaseDeduper,
+        df: LocalDF,
+        columns: Columns,
+        preprocessors: list[Preprocessor] = [],
+        predicate: set = set(),
     ) -> tuple[UnionFind[int], int]:
-        return deduper.set_frame(df).build_union_find(columns, predicate=predicate)
+        return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
 
     @staticmethod
     def _get_components(
@@ -245,7 +250,9 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = SparkDF(
+            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
+        )
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)

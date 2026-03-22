@@ -53,8 +53,9 @@ PYSPARK_TYPES: Final[dict[str, DataType]] = {
 INVALID: Final[str] = "Invalid arg: "
 INVALID_DF: Final[str] = INVALID + "df must be istance of Pandas, Polars of Spark DataFrames, got {}"
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
-INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got '{}'"
+INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got {}"
 INVALID_DEDUPER: Final[str] = INVALID + "deduper must be instance of BaseDeduper, got {}"
+INVALID_PREPROCESSOR: Final[str] = INVALID + "preprocessor must be instance of Preprocessor, got {}"
 INVALID_COLUMNS_EMPTY: Final[str] = (
     INVALID
     + "columns cannot be None, a column label of tuple of column labels must be provided when using sequential API."

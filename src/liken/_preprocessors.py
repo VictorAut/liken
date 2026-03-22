@@ -12,10 +12,11 @@ from typing_extensions import override
 # BASE:
 
 
-class Processor:
+class Preprocessor:
     """Base class for all preprocessors."""
 
     def from_array(self, array: pa.Array) -> None:
+        """array setter"""
         self._array = array
 
     def process(self) -> pa.Array:
@@ -25,7 +26,7 @@ class Processor:
 # STRING PROCESSORS:
 
 
-class Strip(Processor):
+class Strip(Preprocessor):
     """Remove leading/trailing whitespace"""
 
     @override
@@ -33,7 +34,7 @@ class Strip(Processor):
         return pc.utf8_trim_whitespace(self._array)
 
 
-class Lower(Processor):
+class Lower(Preprocessor):
     """Convert strings to lowercase"""
 
     @override
@@ -41,7 +42,7 @@ class Lower(Processor):
         return pc.utf8_lower(self._array)
 
 
-class Alnum(Processor):
+class Alnum(Preprocessor):
     """Remove non-alphanumeric characters, including spaces"""
 
     @override
@@ -49,7 +50,7 @@ class Alnum(Processor):
         return pc.replace_substring_regex(self._array, "[^0-9A-Za-z]+", "")
 
 
-class RemovePunctuation(Processor):
+class RemovePunctuation(Preprocessor):
     """Remove punctuation but preserve spaces"""
 
     @override
@@ -57,7 +58,7 @@ class RemovePunctuation(Processor):
         return pc.replace_substring_regex(self._array, r"[^\w\s]+", "")
 
 
-class NormalizeUnicode(Processor):
+class NormalizeUnicode(Preprocessor):
     """Normalize Unicode strings"""
 
     def __init__(self, form: str = "NFKD"):
@@ -71,7 +72,7 @@ class NormalizeUnicode(Processor):
 # STOPWORDS PROCESSOR:
 
 
-class Stopwords(Processor):
+class Stopwords(Preprocessor):
     """Remove stopwords"""
 
     def __init__(self, words: list[str] | None = None, language: str = "english"):
@@ -100,7 +101,7 @@ class Stopwords(Processor):
 # NAME PROCESSORS:
 
 
-class NormalizeName(Processor):
+class NormalizeName(Preprocessor):
     """Normalize personal names"""
 
     @override
@@ -112,7 +113,7 @@ class NormalizeName(Processor):
         return pa.array([_clean_name(x) if x is not None else None for x in self._array])
 
 
-class NormalizeCompany(Processor):
+class NormalizeCompany(Preprocessor):
     """Normalize company names"""
 
     @override

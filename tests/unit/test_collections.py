@@ -139,7 +139,7 @@ def test_collections_manager_apply_single_on_no_pipeline(s1):
     result = sm.get()
 
     assert isinstance(result, Pipeline)
-    dedupers = result.dedupers[0]
+    dedupers = result.steps[0]
     assert len(dedupers) == 1
 
     assert isinstance(dedupers[0], tuple)
@@ -154,7 +154,7 @@ def test_collections_manager_apply_single_on_as_pipeline(s1):
     result = sm.get()
 
     assert isinstance(result, Pipeline)
-    dedupers = result.dedupers[0]
+    dedupers = result.steps[0]
     assert len(dedupers) == 1
 
     assert isinstance(dedupers[0], tuple)
@@ -169,7 +169,7 @@ def test_collections_manager_apply_stepped_pipeline(s1, s2, s3):
     result = sm.get()
 
     assert isinstance(result, Pipeline)
-    dedupers = result.dedupers
+    dedupers = result.steps
     assert len(dedupers) == 2
 
     print(dedupers)

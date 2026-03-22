@@ -34,13 +34,9 @@ pip install liken
 ## Example
 
 ```python
-from liken import Dedupe, fuzzy
+import liken as lk
 
-lk = Dedupe(df)
-
-lk.apply(fuzzy())
-
-df = lk.drop_duplicates("address")
+df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("address").collect()
 ```
 
 ## License
