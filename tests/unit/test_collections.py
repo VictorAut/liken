@@ -6,9 +6,9 @@ from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
 from liken._collections import InvalidDeduperError
 from liken._dedupers import BaseDeduper
+from liken._pipelines import Pipeline
+from liken._pipelines import on
 from liken._registry import registry
-from liken.rules import Pipeline
-from liken.rules import on
 
 
 ###########
@@ -257,10 +257,10 @@ def test_pretty_get_rules_api():
         pretty == "("
         "\n\tlk.rules.builder()"
         "\n\t\t.step(["
-        "\n\t\t\tlk.rules.on('col_a').exact(),"
+        "\n\t\t\tlk.on('col_a').exact(),"
         "\n\t\t])"
         "\n\t\t.step(["
-        "\n\t\t\tlk.rules.on('col_b').fuzzy(threshold=0.95, scorer='simple_ratio'),"
+        "\n\t\t\tlk.on('col_b').fuzzy(threshold=0.95, scorer='simple_ratio'),"
         "\n\t\t])"
         "\n)"
     )

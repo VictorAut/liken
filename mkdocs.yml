@@ -24,7 +24,7 @@ theme:
   
   features:
     - content.code.copy
-    - navigation.tabs
+    # - navigation.tabs
     - navigation.top
     - navigation.footer
     - navigation.tracking
@@ -54,7 +54,8 @@ plugins:
               show_category_heading: false
               heading_level: 3
               separate_signature: true
-              # show_submodules: true
+              filters:
+                - '!^_'
 
 markdown_extensions:
   - attr_list
@@ -92,10 +93,7 @@ nav:
   - index.md
   - Tutorials:
     - tutorials/first-steps.md
-    - tutorials/strategies.md
-    - Applying Strategies:
-      - tutorials/applying-strategies/sequential-api.md
-      - tutorials/applying-strategies/dict-api.md
+    - tutorials/applying-dedupers.md
     - tutorials/record-linkage.md
     - Advanced Strategies:
       - tutorials/advanced-strategies/rules-api.md
@@ -115,8 +113,7 @@ nav:
     - explanation/performance.md
   - API Reference:
     - reference/liken.md
-    - reference/rules.md
-    - reference/processors.md
+    - reference/preprocessors.md
     - reference/custom.md
     - reference/synthetic.md
 

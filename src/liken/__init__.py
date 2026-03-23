@@ -1,6 +1,5 @@
 from liken import custom
 from liken import preprocessors
-from liken import rules
 from liken import synthetic
 from liken._dedupers import cosine
 from liken._dedupers import exact
@@ -14,6 +13,10 @@ from liken._dedupers import str_endswith
 from liken._dedupers import str_len
 from liken._dedupers import str_startswith
 from liken._dedupers import tfidf
+from liken._pipelines import Pipeline
+from liken._pipelines import on
+from liken._pipelines import On
+from liken._pipelines import pipeline
 from liken.liken import Dedupe
 from liken.liken import dedupe
 
@@ -33,8 +36,11 @@ __all__ = [
     "str_endswith",
     "str_len",
     "str_startswith",
+    "pipeline",
+    "Pipeline",
+    "on",
+    "On",
     "custom",
     "preprocessors",
-    "rules",
     "synthetic",
 ]

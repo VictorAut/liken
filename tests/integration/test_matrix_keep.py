@@ -134,7 +134,7 @@ def test_matrix_keep_rules_api(deduper, keep, columns, input_params, expected_ca
 
     df = (
         lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline().step(getattr(lk.rules.on(columns), deduper.__name__)(**input_params)))
+        .apply(lk.pipeline().step(getattr(lk.on(columns), deduper.__name__)(**input_params)))
         .canonicalize(keep=keep)
         .collect()
     )

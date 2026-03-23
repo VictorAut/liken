@@ -1271,10 +1271,10 @@ def isna() -> BaseDeduper:
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
+            pipeline = lk.pipeline().step(
                 [
-                    lk.rules.on("email").exact(),
-                    ~lk.rules.on("address").isna(),
+                    lk.on("email").exact(),
+                    ~lk.on("address").isna(),
                 ]
             )
 
@@ -1322,8 +1322,8 @@ def isin(values: Iterable) -> BaseDeduper:
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
-                lk.rules.on("address").isin(values="london")
+            pipeline = lk.pipeline().step(
+                lk.on("address").isin(values="london")
             )
 
             df = (
@@ -1379,10 +1379,10 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
+            pipeline = lk.pipeline().step(
                 [
-                    lk.rules.on("email").exact(),
-                    lk.rules.on("email").str_len(min_len=10),
+                    lk.on("email").exact(),
+                    lk.on("email").str_len(min_len=10),
                 ]
             )
 
@@ -1437,10 +1437,10 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
+            pipeline = lk.pipeline().step(
                 [
-                    lk.rules.on("email").exact(),
-                    lk.rules.on("email").str_startswith(pattern="f", case=True),
+                    lk.on("email").exact(),
+                    lk.on("email").str_startswith(pattern="f", case=True),
                 ]
             )
 
@@ -1495,10 +1495,10 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
+            pipeline = lk.pipeline().step(
                 [
-                    lk.rules.on("email").exact(),
-                    lk.rules.on("email").str_endswith(pattern=".com", case=False),
+                    lk.on("email").exact(),
+                    lk.on("email").str_endswith(pattern=".com", case=False),
                 ]
             )
 
@@ -1559,10 +1559,10 @@ def str_contains(
 
             import liken as lk
 
-            pipeline = lk.rules.pipeline().step(
+            pipeline = lk.pipeline().step(
                 [
-                    lk.rules.on("email").exact(),
-                    lk.rules.on("email").str_contains(pattern=r"05\\d{3}", regex=True),
+                    lk.on("email").exact(),
+                    lk.on("email").str_contains(pattern=r"05\\d{3}", regex=True),
                 ]
             )
 

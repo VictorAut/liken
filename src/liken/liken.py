@@ -18,6 +18,7 @@ from liken._dedupers import exact
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
+from liken._pipelines import Pipeline
 from liken._types import Columns
 from liken._types import DataFrameLike
 from liken._types import Keep
@@ -26,7 +27,6 @@ from liken._validators import validate_columns_arg
 from liken._validators import validate_df_arg
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg
-from liken.rules import Pipeline
 
 
 class Dedupe:
@@ -119,9 +119,9 @@ class Dedupe:
             Pipeline API:
 
                 lk.dedupe(df).apply(
-                    lk.rules.pipeline()
-                    .step(lk.rules.on("address").exact())
-                    .step(lk.rules.on("address").tfidf())
+                    lk.pipeline()
+                    .step(lk.on("address").exact())
+                    .step(lk.on("address").tfidf())
                 )
 
         """

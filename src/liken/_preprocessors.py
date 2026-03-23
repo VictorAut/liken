@@ -1,4 +1,5 @@
 import re
+from typing import Literal
 
 import nltk
 import pyarrow as pa
@@ -61,7 +62,10 @@ class RemovePunctuation(Preprocessor):
 class NormalizeUnicode(Preprocessor):
     """Normalize Unicode strings"""
 
-    def __init__(self, form: str = "NFKD"):
+    def __init__(
+        self,
+        form: Literal["NFC", "NFKC", "NFD", "NFKD"] = "NFKD",
+    ):
         self._form = form
 
     @override

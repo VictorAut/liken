@@ -17,8 +17,8 @@ from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 from liken._dedupers import BaseDeduper
 from liken._exceptions import InvalidDeduperError
 from liken._exceptions import warn
-from liken.rules import On
-from liken.rules import Pipeline
+from liken._pipelines import On
+from liken._pipelines import Pipeline
 
 
 # DICT CONFIG:
