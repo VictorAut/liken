@@ -1,8 +1,8 @@
 ---
-title: "liken.processors"
+title: "liken.preprocessors"
 ---
 
-::: liken.processors
+::: liken.preprocessors
     options:
       inherited_members: false
       members_order: __all__
