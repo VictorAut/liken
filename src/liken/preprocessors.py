@@ -1,12 +1,13 @@
 import pyarrow as pa
 
 from liken._preprocessors import Alnum
+from liken._preprocessors import AsciiFold
 from liken._preprocessors import Lower
 from liken._preprocessors import NormalizeCompany
 from liken._preprocessors import NormalizeName
 from liken._preprocessors import NormalizeUnicode
 from liken._preprocessors import RemovePunctuation
-from liken._preprocessors import Stopwords
+from liken._preprocessors import RemoveStopwords
 from liken._preprocessors import Strip
 
 
@@ -35,9 +36,14 @@ def normalize_unicode(form: str = "NFKD") -> NormalizeUnicode:
     return NormalizeUnicode(form=form)
 
 
-def stopwords(words: list[str] | None = None, language: str = "english") -> Stopwords:
+def ascii_fold() -> AsciiFold:
     """TODO"""
-    return Stopwords(words=words, language=language)
+    return AsciiFold()
+
+
+def remove_stopwords(words: list[str] | None = None, language: str = "english") -> RemoveStopwords:
+    """TODO"""
+    return RemoveStopwords(words=words, language=language)
 
 
 def normalize_names() -> NormalizeName:
