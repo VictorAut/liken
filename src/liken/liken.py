@@ -156,12 +156,8 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(
-            columns, self._collection.is_sequential_applied
-        )
-        wdf: Frame = wrap(
-            self._df, None
-        )  # canonical id only ever autoincremental for dropping
+        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
+        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -219,9 +215,7 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(
-            columns, self._collection.is_sequential_applied
-        )
+        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
@@ -279,8 +273,6 @@ class Dedupe:
 # API:
 
 
-def dedupe(
-    df: UserDataFrame, /, *, spark_session: SparkSession | None = None
-) -> Dedupe:
+def dedupe(df: UserDataFrame, /, *, spark_session: SparkSession | None = None) -> Dedupe:
     """Convenience function for `Dedupe` entrypoint."""
     return Dedupe(df, spark_session=spark_session)

@@ -14,15 +14,15 @@ from liken._constants import INVALID_COLUMNS_EMPTY
 from liken._constants import INVALID_COLUMNS_NOT_NONE
 from liken._constants import INVALID_COLUMNS_REPEATED
 from liken._constants import INVALID_DEDUPER
-from liken._constants import INVALID_PREPROCESSOR
 from liken._constants import INVALID_DF
 from liken._constants import INVALID_KEEP
+from liken._constants import INVALID_PREPROCESSOR
 from liken._constants import INVALID_SPARK
 from liken._constants import SUPPORTED_DFS
 from liken._dedupers import BaseDeduper
+from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import UserDataFrame
-from liken._preprocessors import Preprocessor
 
 
 def validate_df_arg(df: UserDataFrame) -> UserDataFrame:
@@ -84,6 +84,7 @@ def validate_columns_arg(
     if not is_sequential_applied and columns:
         raise ValueError(INVALID_COLUMNS_NOT_NONE)
     return columns
+
 
 def validate_preprocessor_arg(preprocessor: Preprocessor | list[Preprocessor]) -> list[Preprocessor]:
     """Validates that the given arg is in fact a `Preprocessor`, or a list of

@@ -32,9 +32,9 @@ from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
+from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import Keep
-from liken._preprocessors import Preprocessor
 
 
 if TYPE_CHECKING:
@@ -250,9 +250,7 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(
-            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
-        )
+        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)

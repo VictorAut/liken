@@ -1,4 +1,3 @@
-import pyarrow as pa
 
 from liken._preprocessors import Alnum
 from liken._preprocessors import AsciiFold

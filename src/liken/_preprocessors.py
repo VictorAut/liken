@@ -125,9 +125,7 @@ class NormalizeName(Preprocessor):
         # Important: cast to python list first
         pylist = self._array.to_pylist()
 
-        return pa.array(
-            [_clean_name(x) if x is not None else None for x in pylist]
-        )
+        return pa.array([_clean_name(x) if x is not None else None for x in pylist])
 
 
 class NormalizeCompany(Preprocessor):

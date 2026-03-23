@@ -38,8 +38,8 @@ from sparse_dot_topn import sp_matmul_topn
 from typing_extensions import override
 
 from liken._constants import CANONICAL_ID
-from liken._registry import registry
 from liken._preprocessors import Preprocessor
+from liken._registry import registry
 
 
 if TYPE_CHECKING:
@@ -98,7 +98,7 @@ class BaseDeduper(Base):
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
-    
+
     @staticmethod
     def preprocess(array: pa.Array | pa.Table, preprocessors: list[Preprocessor]) -> pa.Array | pa.Table:
         """apply a sequence of preprocessors"""

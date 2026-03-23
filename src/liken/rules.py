@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Self
-from typing import final
-from typing import TypeAlias
 from typing import NamedTuple
-
+from typing import Self
+from typing import TypeAlias
+from typing import final
 
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
@@ -239,15 +238,10 @@ class Pipeline:
         step: PipelineStep = [on.unit for on in ons]
 
         # propagate preprocessor
-        step = [
-            s._replace(preprocessors=preprocessors) if not s.preprocessors else s
-            for s in step
-        ]
+        step = [s._replace(preprocessors=preprocessors) if not s.preprocessors else s for s in step]
 
         # predicates sorted to first for "rule predication"
-        step: PipelineStep = sorted(
-            step, key=lambda x: not isinstance(x[1], PredicateDedupers)
-        )
+        step: PipelineStep = sorted(step, key=lambda x: not isinstance(x[1], PredicateDedupers))
 
         self._steps.append(step)
 
