@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
-
 import pandas as pd
 import polars as pl
 import pytest
@@ -19,15 +17,11 @@ SINGLE_COL = "address"
 
 
 def build_pipeline_global(preprocessors):
-    return lk.rules.pipeline(preprocessors=preprocessors).step(
-        lk.rules.on(SINGLE_COL).exact()
-    )
+    return lk.rules.pipeline(preprocessors=preprocessors).step(lk.rules.on(SINGLE_COL).exact())
 
 
 def build_pipeline_step(preprocessors):
-    return lk.rules.pipeline().step(
-        lk.rules.on(SINGLE_COL).exact(), preprocessors=preprocessors
-    )
+    return lk.rules.pipeline().step(lk.rules.on(SINGLE_COL).exact(), preprocessors=preprocessors)
 
 
 def build_pipeline_both(preprocessors):

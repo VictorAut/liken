@@ -1,4 +1,4 @@
-"""Narrow integration tests for of individual dedupers under varying 
+"""Narrow integration tests for of individual dedupers under varying
 parametrisation of `keep`
 """
 
@@ -97,12 +97,8 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize(
-    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
-)
-def test_matrix_keep_sequence_api(
-    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
+def test_matrix_keep_sequence_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
@@ -116,12 +112,8 @@ def test_matrix_keep_sequence_api(
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize(
-    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
-)
-def test_matrix_keep_dict_api(
-    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
+def test_matrix_keep_dict_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
@@ -135,12 +127,8 @@ def test_matrix_keep_dict_api(
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize(
-    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
-)
-def test_matrix_keep_rules_api(
-    deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
+def test_matrix_keep_rules_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 

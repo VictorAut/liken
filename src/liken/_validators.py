@@ -86,10 +86,8 @@ def validate_columns_arg(
     return columns
 
 
-def validate_preprocessor_arg(preprocessor: Preprocessor | list[Preprocessor]) -> list[Preprocessor]:
-    """Validates that the given arg is in fact a `Preprocessor`, or a list of
-    the same.
-    """
+def validate_preprocessor_arg(preprocessor: Preprocessor) -> Preprocessor:
+    """Validates that the given arg is in fact a `Preprocessor`"""
     if not isinstance(preprocessor, Preprocessor):
         raise TypeError(INVALID_PREPROCESSOR.format(type(preprocessor).__name__))
     return preprocessor

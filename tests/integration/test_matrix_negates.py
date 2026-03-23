@@ -39,11 +39,6 @@ def test_matrix_negates(deduper, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline().step(deduper))
-        .canonicalize()
-        .collect()
-    )
+    df = lk.dedupe(df, spark_session=spark_session).apply(lk.rules.pipeline().step(deduper)).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

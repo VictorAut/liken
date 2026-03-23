@@ -69,11 +69,6 @@ def test_matrix_and(step, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.rules.pipeline().step(step))
-        .canonicalize()
-        .collect()
-    )
+    df = lk.dedupe(df, spark_session=spark_session).apply(lk.rules.pipeline().step(step)).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

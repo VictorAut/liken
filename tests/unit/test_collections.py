@@ -7,7 +7,6 @@ from liken._collections import DeduplicationDict
 from liken._collections import InvalidDeduperError
 from liken._dedupers import BaseDeduper
 from liken._registry import registry
-from liken.rules import On
 from liken.rules import Pipeline
 from liken.rules import on
 
@@ -77,9 +76,7 @@ def test_dedupers_config_rejects_invalid_value_type():
 
 def test_dedupers_config_rejects_invalid_member_in_value(s1, s2, s3):
     config = DeduplicationDict()
-    with pytest.raises(
-        InvalidDeduperError, match="Invalid type for dict value member"
-    ):
+    with pytest.raises(InvalidDeduperError, match="Invalid type for dict value member"):
         config["col"] = [s1, "bad", s2, s3]
 
 
@@ -239,8 +236,7 @@ def test_pretty_get_dict_api(s1, s2, s3):
 
     pretty = sm.pretty_get()
     assert (
-        pretty
-        == "{"
+        pretty == "{"
         "\n\t'col_a': ("
         "\n\t\tdummy_deduper(),"
         "\n\t\tdummy_deduper(),"
@@ -258,8 +254,7 @@ def test_pretty_get_rules_api():
 
     pretty = sm.pretty_get()
     assert (
-        pretty
-        == "("
+        pretty == "("
         "\n\tlk.rules.builder()"
         "\n\t\t.step(["
         "\n\t\t\tlk.rules.on('col_a').exact(),"

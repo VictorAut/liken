@@ -150,7 +150,7 @@ class On:
 
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor = []):
         self._columns: Columns = columns
-        self._unit: PipelineUnit = ()
+        self._unit: PipelineUnit
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
 
     def __getattr__(self, attr):

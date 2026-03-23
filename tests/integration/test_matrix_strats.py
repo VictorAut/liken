@@ -156,50 +156,28 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize(
-    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
-)
-def test_matrix_dedupers_sequence_api(
-    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_dedupers_sequence_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(deduper(**dedup_kwarg))
-        .canonicalize(columns)
-        .collect()
-    )
+    df = lk.dedupe(df, spark_session=spark_session).apply(deduper(**dedup_kwarg)).canonicalize(columns).collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize(
-    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
-)
-def test_matrix_dedupers_dict_api(
-    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_dedupers_dict_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply({columns: [deduper(**dedup_kwarg)]})
-        .canonicalize()
-        .collect()
-    )
+    df = lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**dedup_kwarg)]}).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
 
-@pytest.mark.parametrize(
-    "deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS
-)
-def test_matrix_dedupers_rules_api(
-    deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers
-):
+@pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
+def test_matrix_dedupers_rules_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
 
     df, spark_session = dataframe
 

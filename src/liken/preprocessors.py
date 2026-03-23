@@ -1,4 +1,3 @@
-
 from liken._preprocessors import Alnum
 from liken._preprocessors import AsciiFold
 from liken._preprocessors import Lower
