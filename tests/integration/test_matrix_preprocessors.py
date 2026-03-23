@@ -96,7 +96,7 @@ IDS = [
 @pytest.mark.parametrize("preprocessors, data, expected_canonical_id", PARAMS, ids=IDS)
 @pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
 @pytest.mark.parametrize("pipeline_builder", PIPELINE_BUILDERS)
-def test_preprocessors_from_pipeline(
+def test_matrix_preprocessors(
     backend,
     preprocessors,
     data,

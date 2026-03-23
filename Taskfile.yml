@@ -30,6 +30,12 @@ tasks:
     desc: Runs tests
     cmds:
       - uv run pytest tests/
+    
+  coverage:
+    desc: Runs tests with coverage
+    cmds:
+      - uv run coverage run -m pytest tests/ -v
+      - uv run coverage html --omit "tests/**/*"
 
   docs:
     desc: locally build and serve MkDocs
