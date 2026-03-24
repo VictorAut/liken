@@ -86,7 +86,7 @@ class Col:
             )
 
         Pipeline preprocessors will be applied to all dedupers:
-                
+
             pipeline = (
                 lk.pipeline(preprocessors=[lk.preprocessors.lower()])
                 .step(lk.col("email").fuzzy()) # Preprocessor applies here
@@ -96,7 +96,7 @@ class Col:
         But, a global pipeline preprocessor will not override an explicit
         deduper's preprocessor. Similarily, a step's preprocessor will not
         override the deduper's:
-            
+
             pipeline = (
                 lk.pipeline(preprocessors=[lk.preprocessors.ascii_fold()])
                 .step(
@@ -104,7 +104,7 @@ class Col:
                         lk.col("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
                         ~lk.col(
                             "address",
-                            preprocessors=[lk.preprocessors.lower()], 
+                            preprocessors=[lk.preprocessors.lower()],
                         ).isna(), # uses it's own preprocessor, `lower`.
                     ],
                     preprocessors=[lk.preprocessors.alnum()], # defines the step's preprocessor
@@ -362,15 +362,15 @@ class Col:
 
 class Pipeline:
     """Builds deduplication pipeline.
-    
+
     Defines deduplication steps as chainable calls. Accepts preprocessors.
     Preprocessors are propagate to each step and on each column, unless
     explicit overriden in those stages.
-    
+
     Args:
         preprocessors: a preprocessor, or list of preprocessors to apply to the
             pipeline
-    
+
     Returns:
         None
 
@@ -391,27 +391,27 @@ class Pipeline:
         preprocessors: InputPreprocessor = [],
     ) -> Self:
         """Define a deduplication pipeline step
-        
+
         Accepts a single deduper or a list of dedupers. A list of dedupers that
         has more than one member are composed as "and rules" meaning that the
-        deduplication of both (or more) dedupers are considered for 
+        deduplication of both (or more) dedupers are considered for
         canonicalisation.
-        
+
         Args:
             ons: `Col` deduper, or list of the same.
             preprocessors: a preprocessor, or list of preprocessors to appy the
                 whole step (i.e. to all dedupers if more than one deduper).
-        
+
         Returns:
             Self
-        
+
         Example:
             A single deduper is added:
-                
+
                 pipeline = lk.pipeline().step(lk.col("email").exact())
 
             Multiple steps can be chained:
-                
+
                 pipeline = (
                     lk.pipeline()
                     .step(lk.col("email").fuzzy())
@@ -420,7 +420,7 @@ class Pipeline:
 
             More than on deduper can be added to form composable rules within
             a step:
-                
+
                 pipeline = (
                     lk.pipeline()
                     .step(
@@ -433,7 +433,7 @@ class Pipeline:
                 )
 
             Pipeline preprocessors will be applied to all steps:
-                
+
                 pipeline = (
                     lk.pipeline(preprocessors=[lk.preprocessors.lower()])
                     .step(lk.col("email").fuzzy()) # Preprocessor applies here
@@ -442,7 +442,7 @@ class Pipeline:
 
             But, a global pipeline preprocessor will not override an explicit
             step's preprocessor
-                
+
                 pipeline = (
                     lk.pipeline(preprocessors=[lk.preprocessors.lower()])
                     .step(
@@ -462,15 +462,10 @@ class Pipeline:
         step: PipelineStep = [on.unit for on in ons]
 
         # propagate preprocessor
-        step = [
-            s._replace(preprocessors=preprocessors) if not s.preprocessors else s
-            for s in step
-        ]
+        step = [s._replace(preprocessors=preprocessors) if not s.preprocessors else s for s in step]
 
         # predicates sorted to first for "rule predication"
-        step: PipelineStep = sorted(
-            step, key=lambda x: not isinstance(x[1], PredicateDedupers)
-        )
+        step: PipelineStep = sorted(step, key=lambda x: not isinstance(x[1], PredicateDedupers))
 
         self._steps.append(step)
 

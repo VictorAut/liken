@@ -13,9 +13,9 @@ from liken._dedupers import str_endswith
 from liken._dedupers import str_len
 from liken._dedupers import str_startswith
 from liken._dedupers import tfidf
+from liken._pipelines import Col
 from liken._pipelines import Pipeline
 from liken._pipelines import col
-from liken._pipelines import Col
 from liken._pipelines import pipeline
 from liken.liken import Dedupe
 from liken.liken import dedupe

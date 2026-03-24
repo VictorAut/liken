@@ -52,7 +52,7 @@ def remove_stopwords(
     language: str = "english",
 ) -> RemoveStopwords:
     """Remove stopwords.
-    
+
     Args:
         words: A list of words to ignore. If defined, `language` argument is
             ignored.
@@ -62,7 +62,7 @@ def remove_stopwords(
 
 def normalize_names() -> NormalizeName:
     """Normalize personal names.
-    
+
     Preserves only first name, middle name and last name. Titles and nicknames
     are stripped. Commas are cleaned.
     """
@@ -71,7 +71,7 @@ def normalize_names() -> NormalizeName:
 
 def normalize_company() -> NormalizeCompany:
     """Normalize company names.
-    
+
     Strips common company name nomenclature e.g. "Ltd.", or "LLC".
     """
     return NormalizeCompany()
