@@ -6,20 +6,8 @@ import typing
 
 import pytest
 
-from liken import Dedupe
-from liken import cosine
-from liken import exact
-from liken import fuzzy
-from liken import jaccard
-from liken import lsh
-from liken import tfidf
+import liken as lk
 from liken._constants import CANONICAL_ID
-from liken.custom import register
-from liken.rules import Rules
-from liken.rules import on
-from liken.rules import str_contains
-from liken.rules import str_endswith
-from liken.rules import str_startswith
 
 
 # CONSTANTS:
@@ -41,10 +29,41 @@ NUMERICAL_COMPOUND_COL = (
 )
 
 
+def simple_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
+    return (
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(deduper(**deduper_kwarg))
+        .canonicalize(columns, **drop_kwarg)
+        .collect()
+    )
+
+
+def dict_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
+
+    return (
+        lk.dedupe(df, spark_session=spark_session)
+        .apply({columns: [deduper(**deduper_kwarg)]})
+        .canonicalize(**drop_kwarg)
+        .collect()
+    )
+
+
+def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
+    pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
+    return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize(**drop_kwarg).collect()
+
+
+API_BUILDERS = [
+    simple_api,
+    dict_api,
+    pipeline_api,
+]
+
+
 # REGISTER A CUSTOM CALLABLE:
 
 
-@register
+@lk.custom.register
 def strings_same_len(array: typing.Iterable, min_len: int = 3):
     n = len(array)
     for i in range(n):
@@ -66,44 +85,44 @@ PARAMS = [
     (strings_same_len, "email", {"drop_duplicates": True}, {"min_len": 3}, [0, 1, 2, 3, 6, 8, 9]),
     # EXACT:
     # on single column
-    (exact, SINGLE_COL, {"drop_duplicates": False}, {}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    (exact, SINGLE_COL, {"drop_duplicates": True}, {}, [0, 1, 2, 3, 4, 5, 6, 9]),
+    (lk.exact, SINGLE_COL, {"drop_duplicates": False}, {}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.exact, SINGLE_COL, {"drop_duplicates": True}, {}, [0, 1, 2, 3, 4, 5, 6, 9]),
     # on compound column
-    (exact, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": False}, {}, [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
-    (exact, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": True}, {}, [0, 2, 3, 4, 5, 6, 7, 8, 9]),
+    (lk.exact, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": False}, {}, [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
+    (lk.exact, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": True}, {}, [0, 2, 3, 4, 5, 6, 7, 8, 9]),
     #
     # FUZZY:
-    (fuzzy, SINGLE_COL, {"drop_duplicates": False}, {"threshold": 0.65}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
-    (fuzzy, SINGLE_COL, {"drop_duplicates": True}, {"threshold": 0.65}, [0, 1, 2, 4, 5, 9]),
+    (lk.fuzzy, SINGLE_COL, {"drop_duplicates": False}, {"threshold": 0.65}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"drop_duplicates": True}, {"threshold": 0.65}, [0, 1, 2, 4, 5, 9]),
     #
     # COSINE:
-    (cosine, NUMERICAL_COMPOUND_COL, {"drop_duplicates": False}, {"threshold": 0.99}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),
-    (cosine, NUMERICAL_COMPOUND_COL, {"drop_duplicates": True}, {"threshold": 0.99},  [0, 6, 7]),
+    (lk.cosine, NUMERICAL_COMPOUND_COL, {"drop_duplicates": False}, {"threshold": 0.99}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),
+    (lk.cosine, NUMERICAL_COMPOUND_COL, {"drop_duplicates": True}, {"threshold": 0.99},  [0, 6, 7]),
     #
     # JACCARD:
-    (jaccard, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": False}, {"threshold": 0.35}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
-    (jaccard, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": True}, {"threshold": 0.35}, [0, 2, 3, 7, 9]),
+    (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": False}, {"threshold": 0.35}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
+    (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"drop_duplicates": True}, {"threshold": 0.35}, [0, 2, 3, 7, 9]),
     #
     # LSH:
-    (lsh, SINGLE_COL, {"drop_duplicates": False}, {"ngram": 1, "threshold": 0.65, "num_perm": 128}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
-    (lsh, SINGLE_COL, {"drop_duplicates": True}, {"ngram": 1, "threshold": 0.65, "num_perm": 128}, [0, 1, 2, 4, 5, 9]),
+    (lk.lsh, SINGLE_COL, {"drop_duplicates": False}, {"ngram": 1, "threshold": 0.65, "num_perm": 128}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
+    (lk.lsh, SINGLE_COL, {"drop_duplicates": True}, {"ngram": 1, "threshold": 0.65, "num_perm": 128}, [0, 1, 2, 4, 5, 9]),
     #
     # STRING STARTS WITH:
-    (str_startswith, SINGLE_COL, {"drop_duplicates": False}, {"pattern": "calle", "case": False}, [0, 1, 2, 2, 4, 5, 6, 7, 8, 9]),
-    (str_startswith, SINGLE_COL, {"drop_duplicates": True}, {"pattern": "calle", "case": False}, [0, 1, 2, 4, 5, 6, 7, 8, 9]),
+    (lk.str_startswith, SINGLE_COL, {"drop_duplicates": False}, {"pattern": "calle", "case": False}, [0, 1, 2, 2, 4, 5, 6, 7, 8, 9]),
+    (lk.str_startswith, SINGLE_COL, {"drop_duplicates": True}, {"pattern": "calle", "case": False}, [0, 1, 2, 4, 5, 6, 7, 8, 9]),
     #
     # STRING ENDS WITH:
-    (str_endswith, SINGLE_COL, {"drop_duplicates": False}, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 1]),
-    (str_endswith, SINGLE_COL, {"drop_duplicates": True}, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8]),
+    (lk.str_endswith, SINGLE_COL, {"drop_duplicates": False}, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 1]),
+    (lk.str_endswith, SINGLE_COL, {"drop_duplicates": True}, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8]),
     #
     # STRING CONTAINS:
-    (str_contains, SINGLE_COL, {"drop_duplicates": False}, {"pattern": r"05\d{3}", "case": False, "regex": True}, [0, 1, 2, 2, 4, 2, 6, 7, 8, 9]),
-    (str_contains, SINGLE_COL, {"drop_duplicates": True}, {"pattern": r"05\d{3}", "case": False, "regex": True}, [0, 1, 2, 4, 6, 7, 8, 9]),
+    (lk.str_contains, SINGLE_COL, {"drop_duplicates": False}, {"pattern": r"05\d{3}", "case": False, "regex": True}, [0, 1, 2, 2, 4, 2, 6, 7, 8, 9]),
+    (lk.str_contains, SINGLE_COL, {"drop_duplicates": True}, {"pattern": r"05\d{3}", "case": False, "regex": True}, [0, 1, 2, 4, 6, 7, 8, 9]),
     #
     # TF IDF:
     # progressive deduping: vary threshold
-    (tfidf, SINGLE_COL, {"drop_duplicates": False}, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
-    (tfidf, SINGLE_COL, {"drop_duplicates": True}, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 4, 5]),
+    (lk.tfidf, SINGLE_COL, {"drop_duplicates": False}, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
+    (lk.tfidf, SINGLE_COL, {"drop_duplicates": True}, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 4, 5]),
 ]
 
 # fmt: on
@@ -134,43 +153,25 @@ IDS = [
 ]
 
 
-@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-def test_matrix_strats_sequence_api(
-    strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers
+@pytest.mark.parametrize(
+    "deduper, columns, drop_kwarg, deduper_kwarg, expected_canonical_id",
+    PARAMS,
+    ids=IDS,
+)
+@pytest.mark.parametrize("api_builder", API_BUILDERS)
+def test_matrix_dedupers(
+    deduper,
+    columns,
+    drop_kwarg,
+    deduper_kwarg,
+    expected_canonical_id,
+    api_builder,
+    dataframe,
+    helpers,
 ):
 
     df, spark_session = dataframe
 
-    lk = Dedupe(df, spark_session=spark_session)
-
-    # single strategy item addition
-    lk.apply(strategy(**strat_kwarg))
-    df = lk.canonicalize(columns, **drop_kwarg)
-
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-def test_matrix_strats_dict_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
-
-    df, spark_session = dataframe
-
-    lk = Dedupe(df, spark_session=spark_session)
-
-    # dictionary strategy addition
-    lk.apply({columns: [strategy(**strat_kwarg)]})
-    df = lk.canonicalize(**drop_kwarg)
-
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-@pytest.mark.parametrize("strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id", PARAMS, ids=IDS)
-def test_matrix_strats_rules_api(strategy, columns, drop_kwarg, strat_kwarg, expected_canonical_id, dataframe, helpers):
-
-    df, spark_session = dataframe
-
-    lk = Dedupe(df, spark_session=spark_session)
-    lk.apply(Rules(on(columns, strategy(**strat_kwarg))))
-    df = lk.canonicalize(**drop_kwarg)
+    df = api_builder(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

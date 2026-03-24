@@ -6,11 +6,11 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
+from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
+from liken._collections import DeduplicationDict
+from liken._dedupers import BaseDeduper
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
-from liken._strats_library import BaseStrategy
-from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from liken._strats_manager import StratsDict
 
 
 ############################
@@ -19,16 +19,16 @@ from liken._strats_manager import StratsDict
 
 
 @pytest.fixture
-def mock_strategy():
-    strat = Mock(spec=BaseStrategy)
-    strat.set_frame.return_value = strat
-    strat.canonicalizer.return_value = "df_out"
-    return strat
+def mock_deduper():
+    deduper = Mock(spec=BaseDeduper)
+    deduper.set_frame.return_value = deduper
+    deduper.canonicalizer.return_value = "df_out"
+    return deduper
 
 
 @pytest.fixture
-def strats_config(mock_strategy):
-    cfg = StratsDict({SEQUENTIAL_API_DEFAULT_KEY: [mock_strategy]})
+def dedupers_config(mock_deduper):
+    cfg = DeduplicationDict({SEQUENTIAL_API_DEFAULT_KEY: [mock_deduper]})
     return cfg
 
 
@@ -42,42 +42,42 @@ def local_df():
 #################
 
 
-def test_localexecutor_canonicalize_sequential_calls(mock_strategy, local_df, strats_config):
-    mock_strategy.build_union_find.return_value = ({0: 0}, 1)
+def test_localexecutor_canonicalize_sequential_calls(mock_deduper, local_df, dedupers_config):
+    mock_deduper.build_union_find.return_value = ({0: 0}, 1)
 
     executor = LocalExecutor()
 
     executor.execute(
         local_df,
         columns="address",
-        strats=strats_config,
+        dedupers=dedupers_config,
         keep="last",
         drop_duplicates=False,
         drop_canonical_id=False,
     )
 
-    mock_strategy.set_frame.assert_called_once_with(local_df)
-    mock_strategy.canonicalizer.assert_called_once_with(components=ANY, drop_duplicates=False, keep="last")
+    mock_deduper.set_frame.assert_called_once_with(local_df)
+    mock_deduper.canonicalizer.assert_called_once_with(components=ANY, drop_duplicates=False, keep="last")
 
 
-def test_localexecutor_canonicalize_dict_calls(mock_strategy, local_df):
-    mock_strategy.build_union_find.return_value = ({0: 0}, 1)
+def test_localexecutor_canonicalize_dict_calls(mock_deduper, local_df):
+    mock_deduper.build_union_find.return_value = ({0: 0}, 1)
 
-    cfg = StratsDict({"address": (mock_strategy,), "email": (mock_strategy, mock_strategy)})
+    cfg = DeduplicationDict({"address": (mock_deduper,), "email": (mock_deduper, mock_deduper)})
 
     executor = LocalExecutor()
 
     executor.execute(
         local_df,
         columns=None,
-        strats=cfg,
+        dedupers=cfg,
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
     )
 
-    mock_strategy.set_frame.assert_called()
-    assert mock_strategy.canonicalizer.call_count == 3
+    mock_deduper.set_frame.assert_called()
+    assert mock_deduper.canonicalizer.call_count == 3
 
 
 #################
@@ -109,7 +109,7 @@ def spark_df():
 
 def test_sparkexecutor_canonicalize_maps_partitions(
     spark_df,
-    strats_config,
+    dedupers_config,
 ):
     spark = Mock()
     executor = SparkExecutor(spark_session=spark, id="id")
@@ -121,7 +121,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
     executor.execute(
         spark_df,
         columns="address",
-        strats=strats_config,
+        dedupers=dedupers_config,
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
@@ -136,13 +136,13 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 ######################
 
 
-@patch("liken.dedupe.Dedupe")
+@patch("liken.liken.Dedupe")
 def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     result = list(
         SparkExecutor._process_partition(
             factory=mock_dedupe,
             partition=iter([]),
-            strats=Mock(),
+            dedupers=Mock(),
             id="id",
             columns="address",
             keep="first",
@@ -154,19 +154,21 @@ def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     mock_dedupe.assert_not_called()
 
 
-@patch("liken.dedupe.Dedupe")
+@patch("liken.liken.Dedupe")
 def test_process_partition_calls_dedupe_api(mock_dedupe):
     row = Row(id="1")
-    dp_instance = Mock()
-    dp_instance.canonicalize.return_value = ["out"]
+    instance = Mock()
+    instance.apply.return_value = instance
+    instance.canonicalize.return_value = instance
+    instance.collect.return_value = ["out"]
 
-    mock_dedupe._from_rows.return_value = dp_instance
+    mock_dedupe._from_rows.return_value = instance
 
     result = list(
         SparkExecutor._process_partition(
             factory=mock_dedupe,
             partition=iter([row]),
-            strats=Mock(),
+            dedupers=Mock(),
             id="id",
             columns="address",
             keep="last",
@@ -175,11 +177,12 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
     )
 
     mock_dedupe._from_rows.assert_called_once_with([row])
-    dp_instance.apply.assert_called_once()
-    dp_instance.canonicalize.assert_called_once_with(
+    instance.apply.assert_called_once()
+    instance.canonicalize.assert_called_once_with(
         "address",
         keep="last",
         drop_duplicates=False,
         id="id",
     )
+    instance.collect.assert_called_once()
     assert result == ["out"]

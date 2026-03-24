@@ -53,8 +53,9 @@ PYSPARK_TYPES: Final[dict[str, DataType]] = {
 INVALID: Final[str] = "Invalid arg: "
 INVALID_DF: Final[str] = INVALID + "df must be istance of Pandas, Polars of Spark DataFrames, got {}"
 INVALID_SPARK: Final[str] = INVALID + "spark_session must be provided for a spark dataframe"
-INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got '{}'"
-INVALID_STRAT: Final[str] = INVALID + "strat must be instance of BaseStrategy, got {}"
+INVALID_KEEP: Final[str] = INVALID + "keep must be one of 'first' or 'last', got {}"
+INVALID_DEDUPER: Final[str] = INVALID + "deduper must be instance of BaseDeduper, got {}"
+INVALID_PREPROCESSOR: Final[str] = INVALID + "preprocessor must be instance of Preprocessor, got {}"
 INVALID_COLUMNS_EMPTY: Final[str] = (
     INVALID
     + "columns cannot be None, a column label of tuple of column labels must be provided when using sequential API."
@@ -64,22 +65,24 @@ INVALID_COLUMNS_NOT_NONE: Final[str] = (
     INVALID + "columns must be None when using the dict API, as they have been defined as dictionary keys."
 )
 
-# strategy collection errors
+# collection errors
 
 INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
-INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseStrategy', got '{}'"
+INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected list, tuple or 'BaseDeduper', got '{}'"
 INVALID_DICT_MEMBER_MSG: Final[str] = (
-    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseStrategy', got '{}'"
+    "Invalid type for dict value member: at index {} for key '{}': 'expected 'BaseDeduper', got '{}'"
 )
 INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
-    "Cannot apply a 'BaseStrategy' after a strategy mapping (dict) has been set. "
-    "Use either individual 'BaseStrategy' instances or a dict of strategies, not both."
+    "Cannot apply a 'BaseDeduper' after a deduper mapping (dict) has been set. "
+    "Use either individual 'BaseDeduper' instances or a dict of dedupers, not both."
 )
-INVALID_RULE_EMPTY_MSG: Final[str] = "Rules cannot be empty"
-INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Rules element at index {} is not an instance of On, got '{}'"
-INVALID_FALLBACK_MSG: Final[str] = "Invalid strategy: Expected a 'BaseStrategy', a dict or 'Rules', got '{}'"
+INVALID_RULE_EMPTY_MSG: Final[str] = "Pipeline cannot be empty"
+INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Pipeline element at index {} is not an instance of Col, got '{}'"
+INVALID_FALLBACK_MSG: Final[str] = "Invalid deduper: Expected a 'BaseDeduper', a dict or 'Pipeline', got '{}'"
 
-# strategy collection warnings
+# collection warnings
 
-WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence strategy with a dict strategy"
-WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Rules' strategy with a new 'Rules' strategy"
+WARN_DICT_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence deduper with a dict deduper"
+WARN_RULES_REPLACES_RULES_MSG: Final[str] = (
+    "Replacing previously added 'Pipeline' deduper with a new 'Pipeline' deduper"
+)

@@ -14,7 +14,7 @@
 The key features are:
 
 - Near deduplication
-- Ready-to-use deduplication strategies
+- Ready-to-use deduplication methods
 - Record linkage and canonicalization
 - Rules-based deduplication
 - Pandas, Polars and PySpark support
@@ -34,13 +34,9 @@ pip install liken
 ## Example
 
 ```python
-from liken import Dedupe, fuzzy
+import liken as lk
 
-lk = Dedupe(df)
-
-lk.apply(fuzzy())
-
-df = lk.drop_duplicates("address")
+df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("address").collect()
 ```
 
 ## License

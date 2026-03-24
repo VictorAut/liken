@@ -13,12 +13,14 @@ from pyspark.sql import SparkSession
 from liken._constants import INVALID_COLUMNS_EMPTY
 from liken._constants import INVALID_COLUMNS_NOT_NONE
 from liken._constants import INVALID_COLUMNS_REPEATED
+from liken._constants import INVALID_DEDUPER
 from liken._constants import INVALID_DF
 from liken._constants import INVALID_KEEP
+from liken._constants import INVALID_PREPROCESSOR
 from liken._constants import INVALID_SPARK
-from liken._constants import INVALID_STRAT
 from liken._constants import SUPPORTED_DFS
-from liken._strats_library import BaseStrategy
+from liken._dedupers import BaseDeduper
+from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import UserDataFrame
 
@@ -44,14 +46,14 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return keep
 
 
-def validate_strat_arg(strat: BaseStrategy) -> BaseStrategy:
-    """Validates that the given 'strategy' is in fact a `BaseStrategy`.
+def validate_deduper_arg(deduper: BaseDeduper) -> BaseDeduper:
+    """Validates that the given 'deduper' is in fact a `BaseDeduper`.
 
-    As used by the strategy manager
+    As used by the collections manager
     """
-    if not isinstance(strat, BaseStrategy):
-        raise TypeError(INVALID_STRAT.format(type(strat).__name__))
-    return strat
+    if not isinstance(deduper, BaseDeduper):
+        raise TypeError(INVALID_DEDUPER.format(type(deduper).__name__))
+    return deduper
 
 
 def validate_columns_arg(
@@ -63,8 +65,8 @@ def validate_columns_arg(
     Allowed combinations are:
 
     - Sequential API: .canonicalize with columns defined
-    - Dict API: .canonicalize with no columns defined
-    - Rules API: .canonicalize with no columns defined
+    - Dict API: .canonicalize with NO columns defined
+    - Pipeline API: .canonicalize with NO columns defined
 
     Any other combination/repetion raises a value error
     """
@@ -82,3 +84,10 @@ def validate_columns_arg(
     if not is_sequential_applied and columns:
         raise ValueError(INVALID_COLUMNS_NOT_NONE)
     return columns
+
+
+def validate_preprocessor_arg(preprocessor: Preprocessor) -> Preprocessor:
+    """Validates that the given arg is in fact a `Preprocessor`"""
+    if not isinstance(preprocessor, Preprocessor):
+        raise TypeError(INVALID_PREPROCESSOR.format(type(preprocessor).__name__))
+    return preprocessor

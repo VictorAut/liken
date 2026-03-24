@@ -28,6 +28,7 @@ theme:
     - navigation.top
     - navigation.footer
     - navigation.tracking
+    - navigation.sections
 
 extra_css:
   - stylesheets/extra.css
@@ -44,11 +45,17 @@ plugins:
               show_if_no_docstring: false
               show_symbol_type_heading: true
               show_symbol_type_toc: true
-              show_object_full_path: false
+              show_object_full_path: true
               show_docstring_type_aliases: true
-              backlinks: tree
+              show_root_toc_entry: true
+              show_root_full_path: true
               docstring_options:
                 warn_missing_types: false
+              show_category_heading: false
+              heading_level: 3
+              separate_signature: true
+              filters:
+                - '!^_'
 
 markdown_extensions:
   - attr_list
@@ -86,30 +93,15 @@ nav:
   - index.md
   - Tutorials:
     - tutorials/first-steps.md
-    - tutorials/strategies.md
-    - Applying Strategies:
-      - tutorials/applying-strategies/sequential-api.md
-      - tutorials/applying-strategies/dict-api.md
+    - tutorials/applying-dedupers.md
     - tutorials/record-linkage.md
-    - Advanced Strategies:
-      - tutorials/advanced-strategies/rules-api.md
-      - tutorials/advanced-strategies/boolean-operators.md
-      - tutorials/advanced-strategies/discrete-strategies.md
-    - tutorials/supported-backends.md
-    - tutorials/customizing-strategies.md
-    - tutorials/using-synthetic-data.md
-  - How-To Guides: 
-    - how-tos/choose-the-right-api.md
-    - how-tos/build-iterative-workloads.md
-    - how-tos/optimise-for-performance.md
-  - Explanation:
-    - explanation/what-diff-in-apis.md
-    - explanation/binary-vs-discrete.md
-    - explanation/how-does-it-work.md
-    - explanation/performance.md
-  - Reference:
+    - tutorials/custom-dedupers.md
+  - In Practice: 
+    - in-practice/iterative-workloads.md
+    - in-practice/performance.md
+  - API Reference:
     - reference/liken.md
-    - reference/rules.md
+    - reference/preprocessors.md
     - reference/custom.md
-    - reference/datasets.md
+    - reference/synthetic.md
 

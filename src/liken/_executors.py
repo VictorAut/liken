@@ -1,4 +1,4 @@
-"""Strategy executors
+"""Deduplication collectionexecutors.
 
 `SparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`
@@ -23,21 +23,22 @@ from networkx.utils.union_find import UnionFind
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
 
+from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
+from liken._collections import DeduplicationDict
+from liken._collections import Pipeline
 from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
-from liken._strats_library import BaseStrategy
-from liken._strats_library import BinaryDedupers
-from liken._strats_manager import SEQUENTIAL_API_DEFAULT_KEY
-from liken._strats_manager import Rules
-from liken._strats_manager import StratsDict
+from liken._dedupers import BaseDeduper
+from liken._dedupers import PredicateDedupers
+from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import Keep
 
 
 if TYPE_CHECKING:
-    from liken.dedupe import Dedupe
+    from liken.liken import Dedupe
 
 
 # TYPES:
@@ -58,7 +59,7 @@ class Executor(Protocol[F]):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        dedupers: DeduplicationDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -74,58 +75,58 @@ class LocalExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        dedupers: DeduplicationDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
         id: str | None = None,
     ) -> LocalDF:
-        """Process a local dataframe according to the strategy collection
+        """Process a local dataframe according to the deduplication collection
 
         Processing is defined according to whether the collections of
-        strategies is:
-            - Rules: in which case "and" combinations are allowed
-            - StratsDict: in which case handles Sequential and Dict API
+        dedupers is a:
+            - Pipeline: in which case "and" combination steps are allowed
+            - DeduplicationDict: in which case handles Sequential and Dict API
 
-        For Rules, predication is implemented if an and combination contains at
-        least one Binary Deduper. In that case the binary dedupers are proxy
+        For Pipeline, predication is implemented if an and combination contains at
+        least one Predicate Deduper. In that case the predicate dedupers are proxy
         WHERE filters that propagate a set of dataframe indice positions to the
-        next deduper (most likely a threshold deduper, but optionally binary
+        next deduper (most likely a threshold deduper, but optionally predicate
         also.)
         """
 
         del id  # Unused: here for interface symmetry with SparkExecutor
 
-        call_strat = partial(
-            self._call_strat,
+        call_deduper = partial(
+            self._call_deduper,
             drop_duplicates=drop_duplicates,
             keep=keep,
         )
 
-        if isinstance(strats, StratsDict):
+        if isinstance(dedupers, DeduplicationDict):
             if not columns:
-                for col, iter_strats in strats.items():
-                    for strat in iter_strats:
-                        uf, n = self._build_uf(strat, df, col)
+                for col, iter_dedupers in dedupers.items():
+                    for deduper in iter_dedupers:
+                        uf, n = self._build_uf(deduper, df, col)
                         components: SingleComponents = self._get_components(uf, n)
-                        df = call_strat(strat, components)
+                        df = call_deduper(deduper, components)
             else:
                 # For sequential API calls e.g.`.canonicalize("address")`
-                for strat in strats[SEQUENTIAL_API_DEFAULT_KEY]:
-                    uf, n = self._build_uf(strat, df, columns)
+                for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
+                    uf, n = self._build_uf(deduper, df, columns)
                     components: SingleComponents = self._get_components(uf, n)
-                    df = call_strat(strat, components)
+                    df = call_deduper(deduper, components)
 
-        if isinstance(strats, Rules):
-            for stage in strats:
-                has_any_binary: bool = stage.has_any_binary_strat
+        if isinstance(dedupers, Pipeline):
+            for step in dedupers.steps:
+                any_predicate: bool = dedupers._has_any_predicate(step)
 
-                # predication only if at least one binary strategy
-                if has_any_binary:
+                # predication only if at least one predicate deduper
+                if any_predicate:
                     indices = set()
 
-                    for col, strat in stage.and_strats:
-                        uf, n = self._build_uf(strat, df, col, predicate=indices)
+                    for col, deduper, preprocessor in step:
+                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
 
                         components = defaultdict(list)
                         idx: list = sorted(indices)
@@ -135,7 +136,7 @@ class LocalExecutor(Executor):
                             else:
                                 components[idx[uf[i]]].append(idx[i])
 
-                        if isinstance(strat, BinaryDedupers):
+                        if isinstance(deduper, PredicateDedupers):
                             for c in components.values():
                                 if len(c) > 1:
                                     indices = indices.union(set(c))
@@ -143,12 +144,12 @@ class LocalExecutor(Executor):
                 else:
                     ufs = []
 
-                    for col, strat in stage.and_strats:
-                        uf, n = self._build_uf(strat, df, col)
+                    for col, deduper, preprocessor in step:
+                        uf, n = self._build_uf(deduper, df, col, preprocessor)
                         ufs.append(uf)
                     components: MultiComponents = self._get_multi_components(ufs, n)
 
-                df = call_strat(strat, components)
+                df = call_deduper(deduper, components)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -156,9 +157,13 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _build_uf(
-        strat: BaseStrategy, df: LocalDF, columns: Columns, predicate: set = set()
+        deduper: BaseDeduper,
+        df: LocalDF,
+        columns: Columns,
+        preprocessors: list[Preprocessor] = [],
+        predicate: set = set(),
     ) -> tuple[UnionFind[int], int]:
-        return strat.set_frame(df).build_union_find(columns, predicate=predicate)
+        return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
 
     @staticmethod
     def _get_components(
@@ -182,13 +187,13 @@ class LocalExecutor(Executor):
         return components
 
     @staticmethod
-    def _call_strat(
-        strat: BaseStrategy,
+    def _call_deduper(
+        deduper: BaseDeduper,
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
     ) -> LocalDF:
-        return strat.canonicalizer(
+        return deduper.canonicalizer(
             components=components,
             drop_duplicates=drop_duplicates,
             keep=keep,
@@ -207,7 +212,7 @@ class SparkExecutor(Executor):
         /,
         *,
         columns: Columns | None,
-        strats: StratsDict | Rules,
+        dedupers: DeduplicationDict | Pipeline,
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
@@ -220,13 +225,13 @@ class SparkExecutor(Executor):
 
         Args:
             columns: The attribute to deduplicate.
-            strats: the collection of strats
+            dedupers: the collection of dedupers
         Retuns:
             Instance's _df attribute is updated
         """
 
         # import in worker node
-        from liken.dedupe import Dedupe
+        from liken.liken import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
         process_partition = self._process_partition
@@ -235,7 +240,7 @@ class SparkExecutor(Executor):
             lambda partition: process_partition(
                 factory=Dedupe,
                 partition=partition,
-                strats=strats,
+                dedupers=dedupers,
                 id=id,
                 columns=columns,
                 drop_duplicates=drop_duplicates,
@@ -256,7 +261,7 @@ class SparkExecutor(Executor):
         *,
         factory: Type[Dedupe],
         partition: Iterator[Row],
-        strats: StratsDict | Rules,
+        dedupers: DeduplicationDict | Pipeline,
         id: str | None,
         columns: Columns | None,
         drop_duplicates: bool,
@@ -265,12 +270,12 @@ class SparkExecutor(Executor):
         """process a spark dataframe partition i.e. a list[Row]
 
         This function is functionality mapped to a worker node. For clean
-        separation from the driver, strats are re-instantiated and the main
+        separation from the driver, dedupers are re-instantiated and the main
         liken API is executed *per* worker node.
 
         Args:
             paritition_iter: a partition
-            strats: the collection of strats
+            dedupers: the collection of dedupers
             id: the unique identified of the dataset a.k.a "business key"
             columns: the attribute on which to deduplicate
 
@@ -283,13 +288,16 @@ class SparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        lk = factory._from_rows(rows)  # type: ignore
-        lk.apply(strats)  # type: ignore
-        df = lk.canonicalize(
-            columns,
-            keep=keep,
-            drop_duplicates=drop_duplicates,
-            id=id,
+        df = (
+            factory._from_rows(rows)
+            .apply(dedupers)
+            .canonicalize(
+                columns,
+                keep=keep,
+                drop_duplicates=drop_duplicates,
+                id=id,
+            )
+            .collect()
         )
 
         return iter(cast(list[Row], df))

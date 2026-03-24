@@ -8,20 +8,20 @@ from liken import exact
 from liken import fuzzy
 from liken import jaccard
 from liken import lsh
+from liken import str_contains
+from liken import str_endswith
+from liken import str_startswith
 from liken import tfidf
-from liken._strats_library import LSH
-from liken._strats_library import BaseStrategy
-from liken._strats_library import Cosine
-from liken._strats_library import Exact
-from liken._strats_library import Fuzzy
-from liken._strats_library import Jaccard
-from liken._strats_library import StrContains
-from liken._strats_library import StrEndsWith
-from liken._strats_library import StrStartsWith
-from liken._strats_library import TfIdf
-from liken.rules import str_contains
-from liken.rules import str_endswith
-from liken.rules import str_startswith
+from liken._dedupers import LSH
+from liken._dedupers import BaseDeduper
+from liken._dedupers import Cosine
+from liken._dedupers import Exact
+from liken._dedupers import Fuzzy
+from liken._dedupers import Jaccard
+from liken._dedupers import StrContains
+from liken._dedupers import StrEndsWith
+from liken._dedupers import StrStartsWith
+from liken._dedupers import TfIdf
 
 
 ############
@@ -32,7 +32,7 @@ from liken.rules import str_startswith
 @pytest.fixture
 def mock_df():
     """
-    Minimal LocalDF. Only methods used by strategies defined.
+    Minimal LocalDF. Only methods used by dedupers are defined.
     """
     df = Mock()
     df._get_col.return_value = pa.array([1, 2, 3])
@@ -43,21 +43,21 @@ def mock_df():
 
 
 ##############################
-# BaseStrategy core behavior #
+# BaseDeduper core behavior #
 ##############################
 
 
 def test_set_frame_sets_wrapped_df(mock_df):
-    strat = BaseStrategy()
-    returned = strat.set_frame(mock_df)
-    assert returned is strat
-    assert strat.wdf is mock_df
+    deduper = BaseDeduper()
+    returned = deduper.set_frame(mock_df)
+    assert returned is deduper
+    assert deduper.wdf is mock_df
 
 
 def test_gen_similarity_pairs_not_implemented():
-    strat = BaseStrategy()
+    deduper = BaseDeduper()
     with pytest.raises(NotImplementedError):
-        list(strat._gen_similarity_pairs(pa.array([])))
+        list(deduper._gen_similarity_pairs(pa.array([])))
 
 
 ################
@@ -66,24 +66,24 @@ def test_gen_similarity_pairs_not_implemented():
 
 
 def test_canonicalize_puts_canonical_id(mock_df):
-    strat = BaseStrategy()
-    strat.set_frame(mock_df)
+    deduper = BaseDeduper()
+    deduper.set_frame(mock_df)
 
-    strat.wdf.get_array = Mock(
+    deduper.wdf.get_array = Mock(
         side_effect=[
             pa.array([10, 20, 30]),
             pa.array(["a", "a", "b"]),
         ]
     )
 
-    strat.wdf.get_canonical = Mock(side_effect=[pa.array([10, 20, 30])])
+    deduper.wdf.get_canonical = Mock(side_effect=[pa.array([10, 20, 30])])
 
     components = {
         0: [0, 1],
         2: [2],
     }
 
-    result = strat.canonicalizer(components=components, drop_duplicates=False, keep="first")
+    result = deduper.canonicalizer(components=components, drop_duplicates=False, keep="first")
 
     mock_df.put_col.assert_called_once()
     assert result is mock_df
@@ -95,15 +95,15 @@ def test_canonicalize_puts_canonical_id(mock_df):
 
 
 def test_column_array_mixin_str_column(mock_df):
-    strat = Exact().set_frame(mock_df)
-    arr = strat.wdf.get_array("a")
+    deduper = Exact().set_frame(mock_df)
+    arr = deduper.wdf.get_array("a")
     mock_df.get_array.assert_called_once_with("a")
     assert isinstance(arr, pa.Array)
 
 
 def test_column_array_mixin_tuple_column(mock_df):
-    strat = Exact().set_frame(mock_df)
-    arr = strat.wdf.get_array(("a", "b"))
+    deduper = Exact().set_frame(mock_df)
+    arr = deduper.wdf.get_array(("a", "b"))
     mock_df.get_array.assert_called_once_with(("a", "b"))
     assert isinstance(arr, pa.Array)
 
@@ -151,5 +151,5 @@ def test_compound_column_validation_rejects_str():
     ],
 )
 def test_public_factories_return_correct_type(factory, cls):
-    strat = factory()
-    assert isinstance(strat, cls)
+    deduper = factory()
+    assert isinstance(deduper, cls)
