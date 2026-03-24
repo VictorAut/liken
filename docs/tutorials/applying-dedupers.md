@@ -9,7 +9,7 @@ In your [First Steps](../first-steps.md#the-simplest-example) you found out how 
 When it comes to 'using' dedupers, they are *applied* first, before calling `drop_duplicates()`:
 
 
-```python {hl_lines="4"}
+```python
 import liken as lk
 
 df = lk.dedupe(df).apply(fuzzy()).drop_duplicates("address").collect()
@@ -139,6 +139,8 @@ pipeline = (
     .step(lk.on("address").str_len(min=10))
 ) # OR: either condition must hold
 ```
+!!! note
+    OR semantics are achieved in with dictionaries. If you are just using OR semantics in pipeline, consider sticking to defining collections of dedupers are dictionaries, which are simpler to use.
 
 ### NOT semantics
 
@@ -157,3 +159,112 @@ pipeline = (
     )
 )
 ```
+
+### Preprocessors
+
+Pipelines support the addition of a powerful feature: preprocessors. **Liken's** preprocessors transform data solely within the internals of the library for the purposes of deduplication whilst still returning data to you in the original format. 
+
+Preprocessors can be used to refine deduplication pipelines, reduce boilerplate code preprocessing code, reduce the number of "dummy" columns that you have to maintain, and reduces the risk of unacceptable false positive rates.
+
+Preprocessors are available in the [`liken.preprocessors`](../reference/preprocessors.md) module and can be made available to the overall pipeline scope, a `step` in the pipeline, or `on` column only.
+
+=== "Pipeline level"
+
+    ```python
+    import liken as lk
+
+    pipeline = (
+        lk.pipeline(preprocessors=lk.preprocessors.lower())
+        .step(
+            [
+                lk.on("email").fuzzy(),
+                ~lk.on("email").isna(),
+            ],
+        )
+        .step(lk.on("address").tfidf())
+    )
+    
+    ```
+
+=== "Step level"
+
+    ```python
+    import liken as lk
+
+    pipeline = (
+        lk.pipeline()
+        .step(
+            [
+                lk.on("email").fuzzy(),
+                ~lk.on("email").isna(),
+            ],
+            preprocessors=lk.preprocessors.lower()
+        )
+        .step(lk.on("address").tfidf())
+    )
+    ```
+
+=== "On column level"
+
+    ```python
+    import liken as lk
+
+    pipeline = (
+        lk.pipeline()
+        .step(
+            [
+                lk.on("email").fuzzy(),
+                ~lk.on("email").isna(),
+            ],
+        )
+        .step(lk.on("address", preprocessors=lk.preprocessors.lower()).tfidf())
+    )
+    ```
+
+A single preprocessor can be passed, or multiple, if passed as a list:
+
+```python
+import liken as lk
+
+pipeline = (
+    lk.pipeline(
+        preprocessors=[
+            lk.preprocessors.lower(),
+            lk.preprocessors.ascii_fold(),
+            lk.preprocessors.remove_punctuation(),
+        ]
+    )
+    .step(lk.on("address").tfidf())
+)
+```
+
+Preprocessors are propagated in a top-down manner, but overriden buttom-up. So, a `pipeline` level preprocessor will propagate to each `step` and column accessor `on`, but will be respectively overriden if preprocessors are defined there:
+
+```python
+pipeline = (
+    lk.pipeline(preprocessors=[lk.preprocessors.ascii_fold()])
+    .step(
+        [
+            lk.on("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
+            ~lk.on(
+                "address",
+                preprocessors=[lk.preprocessors.lower()],
+            ).isna(),  # uses it's own preprocessor, `lower`.
+        ],
+        preprocessors=[lk.preprocessors.alnum()],  # defines the step's preprocessor
+    )
+    .step(
+        lk.on("address").tfidf()
+    )  # defaults to the pipeline's preprocessor, `ascii_fold`.
+)
+```
+
+## Summary
+
+Different collections of dedupers, whether a single deduper, a dictionary or a pipeline, are best suited to different use cases:
+
+| Collection | Quick tasks | Multiple columns | OR semantics | AND semantics | NOT semantics | Preprocessors |
+| ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| Single | :white_check_mark: | :material-close: | :material-close: | :material-close: | :material-close: | :material-close: |
+| Dict | :white_check_mark: | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: | :material-close: |
+| Pipeline | :material-close: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |

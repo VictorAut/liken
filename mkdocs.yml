@@ -97,7 +97,6 @@ nav:
     - tutorials/record-linkage.md
     - tutorials/customizing-strategies.md
   - How-To Guides: 
-    - how-tos/choose-the-right-api.md
     - how-tos/build-iterative-workloads.md
     - how-tos/optimise-for-performance.md
   - Explanation:
