@@ -77,7 +77,7 @@ INVALID_SEQUENCE_AFTER_DICT_MSG: Final[str] = (
     "Use either individual 'BaseDeduper' instances or a dict of dedupers, not both."
 )
 INVALID_RULE_EMPTY_MSG: Final[str] = "Pipeline cannot be empty"
-INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Pipeline element at index {} is not an instance of On, got '{}'"
+INVALID_RULE_MEMBER_MSG: Final[str] = "Invalid Pipeline element at index {} is not an instance of Col, got '{}'"
 INVALID_FALLBACK_MSG: Final[str] = "Invalid deduper: Expected a 'BaseDeduper', a dict or 'Pipeline', got '{}'"
 
 # collection warnings

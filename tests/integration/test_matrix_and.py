@@ -46,19 +46,19 @@ def str_same_len(array: typing.Iterable):
 
 PARAMS = [
     # single column
-    ([lk.on("email").fuzzy(0.95)], [0, 1, 2, 3, 4, 4, 3, 3, 8, 0]),
-    ([lk.on("email").fuzzy(0.95), lk.on("email").str_same_len()],  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
+    ([lk.col("email").fuzzy(0.95)], [0, 1, 2, 3, 4, 4, 3, 3, 8, 0]),
+    ([lk.col("email").fuzzy(0.95), lk.col("email").str_same_len()],  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
     # single column
-    ([lk.on("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ([lk.on("address").fuzzy(0.70), lk.on("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    ([lk.col("address").fuzzy(0.70), lk.col("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # single column
-    ([lk.on("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ([lk.on("address").fuzzy(0.70), ~lk.on("address").isna()], [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
+    ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    ([lk.col("address").fuzzy(0.70), ~lk.col("address").isna()], [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),
     # single column
-    ([lk.on("account").exact()], [0, 0, 2, 3, 4, 0, 0, 2, 8, 8]),
-    ([lk.on("property_height").isna(), lk.on("account").exact()], [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
+    ([lk.col("account").exact()], [0, 0, 2, 3, 4, 0, 0, 2, 8, 8]),
+    ([lk.col("property_height").isna(), lk.col("account").exact()], [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
     # two threshold dedupers
-    ([lk.on("birth_country").exact(), lk.on("marital_status").exact()], [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
+    ([lk.col("birth_country").exact(), lk.col("marital_status").exact()], [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
 ]
 
 # fmt: on

@@ -17,16 +17,16 @@ SINGLE_COL = "address"
 
 
 def build_pipeline_global(preprocessors):
-    return lk.pipeline(preprocessors=preprocessors).step(lk.on(SINGLE_COL).exact())
+    return lk.pipeline(preprocessors=preprocessors).step(lk.col(SINGLE_COL).exact())
 
 
 def build_pipeline_step(preprocessors):
-    return lk.pipeline().step(lk.on(SINGLE_COL).exact(), preprocessors=preprocessors)
+    return lk.pipeline().step(lk.col(SINGLE_COL).exact(), preprocessors=preprocessors)
 
 
 def build_pipeline_both(preprocessors):
     return lk.pipeline(preprocessors=preprocessors).step(
-        lk.on(SINGLE_COL, preprocessors=preprocessors).exact()
+        lk.col(SINGLE_COL, preprocessors=preprocessors).exact()
     )
 
 

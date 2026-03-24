@@ -95,15 +95,10 @@ nav:
     - tutorials/first-steps.md
     - tutorials/applying-dedupers.md
     - tutorials/record-linkage.md
-    - tutorials/customizing-strategies.md
-  - How-To Guides: 
-    - how-tos/build-iterative-workloads.md
-    - how-tos/optimise-for-performance.md
-  - Explanation:
-    - explanation/what-diff-in-apis.md
-    - explanation/binary-vs-discrete.md
-    - explanation/how-does-it-work.md
-    - explanation/performance.md
+    - tutorials/custom-dedupers.md
+  - In Practice: 
+    - in-practice/iterative-workloads.md
+    - in-practice/performance.md
   - API Reference:
     - reference/liken.md
     - reference/preprocessors.md

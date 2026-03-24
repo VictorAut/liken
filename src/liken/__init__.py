@@ -14,8 +14,8 @@ from liken._dedupers import str_len
 from liken._dedupers import str_startswith
 from liken._dedupers import tfidf
 from liken._pipelines import Pipeline
-from liken._pipelines import on
-from liken._pipelines import On
+from liken._pipelines import col
+from liken._pipelines import Col
 from liken._pipelines import pipeline
 from liken.liken import Dedupe
 from liken.liken import dedupe
@@ -38,8 +38,8 @@ __all__ = [
     "str_startswith",
     "pipeline",
     "Pipeline",
-    "on",
-    "On",
+    "col",
+    "Col",
     "custom",
     "preprocessors",
     "synthetic",

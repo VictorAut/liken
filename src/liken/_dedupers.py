@@ -1273,8 +1273,8 @@ def isna() -> BaseDeduper:
 
             pipeline = lk.pipeline().step(
                 [
-                    lk.on("email").exact(),
-                    ~lk.on("address").isna(),
+                    lk.col("email").exact(),
+                    ~lk.col("address").isna(),
                 ]
             )
 
@@ -1323,7 +1323,7 @@ def isin(values: Iterable) -> BaseDeduper:
             import liken as lk
 
             pipeline = lk.pipeline().step(
-                lk.on("address").isin(values="london")
+                lk.col("address").isin(values="london")
             )
 
             df = (
@@ -1381,8 +1381,8 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
 
             pipeline = lk.pipeline().step(
                 [
-                    lk.on("email").exact(),
-                    lk.on("email").str_len(min_len=10),
+                    lk.col("email").exact(),
+                    lk.col("email").str_len(min_len=10),
                 ]
             )
 
@@ -1439,8 +1439,8 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
 
             pipeline = lk.pipeline().step(
                 [
-                    lk.on("email").exact(),
-                    lk.on("email").str_startswith(pattern="f", case=True),
+                    lk.col("email").exact(),
+                    lk.col("email").str_startswith(pattern="f", case=True),
                 ]
             )
 
@@ -1497,8 +1497,8 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
 
             pipeline = lk.pipeline().step(
                 [
-                    lk.on("email").exact(),
-                    lk.on("email").str_endswith(pattern=".com", case=False),
+                    lk.col("email").exact(),
+                    lk.col("email").str_endswith(pattern=".com", case=False),
                 ]
             )
 
@@ -1561,8 +1561,8 @@ def str_contains(
 
             pipeline = lk.pipeline().step(
                 [
-                    lk.on("email").exact(),
-                    lk.on("email").str_contains(pattern=r"05\\d{3}", regex=True),
+                    lk.col("email").exact(),
+                    lk.col("email").str_contains(pattern=r"05\\d{3}", regex=True),
                 ]
             )
 

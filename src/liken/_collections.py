@@ -17,7 +17,7 @@ from liken._constants import WARN_RULES_REPLACES_RULES_MSG
 from liken._dedupers import BaseDeduper
 from liken._exceptions import InvalidDeduperError
 from liken._exceptions import warn
-from liken._pipelines import On
+from liken._pipelines import Col
 from liken._pipelines import Pipeline
 
 
@@ -99,7 +99,7 @@ class CollectionsManager:
         dict (or DeduplicationDict — even though this is not public) then it is the
         "Dict" API. Else "Pipeline" API is in use.
 
-        Note also that as Pipeline contains On and combinations of On operated
+        Note also that as Pipeline contains Col and combinations of Col operated
         with & results in self mutation, need deep copy to allow for
         serialization to Spark workers."""
 
@@ -119,7 +119,7 @@ class CollectionsManager:
             self._dedupers = DeduplicationDict(deduper)
             return
 
-        if isinstance(deduper, On):
+        if isinstance(deduper, Col):
             deduper = Pipeline().step(deduper)
 
         if isinstance(deduper, Pipeline):

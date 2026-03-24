@@ -7,7 +7,7 @@ from liken._collections import DeduplicationDict
 from liken._collections import InvalidDeduperError
 from liken._dedupers import BaseDeduper
 from liken._pipelines import Pipeline
-from liken._pipelines import on
+from liken._pipelines import col
 from liken._registry import registry
 
 
@@ -130,7 +130,7 @@ def test_collections_manager_apply_dict(s1, s2, s3):
 
 def test_collections_manager_apply_single_on_no_pipeline(s1):
     sm = CollectionsManager()
-    on_deduper = on("a").s1()
+    on_deduper = col("a").s1()
 
     sm.apply(on_deduper)
     result = sm.get()
@@ -145,7 +145,7 @@ def test_collections_manager_apply_single_on_no_pipeline(s1):
 
 def test_collections_manager_apply_single_on_as_pipeline(s1):
     sm = CollectionsManager()
-    pipeline = Pipeline().step(on("a").s1())
+    pipeline = Pipeline().step(col("a").s1())
 
     sm.apply(pipeline)
     result = sm.get()
@@ -160,7 +160,7 @@ def test_collections_manager_apply_single_on_as_pipeline(s1):
 
 def test_collections_manager_apply_stepped_pipeline(s1, s2, s3):
     sm = CollectionsManager()
-    pipeline = Pipeline().step(on("a").s1()).step([on("b").s2(), on("c").s3()])
+    pipeline = Pipeline().step(col("a").s1()).step([col("b").s2(), col("c").s3()])
 
     sm.apply(pipeline)
     result = sm.get()
@@ -250,17 +250,17 @@ def test_pretty_get_dict_api(s1, s2, s3):
 
 def test_pretty_get_rules_api():
     sm = CollectionsManager()
-    sm.apply(Pipeline().step(on("col_a").exact()).step(on("col_b").fuzzy()))
+    sm.apply(Pipeline().step(col("col_a").exact()).step(col("col_b").fuzzy()))
 
     pretty = sm.pretty_get()
     assert (
         pretty == "("
         "\n\tlk.rules.builder()"
         "\n\t\t.step(["
-        "\n\t\t\tlk.on('col_a').exact(),"
+        "\n\t\t\tlk.col('col_a').exact(),"
         "\n\t\t])"
         "\n\t\t.step(["
-        "\n\t\t\tlk.on('col_b').fuzzy(threshold=0.95, scorer='simple_ratio'),"
+        "\n\t\t\tlk.col('col_b').fuzzy(threshold=0.95, scorer='simple_ratio'),"
         "\n\t\t])"
         "\n)"
     )

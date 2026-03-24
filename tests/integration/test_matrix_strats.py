@@ -183,7 +183,7 @@ def test_matrix_dedupers_rules_api(deduper, columns, dedup_kwarg, expected_canon
 
     df = (
         lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.pipeline().step(getattr(lk.on(columns), deduper.__name__)(**dedup_kwarg)))
+        .apply(lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**dedup_kwarg)))
         .canonicalize()
         .collect()
     )

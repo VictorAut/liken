@@ -37,16 +37,16 @@ def pipeline(preprocessors: InputPreprocessor = []) -> Pipeline:
     return Pipeline(preprocessors)
 
 
-def on(columns: Columns, /, *, preprocessors: InputPreprocessor = []) -> On:
-    """Convenience function for calling `On` with a deduper."""
-    return On(columns, preprocessors=preprocessors)
+def col(columns: Columns, /, *, preprocessors: InputPreprocessor = []) -> Col:
+    """Convenience function for calling `Col` with a deduper."""
+    return Col(columns, preprocessors=preprocessors)
 
 
 # ON:
 
 
 @final
-class On:
+class Col:
     """Unit collection for a single deduper in the Pipeline API.
 
     Operates deduplication on a column. Passed as a step in a deduplication
@@ -89,8 +89,8 @@ class On:
                 
             pipeline = (
                 lk.pipeline(preprocessors=[lk.preprocessors.lower()])
-                .step(lk.on("email").fuzzy()) # Preprocessor applies here
-                .step(lk.on("address").tfidf()) # And here
+                .step(lk.col("email").fuzzy()) # Preprocessor applies here
+                .step(lk.col("address").tfidf()) # And here
             )
 
         But, a global pipeline preprocessor will not override an explicit
@@ -101,15 +101,15 @@ class On:
                 lk.pipeline(preprocessors=[lk.preprocessors.ascii_fold()])
                 .step(
                     [
-                        lk.on("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
-                        ~lk.on(
+                        lk.col("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
+                        ~lk.col(
                             "address",
                             preprocessors=[lk.preprocessors.lower()], 
                         ).isna(), # uses it's own preprocessor, `lower`.
                     ],
                     preprocessors=[lk.preprocessors.alnum()], # defines the step's preprocessor
                 )
-                .step(lk.on("address").tfidf()) # defaults to the pipeline's preprocessor, `ascii_fold`.
+                .step(lk.col("address").tfidf()) # defaults to the pipeline's preprocessor, `ascii_fold`.
             )
     """
 
@@ -117,10 +117,10 @@ class On:
     # must be manually maintained
     # add a new dummy method here upon adding a new deduper.
 
-    def exact(self, *args, **kwargs) -> On:
+    def exact(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.exact` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.exact`](../reference/liken.md#liken.exact) reference for
         complete documentation.
 
@@ -132,10 +132,10 @@ class On:
         """
         return self.__getattr__("exact")(*args, **kwargs)
 
-    def fuzzy(self, *args, **kwargs) -> On:
+    def fuzzy(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.fuzzy` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.fuzzy`](../reference/liken.md#liken.fuzzy) reference for
         complete documentation.
 
@@ -147,10 +147,10 @@ class On:
         """
         return self.__getattr__("fuzzy")(*args, **kwargs)
 
-    def tfidf(self, *args, **kwargs) -> On:
+    def tfidf(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.tfidf` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.tfidf`](../reference/liken.md#liken.tfidf) reference for
         complete documentation.
 
@@ -162,10 +162,10 @@ class On:
         """
         return self.__getattr__("tfidf")(*args, **kwargs)
 
-    def lsh(self, *args, **kwargs) -> On:
+    def lsh(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.lsh` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.lsh`](../reference/liken.md#liken.lsh) reference for
         complete documentation.
 
@@ -177,10 +177,10 @@ class On:
         """
         return self.__getattr__("lsh")(*args, **kwargs)
 
-    def jaccard(self, *args, **kwargs) -> On:
+    def jaccard(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.jaccard` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.jaccard`](../reference/liken.md#liken.jaccard) reference for
         complete documentation.
 
@@ -192,10 +192,10 @@ class On:
         """
         return self.__getattr__("jaccard")(*args, **kwargs)
 
-    def cosine(self, *args, **kwargs) -> On:
+    def cosine(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.cosine` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.cosine`](../reference/liken.md#liken.cosine) reference for
         complete documentation.
 
@@ -207,10 +207,10 @@ class On:
         """
         return self.__getattr__("cosine")(*args, **kwargs)
 
-    def isin(self, *args, **kwargs) -> On:
+    def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.isin`](../reference/liken.md#liken.isin) reference for
         complete documentation.
 
@@ -222,10 +222,10 @@ class On:
         """
         return self.__getattr__("isin")(*args, **kwargs)
 
-    def isna(self, *args, **kwargs) -> On:
+    def isna(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isna` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.isna`](../reference/liken.md#liken.isna) reference for
         complete documentation.
 
@@ -237,10 +237,10 @@ class On:
         """
         return self.__getattr__("isna")(*args, **kwargs)
 
-    def str_startswith(self, *args, **kwargs) -> On:
+    def str_startswith(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_startswith` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.str_startswith`](../reference/liken.md#liken.str_startswith) reference for
         complete documentation.
 
@@ -252,10 +252,10 @@ class On:
         """
         return self.__getattr__("str_startswith")(*args, **kwargs)
 
-    def str_endswith(self, *args, **kwargs) -> On:
+    def str_endswith(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_endswith` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.str_endswith`](../reference/liken.md#liken.str_endswith) reference for
         complete documentation.
 
@@ -267,10 +267,10 @@ class On:
         """
         return self.__getattr__("str_endswith")(*args, **kwargs)
 
-    def str_contains(self, *args, **kwargs) -> On:
+    def str_contains(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_contains` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.str_contains`](../reference/liken.md#liken.str_contains) reference for
         complete documentation.
 
@@ -282,10 +282,10 @@ class On:
         """
         return self.__getattr__("str_contains")(*args, **kwargs)
 
-    def str_len(self, *args, **kwargs) -> On:
+    def str_len(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_len` function.
 
-        Usage is identical to the function but chained to an instance of `On`.
+        Usage is identical to the function but chained to an instance of `Col`.
         See [`lk.str_len`](../reference/liken.md#liken.str_len) reference for
         complete documentation.
 
@@ -303,7 +303,7 @@ class On:
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
 
     def __getattr__(self, attr):
-        """Make deduper functions available as method calls to On.
+        """Make deduper functions available as method calls to Col.
 
         Functions are retrieved from registry. Includes any prior custom
         dedupers that have been registered.
@@ -322,7 +322,7 @@ class On:
 
         return wrapper
 
-    def __invert__(self) -> On:
+    def __invert__(self) -> Col:
         """Propagate inverstion to the deduper. Allows for following syntax:
 
         ~on("email").isna()
@@ -332,7 +332,7 @@ class On:
 
         columns, deduper, preprocessors = self._unit
 
-        new_on = On(columns)
+        new_on = Col(columns)
         new_on._unit = PipelineUnit(columns, ~deduper, preprocessors)
         return new_on
 
@@ -343,9 +343,9 @@ class On:
     def __str__(self) -> str:
         """string representation
 
-        Parses a single On or combinations of On operated with `&`
+        Parses a single Col or combinations of Col operated with `&`
         """
-        on: str = "lk.on"
+        on: str = "lk.col"
 
         rep = ""
         columns, deduper, _ = self._unit
@@ -380,12 +380,12 @@ class Pipeline:
 
     def __init__(self, preprocessors: InputPreprocessor = []):
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
-        self._ons: list[list[On]] = []
+        self._ons: list[list[Col]] = []
         self._steps: PipelineCollection = []
 
     def step(
         self,
-        ons: On | list[On],
+        ons: Col | list[Col],
         /,
         *,
         preprocessors: InputPreprocessor = [],
@@ -398,7 +398,7 @@ class Pipeline:
         canonicalisation.
         
         Args:
-            ons: `On` deduper, or list of the same.
+            ons: `Col` deduper, or list of the same.
             preprocessors: a preprocessor, or list of preprocessors to appy the
                 whole step (i.e. to all dedupers if more than one deduper).
         
@@ -408,14 +408,14 @@ class Pipeline:
         Example:
             A single deduper is added:
                 
-                pipeline = lk.pipeline().step(lk.on("email").exact())
+                pipeline = lk.pipeline().step(lk.col("email").exact())
 
             Multiple steps can be chained:
                 
                 pipeline = (
                     lk.pipeline()
-                    .step(lk.on("email").fuzzy())
-                    .step(lk.on("address").tfidf())
+                    .step(lk.col("email").fuzzy())
+                    .step(lk.col("address").tfidf())
                 )
 
             More than on deduper can be added to form composable rules within
@@ -425,19 +425,19 @@ class Pipeline:
                     lk.pipeline()
                     .step(
                         [
-                            lk.on("email").fuzzy(),
-                            ~lk.on("address").isna(),
+                            lk.col("email").fuzzy(),
+                            ~lk.col("address").isna(),
                         ]
                     )
-                    .step(lk.on("address").tfidf())
+                    .step(lk.col("address").tfidf())
                 )
 
             Pipeline preprocessors will be applied to all steps:
                 
                 pipeline = (
                     lk.pipeline(preprocessors=[lk.preprocessors.lower()])
-                    .step(lk.on("email").fuzzy()) # Preprocessor applies here
-                    .step(lk.on("address").tfidf()) # And here
+                    .step(lk.col("email").fuzzy()) # Preprocessor applies here
+                    .step(lk.col("address").tfidf()) # And here
                 )
 
             But, a global pipeline preprocessor will not override an explicit
@@ -446,17 +446,17 @@ class Pipeline:
                 pipeline = (
                     lk.pipeline(preprocessors=[lk.preprocessors.lower()])
                     .step(
-                        lk.on("email").fuzzy(), preprocessors=[lk.preprocessors.alnum()]
+                        lk.col("email").fuzzy(), preprocessors=[lk.preprocessors.alnum()]
                     )  # only `alnum` preprocessed
-                    .step(lk.on("address").tfidf())  # this one still preprocessed with `lower`
+                    .step(lk.col("address").tfidf())  # this one still preprocessed with `lower`
                 )
         """
         preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
         if not preprocessors:
             preprocessors = self._preprocessors
 
-        if isinstance(ons, On):
-            ons: list[On] = [ons]
+        if isinstance(ons, Col):
+            ons: list[Col] = [ons]
         self._ons.append(ons)
 
         step: PipelineStep = [on.unit for on in ons]

@@ -4,7 +4,7 @@ title: Applying Dedupers
 
 ## Applying Your First Deduper
 
-In your [First Steps](../first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **liken** — in fact it was *the* [exact](../../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called `drop_duplicates()` with no other deduper.
+In your [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **liken** — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called `drop_duplicates()` with no other deduper.
 
 When it comes to 'using' dedupers, they are *applied* first, before calling `drop_duplicates()`:
 
@@ -58,11 +58,11 @@ import liken as lk
 
 pipeline = (
     lk.pipeline()
-    .step(lk.on("email").exact())
-    .step(lk.on("address").fuzzy(threshold=0.98))
-    .step(lk.on("address").tfidf(threshold=0.9, ngram=(1, 2), topn=1))
+    .step(lk.col("email").exact())
+    .step(lk.col("address").fuzzy(threshold=0.98))
+    .step(lk.col("address").tfidf(threshold=0.9, ngram=(1, 2), topn=1))
     .step(
-        lk.on(
+        lk.col(
             (
                 "marital_status",
                 "has_car",
@@ -79,8 +79,8 @@ df = lk.dedupe(df).apply(pipeline).drop_duplicates().collect()
 A pipeline has the following features:
 
 - Each `step` in a pipeline represents a deduplication step
-- Column access is provided by `lk.on`.
-- Dedupers are provided as method calls to `lk.on`.
+- Column access is provided by `lk.col`.
+- Dedupers are provided as method calls to `lk.col`.
 
 ### AND semantics
 
@@ -95,11 +95,11 @@ pipeline = (
     lk.pipeline()
     .step(
         [
-            lk.on("address").fuzzy(),
-            lk.on("address").str_len(min=10),
+            lk.col("address").fuzzy(),
+            lk.col("address").str_len(min=10),
         ] # AND: both conditions must hold
     )
-    .step(lk.on("email").fuzzy(threshold=0.98))
+    .step(lk.col("email").fuzzy(threshold=0.98))
 )
 
 
@@ -124,8 +124,8 @@ pipeline = (
     lk.pipeline()
     .step(
         [
-            lk.on("address").fuzzy(),
-            lk.on("address").str_len(min=10),
+            lk.col("address").fuzzy(),
+            lk.col("address").str_len(min=10),
         ]
     )
 ) # AND: both conditions must hold
@@ -135,8 +135,8 @@ import liken as lk
 
 pipeline = (
     lk.pipeline()
-    .step(lk.on("address").fuzzy())
-    .step(lk.on("address").str_len(min=10))
+    .step(lk.col("address").fuzzy())
+    .step(lk.col("address").str_len(min=10))
 ) # OR: either condition must hold
 ```
 !!! note
@@ -144,7 +144,7 @@ pipeline = (
 
 ### NOT semantics
 
-Predicate dedupers can be inverted to form a NOT semantics by using the `~` operator on the column accessor `lk.on`. If in our earlier example we wanted to deduplicate where the minimum length was *not* 20 characters then we would have the following:
+Predicate dedupers can be inverted to form a NOT semantics by using the `~` operator on the column accessor `lk.col`. If in our earlier example we wanted to deduplicate where the minimum length was *not* 20 characters then we would have the following:
 
 ```python
 import liken as lk
@@ -153,8 +153,8 @@ pipeline = (
     lk.pipeline()
     .step(
         [
-            lk.on("address").fuzzy(),
-            ~lk.on("address").isna(), # NOT null
+            lk.col("address").fuzzy(),
+            ~lk.col("address").isna(), # NOT null
         ]
     )
 )
@@ -177,11 +177,11 @@ Preprocessors are available in the [`liken.preprocessors`](../reference/preproce
         lk.pipeline(preprocessors=lk.preprocessors.lower())
         .step(
             [
-                lk.on("email").fuzzy(),
-                ~lk.on("email").isna(),
+                lk.col("email").fuzzy(),
+                ~lk.col("email").isna(),
             ],
         )
-        .step(lk.on("address").tfidf())
+        .step(lk.col("address").tfidf())
     )
     
     ```
@@ -195,16 +195,16 @@ Preprocessors are available in the [`liken.preprocessors`](../reference/preproce
         lk.pipeline()
         .step(
             [
-                lk.on("email").fuzzy(),
-                ~lk.on("email").isna(),
+                lk.col("email").fuzzy(),
+                ~lk.col("email").isna(),
             ],
             preprocessors=lk.preprocessors.lower()
         )
-        .step(lk.on("address").tfidf())
+        .step(lk.col("address").tfidf())
     )
     ```
 
-=== "On column level"
+=== "Col level"
 
     ```python
     import liken as lk
@@ -213,11 +213,11 @@ Preprocessors are available in the [`liken.preprocessors`](../reference/preproce
         lk.pipeline()
         .step(
             [
-                lk.on("email").fuzzy(),
-                ~lk.on("email").isna(),
+                lk.col("email").fuzzy(),
+                ~lk.col("email").isna(),
             ],
         )
-        .step(lk.on("address", preprocessors=lk.preprocessors.lower()).tfidf())
+        .step(lk.col("address", preprocessors=lk.preprocessors.lower()).tfidf())
     )
     ```
 
@@ -234,7 +234,7 @@ pipeline = (
             lk.preprocessors.remove_punctuation(),
         ]
     )
-    .step(lk.on("address").tfidf())
+    .step(lk.col("address").tfidf())
 )
 ```
 
@@ -245,8 +245,8 @@ pipeline = (
     lk.pipeline(preprocessors=[lk.preprocessors.ascii_fold()])
     .step(
         [
-            lk.on("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
-            ~lk.on(
+            lk.col("email").fuzzy(),  # preprocessed by step's preprocessor, `alnum`.
+            ~lk.col(
                 "address",
                 preprocessors=[lk.preprocessors.lower()],
             ).isna(),  # uses it's own preprocessor, `lower`.
@@ -254,7 +254,7 @@ pipeline = (
         preprocessors=[lk.preprocessors.alnum()],  # defines the step's preprocessor
     )
     .step(
-        lk.on("address").tfidf()
+        lk.col("address").tfidf()
     )  # defaults to the pipeline's preprocessor, `ascii_fold`.
 )
 ```

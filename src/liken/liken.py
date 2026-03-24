@@ -120,8 +120,8 @@ class Dedupe:
 
                 lk.dedupe(df).apply(
                     lk.pipeline()
-                    .step(lk.on("address").exact())
-                    .step(lk.on("address").tfidf())
+                    .step(lk.col("address").exact())
+                    .step(lk.col("address").tfidf())
                 )
 
         """

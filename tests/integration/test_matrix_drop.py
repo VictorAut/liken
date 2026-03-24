@@ -49,7 +49,7 @@ def dict_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
 
 
 def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
-    pipeline = lk.pipeline().step(getattr(lk.on(columns), deduper.__name__)(**deduper_kwarg))
+    pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
     return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize(**drop_kwarg).collect()
 
 
