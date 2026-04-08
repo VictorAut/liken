@@ -470,7 +470,7 @@ class StrLen(
         super().__init__(min_len=min_len, max_len=max_len)
         self._min_len = min_len
         self._max_len = max_len
-    
+
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
         lengths = pc.utf8_length(array)
