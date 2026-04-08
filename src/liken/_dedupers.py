@@ -293,10 +293,10 @@ class PredicateDedupers(BaseDeduper):
         if mask:
             indices = pc.indices_nonzero(mask).to_pylist()
 
-            n = len(indices)
-            for i in range(n):
-                for j in range(i + 1, n):
-                    yield indices[i], indices[j]
+            if indices:
+                root = indices[0]
+                for i in indices[1:]:
+                    yield root, i
             return
 
         # fallback to non vectorized, i.e. "Python" matching:
@@ -472,13 +472,24 @@ class StrLen(
         self._max_len = max_len
 
     @override
-    def _matches(self, value: str | None) -> bool:
-        if not value:
-            return False
-        len_val = len(value)
-        if not self._max_len:
-            return len_val > self._min_len
-        return len_val > self._min_len and len_val <= self._max_len
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array:
+        lengths = pc.utf8_length(array)
+
+        # Base condition: length > min_len
+        mask = pc.greater(lengths, self._min_len)
+
+        if self._max_len is not None:
+            upper = pc.less_equal(lengths, self._max_len)
+            mask = pc.and_(mask, upper)
+
+        # Exclude nulls / empty strings
+        not_null = pc.invert(pc.is_null(array))
+        not_empty = pc.greater(lengths, 0)
+
+        mask = pc.and_(mask, not_null)
+        mask = pc.and_(mask, not_empty)
+
+        return mask
 
     def __str__(self):
         return self.str_representation(self._NAME)
