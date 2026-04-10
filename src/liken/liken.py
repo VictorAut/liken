@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Self
+from typing import Hashable
 
 import pandas as pd
 import polars as pl
@@ -156,8 +157,12 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        columns: Columns | None = validate_columns_arg(
+            columns, self._collection.is_sequential_applied
+        )
+        wdf: Frame = wrap(
+            self._df, None
+        )  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -215,7 +220,9 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
+        columns: Columns | None = validate_columns_arg(
+            columns, self._collection.is_sequential_applied
+        )
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
@@ -235,7 +242,45 @@ class Dedupe:
 
         self._collection.reset()
 
+        # store canonical ids with multiple records
+        canonical_array = wdf.get_canonical().to_pylist()
+
+        counts: dict[Hashable, int] = {}
+        for cid in canonical_array:
+            counts[cid] = counts.get(cid, 0) + 1
+
+        self._canonical_id_counts = counts
+
         return self
+
+    def canonicals(self, n: int = 2) -> dict[Hashable, int]:
+        """Returns a dictionary of canonical ids that have `n` or more records.
+
+        Only allows n>=2. Only valid for deduplication with canonicalization.
+
+        Args:
+            n: the number of records per canonical id, defaulted at 2
+
+        Returns:
+            A dictionary of canonical ids, where values are the count of
+            associated records.
+
+        Raises:
+            ValueError: incorrect `n`
+            RuntimeError: when called before `canonicalize`
+        """
+
+        if n < 2:
+            raise ValueError("n must be >= 2")
+
+        if not hasattr(self, "_canonical_id_counts"):
+            raise RuntimeError(
+                "No canonical_id counts found. Run `.canonicalize()` first."
+            )
+
+        return {
+            cid: count for cid, count in self._canonical_id_counts.items() if count >= n
+        }
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Collect results and return the dataframe."""
@@ -273,6 +318,8 @@ class Dedupe:
 # API:
 
 
-def dedupe(df: UserDataFrame, /, *, spark_session: SparkSession | None = None) -> Dedupe:
+def dedupe(
+    df: UserDataFrame, /, *, spark_session: SparkSession | None = None
+) -> Dedupe:
     """Convenience function for `Dedupe` entrypoint."""
     return Dedupe(df, spark_session=spark_session)

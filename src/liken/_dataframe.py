@@ -120,6 +120,13 @@ class Frame(Generic[D, S]):
     def get_canonical(self) -> pa.Array:
         """Convenience method"""
         return self.get_array(CANONICAL_ID)
+    
+    def repeated_canonical_ids(self, n: int = 2) -> list:
+        """get a list of repeated canonical ids, based on the minimum number
+        of repeated ids, `n`.
+        """
+        del n
+        raise NotImplementedError
 
 
 # CANONICAL ID
@@ -217,6 +224,13 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
+    
+    def repeated_canonical_ids(self, n: int = 2) -> list:
+        if n < 2:
+            raise ValueError("n must be >= 2")
+
+        counts = self._df[CANONICAL_ID].value_counts()
+        return counts[counts >= n].index.tolist()
 
 
 @final
