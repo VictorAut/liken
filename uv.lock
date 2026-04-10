@@ -774,7 +774,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=1,<4" },
     { name = "polars", specifier = ">=1.24.0,<2" },
     { name = "pyarrow", specifier = ">=23.0.1,<24" },
-    { name = "pyspark", specifier = ">=3.5.5,<4" },
+    { name = "pyspark", specifier = ">=4" },
     { name = "rapidfuzz", specifier = ">=3.12.2,<4" },
     { name = "scikit-learn", specifier = ">=1.6.1,<2" },
     { name = "sparse-dot-topn", specifier = ">=1.1.5,<2" },
@@ -1583,12 +1583,12 @@ wheels = [
 
 [[package]]
 name = "pyspark"
-version = "3.5.7"
+version = "4.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "py4j" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/65/2764b1840aa6ea5f7e668a36702c3128ac54d0b861d3d57669b2453469a6/pyspark-3.5.7.tar.gz", hash = "sha256:80e36514e0c5c126d35a26adf4f405cd4a69de96a8ea8a3c1e9a65fce2fb4eaa", size = 317370347, upload-time = "2025-09-23T19:46:10.326Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/bf/58ee13add151469c25825b7125bbf62c3bdcec05eec4d458fcb5c5516066/pyspark-4.1.1.tar.gz", hash = "sha256:77f78984aa84fbe865c717dd37b49913b4e5c97d76ef6824f932f1aefa6621ec", size = 455359625, upload-time = "2026-01-09T09:38:38.28Z" }
 
 [[package]]
 name = "pytest"

@@ -72,6 +72,8 @@ class Dedupe:
         else:
             self._executor = LocalExecutor()
 
+        self.has_been_canonicalized: bool = False
+
     @classmethod
     def _from_rows(
         cls,
@@ -242,14 +244,7 @@ class Dedupe:
 
         self._collection.reset()
 
-        # store canonical ids with multiple records
-        canonical_array = wdf.get_canonical().to_pylist()
-
-        counts: dict[Hashable, int] = {}
-        for cid in canonical_array:
-            counts[cid] = counts.get(cid, 0) + 1
-
-        self._canonical_id_counts = counts
+        self.has_been_canonicalized: bool = True
 
         return self
 
@@ -273,10 +268,20 @@ class Dedupe:
         if n < 2:
             raise ValueError("n must be >= 2")
 
-        if not hasattr(self, "_canonical_id_counts"):
+        if not self.has_been_canonicalized:
             raise RuntimeError(
                 "No canonical_id counts found. Run `.canonicalize()` first."
             )
+        
+        wdf: Frame = wrap(self._df, id=None)
+        
+        canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
+
+        counts: dict[Hashable, int] = {}
+        for cid in canonical_array:
+            counts[cid] = counts.get(cid, 0) + 1
+
+        self._canonical_id_counts = counts
 
         return {
             cid: count for cid, count in self._canonical_id_counts.items() if count >= n
