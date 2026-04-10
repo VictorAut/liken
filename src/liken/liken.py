@@ -286,6 +286,15 @@ class Dedupe:
         return {
             cid: count for cid, count in self._canonical_id_counts.items() if count >= n
         }
+    
+    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """TODO
+        """
+        
+        wdf: Frame = wrap(self._df, id=None)
+        
+        return wdf.synthesize_record()
+
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Collect results and return the dataframe."""
