@@ -3,7 +3,7 @@ name = "liken"
 version = "0.6.1"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "Apache-2.0"
 keywords = [
