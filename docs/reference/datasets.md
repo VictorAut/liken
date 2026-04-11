@@ -1,8 +1,8 @@
 ---
-title: "liken.synthetic"
+title: "liken.datasets"
 ---
 
-::: liken.synthetic
+::: liken.datasets
     options:
       inherited_members: false
       members_order: __all__

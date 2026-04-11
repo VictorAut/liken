@@ -66,6 +66,7 @@ docs = [
     "mkdocs-material>=9.7.1,<10",
     "markdown-pycon>=1.0.1,<2",
     "mkdocstrings[python]>=1.0.3",
+    "zensical>=0.0.32",
 ]
 
 

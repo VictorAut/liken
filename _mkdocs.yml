@@ -103,5 +103,5 @@ nav:
     - reference/liken.md
     - reference/preprocessors.md
     - reference/custom.md
-    - reference/synthetic.md
+    - reference/datasets.md
 
