@@ -1,3 +1,5 @@
+from typing import Literal
+
 from liken._preprocessors import Alnum
 from liken._preprocessors import AsciiFold
 from liken._preprocessors import Lower
@@ -29,7 +31,7 @@ def remove_punctuation() -> RemovePunctuation:
     return RemovePunctuation()
 
 
-def normalize_unicode(form: str = "NFKD") -> NormalizeUnicode:
+def normalize_unicode(form: Literal["NFC", "NFKC", "NFD", "NFKD"] = "NFKD") -> NormalizeUnicode:
     """Normalize Unicode strings.
 
     Args:

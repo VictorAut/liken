@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Self
 from typing import Hashable
+from typing import Self
 
 import pandas as pd
 import polars as pl
@@ -159,12 +159,8 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(
-            columns, self._collection.is_sequential_applied
-        )
-        wdf: Frame = wrap(
-            self._df, None
-        )  # canonical id only ever autoincremental for dropping
+        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
+        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -222,9 +218,7 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(
-            columns, self._collection.is_sequential_applied
-        )
+        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
         wdf: Frame = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
@@ -269,12 +263,10 @@ class Dedupe:
             raise ValueError("n must be >= 2")
 
         if not self.has_been_canonicalized:
-            raise RuntimeError(
-                "No canonical_id counts found. Run `.canonicalize()` first."
-            )
-        
+            raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
+
         wdf: Frame = wrap(self._df, id=None)
-        
+
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
         counts: dict[Hashable, int] = {}
@@ -283,18 +275,14 @@ class Dedupe:
 
         self._canonical_id_counts = counts
 
-        return {
-            cid: count for cid, count in self._canonical_id_counts.items() if count >= n
-        }
-    
-    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """TODO
-        """
-        
-        wdf: Frame = wrap(self._df, id=None)
-        
-        return wdf.synthesize_record()
+        return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
 
+    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """TODO"""
+
+        wdf: Frame = wrap(self._df, id=None)
+
+        return wdf.synthesize_record()
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Collect results and return the dataframe."""
@@ -332,8 +320,6 @@ class Dedupe:
 # API:
 
 
-def dedupe(
-    df: UserDataFrame, /, *, spark_session: SparkSession | None = None
-) -> Dedupe:
+def dedupe(df: UserDataFrame, /, *, spark_session: SparkSession | None = None) -> Dedupe:
     """Convenience function for `Dedupe` entrypoint."""
     return Dedupe(df, spark_session=spark_session)

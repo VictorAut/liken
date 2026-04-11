@@ -42,8 +42,8 @@ import pyarrow as pa
 import pyspark.sql as spark
 from pyarrow.compute import coalesce
 from pyspark.rdd import RDD
-from pyspark.sql import functions
 from pyspark.sql import Row
+from pyspark.sql import functions
 from pyspark.sql.types import LongType
 from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
@@ -347,25 +347,19 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
         df_new: spark.DataFrame = df.drop(CANONICAL_ID)
         self._schema = self._new_schema(df_new, id)
         return df_new.rdd.mapPartitions(
-            lambda partition: [
-                Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition
-            ]
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
         )
 
     def _df_copy_id(self, df: spark.DataFrame, id: str) -> RDD[Row]:
         self._schema = self._new_schema(df, id)
         return df.rdd.mapPartitions(
-            lambda partition: [
-                Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition
-            ]
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
         )
 
     def _df_autoincrement_id(self, df: spark.DataFrame) -> RDD[Row]:
         self._schema = self._new_schema(df)
         return df.rdd.zipWithIndex().mapPartitions(
-            lambda partition: [
-                Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition
-            ]
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
         )
 
     @staticmethod
@@ -469,10 +463,7 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
     # WRAPPER METHODS:
 
     def put_col(self, column: str, array: list) -> Self:
-        self._df = [
-            spark.Row(**{**row.asDict(), column: value})
-            for row, value in zip(self._df, array)
-        ]
+        self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:

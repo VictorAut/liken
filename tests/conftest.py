@@ -13,8 +13,8 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
-from liken.liken import BaseDeduper
 from liken.datasets import fake_10
+from liken.liken import BaseDeduper
 
 
 @pytest.fixture(scope="session")
