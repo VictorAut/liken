@@ -27,6 +27,10 @@ nav = [
         "reference/custom.md",
         "reference/datasets.md",
     ] },
+    { "About" = [
+        "about/release-history.md",
+        "about/license.md",
+    ] },
 ]
 
 # THEME:
