@@ -1,8 +1,12 @@
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: #1e2629;        
-  --md-default-bg-color--light: #255f14;
-  --md-code-bg-color: #272c2e; 
-
+  --md-default-bg-color: #1e2629;
+  --md-primary-bg-color: #265f14;
   --md-accent-fg-color: #265f14;
   --md-accent-fg-color--transparent: #265f1421;
+  --md-code-bg-color: #272c2e;
+}
+
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  background-color:  rgba(20, 24, 27, 0.6);
 }

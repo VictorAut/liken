@@ -32,11 +32,11 @@ nav = [
 # THEME:
 
 [project.theme]
-logo = "images/logo.png"
+logo = "images/favicon-transparent.png"
 favicon = "images/favicon-transparent.png"
 features = [
     "navigation.top",
-    # "navigation.tabs",
+    "navigation.tabs",
     "navigation.sections",
     "navigation.tracking",
     "navigation.footer",
