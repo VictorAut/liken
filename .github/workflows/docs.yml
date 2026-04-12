@@ -31,7 +31,7 @@ jobs:
           uv sync --locked --all-extras --group docs
       
       - run: |
-          uv run mkdocs build
+          uv run zensical build --clean
 
       - name: Upload static files as artifact
         uses: actions/upload-pages-artifact@v3

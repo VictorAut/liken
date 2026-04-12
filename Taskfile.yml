@@ -40,5 +40,4 @@ tasks:
   docs:
     desc: locally build and serve MkDocs
     cmds:
-      - uv run mkdocs build
-      - uv run mkdocs serve
+      - uv run zensical serve
