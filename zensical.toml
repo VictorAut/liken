@@ -95,3 +95,8 @@ custom_fences = [
 alternate_style = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
+
+# VERSIONING:
+
+[project.extra.version]
+provider = "mike"

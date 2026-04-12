@@ -63,6 +63,7 @@ test = [
 ]
 docs = [
     "markdown-pycon>=1.0.1,<2",
+    "mike",
     "mkdocstrings[python]>=1.0.3",
     "zensical>=0.0.32",
 ]
@@ -70,6 +71,9 @@ docs = [
 
 [tool.uv]
 default-groups = "all"
+
+[tool.uv.sources]
+mike = { git = "https://github.com/squidfunk/mike.git" }
 
 [build-system]
 requires = ["uv_build>=0.10.4,<0.11.0"]
