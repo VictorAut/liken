@@ -1,6 +1,15 @@
 ---
 title: Release History
 ---
+
+## v0.7.2 (2026-04-12)
+
+**Features**
+
+
+- Release history added to documentation About page
+
+
 ## v0.7.1 (2026-04-12)
 
 
