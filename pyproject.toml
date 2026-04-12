@@ -1,6 +1,6 @@
 [project]
 name = "liken"
-version = "0.6.1"
+version = "0.7.0"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
 requires-python = ">=3.11"
@@ -62,8 +62,6 @@ test = [
     "pytest-cov>=6.1.1,<7",
 ]
 docs = [
-    "mkdocs>=1.6.1,<2",
-    "mkdocs-material>=9.7.1,<10",
     "markdown-pycon>=1.0.1,<2",
     "mkdocstrings[python]>=1.0.3",
     "zensical>=0.0.32",
