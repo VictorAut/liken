@@ -88,8 +88,6 @@ def test_wrapper_methods_spark(df_spark):
     with pytest.raises(NotImplementedError):
         wdf.put_col()
     with pytest.raises(NotImplementedError):
-        wdf._get_col()
-    with pytest.raises(NotImplementedError):
         wdf._get_cols()
     with pytest.raises(NotImplementedError):
         wdf.drop_duplicates()

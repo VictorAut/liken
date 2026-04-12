@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Hashable
 from typing import Self
 
 import pandas as pd
@@ -70,6 +71,8 @@ class Dedupe:
             self._executor = SparkExecutor(spark_session=spark_session)
         else:
             self._executor = LocalExecutor()
+
+        self.has_been_canonicalized: bool = False
 
     @classmethod
     def _from_rows(
@@ -235,7 +238,51 @@ class Dedupe:
 
         self._collection.reset()
 
+        self.has_been_canonicalized: bool = True
+
         return self
+
+    def canonicals(self, n: int = 2) -> dict[Hashable, int]:
+        """Returns a dictionary of canonical ids that have `n` or more records.
+
+        Only allows n>=2. Only valid for deduplication with canonicalization.
+
+        Args:
+            n: the number of records per canonical id, defaulted at 2
+
+        Returns:
+            A dictionary of canonical ids, where values are the count of
+            associated records.
+
+        Raises:
+            ValueError: incorrect `n`
+            RuntimeError: when called before `canonicalize`
+        """
+
+        if n < 2:
+            raise ValueError("n must be >= 2")
+
+        if not self.has_been_canonicalized:
+            raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
+
+        wdf: Frame = wrap(self._df, id=None)
+
+        canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
+
+        counts: dict[Hashable, int] = {}
+        for cid in canonical_array:
+            counts[cid] = counts.get(cid, 0) + 1
+
+        self._canonical_id_counts = counts
+
+        return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
+
+    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+        """TODO: explain"""
+
+        wdf: Frame = wrap(self._df, id=None)
+
+        return wdf.synthesize_record()
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Collect results and return the dataframe."""

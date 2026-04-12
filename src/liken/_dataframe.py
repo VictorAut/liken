@@ -43,6 +43,7 @@ import pyspark.sql as spark
 from pyarrow.compute import coalesce
 from pyspark.rdd import RDD
 from pyspark.sql import Row
+from pyspark.sql import functions
 from pyspark.sql.types import LongType
 from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
@@ -120,6 +121,9 @@ class Frame(Generic[D, S]):
     def get_canonical(self) -> pa.Array:
         """Convenience method"""
         return self.get_array(CANONICAL_ID)
+
+    def synthesize_record(self) -> D:
+        raise NotImplementedError
 
 
 # CANONICAL ID
@@ -218,6 +222,15 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
 
+    # SYNTHETIC GOLDEN RECORD
+
+    def synthesize_record(self) -> pd.DataFrame:
+        def _first_non_null(series: pd.Series):
+            non_null = series.dropna()
+            return non_null.iloc[0] if not non_null.empty else pd.NA
+
+        return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
+
 
 @final
 class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
@@ -263,6 +276,19 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
     def drop_duplicates(self, keep: Keep) -> Self:
         self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
+
+    # SYNTHETIC GOLDEN RECORD
+
+    def synthesize_record(self) -> pl.DataFrame:
+        exprs = []
+
+        for col in self._df.columns:
+            if col == CANONICAL_ID:
+                continue
+
+            exprs.append(pl.col(col).drop_nulls().first().alias(col))
+
+        return self._df.group_by(CANONICAL_ID).agg(exprs).sort(CANONICAL_ID)
 
 
 SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
@@ -381,8 +407,33 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
     def _get_cols(self):
         raise NotImplementedError(self.err_msg)
 
+    def _get_col(self, column: str) -> pa.Array:
+        """TODO
+        warn that everything is returned to driver node!
+        """
+        df: spark.DataFrame = self._df.toDF()
+
+        return df.select(column).toArrow().column(0).combine_chunks()
+
     def drop_duplicates(self):
         raise NotImplementedError(self.err_msg)
+
+    # SYNTHETIC GOLDEN RECORD
+
+    def synthesize_record(self) -> pl.DataFrame:
+        """TODO
+        warn that everything is returned to driver node!
+        """
+        df: spark.DataFrame = self._df.toDF()
+        exprs = []
+
+        for col in df.columns:
+            if col == CANONICAL_ID:
+                continue
+
+            exprs.append(functions.first(functions.col(col), ignorenulls=True).alias(col))
+
+        return df.groupBy(CANONICAL_ID).agg(*exprs).orderBy(CANONICAL_ID)
 
 
 @final

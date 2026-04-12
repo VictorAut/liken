@@ -1,9 +1,9 @@
 [project]
 name = "liken"
-version = "0.6.1"
+version = "0.7.0"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "Apache-2.0"
 keywords = [
@@ -29,7 +29,7 @@ dependencies = [
     "scikit-learn>=1.6.1,<2",
     "sparse-dot-topn>=1.1.5,<2",
     "typing-extensions>=4.13.0,<5",
-    "pyspark>=3.5.5,<4",
+    "pyspark>=4",
     "datasketch>=1.8.0,<2",
     "networkx>=3.6.1,<4",
     "pyarrow>=23.0.1,<24",
@@ -62,10 +62,9 @@ test = [
     "pytest-cov>=6.1.1,<7",
 ]
 docs = [
-    "mkdocs>=1.6.1,<2",
-    "mkdocs-material>=9.7.1,<10",
     "markdown-pycon>=1.0.1,<2",
     "mkdocstrings[python]>=1.0.3",
+    "zensical>=0.0.32",
 ]
 
 

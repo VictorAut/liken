@@ -1,6 +1,6 @@
 from liken import custom
+from liken import datasets
 from liken import preprocessors
-from liken import synthetic
 from liken._dedupers import cosine
 from liken._dedupers import exact
 from liken._dedupers import fuzzy
@@ -42,5 +42,5 @@ __all__ = [
     "Col",
     "custom",
     "preprocessors",
-    "synthetic",
+    "datasets",
 ]
