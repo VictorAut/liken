@@ -278,7 +278,7 @@ class Dedupe:
         return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
 
     def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """TODO"""
+        """TODO: explain"""
 
         wdf: Frame = wrap(self._df, id=None)
 
