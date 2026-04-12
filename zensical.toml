@@ -18,6 +18,7 @@ nav = [
         "tutorials/custom-dedupers.md",
     ] },
     { "In Practice" = [
+        "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
         "in-practice/performance.md",
     ] },
@@ -29,6 +30,7 @@ nav = [
     ] },
     { "About" = [
         "about/release-history.md",
+        "about/contributing.md",
         "about/license.md",
     ] },
 ]
