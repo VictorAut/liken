@@ -772,7 +772,7 @@ wheels = [
 
 [[package]]
 name = "liken"
-version = "0.7.2"
+version = "0.7.3"
 source = { editable = "." }
 dependencies = [
     { name = "catalogue" },
