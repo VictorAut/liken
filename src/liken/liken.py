@@ -279,11 +279,11 @@ class Dedupe:
     def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Synthesizes a record combining the first intance of non null values
         of all records associated to a canonical id.
-        
+
         The resulting "golden" record essentially contains coalesced values of
         all attributes, for the given set of associated records.
 
-        In the case of canonical records that only have one associated record, 
+        In the case of canonical records that only have one associated record,
         they are returned as-is.
 
         Info:
@@ -296,7 +296,7 @@ class Dedupe:
             For PySpark dataframes, this function forces the collection of data
             to the driver node. Additionally, this function only supports usage
             with PySpark `v4` and up.
-        
+
         Returns:
             A dataframe of synthesized records.
         """

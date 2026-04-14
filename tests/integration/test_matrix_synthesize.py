@@ -49,9 +49,7 @@ def test_matrix_preprocessors(
     if backend == "spark":
         df = spark.createDataFrame(schema=schema, data=data)
 
-    result = (
-        lk.dedupe(df, spark_session=spark).apply(lk.exact()).canonicalize("address")
-    )
+    result = lk.dedupe(df, spark_session=spark).apply(lk.exact()).canonicalize("address")
 
     df = result.collect()
     synthesized = result.synthesize()
@@ -88,4 +86,4 @@ def test_matrix_preprocessors(
     ]
 
     # And assert canonicals
-    assert canonicals == {0:2, 3:2}
+    assert canonicals == {0: 2, 3: 2}
