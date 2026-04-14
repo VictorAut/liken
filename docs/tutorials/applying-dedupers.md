@@ -4,7 +4,7 @@ title: Applying Dedupers
 
 In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **liken** — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called `.drop_duplicates` with no other deduper.
 
-To use a [built-in deduper](./first-steps.md#built-in-dedupers), the deduper is *applied* with `.apply`.
+To use a [built-in deduper](./first-steps.md#built-in-dedupers), the deduper is *applied* with `.apply`:
 
 ```python
 import liken as lk

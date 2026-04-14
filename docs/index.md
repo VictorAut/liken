@@ -54,7 +54,12 @@ import liken as lk
 
 df = ... # e.g. read data
 
-df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("name").collect()
+df = (
+    lk.dedupe(df)
+    .apply(lk.fuzzy())
+    .drop_duplicates("name")
+    .collect()
+)
 ```
 
 

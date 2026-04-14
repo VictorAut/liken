@@ -111,7 +111,9 @@ def mock_spark_session():
 class Helpers:
     @staticmethod
     def get_column_as_list(df, col: str):
-        if isinstance(df, pd.DataFrame) or isinstance(df, pl.DataFrame):
+        if isinstance(df, pd.DataFrame):
+            return [None if v is pd.NA else v for v in list(df[col])]
+        if isinstance(df, pl.DataFrame):
             return list(df[col])
         if isinstance(df, SparkDataFrame):
             return [value[col] for value in df.select(col).collect()]

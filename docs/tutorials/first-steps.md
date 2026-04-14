@@ -69,7 +69,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
 ## The Simplest Example
 
-**Liken** aims to provide familiar-feeling *exact* deduplication, without too much ceremony:
+For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* deduplication, without too much ceremony:
 
 === "Single Column"
 
@@ -89,7 +89,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
     df = dedupe(df).drop_duplicates(columns=["address", "email"]).collect()
     ```
 
-However, dataframe records may not be *exactly*. For example:
+However, dataframe records may not be *exactly* repeated. For example:
 
  id   |  address  |         email       
 ------|-----------|---------------------
@@ -126,4 +126,6 @@ When things aren't *exactly* the same, you can still deduplicate data. **Liken**
 | *Predicate* |*single-column*| [`str_contains`](../reference/liken.md/#liken.str_contains)         | Records where the string contains a pattern. Accepts Regex.                          |
 | *Predicate* |*single-column*| [`str_len`](../reference/liken.md/#liken.str_len)              | Records where the string length is bounded by a minimum and maximum length           |
 
-*Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null)
+*Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
+
+To *use* dedupers, you have to *apply* them.
