@@ -10,3 +10,24 @@
 [data-md-color-scheme="slate"] .md-tabs {
   background-color:  rgba(20, 24, 27, 0.6);
 }
+
+.liken-definition {
+  margin: 2rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--md-primary-bg-color);
+  background: var(--md-code-bg-color);
+
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.liken-definition em {
+  font-style: italic;
+  font-weight: 600;
+}
+
+.liken-definition strong {
+  display: block;
+  margin-top: 0.25rem;
+}

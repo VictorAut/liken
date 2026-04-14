@@ -21,8 +21,14 @@
 
 ***
 **Source Code**: [https://github.com/VictorAut/liken](https://github.com/VictorAut/liken)
-
 ***
+
+<div class="liken-definition">
+  <em>Liken</em>:<br>
+  <small><i>phrasal verb</i></small><br>
+  <small>/ˈlaɪ.kən/</small><br>
+  <strong>to say that something is similar to or has the same qualities as something else</strong>
+</div>
 
 **Liken** is a library providing enhanced deduplication tooling for DataFrames.
 
@@ -48,7 +54,12 @@ import liken as lk
 
 df = ... # e.g. read data
 
-df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("name").collect()
+df = (
+    lk.dedupe(df)
+    .apply(lk.fuzzy())
+    .drop_duplicates("name")
+    .collect()
+)
 ```
 
 

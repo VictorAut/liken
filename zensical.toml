@@ -18,6 +18,7 @@ nav = [
         "tutorials/custom-dedupers.md",
     ] },
     { "In Practice" = [
+        "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
         "in-practice/performance.md",
     ] },
@@ -29,6 +30,7 @@ nav = [
     ] },
     { "About" = [
         "about/release-history.md",
+        "about/contributing.md",
         "about/license.md",
     ] },
 ]
@@ -72,6 +74,7 @@ show_object_full_path = true
 show_docstring_type_aliases = true
 show_root_toc_entry = true
 show_root_full_path = true
+filters = ["!^_"]
 
 # MARKDOWN EXTENSIONS:
 
@@ -95,3 +98,8 @@ custom_fences = [
 alternate_style = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
+
+# VERSIONING:
+
+[project.extra.version]
+provider = "mike"

@@ -25,9 +25,7 @@ def build_pipeline_step(preprocessors):
 
 
 def build_pipeline_both(preprocessors):
-    return lk.pipeline(preprocessors=preprocessors).step(
-        lk.col(SINGLE_COL, preprocessors=preprocessors).exact()
-    )
+    return lk.pipeline(preprocessors=preprocessors).step(lk.col(SINGLE_COL, preprocessors=preprocessors).exact())
 
 
 PIPELINE_BUILDERS = [

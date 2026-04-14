@@ -251,12 +251,11 @@ class Dedupe:
             n: the number of records per canonical id, defaulted at 2
 
         Returns:
-            A dictionary of canonical ids, where values are the count of
-            associated records.
+            A dictionary of canonical ids, where values are counts.
 
         Raises:
-            ValueError: incorrect `n`
-            RuntimeError: when called before `canonicalize`
+            ValueError: Incorrect `n`
+            RuntimeError: When called before `canonicalize`
         """
 
         if n < 2:
@@ -278,7 +277,29 @@ class Dedupe:
         return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
 
     def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """TODO: explain"""
+        """Synthesizes a record combining the first intance of non null values
+        of all records associated to a canonical id.
+
+        The resulting "golden" record essentially contains coalesced values of
+        all attributes, for the given set of associated records.
+
+        In the case of canonical records that only have one associated record,
+        they are returned as-is.
+
+        Info:
+            A future version of `.synthesize` will allow for picking a chosen
+            value given a set of records. The current implementation is limited
+            to the `first` instance, but `last` will also be supported as well
+            as `min` and `max` for numerical data.
+
+        Warning:
+            For PySpark dataframes, this function forces the collection of data
+            to the driver node. Additionally, this function only supports usage
+            with PySpark `v4` and up.
+
+        Returns:
+            A dataframe of synthesized records.
+        """
 
         wdf: Frame = wrap(self._df, id=None)
 
