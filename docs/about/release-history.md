@@ -2,7 +2,16 @@
 title: Release History
 ---
 
-## v0.7.3 (2026-04-12)
+## v0.7.4 (2026-04-14)
+
+
+**Fixes**
+
+
+- Fix release history
+
+
+## v0.7.3 (2026-04-14)
 
 **Features**
 
