@@ -2,6 +2,21 @@
 title: Release History
 ---
 
+## v0.7.3 (2026-04-12)
+
+**Features**
+
+
+- Added documentation on "Common Recipes"
+- Revised documentation on "Tutorials"
+
+
+**Fixes**
+
+
+- Added unit tests for `.synthesize` and `.canonicals`
+
+
 ## v0.7.2 (2026-04-12)
 
 **Features**
