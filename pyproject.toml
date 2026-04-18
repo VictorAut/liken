@@ -58,6 +58,7 @@ docs = [
     "markdown-pycon>=1.0.1,<2",
     "mike",
     "mkdocstrings[python]>=1.0.3",
+    "termynal>=0.14.0",
     "zensical>=0.0.32",
 ]
 

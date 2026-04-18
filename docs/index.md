@@ -43,8 +43,10 @@ The key features are:
 
 ## Installation
 
-```shell
-pip install liken
+<!-- termynal -->
+```
+$ pip install liken
+---> 100%
 ```
 
 ## Use `liken` In Your Code
