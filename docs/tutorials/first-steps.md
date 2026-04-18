@@ -27,9 +27,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df)
-        # .apply(...)
         # ...
-        .collect()
     )
     ```
 
@@ -43,9 +41,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df)
-        # .apply(...)
         # ...
-        .collect()
     )
     ```
 
@@ -61,9 +57,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df, spark_session=spark)
-        # .apply(...)
         # ...
-        .collect()
     )
     ```
 
@@ -77,7 +71,7 @@ For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* d
 
     import liken as lk
 
-    df = dedupe(df).drop_duplicates("address").collect()
+    df = dedupe(df).drop_duplicates("address")
     ```
 
 === "Multiple Columns"
@@ -86,7 +80,7 @@ For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* d
 
     import liken as lk
 
-    df = dedupe(df).drop_duplicates(columns=["address", "email"]).collect()
+    df = dedupe(df).drop_duplicates(columns=["address", "email"])
     ```
 
 However, dataframe records may not be *exactly* repeated. For example:

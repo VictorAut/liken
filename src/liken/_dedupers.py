@@ -933,7 +933,6 @@ def exact() -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(exact())
                 .drop_duplicates("address")
-                .collect()
             )
 
         Applied to multiple columns:
@@ -942,7 +941,6 @@ def exact() -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(exact())
                 .drop_duplicates(("address", "email"))
-                .collect()
             )
 
         E.g.
@@ -967,7 +965,7 @@ def exact() -> BaseDeduper:
         By default `exact` is used when no dedupers are explicitely applied:
 
             # OK, still dedupes.
-            df = Dedupe(df).drop_duplicates("address").collect()
+            df = Dedupe(df).drop_duplicates("address")
     """
     return Exact()
 
@@ -997,7 +995,6 @@ def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
                 lk.dedupe(df)
                 .apply({"address": fuzzy(threshold=0.8)})
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
         E.g.
@@ -1062,7 +1059,6 @@ def tfidf(
                 lk.dedupe(df)
                 .apply({"address": tfidf(threshold=0.8, ngram=1)})
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
         E.g.
@@ -1126,7 +1122,6 @@ def lsh(
                 lk.dedupe(df)
                 .apply({"address": lsh(threshold=0.8, ngram=1)})
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
         E.g.
@@ -1178,7 +1173,6 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
                     ("account", "status", "country", "property"),
                     keep="first",
                 )
-                .collect()
             )
 
         E.g.
@@ -1258,7 +1252,6 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
                     ("surface are", "ceiling height", "building age", "num_rooms"),
                     keep="first",
                 )
-                .collect()
             )
     """
     return Cosine(threshold=threshold)
@@ -1293,7 +1286,6 @@ def isna() -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(pipeline)
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
             >>> df # before
@@ -1341,7 +1333,6 @@ def isin(values: Iterable) -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(pipeline)
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
             >>> df # before
@@ -1401,7 +1392,6 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(pipeline)
                 .drop_duplicates(keep="last")
-                .collect()
             )
 
             >>> df # before
@@ -1459,7 +1449,6 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(pipeline)
                 .drop_duplicates(keep="first")
-                .collect()
             )
 
             >>> df
@@ -1517,7 +1506,6 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
                 lk.dedupe(df)
                 .apply(pipeline)
                 .drop_duplicates(keep="first")
-                .collect()
             )
 
             >>> df
@@ -1581,7 +1569,6 @@ def str_contains(
                 lk.dedupe(df)
                 .apply(pipeline)
                 .canonicalize(keep="first")
-                .collect()
             )
 
             >>> df

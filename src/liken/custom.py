@@ -48,7 +48,6 @@ def register(f: PairGenerator) -> Callable:
                 lk.dedupe(df)
                 .apply(custom_deduper(**kwargs))
                 .drop_duplicates("address")
-                .collect()
             )
 
         E.g. the following Custom exact string-length deduplication deduper:
@@ -67,7 +66,6 @@ def register(f: PairGenerator) -> Callable:
                 lk.dedupe(df)
                 .apply(eq_str_len()) # array arg implicitely passed
                 .drop_duplicates("address")
-                .collect()
             )
 
         Before:

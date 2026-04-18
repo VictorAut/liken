@@ -10,7 +10,7 @@ docs_dir = "docs"
 site_dir = "site"
 extra_css = ["stylesheets/extra.css"]
 nav = [
-    { "Liken" = "index.md"},
+    { "Liken" = "index.md" },
     { "Tutorials" = [
         "tutorials/first-steps.md",
         "tutorials/applying-dedupers.md",
@@ -32,6 +32,8 @@ nav = [
         "about/release-history.md",
         "about/contributing.md",
         "about/license.md",
+        { "PyPI ↗" = "https://pypi.org/project/liken/" },
+        { "Github ↗" = "https://github.com/VictorAut/liken" }
     ] },
 ]
 
@@ -46,6 +48,9 @@ features = [
     "navigation.sections",
     "navigation.tracking",
     "navigation.footer",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
 ]
 
 [[project.theme.palette]]
@@ -82,7 +87,7 @@ filters = ["!^_"]
 [project.markdown_extensions.pymdownx.caret]
 [project.markdown_extensions.pymdownx.details]
 [project.markdown_extensions.pymdownx.emoji]
-emoji_index = "zensical.extensions.emoji.twemoji" 
+emoji_index = "zensical.extensions.emoji.twemoji"
 emoji_generator = "zensical.extensions.emoji.to_svg"
 [project.markdown_extensions.pymdownx.highlight]
 anchor_linenums = true
@@ -91,7 +96,7 @@ line_spans = "__span"
 [project.markdown_extensions.pymdownx.inlinehilite]
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
-  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
+    { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
 ]
 [project.markdown_extensions.pymdownx.snippets]
 [project.markdown_extensions.pymdownx.tabbed]

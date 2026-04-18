@@ -50,7 +50,7 @@ class Dedupe:
 
         import liken as lk
 
-        lk.dedupe(df).apply(exact()).drop_duplicates().collect()
+        lk.dedupe(df).apply(exact()).drop_duplicates()
     """
 
     _executor: Executor
@@ -136,7 +136,7 @@ class Dedupe:
         columns: Columns | None = None,
         *,
         keep: Keep = "first",
-    ) -> Self:
+    ) -> UserDataFrame:
         """Drop duplicates by enacting the applied dedupers.
 
         If no dedupers are explicitely provided, will carry out an exact
@@ -179,7 +179,7 @@ class Dedupe:
 
         self._collection.reset()
 
-        return self
+        return self._df
 
     def canonicalize(
         self,
@@ -207,8 +207,9 @@ class Dedupe:
                 canonical_id.
 
         Returns:
-            A canonicalised DataFrame. By default canonicalization is tracked
-                in a new `canonical_id` field.
+            Self. Access the dataframe with `.collect`, or numbers of repeated
+                canonicals ids with `.canonicals`, or synthetic records with
+                `.synthesize`.
 
         Raises:
             ValueError: Incorrect value to `keep` arg.
@@ -272,9 +273,7 @@ class Dedupe:
         for cid in canonical_array:
             counts[cid] = counts.get(cid, 0) + 1
 
-        self._canonical_id_counts = counts
-
-        return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
+        return {cid: count for cid, count in counts.items() if count >= n}
 
     def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
         """Synthesizes a record combining the first intance of non null values
@@ -306,7 +305,7 @@ class Dedupe:
         return wdf.synthesize_record()
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """Collect results and return the dataframe."""
+        """Collect canonicalization results and returns the dataframe."""
         return self._df
 
     def explain(self):

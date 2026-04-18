@@ -6,14 +6,12 @@ Up to now you've learnt how to use dedupers with `apply`, specifically within th
 
 But, what if you want to retain your duplicate instances? And instead simply label them as such?
 
-**Liken** supports **Record Linkage**, which describes the idea that the deduplication process you are doing is not to drop data from your DataFrame, but rather to *link* it together. So, a deduper that defines a fuzzy string deduplication of an `address` column will *label* the duplicates as duplicates rather than *dropping* them.
+**Liken** supports **Record Linkage**, where the deduplication process you are doing is not to drop data from your DataFrame, but rather to *link* it together. So, a deduper that defines a fuzzy string deduplication of an `address` column will *label* the duplicates as duplicates rather than *dropping* them. Records are instead *canonicalized*.
 
-Retaining records as *known* duplicates instead of *dropping* duplicates is known as **Record Linkage** in **Liken**. However, this is also known as **Entity Resolution**. The link is provided by a **canonical** record, which in **Liken** is identified by the auto-generated `canonical_id` column.
+Retaining records as *known* duplicates instead of *dropping* duplicates is known as **Record Linkage** in **Liken**. This is also known as **Entity Resolution**, in other literature. The link is provided by a **canonical** record, which in **Liken** is identified by the auto-generated `canonical_id` column.
 
 
 ## Canonicalization
-
-You've actually already implicitely encountered **Liken's** canonicalisation when dropping duplicates upon chosing [which `keep` argument to declare](../tutorials/applying-dedupers.md#dictionaries-of-dedupers).
 
 Let's look at a dummy dataset, `df`:
 
@@ -29,7 +27,7 @@ Two very clearly similar emails exist.
 ///     
 
 
-We're going to aim to **link** the above email addresses. To do so, swap `.drop_duplicates` with `.canonicalize`:
+We're going to aim to **link** the above email addresses. To do so, swap `.drop_duplicates` with `.canonicalize`, and collect the results:
 
 ```python
 import liken as lk
@@ -41,9 +39,11 @@ df = (
         "email",
         keep="first",
     )
-    .collect()
+    .collect() # (1)!
 )
 ```
+
+1.  `canonicalize` does not return the dataframe, unlike `drop_duplicates`. It needs to be collected first!
 
 Now, `df` looks the same, with an extra `canonical_id` column:
 

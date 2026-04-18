@@ -36,7 +36,7 @@ pip install liken
 ```python
 import liken as lk
 
-df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("address").collect()
+df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("address")
 ```
 
 ## License

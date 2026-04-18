@@ -30,16 +30,31 @@
   <strong>to say that something is similar to or has the same qualities as something else</strong>
 </div>
 
-**Liken** is a library providing enhanced deduplication tooling for DataFrames.
+## Why...
+
+**Liken** provides enhanced deduplication tooling for DataFrames.
 
 The key features are:
 
-- Near deduplication
-- Ready-to-use deduplication methods
+- Near deduplication tooling
+- Fuzzy string matching deduper
+- TF-IDF tokenization deduper
+- LSH tokenization deduper
+- Jaccard set deduper
+- Cosine set deduper
+- Composable, rules-based, deduplication pipelines
+- Predicate dedupers for rules
 - Record linkage and canonicalization
-- Rules-based deduplication
+- Built-in Preprocessors
 - Pandas, Polars and PySpark support
 - Customizable in pure Python
+- Synthetic record creation
+- Easy to understand syntax
+- Dummy datasets for practice
+
+**Liken** aims to answer the call for as-easy-to-use near deduplication as possible, with as close to pandas syntax as possible.
+
+Cut boilerplate code to simple deduplication pipelines with **Liken**.
 
 ## Installation
 
@@ -60,7 +75,6 @@ df = (
     lk.dedupe(df)
     .apply(lk.fuzzy())
     .drop_duplicates("name")
-    .collect()
 )
 ```
 

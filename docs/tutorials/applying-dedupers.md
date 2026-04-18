@@ -13,7 +13,6 @@ df = (
     lk.dedupe(df)
     .apply(lk.fuzzy())
     .drop_duplicates("address")
-    .collect()
 )
 ```
 
@@ -42,13 +41,12 @@ df = (
     lk.dedupe(df)
     .apply(collection)
     .drop_duplicates(keep="first")
-    .collect()
 )
 ```
 
 In the above case, the defined collection reads as "Deduplicate exact emails. Then, similar addresses using Fuzzy and then TF-iDF. Finally, any deduplicate records that have 3 out of 4 of those categories matching".
 
-!!! note "`keep` arg"
+??? info "`keep` arg"
     The `keep` argument accepts the literals "first" or "last" which defines which record will be kept from a duplicate set of records, based on their position in the dataframe.
 
 ## Pipelines of Dedupers
@@ -71,7 +69,6 @@ df = (
     lk.dedupe(df)
     .apply(pipeline)
     .drop_duplicates()
-    .collect()
 )
 ```
 
@@ -105,7 +102,6 @@ df = (
     lk.dedupe(df)
     .apply(pipeline)
     .drop_duplicates()
-    .collect()
 )
 ```
 
