@@ -22,6 +22,9 @@ from typing import final
 from networkx.utils.union_find import UnionFind
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
+import ray
+from ray.data import Dataset as RayFrame
+import pandas as pd
 
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import DeduplicationDict
@@ -30,6 +33,7 @@ from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import SparkDF
+from liken._dataframe import RayDF
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
 from liken._preprocessors import Preprocessor
@@ -301,3 +305,48 @@ class SparkExecutor(Executor):
         )
 
         return iter(cast(list[Row], df))
+
+
+class RayExecutor:
+    def __init__(self):
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True)
+
+    def execute(
+        self,
+        df: RayDF,
+        /,
+        *,
+        columns,
+        dedupers,
+        keep,
+        drop_duplicates,
+        drop_canonical_id,
+        id,
+    ) -> RayDF:
+
+        from liken.liken import Dedupe
+
+        def process_batch(batch: pd.DataFrame):
+            return (
+                Dedupe(batch)
+                .apply(dedupers)
+                .canonicalize(
+                    columns,
+                    keep=keep,
+                    drop_duplicates=drop_duplicates,
+                    id=id,
+                )
+                .collect()
+            )
+
+        ds: RayFrame = df._df
+
+        new_ds: RayFrame = ds.map_batches(process_batch, batch_format="pandas")
+
+        result = RayDF(new_ds, id=None)
+
+        if drop_canonical_id:
+            return result.drop_col("canonical_id")
+
+        return result

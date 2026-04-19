@@ -46,15 +46,40 @@ The key features are:
 - Predicate dedupers for rules
 - Record linkage and canonicalization
 - Built-in Preprocessors
-- Pandas, Polars and PySpark support
+- Pandas, Polars, Modin, Ray and PySpark support
 - Customizable in pure Python
 - Synthetic record creation
 - Easy to understand syntax
 - Dummy datasets for practice
 
-**Liken** aims to answer the call for as-easy-to-use near deduplication as possible, with as close to pandas syntax as possible.
+**Liken** aims to answer the call for as-easy-to-use near deduplication as possible, with as natural and easy to understand syntax as possible.
 
 Cut boilerplate code to simple deduplication pipelines with **Liken**.
+
+## Supported DataFrame Libraries
+
+<div class="logo-grid">
+  <a href="https://pandas.pydata.org" target="_blank">
+    <img src="images/supported-libraries/pandas.png" alt="Pandas">
+  </a>
+
+  <a href="https://pola.rs" target="_blank">
+    <img src="images/supported-libraries/polars.svg" alt="Polars">
+  </a>
+
+  <a href="https://modin.readthedocs.io/en/latest/" target="_blank">
+    <img src="images/supported-libraries/modin.png" alt="Modin">
+  </a>
+
+  <a href="https://spark.apache.org/docs/latest/api/python/" target="_blank">
+    <img src="images/supported-libraries/spark.png" alt="PySpark">
+  </a>
+
+  <a href="https://docs.ray.io/en/latest/" target="_blank">
+    <img src="images/supported-libraries/ray.svg" alt="PySpark">
+  </a>
+</div>
+
 
 ## Installation
 

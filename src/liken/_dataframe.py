@@ -36,6 +36,7 @@ from typing import TypeAlias
 from typing import TypeVar
 from typing import final
 
+import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -48,6 +49,8 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
 from typing_extensions import override
+import ray
+from ray.data import Dataset as RayFrame
 
 from liken._constants import CANONICAL_ID
 from liken._constants import NA_PLACEHOLDER
@@ -200,7 +203,7 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
 
-    # ARROW BACKEND:
+    # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
         return pa.array(self._df[column])
@@ -222,7 +225,7 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
 
-    # SYNTHETIC GOLDEN RECORD
+    # SYNTHETIC GOLDEN RECORD:
 
     def synthesize_record(self) -> pd.DataFrame:
         def _first_non_null(series: pd.Series):
@@ -254,7 +257,7 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
 
-    # ARROW BACKEND:
+    # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
         return pa.array(self._df.get_column(column))
@@ -277,7 +280,7 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
         self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
 
-    # SYNTHETIC GOLDEN RECORD
+    # SYNTHETIC GOLDEN RECORD:
 
     def synthesize_record(self) -> pl.DataFrame:
         exprs = []
@@ -418,7 +421,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
     def drop_duplicates(self):
         raise NotImplementedError(self.err_msg)
 
-    # SYNTHETIC GOLDEN RECORD
+    # SYNTHETIC GOLDEN RECORD:
 
     def synthesize_record(self) -> pl.DataFrame:
         """TODO
@@ -449,7 +452,7 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
     def __init__(self, df: list[spark.Row]):
         self._df: list[spark.Row] = df
 
-    # ARROW BACKEND:
+    # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
         return pa.array([row[column] for row in self._df])
@@ -486,12 +489,181 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
         return self
 
 
+@final
+class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
+    """Modin DataFrame wrapper (Pandas-compatible, distributed execution)"""
+
+    def __init__(self, df: mpd.DataFrame, id: str | None = None):
+        self._df: mpd.DataFrame = self._add_canonical_id(df, id)
+        self._id = id
+
+    # CANONICAL ID HELPERS:
+
+    def _df_as_is(self, df: mpd.DataFrame) -> mpd.DataFrame:
+        return df
+
+    def _df_overwrite_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[id]})
+
+    def _df_copy_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[id]})
+
+    def _df_autoincrement_id(self, df: mpd.DataFrame) -> mpd.DataFrame:
+        return df.assign(**{CANONICAL_ID: mpd.RangeIndex(start=0, stop=len(df))})
+
+    # ARROW INTERFACES:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array(self._df[column]._to_pandas())
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return pa.Table.from_pandas(self._df[list(columns)]._to_pandas())
+
+    # WRAPPER METHODS:
+
+    def put_col(self, column: str, array: list) -> Self:
+        self._df = self._df.assign(**{column: array})
+        return self
+
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop(columns=column)
+        return self
+
+    def drop_duplicates(self, keep: Keep) -> Self:
+        self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
+        return self
+
+    # SYNTHETIC GOLDEN RECORD:
+
+    def synthesize_record(self) -> mpd.DataFrame:
+        def _first_non_null(series):
+            non_null = series.dropna()
+            return non_null.iloc[0] if not non_null.empty else None
+
+        return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
+
+
+# class RayDF(Frame[RayFrame, None], CanonicalIdMixin):
+class RayDF(Frame[RayFrame, None]): # TODO!
+    """Ray Dataset wrapper (first-class backend)"""
+
+    def __init__(self, df: RayFrame, id: str | None = None):
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True)
+
+        self._df: RayFrame = self._add_canonical_id(df, id)
+        self._id = id
+
+    # TEMP:
+    def _add_canonical_id(self, df, id: str | None):
+
+        has_canonical: bool = CANONICAL_ID in df.columns() # This is a FUNC not attribute!
+        id_is_canonical: bool = id == CANONICAL_ID
+
+        if has_canonical:
+            if id:
+                if id_is_canonical:
+                    return self._df_as_is(df)
+                # overwrite with id
+                return self._df_overwrite_id(df, id)
+            warnings.warn(
+                f"Canonical ID '{CANONICAL_ID}' already exists. Pass '{CANONICAL_ID}' to `id` arg for consistency",
+                category=UserWarning,
+            )
+            return self._df_as_is(df)
+        if id:
+            # write new with id
+            return self._df_copy_id(df, id)
+        # write new auto-incrementing
+        return self._df_autoincrement_id(df)
+
+    # CANONICAL ID HELPERS:
+
+    def _df_as_is(self, df: RayFrame) -> RayFrame:
+        return df
+
+    def _df_overwrite_id(self, df: RayFrame, id: str) -> RayFrame:
+        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+
+    def _df_copy_id(self, df: RayFrame, id: str) -> RayFrame:
+        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+
+    def _df_autoincrement_id(self, ds):
+        # Step 1: get block sizes
+        block_sizes = ds.map_batches(
+            lambda df: pd.DataFrame({"__len__": [len(df)]}),
+            batch_format="pandas"
+        ).take_all()
+
+        lengths = [row["__len__"] for row in block_sizes]
+
+        # Step 2: compute offsets
+        offsets = []
+        total = 0
+        for l in lengths:
+            offsets.append(total)
+            total += l
+
+        # Step 3: assign offsets per block
+        # zip blocks with offsets
+        def add_id_generator():
+            for i, block in enumerate(ds.iter_batches(batch_format="pandas")):
+                offset = offsets[i]
+                block = block.reset_index(drop=True)
+                block[CANONICAL_ID] = range(offset, offset + len(block))
+                yield block
+
+        return ray.data.from_pandas_refs([
+            ray.put(batch) for batch in add_id_generator()
+        ])
+
+    # ARROW INTERFACES:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return self._df.to_arrow()[column]
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return self._df.to_arrow().select(columns)
+
+    # WRAPPER METHODS:
+
+    def put_col(self, column: str, array: list) -> Self:
+        def fn(df):
+            df[column] = array
+            return df
+
+        self._df = self._df.map_batches(fn)
+        return self
+
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop_columns([column])
+        return self
+
+    def drop_duplicates(self, keep: Keep) -> Self:
+        def fn(df):
+            return df.drop_duplicates(subset=[CANONICAL_ID], keep=keep)
+
+        self._df = self._df.map_batches(fn)
+        return self
+
+    # SYNTHETIC GOLDEN RECORD:
+
+    def synthesize_record(self):
+        import pandas as pd
+
+        def fn(df: pd.DataFrame):
+            return df.groupby(CANONICAL_ID, as_index=False).first()
+
+        return self._df.map_batches(fn)
+    
+
+
 # DISPATCHER:
 
 
 @singledispatch
 def wrap(
-    df: pd.DataFrame | pl.DataFrame | spark.DataFrame | list[spark.Row],
+    df: pd.DataFrame | pl.DataFrame | mpd.DataFrame | spark.DataFrame | list[spark.Row],
     id: str | None = None,
 ):
     """
@@ -513,6 +685,14 @@ def _(df, id: str | None = None) -> PolarsDF:
     return PolarsDF(df, id)
 
 
+@wrap.register(mpd.DataFrame)
+def _(df, id: str | None = None) -> ModinDF:
+    return ModinDF(df, id)
+
+@wrap.register(RayFrame)
+def _(df, id: str | None = None) -> RayDF:
+    return RayDF(df, id)
+
 @wrap.register(spark.DataFrame)
 def _(df, id: str | None = None) -> SparkDF:
     return SparkDF(df, id)
@@ -527,5 +707,5 @@ def _(df: list[spark.Row], id: str | None) -> SparkRows:
 # ACCESSIBLE TYPES
 
 
-LocalDF: TypeAlias = PandasDF | PolarsDF | SparkRows
-DF = TypeVar("DF", SparkDF, LocalDF)
+LocalDF: TypeAlias = PandasDF | PolarsDF | ModinDF | SparkRows
+DF = TypeVar("DF", SparkDF, RayDF, LocalDF)

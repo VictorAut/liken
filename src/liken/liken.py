@@ -9,6 +9,7 @@ import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
+from ray.data import Dataset as RayFrame
 
 from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
@@ -19,6 +20,7 @@ from liken._dedupers import exact
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import SparkExecutor
+from liken._executors import RayExecutor
 from liken._pipelines import Pipeline
 from liken._types import Columns
 from liken._types import DataFrameLike
@@ -69,6 +71,8 @@ class Dedupe:
         if isinstance(df, spark.DataFrame):
             spark_session = validate_spark_arg(spark_session)
             self._executor = SparkExecutor(spark_session=spark_session)
+        elif isinstance(df, RayFrame):
+            self._executor = RayExecutor()
         else:
             self._executor = LocalExecutor()
 

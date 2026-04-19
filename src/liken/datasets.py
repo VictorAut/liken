@@ -2,11 +2,14 @@ import random
 from typing import Any
 from typing import Literal
 
+import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from faker import Faker
 from pyspark.sql import SparkSession
+import ray
+from ray.data import Dataset as RayDataset
 
 
 Faker.seed(123)
@@ -18,13 +21,13 @@ Faker.seed(123)
 # fmt: off
 
 
-SCHEMA10 = [
+_SCHEMA10 = [
     "id", "address", "email", "account",
     "birth_country", "marital_status", "number_children", "property_type", 
     "property_height", "property_area_sq_ft", "property_sea_level_elevation_m", "property_num_rooms"
 ]
 
-DATA10 = [
+_DATA10 = [
     (1, "123ab, OL5 9PL, UK", "bbab@example.com", "reddit", "spain", "married", 1, "rental", None, 545, 5, 3),
     (2, "99 Ambleside avenue park Road, ED3 3RT, Edinburgh, United Kingdom", "awesome_surfer_77@yahoo.com", "reddit", "spain", "married", 1, "rental", None, 452, 6, 3),
     (3, "Calle Ancho, 12, 05688, Rioja, Navarra, Espana", "a@example.com", "facebook", "germany", "single", 2, "rental", 2.5, 623, 5, 3),
@@ -41,7 +44,7 @@ DATA10 = [
 # fmt: on
 
 
-SCHEMA10_PLUS = [
+_SCHEMA10_PLUS = [
     "id",
     "first_name",
     "last_name",
@@ -68,7 +71,7 @@ fake = Faker()
 def _return_df(
     schema: list[str],
     data: list[tuple[Any, ...]],
-    backend: Literal["pandas", "polars", "spark"] = "pandas",
+    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Returns the dataframe based on the backend"""
@@ -77,11 +80,27 @@ def _return_df(
         return pd.DataFrame(columns=schema, data=data)
     if backend == "polars":
         return pl.DataFrame(schema=schema, data=data, orient="row")
+    if backend == "modin":
+        return mpd.DataFrame(columns=schema, data=data)
     if backend == "spark":
         if spark_session:
             return spark_session.createDataFrame(schema=schema, data=data)
         raise ValueError("Spark Session not passed yet 'spark' backend requested")
-    raise ValueError(f"Expected one of 'pandas', 'polars', 'spark', got '{backend}'")
+    
+    if backend == "ray":
+        # Ensure Ray is running
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True)
+
+        # safest path: pandas → Ray Dataset
+        pdf = pd.DataFrame(columns=schema, data=data)
+
+        return ray.data.from_pandas(pdf)
+
+    raise ValueError(
+        f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', got '{backend}'"
+    )
+
 
 
 def maybe_null(value, p):
@@ -111,7 +130,7 @@ def fake_row():
 
 
 def fake_10(
-    backend: Literal["pandas", "polars", "spark"] = "pandas",
+    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 10 rows.
@@ -128,15 +147,15 @@ def fake_10(
         ValueError: if no spark session passed when requesting a spark dataframe.
     """
     return _return_df(
-        schema=SCHEMA10,
-        data=DATA10,
+        schema=_SCHEMA10,
+        data=_DATA10,
         backend=backend,
         spark_session=spark_session,
     )
 
 
 def fake_1K(
-    backend: Literal["pandas", "polars", "spark"] = "pandas",
+    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1K (one thousand) rows.
@@ -156,7 +175,7 @@ def fake_1K(
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(
-        schema=SCHEMA10_PLUS,
+        schema=_SCHEMA10_PLUS,
         data=data,
         backend=backend,
         spark_session=spark_session,
@@ -164,7 +183,7 @@ def fake_1K(
 
 
 def fake_100K(
-    backend: Literal["pandas", "polars", "spark"] = "pandas",
+    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 100K (one hundred thousand) rows.
@@ -184,7 +203,7 @@ def fake_100K(
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(
-        schema=SCHEMA10_PLUS,
+        schema=_SCHEMA10_PLUS,
         data=data,
         backend=backend,
         spark_session=spark_session,
@@ -192,7 +211,7 @@ def fake_100K(
 
 
 def fake_1M(
-    backend: Literal["pandas", "polars", "spark"] = "pandas",
+    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1M (one million) rows.
@@ -212,7 +231,7 @@ def fake_1M(
     data.append(data[-1])  # duplicate last row for quick-glance
 
     return _return_df(
-        schema=SCHEMA10_PLUS,
+        schema=_SCHEMA10_PLUS,
         data=data,
         backend=backend,
         spark_session=spark_session,
