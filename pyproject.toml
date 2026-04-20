@@ -76,6 +76,14 @@ requires = ["uv_build>=0.10.4,<0.11.0"]
 build-backend = "uv_build"
 
 
+# TEST
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::FutureWarning",
+    "ignore::DeprecationWarning",
+]
+
 # LINTING
 
 

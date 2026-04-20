@@ -9,7 +9,7 @@ import pandas as pd
 import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
-from ray.data import Dataset as RayFrame
+from ray.data import Dataset as RayDataset
 
 from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
@@ -19,8 +19,8 @@ from liken._dedupers import BaseDeduper
 from liken._dedupers import exact
 from liken._executors import Executor
 from liken._executors import LocalExecutor
-from liken._executors import SparkExecutor
 from liken._executors import RayExecutor
+from liken._executors import SparkExecutor
 from liken._pipelines import Pipeline
 from liken._types import Columns
 from liken._types import DataFrameLike
@@ -71,7 +71,7 @@ class Dedupe:
         if isinstance(df, spark.DataFrame):
             spark_session = validate_spark_arg(spark_session)
             self._executor = SparkExecutor(spark_session=spark_session)
-        elif isinstance(df, RayFrame):
+        elif isinstance(df, RayDataset):
             self._executor = RayExecutor()
         else:
             self._executor = LocalExecutor()
@@ -197,6 +197,11 @@ class Dedupe:
 
         If no dedupers are explicitely provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
+
+        Warning:
+            Leaving `id` to it's default `None` value forces collection to
+            driver node when using Ray Datasets, which is not recommended. Use
+            the dataset's unique identier with the `id` arg, instead.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the

@@ -19,12 +19,11 @@ from typing import TypeVar
 from typing import cast
 from typing import final
 
+import pandas as pd
+import ray
 from networkx.utils.union_find import UnionFind
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
-import ray
-from ray.data import Dataset as RayFrame
-import pandas as pd
 
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import DeduplicationDict
@@ -32,8 +31,8 @@ from liken._collections import Pipeline
 from liken._constants import CANONICAL_ID
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
-from liken._dataframe import SparkDF
 from liken._dataframe import RayDF
+from liken._dataframe import SparkDF
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDedupers
 from liken._preprocessors import Preprocessor
@@ -206,9 +205,8 @@ class LocalExecutor(Executor):
 
 @final
 class SparkExecutor(Executor):
-    def __init__(self, spark_session: SparkSession, id: str | None = None):
+    def __init__(self, spark_session: SparkSession):
         self._spark_session = spark_session
-        self._id = id
 
     def execute(
         self,
@@ -222,22 +220,15 @@ class SparkExecutor(Executor):
         drop_canonical_id: bool,
         id: str | None = None,
     ) -> SparkDF:
-        """Spark specific deduplication helper
-
-        Maps dataframe partitions to be processed via the RDD API yielding low-
-        level list[Rows], which are then post-processed back to a dataframe.
-
-        Args:
-            columns: The attribute to deduplicate.
-            dedupers: the collection of dedupers
-        Retuns:
-            Instance's _df attribute is updated
+        """Maps dataframe partitions to be processed via the RDD API yielding
+        low-level list[Rows], which are then post-processed back to a dataframe.
         """
 
         # import in worker node
         from liken.liken import Dedupe
 
         # IMPORTANT: Use local variables, no references to Self
+        # Allows for serialization via Py4J
         process_partition = self._process_partition
 
         rdd = df.mapPartitions(
@@ -307,7 +298,7 @@ class SparkExecutor(Executor):
         return iter(cast(list[Row], df))
 
 
-class RayExecutor:
+class RayExecutor(Executor):
     def __init__(self):
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
@@ -317,17 +308,20 @@ class RayExecutor:
         df: RayDF,
         /,
         *,
-        columns,
-        dedupers,
-        keep,
-        drop_duplicates,
-        drop_canonical_id,
-        id,
+        columns: Columns | None,
+        dedupers: DeduplicationDict | Pipeline,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
+        id: str | None = None,
     ) -> RayDF:
+        """Maps dataframe partitions to be processed by Ray using pandas for
+        each partition.
+        """
 
         from liken.liken import Dedupe
 
-        def process_batch(batch: pd.DataFrame):
+        def _process_batch(batch: pd.DataFrame) -> pd.DataFrame:
             return (
                 Dedupe(batch)
                 .apply(dedupers)
@@ -340,13 +334,8 @@ class RayExecutor:
                 .collect()
             )
 
-        ds: RayFrame = df._df
-
-        new_ds: RayFrame = ds.map_batches(process_batch, batch_format="pandas")
-
-        result = RayDF(new_ds, id=None)
+        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))
 
         if drop_canonical_id:
-            return result.drop_col("canonical_id")
-
-        return result
+            return df.drop_col("canonical_id")
+        return df

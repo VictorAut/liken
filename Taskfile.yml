@@ -29,7 +29,7 @@ tasks:
   test:
     desc: Runs tests
     cmds:
-      - uv run pytest tests/
+      - uv run --active pytest tests/
     
   coverage:
     desc: Runs tests with coverage

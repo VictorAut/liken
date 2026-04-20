@@ -25,7 +25,6 @@ TODO:
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable
 from functools import singledispatch
 from typing import Any
@@ -41,6 +40,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pyspark.sql as spark
+import ray
 from pyarrow.compute import coalesce
 from pyspark.rdd import RDD
 from pyspark.sql import Row
@@ -48,9 +48,8 @@ from pyspark.sql import functions
 from pyspark.sql.types import LongType
 from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
+from ray.data import Dataset as RayDataset
 from typing_extensions import override
-import ray
-from ray.data import Dataset as RayFrame
 
 from liken._constants import CANONICAL_ID
 from liken._constants import NA_PLACEHOLDER
@@ -98,6 +97,10 @@ class Frame(Generic[D, S]):
         """
         return getattr(self._df, name)
 
+    def _column_labels_list(self, df: D) -> list[str]:
+        """Following syntax used by Pandas, Polars and Spark; override otherwise"""
+        return df.columns
+
     def _get_col(self, column: str) -> S:
         del column
         raise NotImplementedError
@@ -139,6 +142,7 @@ class AddsCanonical(Protocol):
     def _df_overwrite_id(self, df, id: str): ...
     def _df_copy_id(self, df, id: str): ...
     def _df_autoincrement_id(self, df): ...
+    def _column_labels_list(self, df): ...
 
 
 class CanonicalIdMixin(AddsCanonical):
@@ -157,7 +161,7 @@ class CanonicalIdMixin(AddsCanonical):
 
     def _add_canonical_id(self, df, id: str | None):
 
-        has_canonical: bool = CANONICAL_ID in df.columns
+        has_canonical: bool = CANONICAL_ID in self._column_labels_list(df)
         id_is_canonical: bool = id == CANONICAL_ID
 
         if has_canonical:
@@ -166,10 +170,6 @@ class CanonicalIdMixin(AddsCanonical):
                     return self._df_as_is(df)
                 # overwrite with id
                 return self._df_overwrite_id(df, id)
-            warnings.warn(
-                f"Canonical ID '{CANONICAL_ID}' already exists. Pass '{CANONICAL_ID}' to `id` arg for consistency",
-                category=UserWarning,
-            )
             return self._df_as_is(df)
         if id:
             # write new with id
@@ -491,7 +491,7 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
 
 @final
 class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
-    """Modin DataFrame wrapper (Pandas-compatible, distributed execution)"""
+    """Modin DataFrame wrapper"""
 
     def __init__(self, df: mpd.DataFrame, id: str | None = None):
         self._df: mpd.DataFrame = self._add_canonical_id(df, id)
@@ -543,79 +543,54 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
         return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
 
 
-# class RayDF(Frame[RayFrame, None], CanonicalIdMixin):
-class RayDF(Frame[RayFrame, None]): # TODO!
-    """Ray Dataset wrapper (first-class backend)"""
+class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
+    """Ray Dataset wrapper"""
 
-    def __init__(self, df: RayFrame, id: str | None = None):
+    def __init__(self, df: RayDataset, id: str | None = None):
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
-        self._df: RayFrame = self._add_canonical_id(df, id)
+        self._df: RayDataset = self._add_canonical_id(df, id)
         self._id = id
 
-    # TEMP:
-    def _add_canonical_id(self, df, id: str | None):
-
-        has_canonical: bool = CANONICAL_ID in df.columns() # This is a FUNC not attribute!
-        id_is_canonical: bool = id == CANONICAL_ID
-
-        if has_canonical:
-            if id:
-                if id_is_canonical:
-                    return self._df_as_is(df)
-                # overwrite with id
-                return self._df_overwrite_id(df, id)
-            warnings.warn(
-                f"Canonical ID '{CANONICAL_ID}' already exists. Pass '{CANONICAL_ID}' to `id` arg for consistency",
-                category=UserWarning,
-            )
-            return self._df_as_is(df)
-        if id:
-            # write new with id
-            return self._df_copy_id(df, id)
-        # write new auto-incrementing
-        return self._df_autoincrement_id(df)
+    @override
+    def _column_labels_list(self, df: RayDataset) -> list[str]:
+        return df.columns()
 
     # CANONICAL ID HELPERS:
 
-    def _df_as_is(self, df: RayFrame) -> RayFrame:
+    def _df_as_is(self, df: RayDataset) -> RayDataset:
         return df
 
-    def _df_overwrite_id(self, df: RayFrame, id: str) -> RayFrame:
+    def _df_overwrite_id(self, df: RayDataset, id: str) -> RayDataset:
         return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
 
-    def _df_copy_id(self, df: RayFrame, id: str) -> RayFrame:
+    def _df_copy_id(self, df: RayDataset, id: str) -> RayDataset:
         return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
 
-    def _df_autoincrement_id(self, ds):
-        # Step 1: get block sizes
-        block_sizes = ds.map_batches(
-            lambda df: pd.DataFrame({"__len__": [len(df)]}),
-            batch_format="pandas"
-        ).take_all()
+    def _df_autoincrement_id(self, df):
+        """collects data to driver node!"""
+        # Get block sizes
+        block_sizes = df.map_batches(lambda df: pd.DataFrame({"__len__": [len(df)]}), batch_format="pandas").take_all()
 
         lengths = [row["__len__"] for row in block_sizes]
 
-        # Step 2: compute offsets
+        # Compute offsets
         offsets = []
         total = 0
-        for l in lengths:
+        for length in lengths:
             offsets.append(total)
-            total += l
+            total += length
 
-        # Step 3: assign offsets per block
-        # zip blocks with offsets
-        def add_id_generator():
-            for i, block in enumerate(ds.iter_batches(batch_format="pandas")):
+        # Assign offsets per block
+        def _add_id_generator():
+            for i, block in enumerate(df.iter_batches(batch_format="pandas")):
                 offset = offsets[i]
                 block = block.reset_index(drop=True)
                 block[CANONICAL_ID] = range(offset, offset + len(block))
                 yield block
 
-        return ray.data.from_pandas_refs([
-            ray.put(batch) for batch in add_id_generator()
-        ])
+        return ray.data.from_pandas_refs([ray.put(batch) for batch in _add_id_generator()])
 
     # ARROW INTERFACES:
 
@@ -649,13 +624,11 @@ class RayDF(Frame[RayFrame, None]): # TODO!
     # SYNTHETIC GOLDEN RECORD:
 
     def synthesize_record(self):
-        import pandas as pd
 
         def fn(df: pd.DataFrame):
             return df.groupby(CANONICAL_ID, as_index=False).first()
 
         return self._df.map_batches(fn)
-    
 
 
 # DISPATCHER:
@@ -689,9 +662,11 @@ def _(df, id: str | None = None) -> PolarsDF:
 def _(df, id: str | None = None) -> ModinDF:
     return ModinDF(df, id)
 
-@wrap.register(RayFrame)
+
+@wrap.register(RayDataset)
 def _(df, id: str | None = None) -> RayDF:
     return RayDF(df, id)
+
 
 @wrap.register(spark.DataFrame)
 def _(df, id: str | None = None) -> SparkDF:

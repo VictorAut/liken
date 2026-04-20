@@ -6,10 +6,9 @@ import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
+import ray
 from faker import Faker
 from pyspark.sql import SparkSession
-import ray
-from ray.data import Dataset as RayDataset
 
 
 Faker.seed(123)
@@ -86,7 +85,7 @@ def _return_df(
         if spark_session:
             return spark_session.createDataFrame(schema=schema, data=data)
         raise ValueError("Spark Session not passed yet 'spark' backend requested")
-    
+
     if backend == "ray":
         # Ensure Ray is running
         if not ray.is_initialized():
@@ -97,10 +96,7 @@ def _return_df(
 
         return ray.data.from_pandas(pdf)
 
-    raise ValueError(
-        f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', got '{backend}'"
-    )
-
+    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', got '{backend}'")
 
 
 def maybe_null(value, p):

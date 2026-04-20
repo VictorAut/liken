@@ -9,11 +9,12 @@ import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyspark.sql as spark
-from ray.data import Dataset as RayFrame
+from ray.data import Dataset as RayDataset
+
 
 # TODO: `DataFrameLike` needs to be UserDataFrame | list[spark.row]
-UserDataFrame: TypeAlias = pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayFrame | spark.DataFrame
-DataFrameLike: TypeAlias = pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayFrame | spark.DataFrame | list[spark.Row]
+UserDataFrame: TypeAlias = pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayDataset | spark.DataFrame
+DataFrameLike: TypeAlias = pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayDataset | spark.DataFrame | list[spark.Row]
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
 Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule
 SimilarPairIndices: TypeAlias = tuple[int, int]

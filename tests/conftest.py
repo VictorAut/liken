@@ -6,7 +6,6 @@ import pandas as pd
 import polars as pl
 import pytest
 import ray
-from ray.data import Dataset as RayFrame
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -15,6 +14,7 @@ from pyspark.sql.functions import row_number
 from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
+from ray.data import Dataset as RayDataset
 
 from liken.datasets import fake_10
 from liken.liken import BaseDeduper
@@ -133,7 +133,7 @@ class Helpers:
             return list(df[col])
         if isinstance(df, mpd.DataFrame):
             return [None if v is pd.NA else v for v in list(df[col])]
-        if isinstance(df, RayFrame):
+        if isinstance(df, RayDataset):
             # materialize safely
             return [row[col] for row in df.take_all()]
         if isinstance(df, SparkDataFrame):
@@ -156,7 +156,7 @@ class Helpers:
             df = df.assign(**{label: column})
             return df
         
-        if isinstance(df, RayFrame):
+        if isinstance(df, RayDataset):
             def add_col(batch):
                 batch = batch.copy()
                 batch[label] = column[: len(batch)]

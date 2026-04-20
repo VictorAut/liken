@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+from ray.data import Dataset
 
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg
@@ -14,19 +15,20 @@ from liken.liken import Dedupe
 
 @patch("liken.liken.LocalExecutor")
 @patch("liken.liken.SparkExecutor")
-def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe):
+@patch("liken.liken.RayExecutor")
+def test_init_uses_executor(mock_ray_executor, mock_spark_executor, mock_local_executor, dataframe):
+
     df, spark = dataframe
 
     dupe = Dedupe(df, spark_session=spark)
     if spark:
         mock_spark_executor.assert_called_once_with(spark_session=spark)
+    elif isinstance(df, Dataset):
+        mock_ray_executor.assert_called_once()
     else:
         mock_local_executor.assert_called_once()
 
     assert dupe._executor is not None
-
-
-# No apply still exact dedupes
 
 
 @patch("liken.liken.CollectionsManager")
@@ -37,6 +39,9 @@ def test_no_apply_still_exact_apply_once(
 
     df, spark = dataframe
 
+    if isinstance(df, Dataset):
+        pytest.skip("Mocking does not propagate to Ray workers, uses pandas for batches anyway.")
+
     sm = mock_sm.return_value
     sm.has_applies = False
     sm.is_sequential_applied = True
@@ -44,7 +49,7 @@ def test_no_apply_still_exact_apply_once(
     sm.reset.return_value = None
 
     lk = Dedupe(df, spark_session=spark)
-    lk.canonicalize("address")  # <-- no apply!
+    lk.canonicalize("address")  # no apply!
 
     sm.apply.assert_called_once()
 
@@ -58,7 +63,7 @@ def test_validate_keep_arg_valid(keep):
 
 
 def test_validate_keep_arg_invalid():
-    with pytest.raises(ValueError, match="Invalid arg: keep must be one of 'first' or 'last'"):
+    with pytest.raises(ValueError, match="Invalid arg: keep arg must be one of 'first' or 'last'"):
         validate_keep_arg("middle")
 
 
@@ -68,7 +73,7 @@ def test_validate_spark_arg_valid(mock_spark_session):
 
 
 def test_validate_spark_arg_missing_session():
-    with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
+    with pytest.raises(ValueError, match="Invalid arg: spark_session arg must be provided for a spark dataframe"):
         validate_spark_arg(None)
 
 
@@ -76,7 +81,7 @@ def test_validate_spark_arg_missing_session():
 
 
 def test_validate_df_arg():
-    with pytest.raises(ValueError, match="Invalid arg: df must be istance of Pandas, Polars of Spark DataFrames"):
+    with pytest.raises(ValueError, match="Invalid arg: df must be istance of Pandas, Polars, Modin, Ray or Spark DataFrames"):
         Dedupe(Mock())  # mock not specced to a df
 
 

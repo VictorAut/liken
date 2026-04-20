@@ -176,6 +176,7 @@ class DummyFrame(CanonicalIdMixin):
     def _df_overwrite_id(self, df, id): ...
     def _df_copy_id(self, df, id): ...
     def _df_autoincrement_id(self, df): ...
+    def _column_labels_list(self, df): ...
 
 
 PARAMS = [
@@ -192,9 +193,6 @@ IDS = [
     "new canonical id as write from other id",
     "new autoincremental canonical id",
 ]
-
-
-@pytest.mark.filterwarnings("ignore:Canonical ID.*:UserWarning")
 @pytest.mark.parametrize("id, cols, method", PARAMS, ids=IDS)
 def test_add_canonical_id_mixin(id, cols, method):
 
@@ -203,28 +201,11 @@ def test_add_canonical_id_mixin(id, cols, method):
     dummy._df_overwrite_id = Mock()
     dummy._df_copy_id = Mock()
     dummy._df_autoincrement_id = Mock()
+    dummy._column_labels_list = Mock(return_value=cols)
 
     df = Mock()
-    df.columns = cols
 
     dummy._add_canonical_id(df, id)
 
     expected = getattr(dummy, method)
     expected.assert_called_once()
-
-
-def test_add_canonical_id_warning():
-
-    dummy = DummyFrame()
-    dummy._df_as_is = Mock()
-
-    df = Mock()
-    df.columns = ["address", CANONICAL_ID]
-
-    with pytest.warns(
-        UserWarning,
-        match=f"Canonical ID '{CANONICAL_ID}' already exists",
-    ):
-        dummy._add_canonical_id(df, id=None)
-
-    dummy._df_as_is.assert_called_once()

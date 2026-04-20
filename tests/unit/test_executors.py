@@ -8,8 +8,10 @@ from pyspark.sql import Row
 
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import DeduplicationDict
+from liken._dataframe import RayDF
 from liken._dedupers import BaseDeduper
 from liken._executors import LocalExecutor
+from liken._executors import RayExecutor
 from liken._executors import SparkExecutor
 
 
@@ -87,10 +89,9 @@ def test_localexecutor_canonicalize_dict_calls(mock_deduper, local_df):
 
 def test_sparkexecutor_init_sets_attributes():
     spark = Mock()
-    executor = SparkExecutor(spark_session=spark, id="id")
+    executor = SparkExecutor(spark_session=spark)
 
     assert executor._spark_session is spark
-    assert executor._id == "id"
 
 
 @pytest.fixture
@@ -112,7 +113,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
     dedupers_config,
 ):
     spark = Mock()
-    executor = SparkExecutor(spark_session=spark, id="id")
+    executor = SparkExecutor(spark_session=spark)
 
     spark_df_result = Mock()
     spark_df_result.select.return_value = spark_df_result
@@ -186,3 +187,13 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
     )
     instance.collect.assert_called_once()
     assert result == ["out"]
+
+
+#################
+# RayExecutor
+#################
+
+
+def test_rayexecutor_init_does_not_crash():
+    executor = RayExecutor()
+    assert executor is not None
