@@ -388,10 +388,6 @@ class DaskExecutor(Executor):
             id=id,
             preserve_schema=True
         )
-
-        # if drop_canonical_id:
-        #     return df.drop_col(CANONICAL_ID)
-        # return df
         
         return df
 
@@ -407,7 +403,7 @@ class DaskExecutor(Executor):
     ) -> pd.DataFrame:
         from liken.liken import Dedupe
 
-        df = (
+        df =  (
             Dedupe(df)
             .apply(dedupers)
             .canonicalize(
@@ -419,15 +415,7 @@ class DaskExecutor(Executor):
             .collect()
         )
 
-        print("columns:", df.columns)
-
         if drop_canonical_id:
-            if CANONICAL_ID in df.columns:
-                df = df.drop(columns=[CANONICAL_ID])
-        else:
-            # Ensure it ALWAYS exists when expected
-            if CANONICAL_ID not in df.columns:
-                df[CANONICAL_ID] = pd.Series(dtype="int64")
+            return df.drop(columns=[CANONICAL_ID])
         return df
-
 

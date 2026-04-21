@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 from ray.data import Dataset
+import dask.dataframe as dd
 
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg
@@ -16,7 +17,8 @@ from liken.liken import Dedupe
 @patch("liken.liken.LocalExecutor")
 @patch("liken.liken.SparkExecutor")
 @patch("liken.liken.RayExecutor")
-def test_init_uses_executor(mock_ray_executor, mock_spark_executor, mock_local_executor, dataframe):
+@patch("liken.liken.DaskExecutor")
+def test_init_uses_executor(mock_dask_executor, mock_ray_executor, mock_spark_executor, mock_local_executor, dataframe):
 
     df, spark = dataframe
 
@@ -25,6 +27,8 @@ def test_init_uses_executor(mock_ray_executor, mock_spark_executor, mock_local_e
         mock_spark_executor.assert_called_once_with(spark_session=spark)
     elif isinstance(df, Dataset):
         mock_ray_executor.assert_called_once()
+    elif isinstance(df, dd.DataFrame):
+        mock_dask_executor.assert_called_once()
     else:
         mock_local_executor.assert_called_once()
 

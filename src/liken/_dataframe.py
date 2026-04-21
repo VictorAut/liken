@@ -673,22 +673,17 @@ class DaskDF(Frame[dd.DataFrame, dd.Series], CanonicalIdMixin):
             partition[CANONICAL_ID] = range(offset, offset + len(partition))
             return partition
 
-        meta = df._meta.copy()
-        meta[CANONICAL_ID] = pd.Series(dtype="int64")
+        meta = self._new_meta(df)
 
         return df.map_partitions(_assign, meta=meta)
 
     def _new_meta(self, df: dd.DataFrame, id: str | None = None) -> pd.DataFrame:
         meta = df._meta.copy()
 
-        if id:
-            dtype = meta[id].dtype
-        else:
-            dtype = "int64"  # auto-increment default
+        dtype = meta[id].dtype if id else "int64"
 
         meta[CANONICAL_ID] = pd.Series(dtype=dtype)
-        print(type(meta))
-        print("The meta columns are: ", meta.columns)
+
         return meta
 
     # ARROW INTERFACES:
