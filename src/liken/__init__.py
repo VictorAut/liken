@@ -13,6 +13,7 @@ from liken._dedupers import str_endswith
 from liken._dedupers import str_len
 from liken._dedupers import str_startswith
 from liken._dedupers import tfidf
+from liken._pd_affordances import register_pd_affordances
 from liken._pipelines import Col
 from liken._pipelines import Pipeline
 from liken._pipelines import col
@@ -44,3 +45,7 @@ __all__ = [
     "preprocessors",
     "datasets",
 ]
+
+
+# registers pandas affordances
+register_pd_affordances()
