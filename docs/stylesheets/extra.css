@@ -79,3 +79,10 @@ body [data-termynal] {
     background: #272c2e;
     border-radius: 8px;
 }
+
+/* ANNOUNCEMENT BANNER */
+
+.md-banner {
+  background-color: #ff9d2c;
+  color: #000000;
+}

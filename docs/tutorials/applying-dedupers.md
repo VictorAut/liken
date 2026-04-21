@@ -20,6 +20,38 @@ df = (
 
 If you only need a single deduper, use it straight in `.apply` as seen above. The column or columns to dedupe on are passed in `.drop_duplicates`.
 
+### Coming from Pandas?
+
+**Liken** is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
+
+=== "With Pandas Affordance"
+
+    ```python
+    import liken as lk # Only works if you import liken!
+    import pandas as pd
+
+    df = pd.read_csv("...")
+
+    df = df.fuzzy.drop_duplicates("address", threshold=0.6) # kwargs here
+    ```
+
+=== "Normal API Use"
+
+    ```python
+    import liken as lk
+    import pandas as pd
+
+    df = pd.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        .apply(lk.fuzzy(threshold=0.6)) # kwargs here
+        .drop_duplicates("address")
+    )
+    ```
+
+Pandas affordances are limited to [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine). Also, this special use is limited to single dedupers, and does not support the application of collections of dedupers, as shown next.
+
 ## Dictionaries of Dedupers
 
 **Liken** supports deduplicating with a collection of dedupers. This allows deduplicating multiple columns with different dedupers, or defining several dedupers to be run sequentially on a column.

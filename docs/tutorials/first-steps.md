@@ -10,7 +10,8 @@ pip install liken
 
 ## Introduction
 
-**Liken** is a deduplication library for DataFrames. Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, rather the emphasis is on how to set up near deduplication correctly. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, rather the emphasis is on how to set up near deduplication correctly. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+
 
 ## Instantiating
 
