@@ -16,6 +16,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 from typing import ClassVar
 from typing import Iterable
@@ -257,7 +258,7 @@ class Exact(BaseDeduper):
 # PREDICATE DEDUPERS:
 
 
-class PredicateDedupers(BaseDeduper):
+class PredicateDeduper(BaseDeduper):
     """
     Defines predicate, "choice", deduplications, i.e. those that produce a discrete
     outcome. Any pair of values that satisfies the conditions of a predicate
@@ -315,13 +316,13 @@ class PredicateDedupers(BaseDeduper):
         return _NegatedPredicateDeduper(self)
 
 
-class _NegatedPredicateDeduper(PredicateDedupers):
+class _NegatedPredicateDeduper(PredicateDeduper):
     """
     Composable deduplication instance that inverts the results of any predicate
     deduper (except IsNA deduper which follows it's own inversion logic).
     """
 
-    def __init__(self, inner: PredicateDedupers):
+    def __init__(self, inner: PredicateDeduper):
         self._inner = inner
 
     def _matches(self, value):
@@ -350,7 +351,7 @@ class _NegatedPredicateDeduper(PredicateDedupers):
 @final
 class IsNA(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Deduplicates all missing / null values into a single group.
@@ -392,7 +393,7 @@ class IsNA(
 @final
 class _NotNA(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Deduplicate all non-NA / non-null values.
@@ -433,7 +434,7 @@ class _NotNA(
 @final
 class IsIn(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Deduplicates all instances of strings that are a member of a defined
@@ -457,7 +458,7 @@ class IsIn(
 @final
 class StrLen(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Deduplicates all instances of strings that satisfy the bounds in
@@ -498,7 +499,7 @@ class StrLen(
 @final
 class StrStartsWith(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Strings start with canonicalizer.
@@ -533,7 +534,7 @@ class StrStartsWith(
 @final
 class StrEndsWith(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Strings start with canonicalizer.
@@ -568,7 +569,7 @@ class StrEndsWith(
 @final
 class StrContains(
     SingleColumnMixin,
-    PredicateDedupers,
+    PredicateDeduper,
 ):
     """
     Strings contains canonicalizer.
@@ -612,7 +613,7 @@ class StrContains(
 # THRESHOLD DEDUPERS:
 
 
-class ThresholdDedupers(BaseDeduper):
+class ThresholdDeduper(BaseDeduper):
     """
     Base instance of dedupers that implement any similarity comparison
     mechanism.
@@ -629,7 +630,7 @@ class ThresholdDedupers(BaseDeduper):
 @final
 class Fuzzy(
     SingleColumnMixin,
-    ThresholdDedupers,
+    ThresholdDeduper,
 ):
     """
     Fuzzy string matching deduper
@@ -697,7 +698,7 @@ class Fuzzy(
 @final
 class TfIdf(
     SingleColumnMixin,
-    ThresholdDedupers,
+    ThresholdDeduper,
 ):
     """
     TF-IDF deduper.
@@ -713,7 +714,7 @@ class TfIdf(
         ngram: int | tuple[int, int] = 3,
         threshold: float = 0.95,
         topn: int = 2,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(
             threshold=threshold,
@@ -771,7 +772,7 @@ class TfIdf(
 @final
 class LSH(
     SingleColumnMixin,
-    ThresholdDedupers,
+    ThresholdDeduper,
 ):
     """
     Locality Sensitive Hashing deduper
@@ -839,7 +840,7 @@ class LSH(
 @final
 class Jaccard(
     CompoundColumnMixin,
-    ThresholdDedupers,
+    ThresholdDeduper,
 ):
     """
     Deduplicate sets where such sets contain categorical data.
@@ -876,7 +877,7 @@ class Jaccard(
 @final
 class Cosine(
     CompoundColumnMixin,
-    ThresholdDedupers,
+    ThresholdDeduper,
 ):
     """
     Deduplicate sets where such sets contain numeric data.
@@ -971,7 +972,17 @@ def exact() -> BaseDeduper:
 
 
 @registry.register("fuzzy")
-def fuzzy(threshold: float = 0.95, scorer="simple_ratio") -> BaseDeduper:
+def fuzzy(
+    threshold: float = 0.95,
+    scorer: Literal[
+        "simple_ratio",
+        "partial_ratio",
+        "token_sort_ratio",
+        "token_set_ratio",
+        "weighted_ratio",
+        "quick_ratio",
+    ] = "simple_ratio",
+) -> BaseDeduper:
     """Near string deduplication.
 
     Usage is on single columns of a dataframe.
@@ -1024,7 +1035,7 @@ def tfidf(
     threshold: float = 0.95,
     ngram: int | tuple[int, int] = 3,
     topn: int = 2,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseDeduper:
     """Near string deduplication using term frequency, inverse document
     frequency.

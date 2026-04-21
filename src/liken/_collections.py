@@ -110,11 +110,11 @@ class CollectionsManager:
         if isinstance(deduper, BaseDeduper):
             if not self.is_sequential_applied:
                 raise InvalidDeduperError(INVALID_SEQUENCE_AFTER_DICT_MSG)
-            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)
+            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore
             return
 
         if isinstance(deduper, dict | DeduplicationDict):
-            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
+            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore
                 warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
             self._dedupers = DeduplicationDict(deduper)
             return

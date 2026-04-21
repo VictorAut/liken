@@ -63,13 +63,12 @@ from liken._types import Keep
 
 
 D = TypeVar("D")  # dataframe
-S = TypeVar("S")  # Series
 
 
 # BASE
 
 
-class Frame(Generic[D, S]):
+class Frame(Generic[D]):
     """Base class defining a dataframe wrapper
 
     Defines inheritable methods as well as some of the interface
@@ -98,15 +97,11 @@ class Frame(Generic[D, S]):
         """
         return getattr(self._df, name)
 
-    def _column_labels_list(self, df: D) -> list[str]:
-        """Following syntax used by Pandas, Polars and Spark; override otherwise"""
-        return df.columns
-
-    def _get_col(self, column: str) -> S:
+    def _get_col(self, column: str) -> pa.Array:
         del column
         raise NotImplementedError
 
-    def _get_cols(self, columns: tuple[str, ...]) -> D:
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
         del columns
         raise NotImplementedError
 
@@ -119,7 +114,7 @@ class Frame(Generic[D, S]):
         that do care about nulls are not affected (e.g. IsNA).
         """
         if isinstance(columns, str):
-            col: S = self._get_col(columns)
+            col: pa.Array = self._get_col(columns)
             if with_na:
                 return coalesce(col, NA_PLACEHOLDER)
             return col
@@ -183,7 +178,7 @@ class CanonicalIdMixin(AddsCanonical):
 
 
 @final
-class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
+class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
     """Pandas DataFrame wrapper"""
 
     def __init__(self, df: pd.DataFrame, id: str | None = None):
@@ -203,6 +198,9 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
 
     def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
+
+    def _column_labels_list(self, df: pd.DataFrame) -> list[str]:
+        return list(df.columns)
 
     # ARROW INTERFACES:
 
@@ -237,7 +235,7 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
 
 
 @final
-class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
+class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
     """Polars DataFrame wrapper"""
 
     def __init__(self, df: pl.DataFrame, id: str | None = None):
@@ -258,6 +256,9 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
 
+    def _column_labels_list(self, df: pl.DataFrame) -> list[str]:
+        return df.columns
+
     # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
@@ -269,7 +270,7 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
     # WRAPPER METHODS:
 
     def put_col(self, column: str, array: list) -> Self:
-        array = pl.Series(array)  # IMPORTANT; allow list to be assigned to column
+        array: pl.Series = pl.Series(array)  # IMPORTANT; allow list to be assigned to column
         self._df = self._df.with_columns(**{column: array})
         return self
 
@@ -299,7 +300,7 @@ SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
 
 
 @final
-class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
+class SparkDF(Frame[SparkObject], CanonicalIdMixin):
     """Spark DataFrame and Spark RDD wrapper
 
     This wrapper, contrarily to others does not always add a canonical id. When
@@ -366,6 +367,9 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
         )
 
+    def _column_labels_list(self, df: spark.DataFrame) -> list[str]:
+        return df.columns
+
     @staticmethod
     def _new_schema(df: spark.DataFrame, id: str | None = None) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
@@ -405,16 +409,11 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
     def put_col(self):
         raise NotImplementedError(self.err_msg)
 
-    def _get_col(self):
-        raise NotImplementedError(self.err_msg)
-
     def _get_cols(self):
         raise NotImplementedError(self.err_msg)
 
-    def _get_col(self, column: str) -> pa.Array:
-        """TODO
-        warn that everything is returned to driver node!
-        """
+    def _get_col(self, column: str):
+        """Everything is returned to driver node!"""
         df: spark.DataFrame = self._df.toDF()
 
         return df.select(column).toArrow().column(0).combine_chunks()
@@ -424,7 +423,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 
     # SYNTHETIC RECORD:
 
-    def synthesize_record(self) -> pl.DataFrame:
+    def synthesize_record(self) -> spark.DataFrame:
         """TODO
         warn that everything is returned to driver node!
         """
@@ -441,7 +440,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
 
 
 @final
-class SparkRows(Frame[list[spark.Row], list[Any]]):
+class SparkRows(Frame[list[spark.Row]]):
     """Spark Rows DataFrame
 
     Spark Rows is what are processed by individual Worker nodes.
@@ -459,7 +458,7 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
         return pa.array([row[column] for row in self._df])
 
     def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
-        # return [[row[c] for c in columns] for row in self._df]
+
         data = {col: [row[col] for row in self._df] for col in columns}
 
         return pa.table(data)
@@ -491,7 +490,7 @@ class SparkRows(Frame[list[spark.Row], list[Any]]):
 
 
 @final
-class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
+class ModinDF(Frame[mpd.DataFrame], CanonicalIdMixin):
     """Modin DataFrame wrapper"""
 
     def __init__(self, df: mpd.DataFrame, id: str | None = None):
@@ -511,6 +510,9 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
 
     def _df_autoincrement_id(self, df: mpd.DataFrame) -> mpd.DataFrame:
         return df.assign(**{CANONICAL_ID: mpd.RangeIndex(start=0, stop=len(df))})
+
+    def _column_labels_list(self, df: mpd.DataFrame) -> list[str]:
+        return df.columns
 
     # ARROW INTERFACES:
 
@@ -547,7 +549,7 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
 
 
 @final
-class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
+class RayDF(Frame[RayDataset], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
     def __init__(self, df: RayDataset, id: str | None = None):
@@ -556,10 +558,6 @@ class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
 
         self._df: RayDataset = self._add_canonical_id(df, id)
         self._id = id
-
-    @override
-    def _column_labels_list(self, df: RayDataset) -> list[str]:
-        return df.columns()
 
     # CANONICAL ID HELPERS:
 
@@ -596,13 +594,18 @@ class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
 
         return ray.data.from_pandas_refs([ray.put(batch) for batch in _add_id_generator()])
 
+    def _column_labels_list(self, df: RayDataset) -> list[str]:
+        return df.columns()
+
     # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
-        return self._df.to_arrow()[column]
+        # TODO: in a future Ray version, type check
+        return self._df.to_arrow()[column]  # type: ignore[attr-defined]
 
     def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
-        return self._df.to_arrow().select(columns)
+        # TODO: in a future Ray version, type check
+        return self._df.to_arrow().select(columns)  # type: ignore[attr-defined]
 
     # WRAPPER METHODS:
 
@@ -636,10 +639,10 @@ class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
 
 
 @final
-class DaskDF(Frame[dd.DataFrame, dd.Series], CanonicalIdMixin):
+class DaskDF(Frame[dd.DataFrame], CanonicalIdMixin):
     """Dask DataFrame wrapper"""
 
-    def __init__(self, df: dd.DataFrame, id: str | None = None, preserve_schema: bool=False):
+    def __init__(self, df: dd.DataFrame, id: str | None = None, preserve_schema: bool = False):
         if preserve_schema:
             self._df = df
         else:
@@ -685,6 +688,9 @@ class DaskDF(Frame[dd.DataFrame, dd.Series], CanonicalIdMixin):
         meta[CANONICAL_ID] = pd.Series(dtype=dtype)
 
         return meta
+
+    def _column_labels_list(self, df: dd.DataFrame) -> list[str]:
+        return df.columns
 
     # ARROW INTERFACES:
 

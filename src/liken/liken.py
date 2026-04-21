@@ -5,12 +5,10 @@ from __future__ import annotations
 from typing import Hashable
 from typing import Self
 
-import pandas as pd
-import polars as pl
+import dask.dataframe as dd
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 from ray.data import Dataset as RayDataset
-import dask.dataframe as dd
 
 from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
@@ -18,10 +16,10 @@ from liken._dataframe import Frame
 from liken._dataframe import wrap
 from liken._dedupers import BaseDeduper
 from liken._dedupers import exact
+from liken._executors import DaskExecutor
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import RayExecutor
-from liken._executors import DaskExecutor
 from liken._executors import SparkExecutor
 from liken._pipelines import Pipeline
 from liken._types import Columns
@@ -43,9 +41,6 @@ class Dedupe:
         df: The dataframe to deduplicate.
         spark_session: optional spark session if initializing with PySpark
             backend.
-
-    Returns:
-        An Dedupe object with which to "apply" a deduper
 
     Raises:
         ValueError: Initialized with PySpark DataFrame but no Spark Session.
@@ -289,7 +284,7 @@ class Dedupe:
 
         return {cid: count for cid, count in counts.items() if count >= n}
 
-    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+    def synthesize(self) -> UserDataFrame:
         """Synthesizes a record combining the first intance of non null values
         of all records associated to a canonical id.
 
@@ -318,11 +313,11 @@ class Dedupe:
 
         return wdf.synthesize_record()
 
-    def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """Collect canonicalization results and returns the dataframe.""" 
+    def collect(self) -> UserDataFrame:
+        """Collect canonicalization results and returns the dataframe."""
         return self._df
 
-    def explain(self):
+    def explain(self) -> str | None:
         """
         Returns the dedupers as currently stored in the collections manager.
 

@@ -5,12 +5,12 @@ import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
-import pyspark.sql as spark
 import ray
 from faker import Faker
 from pyspark.sql import SparkSession
 
 from liken._types import SupportedBackends
+from liken._types import UserDataFrame
 
 
 Faker.seed(123)
@@ -74,7 +74,7 @@ def _return_df(
     data: list[tuple[Any, ...]],
     backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
-) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+) -> UserDataFrame:
     """Returns the dataframe based on the backend"""
 
     if backend == "pandas":
@@ -132,7 +132,7 @@ def fake_row():
 def fake_10(
     backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
-) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+) -> UserDataFrame:
     """Synthetic 10 rows.
 
     Args:
@@ -157,7 +157,7 @@ def fake_10(
 def fake_1K(
     backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
-) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+) -> UserDataFrame:
     """Synthetic 1K (one thousand) rows.
 
     Args:
@@ -185,7 +185,7 @@ def fake_1K(
 def fake_100K(
     backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
-) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+) -> UserDataFrame:
     """Synthetic 100K (one hundred thousand) rows.
 
     Args:
@@ -213,7 +213,7 @@ def fake_100K(
 def fake_1M(
     backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
-) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+) -> UserDataFrame:
     """Synthetic 1M (one million) rows.
 
     Args:

@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import NamedTuple
 from typing import Self
 from typing import TypeAlias
+from typing import cast
 from typing import final
 
 from liken._dedupers import BaseDeduper
-from liken._dedupers import PredicateDedupers
+from liken._dedupers import PredicateDeduper
 from liken._preprocessors import Preprocessor
 from liken._registry import registry
 from liken._types import Columns
@@ -54,9 +55,6 @@ class Col:
 
     Args:
         columns: the label(s) of a column or columns.
-
-    Returns:
-        None
 
     Example:
         single `on` in a pipeline step:
@@ -332,6 +330,9 @@ class Col:
 
         columns, deduper, preprocessors = self._unit
 
+        if not isinstance(deduper, PredicateDeduper):
+            raise TypeError("Only predicate dedupers support inversion")
+
         new_on = Col(columns)
         new_on._unit = PipelineUnit(columns, ~deduper, preprocessors)
         return new_on
@@ -349,11 +350,11 @@ class Col:
 
         rep = ""
         columns, deduper, _ = self._unit
-        deduper: str = str(deduper)
-        if deduper.startswith("~"):
-            deduper = deduper[1:]
+        deduper_str: str = cast(str, str(deduper))
+        if deduper_str.startswith("~"):
+            deduper_str = deduper_str[1:]
             on = "~" + on
-        rep += f"{on}('{columns}').{deduper}"
+        rep += f"{on}('{columns}').{deduper_str}"
         return rep
 
 
@@ -371,21 +372,18 @@ class Pipeline:
         preprocessors: a preprocessor, or list of preprocessors to apply to the
             pipeline
 
-    Returns:
-        None
-
     Raises:
         TypeError: if passed preprocessor not a member of `liken.preprocessors`
     """
 
     def __init__(self, preprocessors: InputPreprocessor = []):
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
-        self._ons: list[list[Col]] = []
+        self._cols: list[list[Col]] = []
         self._steps: PipelineCollection = []
 
     def step(
         self,
-        ons: Col | list[Col],
+        cols: Col | list[Col],
         /,
         *,
         preprocessors: InputPreprocessor = [],
@@ -398,7 +396,7 @@ class Pipeline:
         canonicalisation.
 
         Args:
-            ons: `Col` deduper, or list of the same.
+            cols: `Col` deduper, or list of the same.
             preprocessors: a preprocessor, or list of preprocessors to appy the
                 whole step (i.e. to all dedupers if more than one deduper).
 
@@ -451,21 +449,26 @@ class Pipeline:
                     .step(lk.col("address").tfidf())  # this one still preprocessed with `lower`
                 )
         """
-        preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
-        if not preprocessors:
-            preprocessors = self._preprocessors
+        preprocessors_list: list[Preprocessor] = resolve_preprocessors(preprocessors)
+        if not preprocessors_list:
+            preprocessors_list = self._preprocessors
 
-        if isinstance(ons, Col):
-            ons: list[Col] = [ons]
-        self._ons.append(ons)
+        if isinstance(cols, list):
+            cols_list = cols
+        elif isinstance(cols, Col):
+            cols_list: list[Col] = cast(list, [cols])
+        else:
+            raise TypeError("Must be an instance of Col, used as `lk.col(...)` or a list of the same.")
 
-        step: PipelineStep = [on.unit for on in ons]
+        self._cols.append(cols_list)
+
+        step: PipelineStep = [col.unit for col in cols_list]
 
         # propagate preprocessor
-        step = [s._replace(preprocessors=preprocessors) if not s.preprocessors else s for s in step]
+        step = [s._replace(preprocessors=preprocessors_list) if not s.preprocessors else s for s in step]
 
         # predicates sorted to first for "rule predication"
-        step: PipelineStep = sorted(step, key=lambda x: not isinstance(x[1], PredicateDedupers))
+        step: PipelineStep = sorted(step, key=lambda x: not isinstance(x[1], PredicateDeduper))
 
         self._steps.append(step)
 
@@ -477,7 +480,7 @@ class Pipeline:
             pros = "preprocessors=" + f"{[str(p) for p in preprocessors]}"
 
         inner = ""
-        for step in self._ons:
+        for step in self._cols:
             inner += "\n\t\t" + ".step(["
             for on in step:
                 inner += "\n\t\t\t" + str(on) + ","
@@ -491,7 +494,7 @@ class Pipeline:
 
         Private! not public API.
         """
-        return any([isinstance(x[1], PredicateDedupers) for x in step])
+        return any([isinstance(x[1], PredicateDeduper) for x in step])
 
     @property
     def steps(self):

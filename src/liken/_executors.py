@@ -35,7 +35,7 @@ from liken._dataframe import LocalDF
 from liken._dataframe import RayDF
 from liken._dataframe import SparkDF
 from liken._dedupers import BaseDeduper
-from liken._dedupers import PredicateDedupers
+from liken._dedupers import PredicateDeduper
 from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import Keep
@@ -127,12 +127,10 @@ class LocalExecutor(Executor):
 
                 # predication only if at least one predicate deduper
                 if any_predicate:
-                    indices = set()
+                    indices: set = set()
 
                     for col, deduper, preprocessor in step:
-                        uf, n = self._build_uf(
-                            deduper, df, col, preprocessor, predicate=indices
-                        )
+                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
 
                         components = defaultdict(list)
                         idx: list = sorted(indices)
@@ -142,7 +140,7 @@ class LocalExecutor(Executor):
                             else:
                                 components[idx[uf[i]]].append(idx[i])
 
-                        if isinstance(deduper, PredicateDedupers):
+                        if isinstance(deduper, PredicateDeduper):
                             for c in components.values():
                                 if len(c) > 1:
                                     indices = indices.union(set(c))
@@ -169,9 +167,7 @@ class LocalExecutor(Executor):
         preprocessors: list[Preprocessor] = [],
         predicate: set = set(),
     ) -> tuple[UnionFind[int], int]:
-        return deduper.set_frame(df).build_union_find(
-            columns, preprocessors, predicate=predicate
-        )
+        return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
 
     @staticmethod
     def _get_components(
@@ -250,9 +246,7 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(
-            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
-        )
+        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -292,7 +286,7 @@ class SparkExecutor(Executor):
         # Core API reused per partition, per worker node
         df = (
             factory._from_rows(rows)
-            .apply(dedupers)
+            .apply(dedupers)  # type: ignore
             .canonicalize(
                 columns,
                 keep=keep,
@@ -330,8 +324,8 @@ class RayExecutor(Executor):
 
         def _process_batch(batch: pd.DataFrame) -> pd.DataFrame:
             return (
-                Dedupe(batch)
-                .apply(dedupers)
+                Dedupe(batch)  # type: ignore
+                .apply(dedupers)  # type: ignore
                 .canonicalize(
                     columns,
                     keep=keep,
@@ -342,7 +336,7 @@ class RayExecutor(Executor):
             )
 
         # IMPORTANT: "pandas" batch
-        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))
+        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))  # type: ignore
 
         if drop_canonical_id:
             return df.drop_col("canonical_id")
@@ -366,7 +360,7 @@ class DaskExecutor(Executor):
         """Maps dataframe partitions to be processed by Dask, natively using
         pandas for each partition.
         """
-        
+
         meta = df._new_meta(df._df, id)
 
         if drop_canonical_id:
@@ -386,9 +380,9 @@ class DaskExecutor(Executor):
                 meta=meta,
             ),
             id=id,
-            preserve_schema=True
+            preserve_schema=True,
         )
-        
+
         return df
 
     @staticmethod
@@ -403,9 +397,9 @@ class DaskExecutor(Executor):
     ) -> pd.DataFrame:
         from liken.liken import Dedupe
 
-        df =  (
-            Dedupe(df)
-            .apply(dedupers)
+        df = (
+            Dedupe(df)  # type: ignore
+            .apply(dedupers)  # type: ignore
             .canonicalize(
                 columns,
                 keep=keep,
@@ -418,4 +412,3 @@ class DaskExecutor(Executor):
         if drop_canonical_id:
             return df.drop(columns=[CANONICAL_ID])
         return df
-

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 
 import liken as lk
@@ -51,7 +53,42 @@ def test_matrix_ray(num_partitions, expected_ids, df_ray, blocking_key, helpers)
         "email": (lk.exact(),),
     }
 
-    # IMPORTANT!!!: define an id
     df = lk.dedupe(df).apply(dedupers).canonicalize(id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
+
+@pytest.mark.parametrize(
+    "num_partitions, expected_ids",
+    PARAMS,
+    ids=IDS,
+)
+def test_matrix_dask(num_partitions, expected_ids, df_dask, blocking_key, helpers):
+
+    df = helpers.add_column(df_dask, blocking_key, "blocking_key", str)
+
+    def _add_partition(df, npartitions):
+
+        def stable_hash(x):
+            return int(hashlib.md5(str(x).encode()).hexdigest(), 16) % npartitions
+
+        df["_part"] = df["blocking_key"].map(stable_hash)
+        return df
+
+    meta = df._meta.assign(_part="int64")
+
+    df = df.map_partitions(_add_partition, num_partitions, meta=meta)
+
+    df = df.shuffle("_part", npartitions=num_partitions)
+
+    df = df.drop(columns="_part")
+
+    dedupers = {
+        "address": (lk.exact(),),
+        "email": (lk.exact(),),
+    }
+
+    df = lk.dedupe(df).apply(dedupers).canonicalize(id="id").collect()
+
+    result = helpers.get_column_as_list(df, CANONICAL_ID)
+
+    assert sorted(result) == sorted(expected_ids)

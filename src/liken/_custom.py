@@ -8,7 +8,7 @@ from typing import final
 
 from typing_extensions import override
 
-from liken._dedupers import ThresholdDedupers
+from liken._dedupers import ThresholdDeduper
 from liken._types import SimilarPairIndices
 
 
@@ -22,7 +22,7 @@ PairGenerator: TypeAlias = Callable[[Iterable], Iterable[SimilarPairIndices]]
 
 
 @final
-class Custom(ThresholdDedupers):
+class Custom(ThresholdDeduper):
     """
     Inherits from Threshold Dedupers for a generalised approach.
 

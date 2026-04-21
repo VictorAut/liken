@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import typing
 
-import pytest
 import dask.dataframe as dd
+import pytest
 
 import liken as lk
 from liken._constants import CANONICAL_ID

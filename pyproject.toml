@@ -99,13 +99,11 @@ force-single-line = true
 lines-after-imports = 2
 
 [tool.mypy]
-warn_no_return = false
-allow_redefinition = true
-
-
-[[tool.mypy.overrides]]
-module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*", "pyarrow.*"]
+# warn_no_return = false
+# allow_redefinition = true
 ignore_missing_imports = true
+disable_error_code = ["no-redef"]
+
 
 [tool.pylint]
 max-line-length = 120

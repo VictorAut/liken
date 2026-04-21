@@ -37,7 +37,7 @@ jobs:
 
         - name: lint
           run: |
-            task lint-slim
+            task lint
 
   test:
     runs-on: ubuntu-latest
