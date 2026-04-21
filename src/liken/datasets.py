@@ -1,7 +1,7 @@
 import random
 from typing import Any
-from typing import Literal
 
+import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
@@ -9,6 +9,8 @@ import pyspark.sql as spark
 import ray
 from faker import Faker
 from pyspark.sql import SparkSession
+
+from liken._types import SupportedBackends
 
 
 Faker.seed(123)
@@ -70,7 +72,7 @@ fake = Faker()
 def _return_df(
     schema: list[str],
     data: list[tuple[Any, ...]],
-    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
+    backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Returns the dataframe based on the backend"""
@@ -87,16 +89,18 @@ def _return_df(
         raise ValueError("Spark Session not passed yet 'spark' backend requested")
 
     if backend == "ray":
-        # Ensure Ray is running
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
-        # safest path: pandas → Ray Dataset
-        pdf = pd.DataFrame(columns=schema, data=data)
+        df = pd.DataFrame(columns=schema, data=data)
 
-        return ray.data.from_pandas(pdf)
+        return ray.data.from_pandas(df)
 
-    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', got '{backend}'")
+    if backend == "dask":
+        df = pd.DataFrame(columns=schema, data=data)
+        return dd.from_pandas(df)
+
+    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', 'ray'; got '{backend}'")
 
 
 def maybe_null(value, p):
@@ -126,7 +130,7 @@ def fake_row():
 
 
 def fake_10(
-    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
+    backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 10 rows.
@@ -151,7 +155,7 @@ def fake_10(
 
 
 def fake_1K(
-    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
+    backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1K (one thousand) rows.
@@ -179,7 +183,7 @@ def fake_1K(
 
 
 def fake_100K(
-    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
+    backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 100K (one hundred thousand) rows.
@@ -207,7 +211,7 @@ def fake_100K(
 
 
 def fake_1M(
-    backend: Literal["pandas", "polars", "modin", "spark", "ray"] = "pandas",
+    backend: SupportedBackends = "pandas",
     spark_session: SparkSession | None = None,
 ) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
     """Synthetic 1M (one million) rows.

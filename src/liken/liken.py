@@ -10,6 +10,7 @@ import polars as pl
 import pyspark.sql as spark
 from pyspark.sql import SparkSession
 from ray.data import Dataset as RayDataset
+import dask.dataframe as dd
 
 from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
@@ -20,10 +21,11 @@ from liken._dedupers import exact
 from liken._executors import Executor
 from liken._executors import LocalExecutor
 from liken._executors import RayExecutor
+from liken._executors import DaskExecutor
 from liken._executors import SparkExecutor
 from liken._pipelines import Pipeline
 from liken._types import Columns
-from liken._types import DataFrameLike
+from liken._types import InternalDataFrame
 from liken._types import Keep
 from liken._types import UserDataFrame
 from liken._validators import validate_columns_arg
@@ -64,7 +66,7 @@ class Dedupe:
         *,
         spark_session: SparkSession | None = None,
     ):
-        self._df: DataFrameLike = validate_df_arg(df)
+        self._df: InternalDataFrame = validate_df_arg(df)
 
         self._collection = CollectionsManager()
 
@@ -73,6 +75,8 @@ class Dedupe:
             self._executor = SparkExecutor(spark_session=spark_session)
         elif isinstance(df, RayDataset):
             self._executor = RayExecutor()
+        elif isinstance(df, dd.DataFrame):
+            self._executor = DaskExecutor()
         else:
             self._executor = LocalExecutor()
 
@@ -171,7 +175,7 @@ class Dedupe:
             self._collection.apply(exact())
         dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
-        self._df: DataFrameLike = self._executor.execute(
+        self._df: InternalDataFrame = self._executor.execute(
             wdf,
             columns=columns,
             dedupers=dedupers,
@@ -200,8 +204,9 @@ class Dedupe:
 
         Warning:
             Leaving `id` to it's default `None` value forces collection to
-            driver node when using Ray Datasets, which is not recommended. Use
-            the dataset's unique identier with the `id` arg, instead.
+            driver node when using `Ray` Datasets and `Dask` DataFrames, which
+            is not recommended. Use the dataset's unique identier with the `id`
+            arg, instead.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
@@ -236,7 +241,7 @@ class Dedupe:
             self.apply(exact())
         dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
-        self._df: DataFrameLike = self._executor.execute(
+        self._df: InternalDataFrame = self._executor.execute(
             wdf,
             columns=columns,
             dedupers=dedupers,
@@ -314,7 +319,7 @@ class Dedupe:
         return wdf.synthesize_record()
 
     def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """Collect canonicalization results and returns the dataframe."""
+        """Collect canonicalization results and returns the dataframe.""" 
         return self._df
 
     def explain(self):

@@ -460,6 +460,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/f3/00bb1e867fba351e2d784170955713bee200c43ea306c59f30bd7e748192/dask-2026.3.0-py3-none-any.whl", hash = "sha256:be614b9242b0b38288060fb2d7696125946469c98a1c30e174883fd199e0428d", size = 1485630, upload-time = "2026-03-18T07:10:12.832Z" },
 ]
 
+[package.optional-dependencies]
+dataframe = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+]
+
 [[package]]
 name = "datasketch"
 version = "1.8.0"
@@ -1004,6 +1011,7 @@ source = { editable = "." }
 dependencies = [
     { name = "catalogue" },
     { name = "cleanco" },
+    { name = "dask", extra = ["dataframe"] },
     { name = "datasketch" },
     { name = "faker" },
     { name = "modin", extra = ["dask", "ray"] },
@@ -1050,6 +1058,7 @@ test = [
 requires-dist = [
     { name = "catalogue", specifier = ">=2.0.10" },
     { name = "cleanco", specifier = ">=2.3" },
+    { name = "dask", extras = ["dataframe"], specifier = ">=2026.3.0" },
     { name = "datasketch", specifier = ">=1.8.0,<2" },
     { name = "faker", specifier = ">=37.12.0" },
     { name = "modin", extras = ["dask", "ray"], specifier = ">=0.37.1" },

@@ -72,3 +72,10 @@
   opacity: 1;
   transform: scale(1.2);
 }
+
+/* TERMYNAL */
+
+body [data-termynal] {
+    background: #272c2e;
+    border-radius: 8px;
+}

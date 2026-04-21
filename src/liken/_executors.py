@@ -29,6 +29,7 @@ from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import DeduplicationDict
 from liken._collections import Pipeline
 from liken._constants import CANONICAL_ID
+from liken._dataframe import DaskDF
 from liken._dataframe import Frame
 from liken._dataframe import LocalDF
 from liken._dataframe import RayDF
@@ -129,7 +130,9 @@ class LocalExecutor(Executor):
                     indices = set()
 
                     for col, deduper, preprocessor in step:
-                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
+                        uf, n = self._build_uf(
+                            deduper, df, col, preprocessor, predicate=indices
+                        )
 
                         components = defaultdict(list)
                         idx: list = sorted(indices)
@@ -166,7 +169,9 @@ class LocalExecutor(Executor):
         preprocessors: list[Preprocessor] = [],
         predicate: set = set(),
     ) -> tuple[UnionFind[int], int]:
-        return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
+        return deduper.set_frame(df).build_union_find(
+            columns, preprocessors, predicate=predicate
+        )
 
     @staticmethod
     def _get_components(
@@ -245,7 +250,9 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = SparkDF(
+            self._spark_session.createDataFrame(rdd, schema=schema), is_init=False
+        )
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -315,8 +322,8 @@ class RayExecutor(Executor):
         drop_canonical_id: bool,
         id: str | None = None,
     ) -> RayDF:
-        """Maps dataframe partitions to be processed by Ray using pandas for
-        each partition.
+        """Maps dataframe partitions to be processed by Ray enforced to use
+        pandas for each partition.
         """
 
         from liken.liken import Dedupe
@@ -334,8 +341,93 @@ class RayExecutor(Executor):
                 .collect()
             )
 
+        # IMPORTANT: "pandas" batch
         df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))
 
         if drop_canonical_id:
             return df.drop_col("canonical_id")
         return df
+
+
+@final
+class DaskExecutor(Executor):
+    def execute(
+        self,
+        df: DaskDF,
+        /,
+        *,
+        columns: Columns | None,
+        dedupers: DeduplicationDict | Pipeline,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
+        id: str | None = None,
+    ) -> DaskDF:
+        """Maps dataframe partitions to be processed by Dask, natively using
+        pandas for each partition.
+        """
+        
+        meta = df._new_meta(df._df, id)
+
+        if drop_canonical_id:
+            meta = meta.drop(columns=[CANONICAL_ID])
+
+        process_partition = self._process_partition
+
+        df = DaskDF(
+            df._df.map_partitions(
+                process_partition,
+                dedupers=dedupers,
+                columns=columns,
+                keep=keep,
+                drop_duplicates=drop_duplicates,
+                drop_canonical_id=drop_canonical_id,
+                id=id,
+                meta=meta,
+            ),
+            id=id,
+            preserve_schema=True
+        )
+
+        # if drop_canonical_id:
+        #     return df.drop_col(CANONICAL_ID)
+        # return df
+        
+        return df
+
+    @staticmethod
+    def _process_partition(
+        df: pd.DataFrame,
+        dedupers: DeduplicationDict | Pipeline,
+        columns: Columns | None,
+        keep: Keep,
+        drop_duplicates: bool,
+        drop_canonical_id: bool,
+        id: str | None = None,
+    ) -> pd.DataFrame:
+        from liken.liken import Dedupe
+
+        df = (
+            Dedupe(df)
+            .apply(dedupers)
+            .canonicalize(
+                columns,
+                keep=keep,
+                drop_duplicates=drop_duplicates,
+                id=id,
+            )
+            .collect()
+        )
+
+        print("columns:", df.columns)
+
+        if drop_canonical_id:
+            if CANONICAL_ID in df.columns:
+                df = df.drop(columns=[CANONICAL_ID])
+        else:
+            # Ensure it ALWAYS exists when expected
+            if CANONICAL_ID not in df.columns:
+                df[CANONICAL_ID] = pd.Series(dtype="int64")
+        return df
+
+

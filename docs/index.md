@@ -78,6 +78,11 @@ Cut boilerplate code to simple deduplication pipelines with **Liken**.
   <a href="https://docs.ray.io/en/latest/" target="_blank">
     <img src="images/supported-libraries/ray.svg" alt="PySpark">
   </a>
+
+  <a href="https://docs.ray.io/en/latest/" target="_blank">
+    <img src="images/supported-libraries/dask.png" alt="Dask">
+  </a>
+
 </div>
 
 

@@ -35,6 +35,7 @@ from typing import TypeAlias
 from typing import TypeVar
 from typing import final
 
+import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
@@ -225,7 +226,7 @@ class PandasDF(Frame[pd.DataFrame, pd.Series], CanonicalIdMixin):
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
 
-    # SYNTHETIC GOLDEN RECORD:
+    # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> pd.DataFrame:
         def _first_non_null(series: pd.Series):
@@ -280,7 +281,7 @@ class PolarsDF(Frame[pl.DataFrame, pl.Series], CanonicalIdMixin):
         self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
         return self
 
-    # SYNTHETIC GOLDEN RECORD:
+    # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> pl.DataFrame:
         exprs = []
@@ -421,7 +422,7 @@ class SparkDF(Frame[SparkObject, None], CanonicalIdMixin):
     def drop_duplicates(self):
         raise NotImplementedError(self.err_msg)
 
-    # SYNTHETIC GOLDEN RECORD:
+    # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> pl.DataFrame:
         """TODO
@@ -517,7 +518,9 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
         return pa.array(self._df[column]._to_pandas())
 
     def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
-        return pa.Table.from_pandas(self._df[list(columns)]._to_pandas())
+        return pa.Table.from_pandas(
+            self._df[list(columns)]._to_pandas()
+        )  # TODO: there's a to_pandas() public function?
 
     # WRAPPER METHODS:
 
@@ -533,7 +536,7 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
         self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
         return self
 
-    # SYNTHETIC GOLDEN RECORD:
+    # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> mpd.DataFrame:
         def _first_non_null(series):
@@ -543,6 +546,7 @@ class ModinDF(Frame[mpd.DataFrame, mpd.Series], CanonicalIdMixin):
         return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
 
 
+@final
 class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
@@ -621,7 +625,7 @@ class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
         self._df = self._df.map_batches(fn)
         return self
 
-    # SYNTHETIC GOLDEN RECORD:
+    # SYNTHETIC RECORD:
 
     def synthesize_record(self):
 
@@ -629,6 +633,94 @@ class RayDF(Frame[RayDataset, None], CanonicalIdMixin):
             return df.groupby(CANONICAL_ID, as_index=False).first()
 
         return self._df.map_batches(fn)
+
+
+@final
+class DaskDF(Frame[dd.DataFrame, dd.Series], CanonicalIdMixin):
+    """Dask DataFrame wrapper"""
+
+    def __init__(self, df: dd.DataFrame, id: str | None = None, preserve_schema: bool=False):
+        if preserve_schema:
+            self._df = df
+        else:
+            self._df = self._add_canonical_id(df, id)
+        self._id = id
+
+    # CANONICAL ID HELPERS:
+
+    def _df_as_is(self, df: dd.DataFrame) -> dd.DataFrame:
+        return df
+
+    def _df_overwrite_id(self, df: dd.DataFrame, id: str) -> dd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[id]})
+
+    def _df_copy_id(self, df: dd.DataFrame, id: str) -> dd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[id]})
+
+    def _df_autoincrement_id(self, df: dd.DataFrame) -> dd.DataFrame:
+
+        lengths = df.map_partitions(len).compute()
+        offsets = []
+        total = 0
+        for length in lengths:
+            offsets.append(total)
+            total += length
+
+        def _assign(partition, partition_info=None):
+            i = partition_info["number"]
+            offset = offsets[i]
+            partition = partition.reset_index(drop=True)
+            partition[CANONICAL_ID] = range(offset, offset + len(partition))
+            return partition
+
+        meta = df._meta.copy()
+        meta[CANONICAL_ID] = pd.Series(dtype="int64")
+
+        return df.map_partitions(_assign, meta=meta)
+
+    def _new_meta(self, df: dd.DataFrame, id: str | None = None) -> pd.DataFrame:
+        meta = df._meta.copy()
+
+        if id:
+            dtype = meta[id].dtype
+        else:
+            dtype = "int64"  # auto-increment default
+
+        meta[CANONICAL_ID] = pd.Series(dtype=dtype)
+        print(type(meta))
+        print("The meta columns are: ", meta.columns)
+        return meta
+
+    # ARROW INTERFACES:
+
+    def _get_col(self, column: str) -> pa.Array:
+        return pa.array(self._df[column].compute())
+
+    def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
+        return pa.Table.from_pandas(self._df[list(columns)].compute())
+
+    # WRAPPER METHODS:
+
+    def put_col(self, column: str, array: list) -> Self:
+        self._df = self._df.assign(**{column: array})
+        return self
+
+    def drop_col(self, column: str) -> Self:
+        self._df = self._df.drop(columns=column)
+        return self
+
+    def drop_duplicates(self, keep: Keep) -> Self:
+        self._df = self._df.drop_duplicates(subset=CANONICAL_ID, keep=keep)
+        return self
+
+    # SYNTHETIC RECORD:
+
+    def synthesize_record(self) -> dd.DataFrame:
+        def _first_non_null(series):
+            non_null = series.dropna()
+            return non_null.iloc[0] if len(non_null) else None
+
+        return self._df.groupby(CANONICAL_ID).agg(_first_non_null).reset_index()
 
 
 # DISPATCHER:
@@ -668,6 +760,11 @@ def _(df, id: str | None = None) -> RayDF:
     return RayDF(df, id)
 
 
+@wrap.register(dd.DataFrame)
+def _(df, id: str | None = None) -> DaskDF:
+    return DaskDF(df, id)
+
+
 @wrap.register(spark.DataFrame)
 def _(df, id: str | None = None) -> SparkDF:
     return SparkDF(df, id)
@@ -683,4 +780,5 @@ def _(df: list[spark.Row], id: str | None) -> SparkRows:
 
 
 LocalDF: TypeAlias = PandasDF | PolarsDF | ModinDF | SparkRows
-DF = TypeVar("DF", SparkDF, RayDF, LocalDF)
+DistributedDF: TypeAlias = SparkDF | RayDF | DaskDF
+DF = TypeVar("DF", LocalDF, DistributedDF)

@@ -36,6 +36,7 @@ dependencies = [
     "nltk>=3.9.3",
     "modin[dask,ray]>=0.37.1",
     "ray>=2.55.0",
+    "dask[dataframe]>=2026.3.0",
 ]
 
 [project.urls]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Final
 
+import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
@@ -23,7 +24,7 @@ from ray.data import Dataset as RayDataset
 
 # This must be manually maintained in sync with the `UserDataFrame` type
 # E.g. if new backend support is added (from a user point of view)
-SUPPORTED_DFS = pd.DataFrame | pl.DataFrame | spark.DataFrame | mpd.DataFrame | RayDataset
+SUPPORTED_DFS = pd.DataFrame | pl.DataFrame | spark.DataFrame | mpd.DataFrame | RayDataset | dd.DataFrame
 
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")

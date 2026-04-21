@@ -15,9 +15,13 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 from ray.data import Dataset as RayDataset
+import dask.dataframe as dd
 
 from liken.datasets import fake_10
 from liken.liken import BaseDeduper
+
+
+# ADDITIONAL DATA COLUMNS:
 
 
 @pytest.fixture(scope="session")
@@ -41,6 +45,9 @@ def canonical_id():
     return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
+# SPARK:
+
+
 @pytest.fixture(scope="session")
 def spark():
     spark = (
@@ -57,7 +64,7 @@ def spark():
     spark.stop()
 
 
-# raw data inputs
+# DATAFRAMES FOR INTEGRATION TESTS:
 
 
 @pytest.fixture(scope="session")
@@ -69,6 +76,7 @@ def df_pandas():
 def df_polars():
     return fake_10("polars")
 
+
 @pytest.fixture(scope="session")
 def df_modin():
     return fake_10("modin")
@@ -77,6 +85,11 @@ def df_modin():
 @pytest.fixture(scope="session")
 def df_ray():
     return fake_10("ray")
+
+
+@pytest.fixture(scope="session")
+def df_dask():
+    return fake_10("dask")
 
 
 @pytest.fixture(scope="function")
@@ -90,8 +103,17 @@ def df_sparkrows(df_spark):
     return df_spark.collect()
 
 
-@pytest.fixture(params=["pandas", "polars", "modin", "ray", "spark"])
-def dataframe(request, df_pandas, df_polars, df_modin, df_ray, df_spark, spark):
+@pytest.fixture(params=["pandas", "polars", "modin", "ray", "dask", "spark"])
+def dataframe(
+    request,
+    df_pandas,
+    df_polars,
+    df_modin,
+    df_ray,
+    df_dask,
+    df_spark,
+    spark,
+):
     """return a tuple of positionally ordered input parameters of Dedupe
 
     This is useful for implementations that ARE part of the public API
@@ -104,11 +126,13 @@ def dataframe(request, df_pandas, df_polars, df_modin, df_ray, df_spark, spark):
         return df_modin, None
     if request.param == "ray":
         return df_ray, None
+    if request.param == "dask":
+        return df_dask, None
     if request.param == "spark":
         return df_spark, spark
 
 
-# Mocks
+# MOCKS:
 
 
 @pytest.fixture
@@ -121,7 +145,7 @@ def mock_spark_session():
     return create_autospec(SparkSession)
 
 
-# helpers
+# HELPERS:
 
 
 class Helpers:
@@ -134,8 +158,10 @@ class Helpers:
         if isinstance(df, mpd.DataFrame):
             return [None if v is pd.NA else v for v in list(df[col])]
         if isinstance(df, RayDataset):
-            # materialize safely
             return [row[col] for row in df.take_all()]
+        if isinstance(df, dd.DataFrame):
+            df = df.compute()
+            return df[col].tolist()
         if isinstance(df, SparkDataFrame):
             return [value[col] for value in df.select(col).collect()]
         if isinstance(df, list):  # i.e. list[Row]
@@ -147,30 +173,49 @@ class Helpers:
         if isinstance(df, pd.DataFrame):
             df = df.assign(**{label: column})
             return df
-        
+
         if isinstance(df, pl.DataFrame):
             df = df.with_columns(pl.Series(name=label, values=column))
             return df
-        
+
         if isinstance(df, mpd.DataFrame):
             df = df.assign(**{label: column})
             return df
         
+        if isinstance(df, dd.DataFrame):
+            def add_col(partition, partition_info=None):
+                i = partition_info["number"]
+                start = sum(df.map_partitions(len).compute()[:i])
+                end = start + len(partition)
+
+                partition = partition.copy()
+                partition[label] = column[start:end]
+                return partition
+
+            meta = df._meta.copy()
+            meta[label] = pd.Series(dtype=dtype if dtype else "object")
+
+            return df.map_partitions(add_col, meta=meta)
+
         if isinstance(df, RayDataset):
+
             def add_col(batch):
                 batch = batch.copy()
                 batch[label] = column[: len(batch)]
                 return batch
 
             return df.map_batches(add_col, batch_format="pandas")
-        
+
         if isinstance(df, SparkDataFrame):
             if dtype is int:
                 _type = LongType()
             if dtype is str:
                 _type = StringType()
             labels_udf = F.udf(lambda indx: column[indx - 1], _type)
-            df = df.withColumn("num_id", row_number().over(Window.orderBy(monotonically_increasing_id())))
+            df = df.withColumn(
+                "num_id",
+                row_number().over(Window.orderBy(monotonically_increasing_id())),
+            )
             df = df.withColumn(label, labels_udf("num_id"))
             return df.drop("num_id")
         if isinstance(df, list):  # i.e. list[Row]
