@@ -9,12 +9,12 @@ from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
 
 from liken._constants import CANONICAL_ID
-from liken._dataframe import CanonicalIdMixin
-from liken._dataframe import PandasDF
-from liken._dataframe import PolarsDF
-from liken._dataframe import SparkDF
-from liken._dataframe import SparkRows
-from liken._dataframe import wrap
+from liken.backends.pandas.wrapper import PandasDF
+from liken.backends.polars.wrapper import PolarsDF
+from liken.backends.pyspark.wrapper import SparkDF
+from liken.backends.pyspark.wrapper import SparkRows
+from liken.core.dispatcher import wrap
+from liken.core.wrapper import CanonicalIdMixin
 
 
 # FIXTURES:
@@ -193,6 +193,8 @@ IDS = [
     "new canonical id as write from other id",
     "new autoincremental canonical id",
 ]
+
+
 @pytest.mark.parametrize("id, cols, method", PARAMS, ids=IDS)
 def test_add_canonical_id_mixin(id, cols, method):
 

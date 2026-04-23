@@ -40,16 +40,16 @@ from typing_extensions import override
 
 from liken._constants import CANONICAL_ID
 from liken._preprocessors import Preprocessor
-from liken._registry import registry
+from liken.core.registries import dedupers_registry
 
 
 if TYPE_CHECKING:
-    from liken._dataframe import LocalDF
-    from liken._executors import MultiComponents
-    from liken._executors import SingleComponents
     from liken._types import Columns
     from liken._types import Keep
     from liken._types import SimilarPairIndices
+    from liken.core.dispatcher import LocalDF
+    from liken.core.executor import MultiComponents
+    from liken.core.executor import SingleComponents
 
 
 # INTERFACE:
@@ -914,7 +914,7 @@ class Cosine(
 # PUBLIC PKG:
 
 
-@registry.register("exact")
+@dedupers_registry.register("exact")
 def exact() -> BaseDeduper:
     """Exact Deduplication.
 
@@ -971,7 +971,7 @@ def exact() -> BaseDeduper:
     return Exact()
 
 
-@registry.register("fuzzy")
+@dedupers_registry.register("fuzzy")
 def fuzzy(
     threshold: float = 0.95,
     scorer: Literal[
@@ -1030,7 +1030,7 @@ def fuzzy(
     return Fuzzy(threshold=threshold, scorer=scorer)
 
 
-@registry.register("tfidf")
+@dedupers_registry.register("tfidf")
 def tfidf(
     threshold: float = 0.95,
     ngram: int | tuple[int, int] = 3,
@@ -1097,7 +1097,7 @@ def tfidf(
     return TfIdf(threshold=threshold, ngram=ngram, topn=topn, **kwargs)
 
 
-@registry.register("lsh")
+@dedupers_registry.register("lsh")
 def lsh(
     threshold: float = 0.95,
     ngram: int = 3,
@@ -1157,7 +1157,7 @@ def lsh(
     return LSH(threshold=threshold, ngram=ngram, num_perm=num_perm)
 
 
-@registry.register("jaccard")
+@dedupers_registry.register("jaccard")
 def jaccard(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using jaccard similarity.
 
@@ -1208,7 +1208,7 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
     return Jaccard(threshold=threshold)
 
 
-@registry.register("cosine")
+@dedupers_registry.register("cosine")
 def cosine(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using cosine similarity.
 
@@ -1271,7 +1271,7 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
 # RULES SUB PKG
 
 
-@registry.register("isna")
+@dedupers_registry.register("isna")
 def isna() -> BaseDeduper:
     """Discrete deduper on null/None values.
 
@@ -1321,7 +1321,7 @@ def isna() -> BaseDeduper:
     return IsNA()
 
 
-@registry.register("isin")
+@dedupers_registry.register("isin")
 def isin(values: Iterable) -> BaseDeduper:
     """Discrete deduper for membership testing.
 
@@ -1369,7 +1369,7 @@ def isin(values: Iterable) -> BaseDeduper:
     return IsIn(values=values)
 
 
-@registry.register("str_len")
+@dedupers_registry.register("str_len")
 def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     """Discrete deduper on string length.
 
@@ -1427,7 +1427,7 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
     return StrLen(min_len=min_len, max_len=max_len)
 
 
-@registry.register("str_startswith")
+@dedupers_registry.register("str_startswith")
 def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings starting with a pattern.
 
@@ -1484,7 +1484,7 @@ def str_startswith(pattern: str, case: bool = True) -> BaseDeduper:
     return StrStartsWith(pattern=pattern, case=case)
 
 
-@registry.register("str_endswith")
+@dedupers_registry.register("str_endswith")
 def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     """Discrete deduper on strings ending with a pattern.
 
@@ -1541,7 +1541,7 @@ def str_endswith(pattern: str, case: bool = True) -> BaseDeduper:
     return StrEndsWith(pattern=pattern, case=case)
 
 
-@registry.register("str_contains")
+@dedupers_registry.register("str_contains")
 def str_contains(
     pattern: str,
     case: bool = True,

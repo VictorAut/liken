@@ -1,0 +1,9 @@
+from typing import Protocol
+
+
+class Backend(Protocol):
+    name: str
+
+    def is_match(self, df: object) -> bool: ...
+    def create_df(self, data, schema, spark_session=None): ...
+    def executor(self, **kwargs): ...

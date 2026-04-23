@@ -1011,22 +1011,38 @@ source = { editable = "." }
 dependencies = [
     { name = "catalogue" },
     { name = "cleanco" },
-    { name = "dask", extra = ["dataframe"] },
     { name = "datasketch" },
     { name = "faker" },
-    { name = "modin", extra = ["dask", "ray"] },
     { name = "nameparser" },
     { name = "networkx" },
     { name = "nltk" },
     { name = "pandas" },
     { name = "polars" },
     { name = "pyarrow" },
-    { name = "pyspark" },
     { name = "rapidfuzz" },
-    { name = "ray" },
     { name = "scikit-learn" },
     { name = "sparse-dot-topn" },
     { name = "typing-extensions" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "dask", extra = ["dataframe"] },
+    { name = "modin", extra = ["dask", "ray"] },
+    { name = "pyspark" },
+    { name = "ray" },
+]
+dask = [
+    { name = "dask", extra = ["dataframe"] },
+]
+modin = [
+    { name = "modin", extra = ["dask", "ray"] },
+]
+pyspark = [
+    { name = "pyspark" },
+]
+ray = [
+    { name = "ray" },
 ]
 
 [package.dev-dependencies]
@@ -1058,23 +1074,28 @@ test = [
 requires-dist = [
     { name = "catalogue", specifier = ">=2.0.10" },
     { name = "cleanco", specifier = ">=2.3" },
-    { name = "dask", extras = ["dataframe"], specifier = ">=2026.3.0" },
+    { name = "dask", extras = ["dataframe"], marker = "extra == 'all'", specifier = ">=2026.3.0" },
+    { name = "dask", extras = ["dataframe"], marker = "extra == 'dask'", specifier = ">=2026.3.0" },
     { name = "datasketch", specifier = ">=1.8.0,<2" },
     { name = "faker", specifier = ">=37.12.0" },
-    { name = "modin", extras = ["dask", "ray"], specifier = ">=0.37.1" },
+    { name = "modin", extras = ["dask", "ray"], marker = "extra == 'all'", specifier = ">=0.37.1" },
+    { name = "modin", extras = ["dask", "ray"], marker = "extra == 'modin'", specifier = ">=0.37.1" },
     { name = "nameparser", specifier = ">=1.1.3" },
     { name = "networkx", specifier = ">=3.6.1,<4" },
     { name = "nltk", specifier = ">=3.9.3" },
     { name = "pandas", specifier = ">=1,<4" },
     { name = "polars", specifier = ">=1.24.0,<2" },
     { name = "pyarrow", specifier = ">=23.0.1,<24" },
-    { name = "pyspark", specifier = ">=3,<5" },
+    { name = "pyspark", marker = "extra == 'all'", specifier = ">=3,<5" },
+    { name = "pyspark", marker = "extra == 'pyspark'", specifier = ">=3,<5" },
     { name = "rapidfuzz", specifier = ">=3.12.2,<4" },
-    { name = "ray", specifier = ">=2.55.0" },
+    { name = "ray", marker = "extra == 'all'", specifier = ">=2.55.0" },
+    { name = "ray", marker = "extra == 'ray'", specifier = ">=2.55.0" },
     { name = "scikit-learn", specifier = ">=1.6.1,<2" },
     { name = "sparse-dot-topn", specifier = ">=1.1.5,<2" },
     { name = "typing-extensions", specifier = ">=4.13.0,<5" },
 ]
+provides-extras = ["pyspark", "modin", "ray", "dask", "all"]
 
 [package.metadata.requires-dev]
 dev = [

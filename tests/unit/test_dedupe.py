@@ -85,7 +85,9 @@ def test_validate_spark_arg_missing_session():
 
 
 def test_validate_df_arg():
-    with pytest.raises(ValueError, match="Invalid arg: df must be istance of Pandas, Polars, Modin, Ray or Spark DataFrames"):
+    with pytest.raises(
+        ValueError, match="Invalid arg: df must be istance of Pandas, Polars, Modin, Ray or Spark DataFrames"
+    ):
         Dedupe(Mock())  # mock not specced to a df
 
 

@@ -7,8 +7,8 @@ tasks:
     desc: Format code
     cmds:
       - uv run ruff check --select I --fix # sorts imports
-      - uv run ruff format src/
-      - uv run ruff check src/ --fix
+      - uv run ruff format src/ tests/
+      - uv run ruff check src/ tests/ --fix
 
   lint:
     desc: lint and type-check
@@ -29,7 +29,7 @@ tasks:
   test:
     desc: Runs tests
     cmds:
-      - uv run --active pytest tests/
+      - uv run --active --all-extras pytest tests/
     
   coverage:
     desc: Runs tests with coverage

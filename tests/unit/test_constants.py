@@ -2,7 +2,7 @@ import pytest
 from ray.data import Dataset
 
 from liken._constants import CANONICAL_ID
-from liken._dataframe import wrap
+from liken.core.dispatcher import wrap
 
 
 @pytest.mark.parametrize(

@@ -100,7 +100,7 @@ def _return_df(
         df = pd.DataFrame(columns=schema, data=data)
         return dd.from_pandas(df)
 
-    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', 'ray'; got '{backend}'")
+    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', 'dask'; got '{backend}'")
 
 
 def maybe_null(value, p):

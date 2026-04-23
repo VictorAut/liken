@@ -8,11 +8,10 @@ from pyspark.sql import Row
 
 from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
 from liken._collections import DeduplicationDict
-from liken._dataframe import RayDF
 from liken._dedupers import BaseDeduper
-from liken._executors import LocalExecutor
-from liken._executors import RayExecutor
-from liken._executors import SparkExecutor
+from liken.backends.pyspark.executor import SparkExecutor
+from liken.backends.ray.executor import RayExecutor
+from liken.core.executor import LocalExecutor
 
 
 ############################

@@ -1,3 +1,5 @@
+import liken.backends
+
 from liken import custom
 from liken import datasets
 from liken import preprocessors

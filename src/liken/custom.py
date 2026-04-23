@@ -5,7 +5,7 @@ from typing import Callable
 
 from liken._custom import Custom
 from liken._custom import PairGenerator
-from liken._registry import registry
+from liken.core.registries import dedupers_registry
 
 
 def register(f: PairGenerator) -> Callable:
@@ -100,6 +100,6 @@ def register(f: PairGenerator) -> Callable:
         return Custom(f, **kwargs)
 
     # Add to registry
-    registry.register(f"{f.__name__}", func=wrapper)
+    dedupers_registry.register(f"{f.__name__}", func=wrapper)
 
     return wrapper

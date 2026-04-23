@@ -6,7 +6,6 @@ import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pytest
-import ray
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -181,8 +180,9 @@ class Helpers:
         if isinstance(df, mpd.DataFrame):
             df = df.assign(**{label: column})
             return df
-        
+
         if isinstance(df, dd.DataFrame):
+
             def add_col(partition, partition_info=None):
                 i = partition_info["number"]
                 start = sum(df.map_partitions(len).compute()[:i])

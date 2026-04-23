@@ -12,15 +12,8 @@ from ray.data import Dataset as RayDataset
 
 from liken._collections import CollectionsManager
 from liken._collections import DeduplicationDict
-from liken._dataframe import Frame
-from liken._dataframe import wrap
 from liken._dedupers import BaseDeduper
 from liken._dedupers import exact
-from liken._executors import DaskExecutor
-from liken._executors import Executor
-from liken._executors import LocalExecutor
-from liken._executors import RayExecutor
-from liken._executors import SparkExecutor
 from liken._pipelines import Pipeline
 from liken._types import Columns
 from liken._types import InternalDataFrame
@@ -30,6 +23,13 @@ from liken._validators import validate_columns_arg
 from liken._validators import validate_df_arg
 from liken._validators import validate_keep_arg
 from liken._validators import validate_spark_arg
+from liken.backends.dask.executor import DaskExecutor
+from liken.backends.pyspark.executor import SparkExecutor
+from liken.backends.ray.executor import RayExecutor
+from liken.core.dispatcher import wrap
+from liken.core.executor import Executor
+from liken.core.executor import LocalExecutor
+from liken.core.wrapper import Frame
 
 
 class Dedupe:

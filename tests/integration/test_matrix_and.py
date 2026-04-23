@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import typing
 
-import dask.dataframe as dd
 import pytest
 
 import liken as lk

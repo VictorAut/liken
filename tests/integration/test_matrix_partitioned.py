@@ -15,8 +15,8 @@ PARTITION_2_PARAMS = (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 PARAMS = [PARTITION_1_PARAMS, PARTITION_2_PARAMS]
 
 
+IDS = ["1 partitions", "2 partitions"]
 
-IDS=["1 partitions", "2 partitions"]
 
 @pytest.mark.parametrize(
     "num_partitions, expected_ids",
@@ -37,6 +37,7 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
+
 @pytest.mark.parametrize(
     "num_partitions, expected_ids",
     PARAMS,
@@ -56,6 +57,7 @@ def test_matrix_ray(num_partitions, expected_ids, df_ray, blocking_key, helpers)
     df = lk.dedupe(df).apply(dedupers).canonicalize(id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
+
 
 @pytest.mark.parametrize(
     "num_partitions, expected_ids",

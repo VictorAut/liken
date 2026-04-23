@@ -11,9 +11,9 @@ from typing import final
 from liken._dedupers import BaseDeduper
 from liken._dedupers import PredicateDeduper
 from liken._preprocessors import Preprocessor
-from liken._registry import registry
 from liken._types import Columns
 from liken._validators import validate_preprocessor_arg
+from liken.core.registries import dedupers_registry
 
 
 # TYPES:
@@ -311,7 +311,7 @@ class Col:
         if attr.startswith("__"):
             raise AttributeError(attr)
 
-        func = registry.get(f"{attr}")
+        func = dedupers_registry.get(f"{attr}")
 
         def wrapper(*args, **kwargs):
             deduper = func(*args, **kwargs)
