@@ -11,6 +11,6 @@ class InvalidDeduperError(TypeError):
         super().__init__(msg)
 
 
-# TODO: these warnings come up was "UserWarning". Change.
+# TODO: these warnings come up as "UserWarning". Change.
 def warn(msg: str) -> None:
     return warnings.warn(msg, category=UserWarning)

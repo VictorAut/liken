@@ -17,11 +17,12 @@ class PandasBackend(Backend):
 
         return isinstance(df, pd.DataFrame)
 
-    def create_df(self, data, schema):
+    def create_df(self, data, schema, **kwargs):
+        del kwargs  # Unused
         return pd.DataFrame(columns=schema, data=data)
 
-    def executor(self):
-
+    def executor(self, **kwargs):
+        del kwargs  # Unused
         return PandasExecutor()
 
     def wrap(self, df, id=None):

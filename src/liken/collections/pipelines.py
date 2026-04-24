@@ -8,12 +8,12 @@ from typing import TypeAlias
 from typing import cast
 from typing import final
 
-from liken._dedupers import BaseDeduper
-from liken._dedupers import PredicateDeduper
-from liken._preprocessors import Preprocessor
-from liken._types import Columns
-from liken._validators import validate_preprocessor_arg
+from liken.core.deduper import BaseDeduper
+from liken.core.deduper import PredicateDeduper
 from liken.core.registries import dedupers_registry
+from liken.preprocessors import Preprocessor
+from liken.types import Columns
+from liken.validators import validate_preprocessor_arg
 
 
 # TYPES:

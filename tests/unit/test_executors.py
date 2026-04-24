@@ -6,11 +6,11 @@ import pytest
 from pyspark.rdd import RDD
 from pyspark.sql import Row
 
-from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
-from liken._collections import DeduplicationDict
-from liken._dedupers import BaseDeduper
-from liken.backends.pyspark.executor import SparkExecutor
+from liken.backends.pyspark.executor import PysparkExecutor
 from liken.backends.ray.executor import RayExecutor
+from liken.collections.dict import DeduplicationDict
+from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.core.deduper import BaseDeduper
 from liken.core.executor import LocalExecutor
 
 
@@ -82,13 +82,13 @@ def test_localexecutor_canonicalize_dict_calls(mock_deduper, local_df):
 
 
 #################
-# SparkExecutor #
+# PysparkExecutor #
 #################
 
 
 def test_sparkexecutor_init_sets_attributes():
     spark = Mock()
-    executor = SparkExecutor(spark_session=spark)
+    executor = PysparkExecutor(spark_session=spark)
 
     assert executor._spark_session is spark
 
@@ -112,7 +112,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
     dedupers_config,
 ):
     spark = Mock()
-    executor = SparkExecutor(spark_session=spark)
+    executor = PysparkExecutor(spark_session=spark)
 
     spark_df_result = Mock()
     spark_df_result.select.return_value = spark_df_result
@@ -139,7 +139,7 @@ def test_sparkexecutor_canonicalize_maps_partitions(
 @patch("liken.liken.Dedupe")
 def test_process_partition_empty_partition_returns_empty(mock_dedupe):
     result = list(
-        SparkExecutor._process_partition(
+        PysparkExecutor._process_partition(
             factory=mock_dedupe,
             partition=iter([]),
             dedupers=Mock(),
@@ -165,7 +165,7 @@ def test_process_partition_calls_dedupe_api(mock_dedupe):
     mock_dedupe._from_rows.return_value = instance
 
     result = list(
-        SparkExecutor._process_partition(
+        PysparkExecutor._process_partition(
             factory=mock_dedupe,
             partition=iter([row]),
             dedupers=Mock(),

@@ -1,6 +1,6 @@
 """Deduplication collectionexecutors.
 
-`SparkExecutor` simply calls a partition processor where each partition will
+`PysparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`
 """
 
@@ -11,16 +11,16 @@ from typing import final
 
 import pandas as pd
 
-from liken._collections import DeduplicationDict
-from liken._collections import Pipeline
-from liken._constants import CANONICAL_ID
-from liken._types import Columns
-from liken._types import Keep
+from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
     from liken.backends.dask.wrapper import DaskDF
+    from liken.collections.base import Pipeline
+    from liken.collections.dict import DeduplicationDict
+    from liken.types import Columns
+    from liken.types import Keep
 
 
 @final

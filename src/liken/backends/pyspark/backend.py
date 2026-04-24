@@ -6,7 +6,7 @@ from liken.core.registries import backends_registry
 
 @final
 @backends_registry.register("pyspark")
-class SparkBackend(Backend):
+class PysparkBackend(Backend):
     name = "pyspark"
 
     def is_match(self, df):
@@ -30,16 +30,17 @@ class SparkBackend(Backend):
         return spark_session.createDataFrame(data=data, schema=schema)
 
     def executor(self, spark_session=None):
-        from liken.backends.pyspark.executor import SparkExecutor
 
-        return SparkExecutor(spark_session=spark_session)
+        from liken.backends.pyspark.executor import PysparkExecutor
+
+        return PysparkExecutor(spark_session=spark_session)
 
     def wrap(self, df, id=None):
 
-        from liken.backends.pyspark.wrapper import SparkDF
-        from liken.backends.pyspark.wrapper import SparkRows
+        from liken.backends.pyspark.wrapper import PysparkDF
+        from liken.backends.pyspark.wrapper import PysparkRows
 
         if isinstance(df, list):
-            return SparkRows(df)
+            return PysparkRows(df)
 
-        return SparkDF(df, id)
+        return PysparkDF(df, id)

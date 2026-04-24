@@ -16,12 +16,15 @@ class ModinBackend(Backend):
             return False
         return isinstance(df, mpd.DataFrame)
 
-    def create_df(self, data, schema):
+    def create_df(self, data, schema, **kwargs):
+        del kwargs  # Unused
         import modin.pandas as mpd
 
         return mpd.DataFrame(columns=schema, data=data)
 
-    def executor(self):
+    def executor(self, **kwargs):
+        del kwargs  # Unused
+
         from liken.backends.modin.executor import ModinExecutor
 
         return ModinExecutor()

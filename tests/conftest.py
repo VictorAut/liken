@@ -94,7 +94,7 @@ def df_dask():
 @pytest.fixture(scope="function")
 def df_spark(spark):
     """Default is a single partition"""
-    return fake_10("spark", spark_session=spark)
+    return fake_10("pyspark", spark_session=spark)
 
 
 @pytest.fixture(scope="function")

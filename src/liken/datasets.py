@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
 from typing import Any
 
-import dask.dataframe as dd
-import modin.pandas as mpd
-import pandas as pd
-import polars as pl
-import ray
 from faker import Faker
-from pyspark.sql import SparkSession
 
-from liken._types import SupportedBackends
-from liken._types import UserDataFrame
+from liken.core.registries import backends_registry
+from liken.types import SupportedBackends
+from liken.types import UserDataFrame
+
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 
 Faker.seed(123)
@@ -77,30 +79,18 @@ def _return_df(
 ) -> UserDataFrame:
     """Returns the dataframe based on the backend"""
 
-    if backend == "pandas":
-        return pd.DataFrame(columns=schema, data=data)
-    if backend == "polars":
-        return pl.DataFrame(schema=schema, data=data, orient="row")
-    if backend == "modin":
-        return mpd.DataFrame(columns=schema, data=data)
-    if backend == "spark":
-        if spark_session:
-            return spark_session.createDataFrame(schema=schema, data=data)
-        raise ValueError("Spark Session not passed yet 'spark' backend requested")
+    try:
+        backend_cls = backends_registry.get(backend)
+    except KeyError:
+        raise ValueError(f"Unsupported backend: {backend}")
 
-    if backend == "ray":
-        if not ray.is_initialized():
-            ray.init(ignore_reinit_error=True)
+    backend_instance = backend_cls()
 
-        df = pd.DataFrame(columns=schema, data=data)
-
-        return ray.data.from_pandas(df)
-
-    if backend == "dask":
-        df = pd.DataFrame(columns=schema, data=data)
-        return dd.from_pandas(df)
-
-    raise ValueError(f"Expected one of 'pandas', 'polars', 'modin', 'spark', 'ray', 'dask'; got '{backend}'")
+    return backend_instance.create_df(
+        data=data,
+        schema=schema,
+        spark_session=spark_session,
+    )
 
 
 def maybe_null(value, p):

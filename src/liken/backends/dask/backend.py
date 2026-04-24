@@ -18,13 +18,16 @@ class DaskBackend(Backend):
             return False
         return isinstance(df, dd.DataFrame)
 
-    def create_df(self, data, schema):
+    def create_df(self, data, schema, **kwargs):
+        del kwargs  # Unused
         import dask.dataframe as dd
 
         df = pd.DataFrame(columns=schema, data=data)
         return dd.from_pandas(df)
 
-    def executor(self):
+    def executor(self, **kwargs):
+        del kwargs  # Unused
+
         from liken.backends.dask.executor import DaskExecutor
 
         return DaskExecutor()

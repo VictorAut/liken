@@ -17,12 +17,13 @@ class PolarsBackend(Backend):
 
         return isinstance(df, pl.DataFrame)
 
-    def create_df(self, data, schema):
+    def create_df(self, data, schema, **kwargs):
+        del kwargs  # Unused
 
         return pl.DataFrame(schema=schema, data=data, orient="row")
 
-    def executor(self):
-
+    def executor(self, **kwargs):
+        del kwargs  # Unused
         return PolarsExecutor()
 
     def wrap(self, df, id=None):

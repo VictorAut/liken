@@ -13,10 +13,10 @@ Whilst Pandas and Polars wrappers are similarly wrapped, note the following:
 - Conversely, Spark DataFrames take care of adding canonical IDs
 
 Additional Points regarding Spark. Upon initialising the public API with a
-Spark DataFrame, the wrapper will call the SparkDF class which will create
+Spark DataFrame, the wrapper will call the PysparkDF class which will create
 canonical IDs. However the output to this is RDDs which are then processed
 by the executor into Spark Rows which are dispatched to worker nodes. Spark
-Rows can be fully recovered to a Spark DataFrame using the same SparkDF class.
+Rows can be fully recovered to a Spark DataFrame using the same PysparkDF class.
 
 TODO:
     - CanonicalIdMixin should be defined first when inherited
@@ -34,9 +34,7 @@ from typing import final
 import pyarrow as pa
 from typing_extensions import override
 
-from liken._constants import CANONICAL_ID
-from liken._constants import PYSPARK_TYPES
-from liken._types import Keep
+from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -47,11 +45,13 @@ if TYPE_CHECKING:
     from pyspark.sql import Row
     from pyspark.sql.types import StructType
 
+    from liken.types import Keep
+
     SparkObject: TypeAlias = DataFrame | RDD[Row]
 
 
 @final
-class SparkDF(DF["SparkObject"], CanonicalIdMixin):
+class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
     """Spark DataFrame and Spark RDD wrapper
 
     This wrapper, contrarily to others does not always add a canonical id. When
@@ -121,7 +121,7 @@ class SparkDF(DF["SparkObject"], CanonicalIdMixin):
     def _df_autoincrement_id(self, df: DataFrame) -> RDD[Row]:
 
         from pyspark.sql import Row
-        
+
         self._schema = self._new_schema(df)
         return df.rdd.zipWithIndex().mapPartitions(
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
@@ -138,10 +138,21 @@ class SparkDF(DF["SparkObject"], CanonicalIdMixin):
         # lazy
         import pyspark.sql.types as T
 
+        pyspark_types: dict = {
+            "boolean": T.BooleanType(),
+            "date": T.DateType(),
+            "double": T.DoubleType(),
+            "float": T.FloatType(),
+            "int": T.IntegerType(),
+            "bigint": T.LongType(),
+            "string": T.StringType(),
+            "timestamp": T.TimestampType(),
+        }
+
         fields = df.schema.fields
         if id:
             dtype = dict(df.dtypes)[id]
-            id_type = PYSPARK_TYPES[dtype]
+            id_type = pyspark_types[dtype]
         else:
             id_type = T.LongType()  # auto-incremental is numeric
         fields += [T.StructField(CANONICAL_ID, id_type, True)]
@@ -210,7 +221,7 @@ class SparkDF(DF["SparkObject"], CanonicalIdMixin):
 
 
 @final
-class SparkRows(DF["list[Row]"]):
+class PysparkRows(DF["list[Row]"]):
     """Spark Rows DataFrame
 
     Spark Rows is what are processed by individual Worker nodes.

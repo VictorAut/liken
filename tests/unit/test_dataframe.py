@@ -8,11 +8,11 @@ import pytest
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import Row
 
-from liken._constants import CANONICAL_ID
 from liken.backends.pandas.wrapper import PandasDF
 from liken.backends.polars.wrapper import PolarsDF
-from liken.backends.pyspark.wrapper import SparkDF
-from liken.backends.pyspark.wrapper import SparkRows
+from liken.backends.pyspark.wrapper import PysparkDF
+from liken.backends.pyspark.wrapper import PysparkRows
+from liken.constants import CANONICAL_ID
 from liken.core.dispatcher import wrap
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -79,7 +79,7 @@ def test_wrapper_methods_polars(df_polars, new_col):
 
 
 def test_wrapper_methods_spark(df_spark):
-    wdf = SparkDF(df_spark, is_init=False)
+    wdf = PysparkDF(df_spark, is_init=False)
 
     dropped = wdf.drop_col("address")
     assert dropped is wdf
@@ -94,7 +94,7 @@ def test_wrapper_methods_spark(df_spark):
 
 
 def test_wrapper_methods_sparkrows(df_sparkrows, new_col):
-    wdf = SparkRows(df_sparkrows)
+    wdf = PysparkRows(df_sparkrows)
 
     result = wdf.put_col("new_col", new_col)
     assert result is wdf
@@ -121,7 +121,7 @@ def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
 
     # first
 
-    wdf = SparkRows(dummy_sparkrows)
+    wdf = PysparkRows(dummy_sparkrows)
 
     dededupe = wdf.drop_duplicates(keep="first")
 
@@ -130,7 +130,7 @@ def test_sparkrows_drop_duplicates_keep_first(dummy_sparkrows):
 
     # last
 
-    wdf = SparkRows(dummy_sparkrows)
+    wdf = PysparkRows(dummy_sparkrows)
 
     dededupe = wdf.drop_duplicates(keep="last")
 
@@ -159,12 +159,12 @@ def test_wrap_dispatch(df_pandas, df_polars, df_spark, df_sparkrows):
     assert isinstance(wrapped, PolarsDF)
     # Spark DataFrame
     wrapped = wrap(df_spark, id="id")
-    assert isinstance(wrapped, SparkDF)
+    assert isinstance(wrapped, PysparkDF)
     # List of Rows
     wrapped = wrap(df_sparkrows, id="id")
-    assert isinstance(wrapped, SparkRows)
+    assert isinstance(wrapped, PysparkRows)
     # Unsupported type
-    with pytest.raises(NotImplementedError, match="Unsupported data frame"):
+    with pytest.raises(ValueError, match="Unsupported dataframe"):
         wrap("not_a_df")
 
 

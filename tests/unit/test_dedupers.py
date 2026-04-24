@@ -12,16 +12,16 @@ from liken import str_contains
 from liken import str_endswith
 from liken import str_startswith
 from liken import tfidf
-from liken._dedupers import LSH
-from liken._dedupers import BaseDeduper
-from liken._dedupers import Cosine
-from liken._dedupers import Exact
-from liken._dedupers import Fuzzy
-from liken._dedupers import Jaccard
-from liken._dedupers import StrContains
-from liken._dedupers import StrEndsWith
-from liken._dedupers import StrStartsWith
-from liken._dedupers import TfIdf
+from liken.core.deduper import BaseDeduper
+from liken.dedupers.cosine import Cosine
+from liken.dedupers.exact import Exact
+from liken.dedupers.fuzzy import Fuzzy
+from liken.dedupers.jaccard import Jaccard
+from liken.dedupers.lsh import LSH
+from liken.dedupers.str_contains import StrContains
+from liken.dedupers.str_endswith import StrEndsWith
+from liken.dedupers.str_startswith import StrStartsWith
+from liken.dedupers.tfidf import TfIdf
 
 
 ############

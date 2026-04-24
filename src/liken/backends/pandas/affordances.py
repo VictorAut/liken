@@ -2,16 +2,16 @@ from typing import Protocol
 
 import pandas as pd
 
-from liken._dedupers import BaseDeduper
-from liken._dedupers import cosine
-from liken._dedupers import fuzzy
-from liken._dedupers import jaccard
-from liken._dedupers import lsh
-from liken._dedupers import tfidf
-from liken._types import Columns
-from liken._types import Keep
+from liken.core.deduper import BaseDeduper
+from liken.dedupers.cosine import cosine
+from liken.dedupers.fuzzy import fuzzy
+from liken.dedupers.jaccard import jaccard
+from liken.dedupers.lsh import lsh
+from liken.dedupers.tfidf import tfidf
 from liken.liken import Dedupe
 from liken.liken import dedupe
+from liken.types import Columns
+from liken.types import Keep
 
 
 class DeduperProtocol(Protocol):

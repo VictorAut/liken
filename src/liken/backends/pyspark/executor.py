@@ -1,6 +1,6 @@
 """Deduplication collectionexecutors.
 
-`SparkExecutor` simply calls a partition processor where each partition will
+`PysparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`
 """
 
@@ -9,33 +9,32 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from typing import Type
-from typing import cast
 from typing import final
 
-from pyspark.sql import Row
-from pyspark.sql import SparkSession
-
-from liken._collections import DeduplicationDict
-from liken._collections import Pipeline
-from liken._constants import CANONICAL_ID
-from liken._types import Columns
-from liken._types import Keep
+from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
-    from liken.backends.pyspark.wrapper import SparkDF
+    from pyspark.sql import Row
+    from pyspark.sql import SparkSession
+
+    from liken.backends.pyspark.wrapper import PysparkDF
+    from liken.collections.base import Pipeline
+    from liken.collections.dict import DeduplicationDict
     from liken.liken import Dedupe
+    from liken.types import Columns
+    from liken.types import Keep
 
 
 @final
-class SparkExecutor(Executor):
+class PysparkExecutor(Executor):
     def __init__(self, spark_session: SparkSession):
         self._spark_session = spark_session
 
     def execute(
         self,
-        df: SparkDF,
+        df: PysparkDF,
         /,
         *,
         columns: Columns | None,
@@ -44,14 +43,14 @@ class SparkExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         id: str | None = None,
-    ) -> SparkDF:
+    ) -> PysparkDF:
         """Maps dataframe partitions to be processed via the RDD API yielding
         low-level list[Rows], which are then post-processed back to a dataframe.
         """
 
         # import in worker node
+        from liken.backends.pyspark.wrapper import PysparkDF
         from liken.liken import Dedupe
-        from liken.backends.pyspark.wrapper import SparkDF
 
         # IMPORTANT: Use local variables, no references to Self
         # Allows for serialization via Py4J
@@ -71,7 +70,7 @@ class SparkExecutor(Executor):
 
         schema = df._schema
 
-        df = SparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = PysparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(CANONICAL_ID)
@@ -121,4 +120,4 @@ class SparkExecutor(Executor):
             .collect()
         )
 
-        return iter(cast(list[Row], df))
+        return iter(df)  # type: ignore

@@ -7,7 +7,7 @@ import hashlib
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 PARTITION_1_PARAMS = (1, [1, 2, 3, 4, 5, 5, 7, 1, 5, 10])

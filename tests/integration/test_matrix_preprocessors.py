@@ -7,7 +7,7 @@ import polars as pl
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # SET UP:

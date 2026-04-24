@@ -2,34 +2,33 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Hashable
 from typing import Self
 
-import dask.dataframe as dd
-import pyspark.sql as spark
-from pyspark.sql import SparkSession
-from ray.data import Dataset as RayDataset
-
-from liken._collections import CollectionsManager
-from liken._collections import DeduplicationDict
-from liken._dedupers import BaseDeduper
-from liken._dedupers import exact
-from liken._pipelines import Pipeline
-from liken._types import Columns
-from liken._types import InternalDataFrame
-from liken._types import Keep
-from liken._types import UserDataFrame
-from liken._validators import validate_columns_arg
-from liken._validators import validate_df_arg
-from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_arg
-from liken.backends.dask.executor import DaskExecutor
-from liken.backends.pyspark.executor import SparkExecutor
-from liken.backends.ray.executor import RayExecutor
+from liken.collections.base import CollectionsManager
+from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Pipeline
+from liken.core.backend import Backend
+from liken.core.deduper import BaseDeduper
+from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
 from liken.core.wrapper import DF
+from liken.dedupers.exact import exact
+from liken.types import Columns
+from liken.types import InternalDataFrame
+from liken.types import Keep
+from liken.types import UserDataFrame
+from liken.validators import validate_columns_arg
+from liken.validators import validate_keep_arg
+from liken.validators import validate_spark_arg
+
+
+if TYPE_CHECKING:
+    from pyspark.sql import Row
+    from pyspark.sql import SparkSession
 
 
 class Dedupe:
@@ -61,26 +60,23 @@ class Dedupe:
         *,
         spark_session: SparkSession | None = None,
     ):
-        self._df: InternalDataFrame = validate_df_arg(df)
+        self._df: InternalDataFrame = df
 
         self._collection = CollectionsManager()
 
-        if isinstance(df, spark.DataFrame):
+        backend: Backend = get_backend(self._df)
+
+        if backend.name == "pyspark":
             spark_session = validate_spark_arg(spark_session)
-            self._executor = SparkExecutor(spark_session=spark_session)
-        elif isinstance(df, RayDataset):
-            self._executor = RayExecutor()
-        elif isinstance(df, dd.DataFrame):
-            self._executor = DaskExecutor()
-        else:
-            self._executor = LocalExecutor()
+
+        self._executor: Executor = backend.executor(spark_session=spark_session)
 
         self.has_been_canonicalized: bool = False
 
     @classmethod
     def _from_rows(
         cls,
-        rows: list[spark.Row],
+        rows: list[Row],
     ) -> Dedupe:
         """bypass initialization and initialize explicitely with no validation.
 

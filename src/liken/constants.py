@@ -3,28 +3,6 @@ from __future__ import annotations
 import os
 from typing import Final
 
-import dask.dataframe as dd
-import modin.pandas as mpd
-import pandas as pd
-import polars as pl
-import pyspark.sql as spark
-from pyspark.sql.types import BooleanType
-from pyspark.sql.types import DataType
-from pyspark.sql.types import DateType
-from pyspark.sql.types import DoubleType
-from pyspark.sql.types import FloatType
-from pyspark.sql.types import IntegerType
-from pyspark.sql.types import LongType
-from pyspark.sql.types import StringType
-from pyspark.sql.types import TimestampType
-from ray.data import Dataset as RayDataset
-
-
-# CONSTANTS:
-
-# This must be manually maintained in sync with the `UserDataFrame` type
-# E.g. if new backend support is added (from a user point of view)
-SUPPORTED_DFS = pd.DataFrame | pl.DataFrame | spark.DataFrame | mpd.DataFrame | RayDataset | dd.DataFrame
 
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
@@ -36,18 +14,6 @@ NA_PLACEHOLDER: Final[str] = "na"
 # Sequential API use will load to this dictionary key by default:
 SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
 
-
-# Pyspark sql conversion types
-PYSPARK_TYPES: Final[dict[str, DataType]] = {
-    "boolean": BooleanType(),
-    "date": DateType(),
-    "double": DoubleType(),
-    "float": FloatType(),
-    "int": IntegerType(),
-    "bigint": LongType(),
-    "string": StringType(),
-    "timestamp": TimestampType(),
-}
 
 # ERROR MESSAGES
 

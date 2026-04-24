@@ -7,8 +7,8 @@ tasks:
     desc: Format code
     cmds:
       - uv run ruff check --select I --fix # sorts imports
-      - uv run ruff format src/ tests/
-      - uv run ruff check src/ tests/ --fix
+      - uv run ruff format src/ tests/ tests_extras/ 
+      - uv run ruff check src/ tests/ tests_extras/ --fix
 
   lint:
     desc: lint and type-check
@@ -26,16 +26,26 @@ tasks:
       - uv run ruff format --check src/
       - uv run ruff check src/
 
+  test-unit:
+    desc: Runs tests
+    cmds:
+      - uv run --active --all-extras pytest tests/unit/
+
+  test-integration:
+    desc: Runs tests
+    cmds:
+      - uv run --active --all-extras pytest tests/integration/
+
   test:
     desc: Runs tests
     cmds:
-      - uv run --active --all-extras pytest tests/
+      - task test-unit && task test-integration
     
   coverage:
     desc: Runs tests with coverage
     cmds:
-      - uv run coverage run -m pytest tests/ -v
-      - uv run coverage html --omit "tests/**/*"
+      - uv run --active --all-extras coverage run -m pytest tests/ -v
+      - uv run --active --all-extras coverage html --omit "tests/**/*"
 
   docs:
     desc: locally build and serve MkDocs

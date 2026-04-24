@@ -5,30 +5,26 @@ Most validations are for public arguments of the 'Dedupe' class.
 However, some validations exist for other private classes
 """
 
+from __future__ import annotations
+
 from collections import Counter
+from typing import TYPE_CHECKING
 from typing import Literal
 
-from pyspark.sql import SparkSession
-
-from liken._constants import INVALID_COLUMNS_EMPTY
-from liken._constants import INVALID_COLUMNS_NOT_NONE
-from liken._constants import INVALID_COLUMNS_REPEATED
-from liken._constants import INVALID_DEDUPER
-from liken._constants import INVALID_DF
-from liken._constants import INVALID_KEEP
-from liken._constants import INVALID_PREPROCESSOR
-from liken._constants import INVALID_SPARK
-from liken._constants import SUPPORTED_DFS
-from liken._dedupers import BaseDeduper
-from liken._preprocessors import Preprocessor
-from liken._types import Columns
-from liken._types import UserDataFrame
+from liken.constants import INVALID_COLUMNS_EMPTY
+from liken.constants import INVALID_COLUMNS_NOT_NONE
+from liken.constants import INVALID_COLUMNS_REPEATED
+from liken.constants import INVALID_DEDUPER
+from liken.constants import INVALID_KEEP
+from liken.constants import INVALID_PREPROCESSOR
+from liken.constants import INVALID_SPARK
+from liken.core.deduper import BaseDeduper
+from liken.preprocessors import Preprocessor
+from liken.types import Columns
 
 
-def validate_df_arg(df: UserDataFrame) -> UserDataFrame:
-    if not isinstance(df, SUPPORTED_DFS):
-        raise ValueError(INVALID_DF.format(type(df).__name__))
-    return df
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 
 def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSession:

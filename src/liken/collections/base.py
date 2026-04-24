@@ -2,57 +2,20 @@
 
 from __future__ import annotations
 
-from collections import UserDict
 from copy import deepcopy
 from typing import final
 
-from liken._constants import INVALID_DICT_KEY_MSG
-from liken._constants import INVALID_DICT_MEMBER_MSG
-from liken._constants import INVALID_DICT_VALUE_MSG
-from liken._constants import INVALID_FALLBACK_MSG
-from liken._constants import INVALID_SEQUENCE_AFTER_DICT_MSG
-from liken._constants import SEQUENTIAL_API_DEFAULT_KEY
-from liken._constants import WARN_DICT_REPLACES_SEQUENCE_MSG
-from liken._constants import WARN_RULES_REPLACES_RULES_MSG
-from liken._dedupers import BaseDeduper
-from liken._exceptions import InvalidDeduperError
-from liken._exceptions import warn
-from liken._pipelines import Col
-from liken._pipelines import Pipeline
-
-
-# DICT CONFIG:
-
-
-@final
-class DeduplicationDict(UserDict):
-    """Dict collection for dedupers in the Sequential and Dict APIs
-
-    For Sequential API all values (dedupers) are added under a default key.
-
-    For Dict API column label(s) (i.e. str or tuple) are the keys."""
-
-    def __setitem__(self, key, value):
-        if not isinstance(key, str | tuple):
-            raise InvalidDeduperError(INVALID_DICT_KEY_MSG.format(type(key).__name__))
-        if not isinstance(value, list | tuple | BaseDeduper):
-            raise InvalidDeduperError(INVALID_DICT_VALUE_MSG.format(type(value).__name__))
-        if not isinstance(value, BaseDeduper):
-            for i, member in enumerate(value):
-                if not isinstance(member, BaseDeduper):
-                    raise InvalidDeduperError(INVALID_DICT_MEMBER_MSG.format(i, key, type(member).__name__))
-        else:
-            value = (value,)
-        super().__setitem__(key, value)
-
-    def __str__(self):
-        rep = ""
-        for k, values in self.items():
-            krep = ""
-            for v in values:
-                krep += "\n\t\t" + str(v) + ","
-            rep += f"\n\t'{k}': ({krep[:-1]},\n\t\t),"
-        return "{" + rep + "\n}"
+from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Col
+from liken.collections.pipelines import Pipeline
+from liken.constants import INVALID_FALLBACK_MSG
+from liken.constants import INVALID_SEQUENCE_AFTER_DICT_MSG
+from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.constants import WARN_DICT_REPLACES_SEQUENCE_MSG
+from liken.constants import WARN_RULES_REPLACES_RULES_MSG
+from liken.core.deduper import BaseDeduper
+from liken.exceptions import InvalidDeduperError
+from liken.exceptions import warn
 
 
 # COLLECTIONS MANAGER:

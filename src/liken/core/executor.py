@@ -1,6 +1,6 @@
 """Deduplication collectionexecutors.
 
-`SparkExecutor` simply calls a partition processor where each partition will
+`PysparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`
 """
 
@@ -13,18 +13,18 @@ from typing import TypeVar
 
 from networkx.utils.union_find import UnionFind
 
-from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
-from liken._collections import DeduplicationDict
-from liken._collections import Pipeline
-from liken._constants import CANONICAL_ID
-from liken._dedupers import BaseDeduper
-from liken._dedupers import PredicateDeduper
-from liken._preprocessors import Preprocessor
-from liken._types import Columns
-from liken._types import Keep
-from liken._types import MultiComponents
-from liken._types import SingleComponents
+from liken.collections.base import Pipeline
+from liken.collections.dict import DeduplicationDict
+from liken.constants import CANONICAL_ID
+from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.core.deduper import BaseDeduper
+from liken.core.deduper import PredicateDeduper
 from liken.core.wrapper import DF
+from liken.preprocessors import Preprocessor
+from liken.types import Columns
+from liken.types import Keep
+from liken.types import MultiComponents
+from liken.types import SingleComponents
 
 
 # TYPES:
@@ -78,7 +78,7 @@ class LocalExecutor(Executor):
         also.)
         """
 
-        del id  # Unused: here for interface symmetry with SparkExecutor
+        del id  # Unused: here for interface symmetry with PysparkExecutor
 
         call_deduper = partial(
             self._call_deduper,

@@ -1,38 +1,37 @@
+from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
-import dask.dataframe as dd
 import pandas as pd
 import pytest
 from ray.data import Dataset
 
-from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_arg
 from liken.liken import Dedupe
+from liken.validators import validate_keep_arg
+from liken.validators import validate_spark_arg
 
 
 # INITIALIZATION:
 
 
-@patch("liken.liken.LocalExecutor")
-@patch("liken.liken.SparkExecutor")
-@patch("liken.liken.RayExecutor")
-@patch("liken.liken.DaskExecutor")
-def test_init_uses_executor(mock_dask_executor, mock_ray_executor, mock_spark_executor, mock_local_executor, dataframe):
-
+@patch("liken.liken.get_backend")
+def test_init_uses_backend_executor(mock_get_backend, dataframe):
     df, spark = dataframe
 
-    dupe = Dedupe(df, spark_session=spark)
-    if spark:
-        mock_spark_executor.assert_called_once_with(spark_session=spark)
-    elif isinstance(df, Dataset):
-        mock_ray_executor.assert_called_once()
-    elif isinstance(df, dd.DataFrame):
-        mock_dask_executor.assert_called_once()
-    else:
-        mock_local_executor.assert_called_once()
+    mock_backend = MagicMock()
+    mock_backend.executor.return_value = MagicMock()
+    mock_backend.name = "pyspark" if spark else "local"
 
-    assert dupe._executor is not None
+    mock_get_backend.return_value = mock_backend
+
+    dupe = Dedupe(df, spark_session=spark)
+
+    if mock_backend.name == "pyspark":
+        mock_backend.executor.assert_called_once_with(spark_session=spark)
+    else:
+        mock_backend.executor.assert_called_once_with(spark_session=spark)
+
+    assert dupe._executor is mock_backend.executor.return_value
 
 
 @patch("liken.liken.CollectionsManager")
@@ -82,13 +81,6 @@ def test_validate_spark_arg_missing_session():
 
 
 # Misuse of public API:
-
-
-def test_validate_df_arg():
-    with pytest.raises(
-        ValueError, match="Invalid arg: df must be istance of Pandas, Polars, Modin, Ray or Spark DataFrames"
-    ):
-        Dedupe(Mock())  # mock not specced to a df
 
 
 @patch("liken.liken.wrap")

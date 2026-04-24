@@ -1,7 +1,7 @@
 import pytest
 from ray.data import Dataset
 
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 from liken.core.dispatcher import wrap
 
 

@@ -13,10 +13,10 @@ Whilst Pandas and Polars wrappers are similarly wrapped, note the following:
 - Conversely, Spark DataFrames take care of adding canonical IDs
 
 Additional Points regarding Spark. Upon initialising the public API with a
-Spark DataFrame, the wrapper will call the SparkDF class which will create
+Spark DataFrame, the wrapper will call the PysparkDF class which will create
 canonical IDs. However the output to this is RDDs which are then processed
 by the executor into Spark Rows which are dispatched to worker nodes. Spark
-Rows can be fully recovered to a Spark DataFrame using the same SparkDF class.
+Rows can be fully recovered to a Spark DataFrame using the same PysparkDF class.
 
 TODO:
     - CanonicalIdMixin should be defined first when inherited
@@ -31,10 +31,10 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 
-from liken._constants import CANONICAL_ID
-from liken._types import Keep
+from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
+from liken.types import Keep
 
 
 @final

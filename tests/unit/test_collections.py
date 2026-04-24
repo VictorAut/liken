@@ -1,13 +1,13 @@
 import pytest
 
 import liken as lk
-from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
-from liken._collections import CollectionsManager
-from liken._collections import DeduplicationDict
-from liken._collections import InvalidDeduperError
-from liken._dedupers import BaseDeduper
-from liken._pipelines import Pipeline
-from liken._pipelines import col
+from liken.collections.base import CollectionsManager
+from liken.collections.base import InvalidDeduperError
+from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Pipeline
+from liken.collections.pipelines import col
+from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.core.deduper import BaseDeduper
 from liken.core.registries import dedupers_registry
 
 

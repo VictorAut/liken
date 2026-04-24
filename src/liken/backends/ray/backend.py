@@ -18,7 +18,8 @@ class RayBackend(Backend):
             return False
         return isinstance(df, ray.data.Dataset)
 
-    def create_df(self, data, schema):
+    def create_df(self, data, schema, **kwargs):
+        del kwargs  # Unused
         import ray
 
         if not ray.is_initialized():
@@ -28,7 +29,9 @@ class RayBackend(Backend):
 
         return ray.data.from_pandas(df)
 
-    def executor(self):
+    def executor(self, **kwargs):
+        del kwargs  # Unused
+
         from liken.backends.ray.executor import RayExecutor
 
         return RayExecutor()

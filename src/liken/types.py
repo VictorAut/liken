@@ -23,7 +23,7 @@ else:
     InternalDataFrame = object
 
 
-SupportedBackends: TypeAlias = Literal["pandas", "polars", "modin", "spark", "ray", "dask"]
+SupportedBackends: TypeAlias = Literal["pandas", "polars", "modin", "pyspark", "ray", "dask"]
 
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
 Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule

@@ -1,0 +1,74 @@
+env_list = [
+    "minimal-3.11",
+    "minimal-3.12",
+    "minimal-3.13",
+    "minimal-3.14",
+    "all-3.11",
+    "all-3.12",
+    "all-3.13",
+    "all-3.14",
+    "modin-3.11",
+    "modin-3.12",
+    "modin-3.13",
+    "modin-3.14",
+    "dask-3.11",
+    "dask-3.12",
+    "dask-3.13",
+    "dask-3.14",
+    "ray-3.11",
+    "ray-3.12",
+    "ray-3.13",
+    "ray-3.14",
+    "pyspark-3.11",
+    "pyspark-3.12",
+    "pyspark-3.13",
+    "pyspark-3.14",
+]
+
+
+# MINIMAL
+
+[env_base.minimal]
+description = "Run full test suite for all extras"
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", "."]] # i.e. "minimal"
+commands = [["pytest", "tests_extras/test_minimal.py", "-vv"]]
+
+# ALL EXTRAS
+
+[env_base.all]
+description = "Run full test suite for all extras"
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", ".[all]"]]
+commands = [["pytest", "tests/", "tests_extras/test_all_extra.py", "-vv"]]
+
+# EXTRAS
+
+[env_base.modin]
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", ".[modin]"]]
+commands = [["pytest", "tests_extras/test_modin_extra.py", "-vv"]]
+
+
+[env_base.dask]
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", ".[dask]"]]
+commands = [["pytest", "tests_extras/test_dask_extra.py", "-vv"]]
+
+
+[env_base.ray]
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", ".[ray]"]]
+commands = [["pytest", "tests_extras/test_ray_extra.py", "-vv"]]
+
+
+[env_base.pyspark]
+factors = [["3.11", "3.12", "3.13", "3.14"]]
+deps = ["pytest"]
+commands_pre = [["uv", "pip", "install", "-e", ".[pyspark]"]]
+commands = [["pytest", "tests_extras/test_pyspark_extra.py", "-vv"]]
