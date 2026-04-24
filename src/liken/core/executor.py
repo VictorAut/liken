@@ -8,11 +8,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from functools import partial
-from typing import TYPE_CHECKING
 from typing import Protocol
-from typing import TypeAlias
 from typing import TypeVar
-from typing import final
 
 from networkx.utils.union_find import UnionFind
 
@@ -25,28 +22,24 @@ from liken._dedupers import PredicateDeduper
 from liken._preprocessors import Preprocessor
 from liken._types import Columns
 from liken._types import Keep
-from liken.core.wrapper import Frame
-
-
-if TYPE_CHECKING:
-    pass
+from liken._types import MultiComponents
+from liken._types import SingleComponents
+from liken.core.wrapper import DF
 
 
 # TYPES:
 
 
-SingleComponents: TypeAlias = dict[int, list[int]]
-MultiComponents: TypeAlias = dict[tuple[int, ...], list[int]]
-F = TypeVar("F", bound=Frame)
+D = TypeVar("D", bound=DF)
 
 
 # EXECUTORS:
 
 
-class Executor(Protocol[F]):
+class Executor(Protocol[D]):
     def execute(
         self,
-        df: F,
+        df: D,
         /,
         *,
         columns: Columns | None,
@@ -55,14 +48,13 @@ class Executor(Protocol[F]):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         id: str | None,
-    ) -> F: ...
+    ) -> D: ...
 
 
-@final
 class LocalExecutor(Executor):
     def execute(
         self,
-        df: Frame,
+        df: DF,
         /,
         *,
         columns: Columns | None,
@@ -71,7 +63,7 @@ class LocalExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         id: str | None = None,
-    ) -> Frame:
+    ) -> DF:
         """Process a local dataframe according to the deduplication collection
 
         Processing is defined according to whether the collections of
@@ -149,7 +141,7 @@ class LocalExecutor(Executor):
     @staticmethod
     def _build_uf(
         deduper: BaseDeduper,
-        df: Frame,
+        df: DF,
         columns: Columns,
         preprocessors: list[Preprocessor] = [],
         predicate: set = set(),
@@ -183,7 +175,7 @@ class LocalExecutor(Executor):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
-    ) -> Frame:
+    ) -> DF:
         return deduper.canonicalizer(
             components=components,
             drop_duplicates=drop_duplicates,

@@ -20,11 +20,11 @@ from liken._collections import Pipeline
 from liken._constants import CANONICAL_ID
 from liken._types import Columns
 from liken._types import Keep
-from liken.backends.pyspark.wrapper import SparkDF
 from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
+    from liken.backends.pyspark.wrapper import SparkDF
     from liken.liken import Dedupe
 
 
@@ -51,6 +51,7 @@ class SparkExecutor(Executor):
 
         # import in worker node
         from liken.liken import Dedupe
+        from liken.backends.pyspark.wrapper import SparkDF
 
         # IMPORTANT: Use local variables, no references to Self
         # Allows for serialization via Py4J

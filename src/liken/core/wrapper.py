@@ -47,7 +47,7 @@ D = TypeVar("D")  # dataframe
 # BASE
 
 
-class Frame(Generic[D]):
+class DF(Generic[D]):
     """Base class defining a dataframe wrapper
 
     Defines inheritable methods as well as some of the interface

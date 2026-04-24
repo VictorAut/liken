@@ -25,21 +25,25 @@ TODO:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Self
 from typing import final
 
-import dask.dataframe as dd
 import pandas as pd
 import pyarrow as pa
 
 from liken._constants import CANONICAL_ID
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
+
+
+if TYPE_CHECKING:
+    import dask.dataframe as dd
 
 
 @final
-class DaskDF(Frame[dd.DataFrame], CanonicalIdMixin):
+class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
     """Dask DataFrame wrapper"""
 
     def __init__(self, df: dd.DataFrame, id: str | None = None, preserve_schema: bool = False):

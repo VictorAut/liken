@@ -1,4 +1,4 @@
-import liken.backends
+import importlib
 
 from liken import custom
 from liken import datasets
@@ -51,3 +51,12 @@ __all__ = [
 
 # registers pandas affordances
 register_pd_affordances()
+
+
+# "force" backend registration
+importlib.import_module("liken.backends.pandas.backend")
+importlib.import_module("liken.backends.polars.backend")
+importlib.import_module("liken.backends.modin.backend")
+importlib.import_module("liken.backends.pyspark.backend")
+importlib.import_module("liken.backends.dask.backend")
+importlib.import_module("liken.backends.ray.backend")

@@ -1,7 +1,10 @@
+from typing import final
+
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
 
+@final
 @backends_registry.register("modin")
 class ModinBackend(Backend):
     name = "modin"
@@ -13,12 +16,12 @@ class ModinBackend(Backend):
             return False
         return isinstance(df, mpd.DataFrame)
 
-    def create_df(self, data, schema, **_):
+    def create_df(self, data, schema):
         import modin.pandas as mpd
 
         return mpd.DataFrame(columns=schema, data=data)
 
-    def executor(self, **_):
+    def executor(self):
         from liken.backends.modin.executor import ModinExecutor
 
         return ModinExecutor()

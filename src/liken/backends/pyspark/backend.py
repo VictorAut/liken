@@ -1,10 +1,13 @@
+from typing import final
+
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
 
+@final
 @backends_registry.register("pyspark")
 class SparkBackend(Backend):
-    name = "spark"
+    name = "pyspark"
 
     def is_match(self, df):
         try:
@@ -21,12 +24,12 @@ class SparkBackend(Backend):
 
         return False
 
-    def create_df(self, data, schema, spark_session=None, **_):
+    def create_df(self, data, schema, spark_session=None):
         if spark_session is None:
             raise ValueError("Spark session required")
         return spark_session.createDataFrame(data=data, schema=schema)
 
-    def executor(self, spark_session=None, **_):
+    def executor(self, spark_session=None):
         from liken.backends.pyspark.executor import SparkExecutor
 
         return SparkExecutor(spark_session=spark_session)

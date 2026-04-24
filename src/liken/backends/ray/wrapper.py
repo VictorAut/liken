@@ -25,25 +25,30 @@ TODO:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Self
 from typing import final
 
 import pandas as pd
 import pyarrow as pa
-import ray
-from ray.data import Dataset as RayDataset
 
 from liken._constants import CANONICAL_ID
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
+
+
+if TYPE_CHECKING:
+    from ray.data import Dataset as RayDataset
 
 
 @final
-class RayDF(Frame[RayDataset], CanonicalIdMixin):
+class RayDF(DF["RayDataset"], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
     def __init__(self, df: RayDataset, id: str | None = None):
+        import ray
+
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
@@ -63,6 +68,8 @@ class RayDF(Frame[RayDataset], CanonicalIdMixin):
 
     def _df_autoincrement_id(self, df):
         """collects data to driver node!"""
+        import ray
+
         # Get block sizes
         block_sizes = df.map_batches(lambda df: pd.DataFrame({"__len__": [len(df)]}), batch_format="pandas").take_all()
 

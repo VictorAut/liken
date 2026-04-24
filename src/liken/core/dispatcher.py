@@ -23,16 +23,18 @@ TODO:
     - A full interface can then be defined
 """
 
-from __future__ import annotations
+# from __future__ import annotations
 
+from typing import Any
+
+from liken.core.backend import Backend
 from liken.core.registries import backends_registry
+from liken.core.wrapper import DF
 
 
-
-
-def get_backend(df):
+def get_backend(df: Any) -> Backend:
     for backend_cls in backends_registry.get_all().values():
-        backend = backend_cls()  # instantiated
+        backend: Backend = backend_cls()  # instantiated
 
         try:
             if backend.is_match(df):
@@ -45,7 +47,6 @@ def get_backend(df):
 # DISPATCHER:
 
 
-def wrap(df, id: str | None = None):
-    print("REGISTERED BACKENDS ARE:", backends_registry.get_all())
+def wrap(df: Any, id: str | None = None) -> DF:
     backend = get_backend(df)
     return backend.wrap(df, id=id)

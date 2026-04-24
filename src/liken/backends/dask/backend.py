@@ -1,12 +1,15 @@
+from typing import final
+
 import pandas as pd
 
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
 
+@final
 @backends_registry.register("dask")
 class DaskBackend(Backend):
-    name = "polars"
+    name = "dask"
 
     def is_match(self, df):
         try:
@@ -15,13 +18,13 @@ class DaskBackend(Backend):
             return False
         return isinstance(df, dd.DataFrame)
 
-    def create_df(self, data, schema, **_):
+    def create_df(self, data, schema):
         import dask.dataframe as dd
 
         df = pd.DataFrame(columns=schema, data=data)
         return dd.from_pandas(df)
 
-    def executor(self, **_):
+    def executor(self):
         from liken.backends.dask.executor import DaskExecutor
 
         return DaskExecutor()

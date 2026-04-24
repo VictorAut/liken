@@ -25,20 +25,24 @@ TODO:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Self
 from typing import final
 
-import modin.pandas as mpd
 import pyarrow as pa
 
 from liken._constants import CANONICAL_ID
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
+
+
+if TYPE_CHECKING:
+    import modin.pandas as mpd
 
 
 @final
-class ModinDF(Frame[mpd.DataFrame], CanonicalIdMixin):
+class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
     """Modin DataFrame wrapper"""
 
     def __init__(self, df: mpd.DataFrame, id: str | None = None):
@@ -57,6 +61,8 @@ class ModinDF(Frame[mpd.DataFrame], CanonicalIdMixin):
         return df.assign(**{CANONICAL_ID: df[id]})
 
     def _df_autoincrement_id(self, df: mpd.DataFrame) -> mpd.DataFrame:
+        import modin.pandas as mpd
+
         return df.assign(**{CANONICAL_ID: mpd.RangeIndex(start=0, stop=len(df))})
 
     def _column_labels_list(self, df: mpd.DataFrame) -> list[str]:

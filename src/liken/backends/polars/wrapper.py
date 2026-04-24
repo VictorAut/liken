@@ -33,12 +33,12 @@ import pyarrow as pa
 
 from liken._constants import CANONICAL_ID
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
 
 
 @final
-class PolarsDF(Frame[pl.DataFrame], CanonicalIdMixin):
+class PolarsDF(DF[pl.DataFrame], CanonicalIdMixin):
     """Polars DataFrame wrapper"""
 
     def __init__(self, df: pl.DataFrame, id: str | None = None):

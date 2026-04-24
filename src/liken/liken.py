@@ -29,7 +29,7 @@ from liken.backends.ray.executor import RayExecutor
 from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
-from liken.core.wrapper import Frame
+from liken.core.wrapper import DF
 
 
 class Dedupe:
@@ -163,7 +163,7 @@ class Dedupe:
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        wdf: DF = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -229,7 +229,7 @@ class Dedupe:
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
-        wdf: Frame = wrap(self._df, id)
+        wdf: DF = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -274,7 +274,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
 
-        wdf: Frame = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, id=None)
 
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
@@ -309,7 +309,7 @@ class Dedupe:
             A dataframe of synthesized records.
         """
 
-        wdf: Frame = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, id=None)
 
         return wdf.synthesize_record()
 

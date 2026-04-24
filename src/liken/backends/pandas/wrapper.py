@@ -33,12 +33,12 @@ import pyarrow as pa
 
 from liken._constants import CANONICAL_ID
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
 
 
 @final
-class PandasDF(Frame[pd.DataFrame], CanonicalIdMixin):
+class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
     """Pandas DataFrame wrapper"""
 
     def __init__(self, df: pd.DataFrame, id: str | None = None):

@@ -26,32 +26,32 @@ TODO:
 from __future__ import annotations
 
 from collections.abc import Hashable
+from typing import TYPE_CHECKING
 from typing import Self
 from typing import TypeAlias
 from typing import final
 
 import pyarrow as pa
-import pyspark.sql as spark
-from pyspark.rdd import RDD
-from pyspark.sql import Row
-from pyspark.sql import functions
-from pyspark.sql.types import LongType
-from pyspark.sql.types import StructField
-from pyspark.sql.types import StructType
 from typing_extensions import override
 
 from liken._constants import CANONICAL_ID
 from liken._constants import PYSPARK_TYPES
 from liken._types import Keep
+from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.core.wrapper import Frame
 
 
-SparkObject: TypeAlias = spark.DataFrame | RDD[Row]
+if TYPE_CHECKING:
+    from pyspark.rdd import RDD
+    from pyspark.sql import DataFrame
+    from pyspark.sql import Row
+    from pyspark.sql.types import StructType
+
+    SparkObject: TypeAlias = DataFrame | RDD[Row]
 
 
 @final
-class SparkDF(Frame[SparkObject], CanonicalIdMixin):
+class SparkDF(DF["SparkObject"], CanonicalIdMixin):
     """Spark DataFrame and Spark RDD wrapper
 
     This wrapper, contrarily to others does not always add a canonical id. When
@@ -78,7 +78,7 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     def __init__(
         self,
-        df: spark.DataFrame,
+        df: DataFrame,
         id: str | None = None,
         is_init: bool = True,
     ):
@@ -89,54 +89,66 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
         if is_init:
             self._df: RDD[Row] = self._add_canonical_id(df, id)  # type: ignore[no-redef]
         else:
-            self._df: spark.DataFrame = df  # type: ignore[no-redef]
+            self._df: DataFrame = df  # type: ignore[no-redef]
 
         self._id = id
 
     # CANONICAL ID HELPERS:
 
-    def _df_as_is(self, df: spark.DataFrame) -> RDD[Row]:
+    def _df_as_is(self, df: DataFrame) -> RDD[Row]:
         self._schema = df.schema
         return df.rdd
 
-    def _df_overwrite_id(self, df: spark.DataFrame, id: str) -> RDD[Row]:
-        df_new: spark.DataFrame = df.drop(CANONICAL_ID)
+    def _df_overwrite_id(self, df: DataFrame, id: str) -> RDD[Row]:
+
+        from pyspark.sql import Row
+
+        df_new: DataFrame = df.drop(CANONICAL_ID)
         self._schema = self._new_schema(df_new, id)
         return df_new.rdd.mapPartitions(
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
         )
 
-    def _df_copy_id(self, df: spark.DataFrame, id: str) -> RDD[Row]:
+    def _df_copy_id(self, df: DataFrame, id: str) -> RDD[Row]:
+
+        from pyspark.sql import Row
+
         self._schema = self._new_schema(df, id)
         return df.rdd.mapPartitions(
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
         )
 
-    def _df_autoincrement_id(self, df: spark.DataFrame) -> RDD[Row]:
+    def _df_autoincrement_id(self, df: DataFrame) -> RDD[Row]:
+
+        from pyspark.sql import Row
+        
         self._schema = self._new_schema(df)
         return df.rdd.zipWithIndex().mapPartitions(
             lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
         )
 
-    def _column_labels_list(self, df: spark.DataFrame) -> list[str]:
+    def _column_labels_list(self, df: DataFrame) -> list[str]:
         return df.columns
 
     @staticmethod
-    def _new_schema(df: spark.DataFrame, id: str | None = None) -> StructType:
+    def _new_schema(df: DataFrame, id: str | None = None) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
         of the id field.
         """
+        # lazy
+        import pyspark.sql.types as T
+
         fields = df.schema.fields
         if id:
             dtype = dict(df.dtypes)[id]
             id_type = PYSPARK_TYPES[dtype]
         else:
-            id_type = LongType()  # auto-incremental is numeric
-        fields += [StructField(CANONICAL_ID, id_type, True)]
-        return StructType(fields)
+            id_type = T.LongType()  # auto-incremental is numeric
+        fields += [T.StructField(CANONICAL_ID, id_type, True)]
+        return T.StructType(fields)
 
     @override
-    def unwrap(self) -> spark.DataFrame:
+    def unwrap(self) -> DataFrame:
         """Ensure the unwrapped dataframe is always an instance of DataFrame
 
         Permits the access of the base Dedupe class attribute dataframe to be
@@ -144,6 +156,8 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
         yet. For example this would be needed if inspecting the dataframe as
         contained in an instance of Dedupe having yet to call the canonicalizer
         on the collection of dedupers."""
+        from pyspark.rdd import RDD
+
         if isinstance(self._df, RDD):
             return self._df.toDF()
         return self._df
@@ -152,7 +166,9 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     def drop_col(self, column: str) -> Self:
         """Only applies to Spark DataFrame to remove canonical ID"""
-        if isinstance(self._df, spark.DataFrame):
+        from pyspark.sql import DataFrame
+
+        if isinstance(self._df, DataFrame):
             self._df = self._df.drop(column)
             return self
         raise NotImplementedError("Cannot drop columns on spark RDD")
@@ -165,7 +181,7 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     def _get_col(self, column: str):
         """Everything is returned to driver node!"""
-        df: spark.DataFrame = self._df.toDF()
+        df: DataFrame = self._df.toDF()
 
         return df.select(column).toArrow().column(0).combine_chunks()
 
@@ -174,11 +190,14 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
     # SYNTHETIC RECORD:
 
-    def synthesize_record(self) -> spark.DataFrame:
+    def synthesize_record(self) -> DataFrame:
         """TODO
         warn that everything is returned to driver node!
         """
-        df: spark.DataFrame = self._df.toDF()
+        # lazy
+        from pyspark.sql import functions
+
+        df: DataFrame = self._df.toDF()
         exprs = []
 
         for col in df.columns:
@@ -191,7 +210,7 @@ class SparkDF(Frame[SparkObject], CanonicalIdMixin):
 
 
 @final
-class SparkRows(Frame[list[spark.Row]]):
+class SparkRows(DF["list[Row]"]):
     """Spark Rows DataFrame
 
     Spark Rows is what are processed by individual Worker nodes.
@@ -200,8 +219,8 @@ class SparkRows(Frame[list[spark.Row]]):
     will be instantiated in the worker node.
     """
 
-    def __init__(self, df: list[spark.Row]):
-        self._df: list[spark.Row] = df
+    def __init__(self, df: list[Row]):
+        self._df: list[Row] = df
 
     # ARROW INTERFACES:
 
@@ -217,7 +236,9 @@ class SparkRows(Frame[list[spark.Row]]):
     # WRAPPER METHODS:
 
     def put_col(self, column: str, array: list) -> Self:
-        self._df = [spark.Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
+        from pyspark.sql import Row
+
+        self._df = [Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:

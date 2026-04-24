@@ -46,20 +46,20 @@ from liken.core.registries import dedupers_registry
 if TYPE_CHECKING:
     from liken._types import Columns
     from liken._types import Keep
+    from liken._types import MultiComponents
     from liken._types import SimilarPairIndices
-    from liken.core.dispatcher import LocalDF
-    from liken.core.executor import MultiComponents
-    from liken.core.executor import SingleComponents
+    from liken._types import SingleComponents
+    from liken.core.wrapper import DF
 
 
 # INTERFACE:
 
 
 class Base(Protocol):
-    wdf: LocalDF
+    wdf: DF
     with_na_placeholder: bool
 
-    def set_frame(self, wdf: LocalDF) -> Self: ...
+    def set_frame(self, wdf: DF) -> Self: ...
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
     def build_union_find(
         self,
@@ -73,7 +73,7 @@ class Base(Protocol):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
-    ) -> LocalDF: ...
+    ) -> DF: ...
     def str_representation(self, name: str) -> str: ...
     def validate(self, columns: Columns) -> None: ...
 
@@ -98,9 +98,9 @@ class BaseDeduper(Base):
         self._init_args = args
         self._init_kwargs = kwargs
 
-    def set_frame(self, wdf: LocalDF) -> Self:
+    def set_frame(self, wdf: DF) -> Self:
         """Inject dataframe and interface methods"""
-        self.wdf: LocalDF = wdf
+        self.wdf: DF = wdf
         return self
 
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
@@ -147,7 +147,7 @@ class BaseDeduper(Base):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
-    ) -> LocalDF:
+    ) -> DF:
         canonicals = self.wdf.get_canonical()
 
         n = len(canonicals)

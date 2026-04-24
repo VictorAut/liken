@@ -1,12 +1,15 @@
+from typing import final
+
 import pandas as pd
 
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
 
+@final
 @backends_registry.register("ray")
 class RayBackend(Backend):
-    name = "polars"
+    name = "ray"
 
     def is_match(self, df):
         try:
@@ -15,7 +18,7 @@ class RayBackend(Backend):
             return False
         return isinstance(df, ray.data.Dataset)
 
-    def create_df(self, data, schema, **_):
+    def create_df(self, data, schema):
         import ray
 
         if not ray.is_initialized():
@@ -25,7 +28,7 @@ class RayBackend(Backend):
 
         return ray.data.from_pandas(df)
 
-    def executor(self, **_):
+    def executor(self):
         from liken.backends.ray.executor import RayExecutor
 
         return RayExecutor()

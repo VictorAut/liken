@@ -6,21 +6,27 @@ then be processed with the `LocalExecutor`
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from typing import final
+
 import pandas as pd
-import ray
 
 from liken._collections import DeduplicationDict
 from liken._collections import Pipeline
 from liken._types import Columns
 from liken._types import Keep
-
-# if TYPE_CHECKING:
-from liken.backends.ray.wrapper import RayDF
 from liken.core.executor import Executor
 
 
+if TYPE_CHECKING:
+    from liken.backends.ray.wrapper import RayDF
+
+
+@final
 class RayExecutor(Executor):
     def __init__(self):
+        import ray
+
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
@@ -40,6 +46,7 @@ class RayExecutor(Executor):
         pandas for each partition.
         """
 
+        from liken.backends.ray.wrapper import RayDF
         from liken.liken import Dedupe
 
         def _process_batch(batch: pd.DataFrame) -> pd.DataFrame:

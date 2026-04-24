@@ -1,3 +1,5 @@
+from typing import final
+
 import polars as pl
 
 from liken.backends.polars.executor import PolarsExecutor
@@ -6,6 +8,7 @@ from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
 
+@final
 @backends_registry.register("polars")
 class PolarsBackend(Backend):
     name = "polars"
@@ -14,11 +17,11 @@ class PolarsBackend(Backend):
 
         return isinstance(df, pl.DataFrame)
 
-    def create_df(self, data, schema, **_):
+    def create_df(self, data, schema):
 
         return pl.DataFrame(schema=schema, data=data, orient="row")
 
-    def executor(self, **_):
+    def executor(self):
 
         return PolarsExecutor()
 

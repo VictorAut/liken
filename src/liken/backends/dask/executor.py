@@ -6,6 +6,7 @@ then be processed with the `LocalExecutor`
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import final
 
 import pandas as pd
@@ -15,10 +16,11 @@ from liken._collections import Pipeline
 from liken._constants import CANONICAL_ID
 from liken._types import Columns
 from liken._types import Keep
-
-# if TYPE_CHECKING:
-from liken.backends.dask.wrapper import DaskDF
 from liken.core.executor import Executor
+
+
+if TYPE_CHECKING:
+    from liken.backends.dask.wrapper import DaskDF
 
 
 @final
@@ -38,6 +40,8 @@ class DaskExecutor(Executor):
         """Maps dataframe partitions to be processed by Dask, natively using
         pandas for each partition.
         """
+
+        from liken.backends.dask.wrapper import DaskDF
 
         meta = df._new_meta(df._df, id)
 
