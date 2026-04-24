@@ -6,6 +6,7 @@ import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pytest
+import ray
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -61,6 +62,16 @@ def spark():
     spark.sparkContext.setLogLevel("ERROR")
     yield spark
     spark.stop()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ray_session():
+    ray.init(
+        num_cpus=2,
+        object_store_memory=300 * 1024 * 1024,  # 300MB cap
+    )
+    yield
+    ray.shutdown()
 
 
 # DATAFRAMES FOR INTEGRATION TESTS:
