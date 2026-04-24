@@ -89,10 +89,16 @@ Cut boilerplate code to simple deduplication pipelines with **Liken**.
 
 ## Installation
 
-<!-- termynal -->
+With `pip`:
+
+```bash
+pip install liken
 ```
-$ pip install liken
----> 100%
+
+With `uv`:
+
+```bash
+uv pip install liken
 ```
 
 ## Pandas Affordances

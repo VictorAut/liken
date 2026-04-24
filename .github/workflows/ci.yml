@@ -1,4 +1,4 @@
-name: python | validation
+name: ci
 
 on:
   pull_request:
@@ -39,7 +39,7 @@ jobs:
           run: |
             task lint
 
-  test:
+  test-coverage:
     runs-on: ubuntu-latest
 
     strategy:
@@ -98,3 +98,32 @@ jobs:
           header: Coverage Report
           hide_and_recreate: true
           path: coverage.md
+  
+  test-extras:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        extras: ["minimal", "all", "dask", "ray", "pyspark"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: python | setup  ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: uv | install
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.4"
+
+      - name: tox | install
+        run: |
+          uv tool install tox --with tox-uv
+
+      - name: test | optional imports
+        run: |
+          tox run -e ${{ matrix.python-extras }}-${{ matrix.python-version }}

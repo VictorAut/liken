@@ -86,8 +86,10 @@ build-backend = "uv_build"
 
 # TEST
 
+
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::FutureWarning", "ignore::DeprecationWarning"]
+
 
 # LINTING
 
@@ -103,8 +105,6 @@ force-single-line = true
 lines-after-imports = 2
 
 [tool.mypy]
-# warn_no_return = false
-# allow_redefinition = true
 ignore_missing_imports = true
 disable_error_code = ["no-redef"]
 

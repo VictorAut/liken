@@ -42,7 +42,7 @@ description = "Run full test suite for all extras"
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[all]"]]
-commands = [["pytest", "tests/", "tests_extras/test_all_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_all_extra.py", "-vv"]]
 
 # EXTRAS
 
