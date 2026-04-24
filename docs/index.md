@@ -89,17 +89,46 @@ Cut boilerplate code to simple deduplication pipelines with **Liken**.
 
 ## Installation
 
-With `pip`:
+**Liken** supports `pandas` and `polars` by default.
+
+Install with `pip`:
 
 ```bash
 pip install liken
 ```
 
-With `uv`:
+Install with `uv`:
 
 ```bash
 uv pip install liken
 ```
+
+### Extras 
+
+**liken** supports [multiple DataFrame libraries](./index.md#supported-dataframe-libraries), which are optionally installed:
+
+=== "pip"
+
+    ```bash
+    pip install 'liken[dask]'     # deduplicate dask dataframes
+    pip install 'liken[modin]'    # deduplicate modin dataframes
+    pip install 'liken[ray]'      # deduplicate ray datasets
+    pip install 'liken[pyspark]'  # deduplicate pyspark dataframes
+    pip install 'liken[all]'      # deduplicate with any extra
+    ```
+
+=== "uv"
+
+    ```bash
+    uv pip install 'liken[dask]'    # deduplicate dask dataframes
+    uv pip install 'liken[modin]'   # deduplicate modin dataframes
+    uv pip install 'liken[ray]'     # deduplicate ray datasets
+    uv pip install 'liken[pyspark]' # deduplicate pyspark dataframes
+    uv pip install 'liken[all]'     # deduplicate with any extra
+    ```
+
+
+
 
 ## Pandas Affordances
 

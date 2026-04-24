@@ -101,6 +101,7 @@ jobs:
   
   test-extras:
     runs-on: ubuntu-latest
+    needs: test-coverage
 
     strategy:
       matrix:
