@@ -49,26 +49,39 @@ def canonical_id():
 
 
 @pytest.fixture(scope="session")
-def spark():
+def spark_session(request):
+    backend = request.config.getoption("--backend")
+
+    if backend != "pyspark":
+        yield None
+        return
+
     spark = (
         SparkSession.builder.master("local[1]")
         .appName("local-tests")
         .config("spark.executor.cores", "1")
         .config("spark.executor.instances", "1")
         .config("spark.sql.shuffle.partitions", "1")
-        .config("spark.driver.bindAddress", "127.0.0.1")
+        .config("spark.driver.memory", "512m")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("ERROR")
+
     yield spark
     spark.stop()
 
 
 @pytest.fixture(scope="session", autouse=True)
-def ray_session():
+def ray_session(request):
+    backend = request.config.getoption("--backend")
+
+    if backend != "ray" and backend != "modin":
+        yield
+        return
+
     ray.init(
-        num_cpus=2,
-        object_store_memory=300 * 1024 * 1024,  # 300MB cap
+        num_cpus=1,
+        object_store_memory=200 * 1024 * 1024,
     )
     yield
     ray.shutdown()
@@ -77,69 +90,90 @@ def ray_session():
 # DATAFRAMES FOR INTEGRATION TESTS:
 
 
-@pytest.fixture(scope="session")
-def df_pandas():
-    return fake_10("pandas")
+# @pytest.fixture(scope="session")
+# def df_pandas():
+#     return fake_10("pandas")
 
 
-@pytest.fixture(scope="session")
-def df_polars():
-    return fake_10("polars")
+# @pytest.fixture(scope="session")
+# def df_polars():
+#     return fake_10("polars")
 
 
-@pytest.fixture(scope="session")
-def df_modin():
-    return fake_10("modin")
+# @pytest.fixture(scope="session")
+# def df_modin():
+#     return fake_10("modin")
 
 
-@pytest.fixture(scope="session")
-def df_ray():
-    return fake_10("ray")
+# @pytest.fixture(scope="session")
+# def df_ray():
+#     return fake_10("ray")
 
 
-@pytest.fixture(scope="session")
-def df_dask():
-    return fake_10("dask")
+# @pytest.fixture(scope="session")
+# def df_dask():
+#     return fake_10("dask")
 
 
-@pytest.fixture(scope="function")
-def df_spark(spark):
-    """Default is a single partition"""
-    return fake_10("pyspark", spark_session=spark)
+# @pytest.fixture(scope="function")
+# def df_spark(spark_session):
+#     """Default is a single partition"""
+#     return fake_10("pyspark", spark_session=spark_session)
 
 
-@pytest.fixture(scope="function")
-def df_sparkrows(df_spark):
-    return df_spark.collect()
+# @pytest.fixture(scope="function")
+# def df_sparkrows(df_spark):
+#     return df_spark.collect()
 
 
-@pytest.fixture(params=["pandas", "polars", "modin", "ray", "dask", "spark"])
+def pytest_addoption(parser):
+    parser.addoption(
+        "--backend",
+        action="store",
+        default="pandas",
+        help="Backend to run tests against",
+    )
+
+
+# @pytest.fixture(params=["pandas", "polars", "modin", "ray", "dask", "spark"])
+@pytest.fixture
 def dataframe(
     request,
-    df_pandas,
-    df_polars,
-    df_modin,
-    df_ray,
-    df_dask,
-    df_spark,
-    spark,
+    # df_pandas,
+    # df_polars,
+    # df_modin,
+    # df_ray,
+    # df_dask,
+    # df_spark,
+    spark_session,
 ):
     """return a tuple of positionally ordered input parameters of Dedupe
 
     This is useful for implementations that ARE part of the public API
     """
-    if request.param == "pandas":
-        return df_pandas, None
-    if request.param == "polars":
-        return df_polars, None
-    if request.param == "modin":
-        return df_modin, None
-    if request.param == "ray":
-        return df_ray, None
-    if request.param == "dask":
-        return df_dask, None
-    if request.param == "spark":
-        return df_spark, spark
+
+    backend = request.config.getoption("--backend")
+
+    # if request.param == "pandas":
+    if backend == "pandas":
+        return fake_10("pandas")
+    # if request.param == "polars":
+    if backend == "polars":
+        return fake_10("polars")
+    # if request.param == "modin":
+    if backend == "modin":
+        return fake_10("modin")
+    # if request.param == "ray":
+    if backend == "ray":
+        return fake_10("ray")
+    # if request.param == "dask":
+    if backend == "dask":
+        return fake_10("dask")
+    # if request.param == "spark":
+    if backend == "pyspark":
+        return fake_10("pyspark", spark_session=spark_session)
+
+    raise ValueError(f"Unknown backend: {backend}")
 
 
 # MOCKS:

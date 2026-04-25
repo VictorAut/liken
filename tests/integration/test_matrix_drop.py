@@ -168,9 +168,10 @@ def test_matrix_dedupers(
     api_builder,
     dataframe,
     helpers,
+    spark_session
 ):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = api_builder(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg)
 

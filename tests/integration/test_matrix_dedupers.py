@@ -157,9 +157,9 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_sequence_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_dedupers_sequence_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = lk.dedupe(df, spark_session=spark_session).apply(deduper(**dedup_kwarg)).canonicalize(columns).collect()
 
@@ -167,9 +167,9 @@ def test_matrix_dedupers_sequence_api(deduper, columns, dedup_kwarg, expected_ca
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_dict_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_dedupers_dict_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**dedup_kwarg)]}).canonicalize().collect()
 
@@ -177,9 +177,9 @@ def test_matrix_dedupers_dict_api(deduper, columns, dedup_kwarg, expected_canoni
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_rules_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
+def test_matrix_dedupers_rules_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = (
         lk.dedupe(df, spark_session=spark_session)

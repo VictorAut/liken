@@ -98,9 +98,9 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_sequence_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_sequence_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = (
         lk.dedupe(df, spark_session=spark_session)
@@ -113,9 +113,9 @@ def test_matrix_keep_sequence_api(deduper, keep, columns, input_params, expected
 
 
 @pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_dict_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_dict_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = (
         lk.dedupe(df, spark_session=spark_session)
@@ -128,9 +128,9 @@ def test_matrix_keep_dict_api(deduper, keep, columns, input_params, expected_can
 
 
 @pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
-def test_matrix_keep_rules_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers):
+def test_matrix_keep_rules_api(deduper, keep, columns, input_params, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df, spark_session = dataframe
+    df = dataframe
 
     df = (
         lk.dedupe(df, spark_session=spark_session)
