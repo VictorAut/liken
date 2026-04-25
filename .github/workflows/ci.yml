@@ -104,7 +104,7 @@ jobs:
 
   test-coverage-py312:
     runs-on: ubuntu-latest
-    needs: linting
+    needs: test-coverage-py311
 
     strategy:
       matrix:
@@ -166,7 +166,7 @@ jobs:
 
   test-coverage-py313:
     runs-on: ubuntu-latest
-    needs: linting
+    needs: test-coverage-py312
 
     strategy:
       matrix:
@@ -227,7 +227,7 @@ jobs:
 
   test-coverage-py314:
     runs-on: ubuntu-latest
-    needs: linting
+    needs: test-coverage-py313
 
     strategy:
       matrix:
@@ -288,7 +288,7 @@ jobs:
 
   test-extras:
     runs-on: ubuntu-latest
-    needs: test-coverage # hack: avoid spinning up too many local ray/pyspark clusters
+    needs: test-coverage-py314 # hack: avoid spinning up too many local ray/pyspark clusters
 
     strategy:
       matrix:
