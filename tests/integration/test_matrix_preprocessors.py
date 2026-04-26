@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
-import pytest
+import pytest 
+import modin.pandas as mpd
+import dask.dataframe as dd
+import ray.data
 
 import liken as lk
 from liken.constants import CANONICAL_ID
@@ -86,21 +89,22 @@ IDS = [
 
 
 @pytest.mark.parametrize("preprocessors, data, expected_canonical_id", PARAMS, ids=IDS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
 @pytest.mark.parametrize("pipeline_builder", PIPELINE_BUILDERS)
 def test_matrix_preprocessors(
-    backend,
     preprocessors,
     data,
     expected_canonical_id,
     pipeline_builder,
-    spark,
+    spark_session,
     helpers,
+    request,
 ):
+    backend = request.config.getoption("--backend")
+
     pipeline = pipeline_builder(preprocessors)
 
-    df = create_df(backend, spark, data)
-    df = dedupe_df(df, spark, pipeline)
+    df = create_df(backend, spark_session, data)
+    df = dedupe_df(df, spark_session, pipeline)
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -108,15 +112,27 @@ def test_matrix_preprocessors(
 # HELPERS:
 
 
-def create_df(backend, spark, data):
+def create_df(backend, spark_session, data):
     if backend == "pandas":
         df = pd.DataFrame(columns=SCHEMA, data=data)
 
     if backend == "polars":
         df = pl.DataFrame(schema=SCHEMA, data=data, orient="row")
 
+    if backend == "modin":
+        df = mpd.DataFrame(columns=SCHEMA, data=data)
+
+    if backend == "dask":
+        df = pd.DataFrame(columns=SCHEMA, data=data)
+        df = dd.from_pandas(df)
+
+    if backend == "ray":
+        df = pd.DataFrame(columns=SCHEMA, data=data)
+
+        df = ray.data.from_pandas(df)
+
     if backend == "spark":
-        df = spark.createDataFrame(schema=SCHEMA, data=data)
+        df = spark_session.createDataFrame(schema=SCHEMA, data=data)
     return df
 
 

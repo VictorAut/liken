@@ -154,26 +154,12 @@ def dataframe(
 
     backend = request.config.getoption("--backend")
 
-    # if request.param == "pandas":
-    if backend == "pandas":
-        return fake_10("pandas")
-    # if request.param == "polars":
-    if backend == "polars":
-        return fake_10("polars")
-    # if request.param == "modin":
-    if backend == "modin":
-        return fake_10("modin")
-    # if request.param == "ray":
-    if backend == "ray":
-        return fake_10("ray")
-    # if request.param == "dask":
-    if backend == "dask":
-        return fake_10("dask")
-    # if request.param == "spark":
     if backend == "pyspark":
         return fake_10("pyspark", spark_session=spark_session)
-
-    raise ValueError(f"Unknown backend: {backend}")
+    try:
+        return fake_10(backend)
+    except Exception:
+        raise ValueError(f"Unknown backend: {backend}")
 
 
 # MOCKS:

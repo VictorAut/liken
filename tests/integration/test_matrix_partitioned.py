@@ -13,7 +13,10 @@ from liken.constants import CANONICAL_ID
 PARTITION_1_PARAMS = (1, [1, 2, 3, 4, 5, 5, 7, 1, 5, 10])
 PARTITION_2_PARAMS = (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 PARAMS = [PARTITION_1_PARAMS, PARTITION_2_PARAMS]
-
+DEDUPERS = {
+    "address": (lk.exact(),),
+    "email": (lk.exact(),),
+}
 
 IDS = ["1 partitions", "2 partitions"]
 
@@ -23,17 +26,30 @@ IDS = ["1 partitions", "2 partitions"]
     PARAMS,
     ids=IDS,
 )
-def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_key, helpers):
+def test_matrix_spark(
+    num_partitions,
+    expected_ids,
+    dataframe,
+    spark_session,
+    blocking_key,
+    helpers,
+    request,
+):
+    backend = request.config.getoption("--backend")
 
-    df = helpers.add_column(df_spark, blocking_key, "blocking_key", str)
+    if backend != "pyspark":
+        pytest.skip("Pyspark only test")
+
+    df = helpers.add_column(dataframe, blocking_key, "blocking_key", str)
 
     df = df.repartition(num_partitions, "blocking_key")
 
-    dedupers = {
-        "address": (lk.exact(),),
-        "email": (lk.exact(),),
-    }
-    df = lk.dedupe(df, spark_session=spark).apply(dedupers).canonicalize(id="id").collect()
+    df = (
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(DEDUPERS)
+        .canonicalize(id="id")
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
@@ -43,18 +59,24 @@ def test_matrix_spark(num_partitions, expected_ids, df_spark, spark, blocking_ke
     PARAMS,
     ids=IDS,
 )
-def test_matrix_ray(num_partitions, expected_ids, df_ray, blocking_key, helpers):
+def test_matrix_ray(
+    num_partitions,
+    expected_ids,
+    dataframe,
+    blocking_key,
+    helpers,
+    request,
+):
+    backend = request.config.getoption("--backend")
 
-    df = helpers.add_column(df_ray, blocking_key, "blocking_key", str)
+    if backend != "ray":
+        pytest.skip("Ray only test")
+
+    df = helpers.add_column(dataframe, blocking_key, "blocking_key", str)
 
     df = df.repartition(num_partitions, keys="blocking_key")
 
-    dedupers = {
-        "address": (lk.exact(),),
-        "email": (lk.exact(),),
-    }
-
-    df = lk.dedupe(df).apply(dedupers).canonicalize(id="id").collect()
+    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
@@ -64,9 +86,20 @@ def test_matrix_ray(num_partitions, expected_ids, df_ray, blocking_key, helpers)
     PARAMS,
     ids=IDS,
 )
-def test_matrix_dask(num_partitions, expected_ids, df_dask, blocking_key, helpers):
+def test_matrix_dask(
+    num_partitions,
+    expected_ids,
+    dataframe,
+    blocking_key,
+    helpers,
+    request,
+):
+    backend = request.config.getoption("--backend")
 
-    df = helpers.add_column(df_dask, blocking_key, "blocking_key", str)
+    if backend != "dask":
+        pytest.skip("Dask only test")
+
+    df = helpers.add_column(dataframe, blocking_key, "blocking_key", str)
 
     def _add_partition(df, npartitions):
 
@@ -84,12 +117,7 @@ def test_matrix_dask(num_partitions, expected_ids, df_dask, blocking_key, helper
 
     df = df.drop(columns="_part")
 
-    dedupers = {
-        "address": (lk.exact(),),
-        "email": (lk.exact(),),
-    }
-
-    df = lk.dedupe(df).apply(dedupers).canonicalize(id="id").collect()
+    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(id="id").collect()
 
     result = helpers.get_column_as_list(df, CANONICAL_ID)
 

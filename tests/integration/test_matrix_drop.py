@@ -28,6 +28,7 @@ NUMERICAL_COMPOUND_COL = (
     "property_num_rooms",
 )
 
+# HELPERS:
 
 def simple_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
     return (

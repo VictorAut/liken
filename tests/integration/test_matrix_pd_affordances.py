@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 import liken as lk
 
@@ -20,68 +21,33 @@ COLS = ["id", "text", "num_1", "num_2", "num_3", "cat_1", "cat_2"]
 
 df = pd.DataFrame(data=DATA, columns=COLS)
 
+PARAMS = [
+    ("text", "fuzzy", {"threshold":0.6}),
+    ("text", "tfidf", {"threshold":0.6, "topn":2}),
+    ("text", "lsh", {"threshold":0.6, "ngram":2}),
+    (("cat_1", "cat_2"), "jaccard", {"threshold":0.6}),
+    (("num_1", "num_2", "num_3"), "cosine", {"threshold":0.6}),
+]
 
-def test_affordance_fuzzy():
+IDS = [i[1] for i in PARAMS]
 
-    COLS = "text"
+@pytest.mark.parametrize(
+    "columns, deduper, kwargs",
+    PARAMS,
+    ids=IDS,
+)
+def test_pd_affordance(columns, deduper, kwargs, request):
 
-    # Core API
-    core = lk.dedupe(df).apply(lk.fuzzy(threshold=0.6)).drop_duplicates(COLS)
+    backend = request.config.getoption("--backend")
 
-    # Pandas affordance API
-    aff = df.fuzzy.drop_duplicates(COLS, threshold=0.6)
-
-    assert_equal(core, aff)
-
-
-def test_affordance_tfidf():
-
-    COLS = "text"
-
-    # Core API
-    core = lk.dedupe(df).apply(lk.tfidf(threshold=0.6, topn=2)).drop_duplicates(COLS)
-
-    # Pandas affordance API
-    aff = df.tfidf.drop_duplicates(COLS, threshold=0.6, topn=2)
-
-    assert_equal(core, aff)
-
-
-def test_affordance_lsh():
-
-    COLS = "text"
+    if backend != "pandas":
+        pytest.skip("Only a pandas test")
 
     # Core API
-    core = lk.dedupe(df).apply(lk.lsh(threshold=0.6, ngram=2)).drop_duplicates(COLS)
+    core = lk.dedupe(df).apply(getattr(lk, deduper)(**kwargs)).drop_duplicates(columns)
 
     # Pandas affordance API
-    aff = df.lsh.drop_duplicates(COLS, threshold=0.6, ngram=2)
-
-    assert_equal(core, aff)
-
-
-def test_affordance_jaccard():
-
-    COLS = ("cat_1", "cat_2")
-
-    # Core API
-    core = lk.dedupe(df).apply(lk.jaccard(threshold=0.6)).drop_duplicates(COLS)
-
-    # Pandas affordance API
-    aff = df.jaccard.drop_duplicates(COLS, threshold=0.6)
-
-    assert_equal(core, aff)
-
-
-def test_affordance_cosine():
-
-    COLS = ("num_1", "num_2", "num_3")
-
-    # Core API
-    core = lk.dedupe(df).apply(lk.cosine(threshold=0.6)).drop_duplicates(COLS)
-
-    # Pandas affordance API
-    aff = df.cosine.drop_duplicates(COLS, threshold=0.6)
+    aff = getattr(df, deduper).drop_duplicates(columns, **kwargs)
 
     assert_equal(core, aff)
 

@@ -47,30 +47,24 @@ IDS = [
 
 
 @pytest.mark.parametrize("data", PARAMS, ids=IDS)
-def test_matrix_exact_on_na(data, helpers):
+@pytest.mark.parametrize(
+    "deduper, expected_ids",
+    [
+        (lk.exact(), [1, 1, 3]),
+        (lk.isna(), [1, 1, 3]),
+        (~lk.isna(), [1, 2, 3]),
+    ],
+    ids=["exact", "isna", "notna"],
+)
+def test_matrix_pd_nulls(data, deduper, expected_ids, helpers, request):
+
+    backend = request.config.getoption("--backend")
+
+    if backend != "pandas":
+        pytest.skip("Pandas only test")
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    df_deduped = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="id").collect()
+    df_deduped = lk.dedupe(df).apply(deduper).canonicalize("address", id="id").collect()
 
-    assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
-
-
-@pytest.mark.parametrize("data", PARAMS, ids=IDS)
-def test_matrix_isna_on_na(data, helpers):
-
-    df = pd.DataFrame(columns=["id", "address"], data=data)
-
-    df_deduped = lk.dedupe(df).apply(lk.isna()).canonicalize("address", id="id").collect()
-
-    assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 1, 3]
-
-
-@pytest.mark.parametrize("data", PARAMS, ids=IDS)
-def test_matrix_notna_on_na(data, helpers):
-
-    df = pd.DataFrame(columns=["id", "address"], data=data)
-
-    df_deduped = lk.dedupe(df).apply(~lk.isna()).canonicalize("address", id="id").collect()
-
-    assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == [1, 2, 3]
+    assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == expected_ids
