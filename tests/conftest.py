@@ -87,45 +87,6 @@ def ray_session(request):
     ray.shutdown()
 
 
-# DATAFRAMES FOR INTEGRATION TESTS:
-
-
-# @pytest.fixture(scope="session")
-# def df_pandas():
-#     return fake_10("pandas")
-
-
-# @pytest.fixture(scope="session")
-# def df_polars():
-#     return fake_10("polars")
-
-
-# @pytest.fixture(scope="session")
-# def df_modin():
-#     return fake_10("modin")
-
-
-# @pytest.fixture(scope="session")
-# def df_ray():
-#     return fake_10("ray")
-
-
-# @pytest.fixture(scope="session")
-# def df_dask():
-#     return fake_10("dask")
-
-
-# @pytest.fixture(scope="function")
-# def df_spark(spark_session):
-#     """Default is a single partition"""
-#     return fake_10("pyspark", spark_session=spark_session)
-
-
-# @pytest.fixture(scope="function")
-# def df_sparkrows(df_spark):
-#     return df_spark.collect()
-
-
 def pytest_addoption(parser):
     parser.addoption(
         "--backend",
@@ -135,16 +96,9 @@ def pytest_addoption(parser):
     )
 
 
-# @pytest.fixture(params=["pandas", "polars", "modin", "ray", "dask", "spark"])
 @pytest.fixture
 def dataframe(
     request,
-    # df_pandas,
-    # df_polars,
-    # df_modin,
-    # df_ray,
-    # df_dask,
-    # df_spark,
     spark_session,
 ):
     """return a tuple of positionally ordered input parameters of Dedupe
@@ -251,6 +205,31 @@ class Helpers:
             return df.drop("num_id")
         if isinstance(df, list):  # i.e. list[Row]
             pass
+
+    @staticmethod
+    def create_df(backend, spark_session, data, schema):
+        if backend == "pandas":
+            df = pd.DataFrame(columns=schema, data=data)
+
+        if backend == "polars":
+            df = pl.DataFrame(schema=schema, data=data, orient="row")
+
+        if backend == "modin":
+            df = mpd.DataFrame(columns=schema, data=data)
+
+        if backend == "dask":
+            df = pd.DataFrame(columns=schema, data=data)
+            df = dd.from_pandas(df)
+
+        if backend == "ray":
+            df = pd.DataFrame(columns=schema, data=data)
+
+            df = ray.data.from_pandas(df)
+
+        if backend == "pyspark":
+            df = spark_session.createDataFrame(schema=schema, data=data)
+
+        return df
 
 
 @pytest.fixture(scope="session", autouse=True)

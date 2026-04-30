@@ -19,7 +19,6 @@ DATA = [
 
 COLS = ["id", "text", "num_1", "num_2", "num_3", "cat_1", "cat_2"]
 
-df = pd.DataFrame(data=DATA, columns=COLS)
 
 PARAMS = [
     ("text", "fuzzy", {"threshold":0.6}),
@@ -42,6 +41,8 @@ def test_pd_affordance(columns, deduper, kwargs, request):
 
     if backend != "pandas":
         pytest.skip("Only a pandas test")
+
+    df = pd.DataFrame(data=DATA, columns=COLS)
 
     # Core API
     core = lk.dedupe(df).apply(getattr(lk, deduper)(**kwargs)).drop_duplicates(columns)

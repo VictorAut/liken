@@ -12,7 +12,6 @@ import liken as lk
 from liken.constants import CANONICAL_ID
 from liken.custom import register
 
-
 # CONSTANTS:
 
 
@@ -154,9 +153,13 @@ def test_matrix_keep(
     spark_session,
 ):
 
-    df = dataframe
-
-    df = api_builder(df, spark_session, columns, deduper, input_params, {"keep": keep})
+    df = api_builder(
+        df=dataframe,
+        spark_session=spark_session,
+        columns=columns,
+        deduper=deduper,
+        deduper_kwarg=input_params,
+        drop_kwarg={"keep": keep},
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-

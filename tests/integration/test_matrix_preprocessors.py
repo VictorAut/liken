@@ -103,38 +103,7 @@ def test_matrix_preprocessors(
 
     pipeline = pipeline_builder(preprocessors)
 
-    df = create_df(backend, spark_session, data)
-    df = dedupe_df(df, spark_session, pipeline)
+    df = helpers.create_df(backend, spark_session, data, SCHEMA)
+    df = lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-# HELPERS:
-
-
-def create_df(backend, spark_session, data):
-    if backend == "pandas":
-        df = pd.DataFrame(columns=SCHEMA, data=data)
-
-    if backend == "polars":
-        df = pl.DataFrame(schema=SCHEMA, data=data, orient="row")
-
-    if backend == "modin":
-        df = mpd.DataFrame(columns=SCHEMA, data=data)
-
-    if backend == "dask":
-        df = pd.DataFrame(columns=SCHEMA, data=data)
-        df = dd.from_pandas(df)
-
-    if backend == "ray":
-        df = pd.DataFrame(columns=SCHEMA, data=data)
-
-        df = ray.data.from_pandas(df)
-
-    if backend == "spark":
-        df = spark_session.createDataFrame(schema=SCHEMA, data=data)
-    return df
-
-
-def dedupe_df(df, spark, pipeline):
-    return lk.dedupe(df, spark_session=spark).apply(pipeline).canonicalize().collect()

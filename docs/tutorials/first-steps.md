@@ -4,13 +4,11 @@ title: First Steps
 
 ## Installation
 
-```shell
-pip install liken
-```
+See [Installation](../index.md#installation).
 
 ## Introduction
 
-Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, rather the emphasis is on how to set up near deduplication correctly. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, the emphasis is on how to set up near deduplication correctly with **Liken**. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
 
 
 ## Instantiating
@@ -39,6 +37,48 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
     import polars as pl
 
     df = pl.read_csv(...)
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
+=== "Modin"
+
+    ```python
+    import liken as lk
+    import modin.pandas as pd
+
+    df = pd.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
+=== "Dask"
+
+    ```python
+    import liken as lk
+    import dask.dataframe as dd
+
+    df = dd.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
+=== "Ray"
+
+    ```python
+    import liken as lk
+    import ray
+
+    df = ray.data.read_csv("...")
 
     df = (
         lk.dedupe(df)
@@ -84,7 +124,7 @@ For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* d
     df = dedupe(df).drop_duplicates(columns=["address", "email"])
     ```
 
-However, dataframe records may not be *exactly* repeated. For example:
+However, dataframe records may not be *exactly* repeated:
 
  id   |  address  |         email       
 ------|-----------|---------------------

@@ -47,7 +47,7 @@ The key features are:
 - Predicate dedupers for rules
 - Record linkage and canonicalization
 - Built-in Preprocessors
-- Pandas, Polars, Modin, Ray and PySpark support
+- Pandas, Polars, Modin, Ray, Dask and PySpark support
 - Customizable in pure Python
 - Synthetic record creation
 - Easy to understand syntax
@@ -89,8 +89,6 @@ Cut boilerplate code to simple deduplication pipelines with **Liken**.
 
 ## Installation
 
-**Liken** supports `pandas` and `polars` by default.
-
 Install with `pip`:
 
 ```bash
@@ -105,7 +103,7 @@ uv pip install liken
 
 ### Extras 
 
-**liken** supports [multiple DataFrame libraries](./index.md#supported-dataframe-libraries), which are optionally installed:
+**Liken** supports `pandas` and `polars` by default. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
 
 === "pip"
 
@@ -114,7 +112,7 @@ uv pip install liken
     pip install 'liken[modin]'    # deduplicate modin dataframes
     pip install 'liken[ray]'      # deduplicate ray datasets
     pip install 'liken[pyspark]'  # deduplicate pyspark dataframes
-    pip install 'liken[all]'      # deduplicate with any extra
+    pip install 'liken[all]'      # deduplicate with any of the above
     ```
 
 === "uv"
@@ -124,7 +122,7 @@ uv pip install liken
     uv pip install 'liken[modin]'   # deduplicate modin dataframes
     uv pip install 'liken[ray]'     # deduplicate ray datasets
     uv pip install 'liken[pyspark]' # deduplicate pyspark dataframes
-    uv pip install 'liken[all]'     # deduplicate with any extra
+    uv pip install 'liken[all]'     # deduplicate with any of the above
     ```
 
 

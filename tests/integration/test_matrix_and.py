@@ -10,7 +10,6 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
-
 # CONSTANTS:
 
 
@@ -67,8 +66,14 @@ PARAMS = [
 @pytest.mark.parametrize("step, expected_canonical_id", PARAMS)
 def test_matrix_and(step, expected_canonical_id, dataframe, helpers, spark_session):
 
-    df = dataframe
-
-    df = lk.dedupe(df, spark_session=spark_session).apply(lk.pipeline().step(step)).canonicalize().collect()
+    df = (
+        lk.dedupe(
+            dataframe,
+            spark_session=spark_session,
+        )
+        .apply(lk.pipeline().step(step))
+        .canonicalize()
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

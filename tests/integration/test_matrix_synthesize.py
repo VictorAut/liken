@@ -36,20 +36,16 @@ def test_matrix_preprocessors(
     backend,
     schema,
     data,
-    spark,
+    spark_session,
     helpers,
+    request
 ):
 
-    if backend == "pandas":
-        df = pd.DataFrame(columns=schema, data=data)
+    backend = request.config.getoption("--backend")
 
-    if backend == "polars":
-        df = pl.DataFrame(schema=schema, data=data, orient="row")
+    df = helpers.create_df(backend, spark_session, data, schema)
 
-    if backend == "spark":
-        df = spark.createDataFrame(schema=schema, data=data)
-
-    result = lk.dedupe(df, spark_session=spark).apply(lk.exact()).canonicalize("address")
+    result = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize("address")
 
     df = result.collect()
     synthesized = result.synthesize()
