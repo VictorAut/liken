@@ -75,13 +75,12 @@ def spark_session(request):
 def ray_session(request):
     backend = request.config.getoption("--backend")
 
-    if backend != "ray" and backend != "modin":
+    if backend != "ray":
         yield
         return
 
     ray.init(
-        num_cpus=1,
-        object_store_memory=200 * 1024 * 1024,
+        num_cpus=2,
     )
     yield
     ray.shutdown()

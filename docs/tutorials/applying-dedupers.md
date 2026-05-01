@@ -2,9 +2,9 @@
 title: Applying Dedupers
 ---
 
-In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **Liken** — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called `.drop_duplicates` with no other deduper.
+In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **Liken** — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called the `drop_duplicates` function with no other deduper.
 
-To use a [built-in deduper](./first-steps.md#built-in-dedupers), the deduper is *applied* with `.apply`:
+To use a [built-in deduper](./first-steps.md#built-in-dedupers), a deduper is *applied* with the `apply` function:
 
 ```python
 import liken as lk
@@ -18,7 +18,7 @@ df = (
 
 ## Single Dedupers
 
-If you only need a single deduper, use it straight in `.apply` as seen above. The column or columns to dedupe on are passed in `.drop_duplicates`.
+If you only need a single deduper, use it straight in an `apply` function as seen above. The column or columns to dedupe on are passed in `drop_duplicates`.
 
 ### Coming from Pandas?
 
@@ -56,7 +56,7 @@ Pandas affordances are limited to [fuzzy](../reference/liken.md#liken.fuzzy), [t
 
 **Liken** supports deduplicating with a collection of dedupers. This allows deduplicating multiple columns with different dedupers, or defining several dedupers to be run sequentially on a column.
 
-The **Liken** solves this with dictionaries. `.drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary. 
+The **Liken** solves this with dictionaries. `drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary. 
 
 ```python
 import liken as lk

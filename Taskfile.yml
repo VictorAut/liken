@@ -34,7 +34,12 @@ tasks:
   test-integration:
     desc: Runs tests
     cmds:
-      - uv run --active --all-extras pytest tests/integration/
+      - uv run --active --all-extras pytest tests/integration/ --backend pandas
+      - uv run --active --all-extras pytest tests/integration/ --backend polars
+      - uv run --active --all-extras pytest tests/integration/ --backend modin
+      - uv run --active --all-extras pytest tests/integration/ --backend dask
+      - uv run --active --all-extras pytest tests/integration/ --backend ray
+      - uv run --active --all-extras pytest tests/integration/ --backend pyspark
 
   test:
     desc: Runs tests

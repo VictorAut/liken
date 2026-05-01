@@ -13,7 +13,7 @@ Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will 
 
 ## Instantiating
 
-A DataFrame must be passed to the top-level `dedupe` function. **Liken** currently supports three backends: Pandas, Polars and PySpark.
+A DataFrame must be passed to the top-level `dedupe` function.
 
 
 === "Pandas"
@@ -163,4 +163,4 @@ When things aren't *exactly* the same, you can still deduplicate data. **Liken**
 
 *Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
 
-To *use* dedupers, you have to *apply* them.
+To *use* dedupers, you have to *apply* them, which is covered in the next tutorial.

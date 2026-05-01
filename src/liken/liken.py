@@ -256,6 +256,12 @@ class Dedupe:
         Args:
             n: the number of records per canonical id, defaulted at 2
 
+        Warning:
+            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            function forces the collection of data to the driver node.
+            Additionally, this function only supports usage with PySpark `v4`
+            and up.
+
         Returns:
             A dictionary of canonical ids, where values are counts.
 
@@ -297,9 +303,10 @@ class Dedupe:
             as `min` and `max` for numerical data.
 
         Warning:
-            For PySpark dataframes, this function forces the collection of data
-            to the driver node. Additionally, this function only supports usage
-            with PySpark `v4` and up.
+            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            function forces the collection of data to the driver node.
+            Additionally, this function only supports usage with PySpark `v4`
+            and up.
 
         Returns:
             A dataframe of synthesized records.

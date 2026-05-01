@@ -9,7 +9,6 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
-
 PARTITION_1_PARAMS = (1, [1, 2, 3, 4, 5, 5, 7, 1, 5, 10])
 PARTITION_2_PARAMS = (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 PARAMS = [PARTITION_1_PARAMS, PARTITION_2_PARAMS]
@@ -117,7 +116,19 @@ def test_matrix_dask(
 
     df = df.drop(columns="_part")
 
-    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(id="id").collect()
+
+    df = (
+        lk.dedupe(df)
+        .apply(
+            # PASS dict directly, not DEDUPERS
+            {
+                "address": (lk.exact(),),
+                "email": (lk.exact(),),
+            }
+        )
+        .canonicalize(id="id")
+        .collect()
+    )
 
     result = helpers.get_column_as_list(df, CANONICAL_ID)
 

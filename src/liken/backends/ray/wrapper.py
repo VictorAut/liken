@@ -99,8 +99,8 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
     # ARROW INTERFACES:
 
     def _get_col(self, column: str) -> pa.Array:
-        # TODO: in a future Ray version, type check
-        return self._df.to_arrow()[column]  # type: ignore[attr-defined]
+        data = [row[column] for row in self._df.iter_rows()]
+        return pa.array(data)
 
     def _get_cols(self, columns: tuple[str, ...]) -> pa.Table:
         # TODO: in a future Ray version, type check
@@ -134,4 +134,4 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
         def fn(df: pd.DataFrame):
             return df.groupby(CANONICAL_ID, as_index=False).first()
 
-        return self._df.map_batches(fn)
+        return self._df.map_batches(fn, batch_format="pandas")

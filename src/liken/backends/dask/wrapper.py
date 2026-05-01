@@ -122,8 +122,10 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
     # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> dd.DataFrame:
+
         def _first_non_null(series):
             non_null = series.dropna()
             return non_null.iloc[0] if len(non_null) else None
 
-        return self._df.groupby(CANONICAL_ID).agg(_first_non_null).reset_index()
+        df = self._df.compute()
+        return df.groupby(CANONICAL_ID).agg(_first_non_null).reset_index()

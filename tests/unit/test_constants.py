@@ -14,7 +14,7 @@ from liken.core.dispatcher import wrap
     ],
 )
 def test_canonical_id_env_var(env_var_value, dataframe, monkeypatch):
-    df, _ = dataframe
+    df = dataframe
 
     monkeypatch.delenv("CANONICAL_ID", raising=False)
     if env_var_value is not None:

@@ -31,9 +31,7 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("schema, data", PARAMS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_matrix_preprocessors(
-    backend,
+def test_matrix_synthesize(
     schema,
     data,
     spark_session,
