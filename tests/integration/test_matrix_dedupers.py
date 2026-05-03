@@ -9,6 +9,7 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
+
 # CONSTANTS:
 
 
@@ -32,34 +33,19 @@ NUMERICAL_COMPOUND_COL = (
 
 
 def simple_api(df, spark_session, columns, deduper, deduper_kwarg):
-    return (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(deduper(**deduper_kwarg))
-        .canonicalize(columns)
-        .collect()
-    )
+    return lk.dedupe(df, spark_session=spark_session).apply(deduper(**deduper_kwarg)).canonicalize(columns).collect()
 
 
 def dict_api(df, spark_session, columns, deduper, deduper_kwarg):
 
     return (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply({columns: [deduper(**deduper_kwarg)]})
-        .canonicalize()
-        .collect()
+        lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**deduper_kwarg)]}).canonicalize().collect()
     )
 
 
 def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg):
-    pipeline = lk.pipeline().step(
-        getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg)
-    )
-    return (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(pipeline)
-        .canonicalize()
-        .collect()
-    )
+    pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
+    return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
 
 
 API_BUILDERS = [

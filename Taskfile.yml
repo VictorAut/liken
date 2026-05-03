@@ -1,14 +1,30 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: "3"
+
+vars:
+  ALL_PATHS: src/ tests/ tests_extras/
+  UV: uv run --active --all-extras
+  BACKENDS:
+    - pandas
+    - polars
+    - modin
+    - dask
+    - ray
+    - pyspark
 
 tasks:
+  install:
+    desc: Install project
+    cmds:
+      - uv sync --locked --all-extras --all-groups
+  
   format:
     desc: Format code
     cmds:
       - uv run ruff check --select I --fix # sorts imports
-      - uv run ruff format src/ tests/ tests_extras/ 
-      - uv run ruff check src/ tests/ tests_extras/ --fix
+      - uv run ruff format {{.ALL_PATHS}}
+      - uv run ruff check {{.ALL_PATHS}} --fix
 
   lint:
     desc: lint and type-check
@@ -18,39 +34,42 @@ tasks:
       - uv run ruff check src/
       - uv run mypy src/
 
-  # TODO remove this and alter CI job once type checks are running
-  lint-slim:
-    desc: lint and type-check
-    cmds:
-      - uv run ruff check --select I src/
-      - uv run ruff format --check src/
-      - uv run ruff check src/
-
   test-unit:
-    desc: Runs tests
+    desc: Runs unit tests
     cmds:
       - uv run --active --all-extras pytest tests/unit/
 
   test-integration:
-    desc: Runs tests
+    desc: Runs integration tests
     cmds:
-      - uv run --active --all-extras pytest tests/integration/ --backend pandas
-      - uv run --active --all-extras pytest tests/integration/ --backend polars
-      - uv run --active --all-extras pytest tests/integration/ --backend modin
-      - uv run --active --all-extras pytest tests/integration/ --backend dask
-      - uv run --active --all-extras pytest tests/integration/ --backend ray
-      - uv run --active --all-extras pytest tests/integration/ --backend pyspark
+      - for: { var: BACKENDS, as: BACKEND }
+        cmd: uv run --active --all-extras pytest tests/integration/ --backend
+          {{.BACKEND}}
+  
+  test-extras:
+    desc: Runs tests for optional imports
+    vars:
+      EXTRAS: '{{.EXTRAS | default "minimal"}}'
+      PY_VERSION: '{{.PY_VERSION | default "3.14"}}'
+    cmds:
+      - uv tool install tox --with tox-uv
+      - tox run -e {{.EXTRAS}}-{{.PY_VERSION}}
 
   test:
-    desc: Runs tests
+    desc: Runs unit and integration tests
     cmds:
       - task test-unit && task test-integration
-    
+
   coverage:
-    desc: Runs tests with coverage
+    desc: Runs integration tests
+    vars:
+      COV_FORMAT: '{{.COV_FORMAT | default "html"}}'
     cmds:
-      - uv run --active --all-extras coverage run -m pytest tests/ -v
-      - uv run --active --all-extras coverage html --omit "tests/**/*"
+      - uv run --active --all-extras pytest --cov=liken tests/unit/
+      - for: { var: BACKENDS, as: BACKEND }
+        cmd: uv run --active --all-extras pytest --cov=liken --cov-append
+          tests/integration/ --backend {{.BACKEND}}
+      - uv run --active coverage {{.COV_FORMAT}} --omit "tests/**/*"
 
   docs:
     desc: locally build and serve MkDocs

@@ -10,6 +10,7 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
+
 # CONSTANTS:
 
 

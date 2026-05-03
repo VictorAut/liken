@@ -12,6 +12,7 @@ import liken as lk
 from liken.constants import CANONICAL_ID
 from liken.custom import register
 
+
 # CONSTANTS:
 
 
@@ -54,15 +55,8 @@ def dict_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
 
 
 def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
-    pipeline = lk.pipeline().step(
-        getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg)
-    )
-    return (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(pipeline)
-        .canonicalize(**drop_kwarg)
-        .collect()
-    )
+    pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
+    return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize(**drop_kwarg).collect()
 
 
 API_BUILDERS = [
@@ -137,9 +131,7 @@ PARAMS = [
 # fmt: on
 
 
-@pytest.mark.parametrize(
-    "deduper, keep, columns, input_params, expected_canonical_id", PARAMS
-)
+@pytest.mark.parametrize("deduper, keep, columns, input_params, expected_canonical_id", PARAMS)
 @pytest.mark.parametrize("api_builder", API_BUILDERS)
 def test_matrix_keep(
     deduper,

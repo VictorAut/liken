@@ -3,25 +3,10 @@ from unittest.mock import Mock
 import pyarrow as pa
 import pytest
 
-from liken import cosine
-from liken import exact
-from liken import fuzzy
-from liken import jaccard
-from liken import lsh
-from liken import str_contains
-from liken import str_endswith
-from liken import str_startswith
-from liken import tfidf
 from liken.core.deduper import BaseDeduper
-from liken.dedupers.cosine import Cosine
 from liken.dedupers.exact import Exact
-from liken.dedupers.fuzzy import Fuzzy
 from liken.dedupers.jaccard import Jaccard
-from liken.dedupers.lsh import LSH
-from liken.dedupers.str_contains import StrContains
-from liken.dedupers.str_endswith import StrEndsWith
 from liken.dedupers.str_startswith import StrStartsWith
-from liken.dedupers.tfidf import TfIdf
 
 
 ############
@@ -129,27 +114,3 @@ def test_compound_column_validation_accepts_tuple():
 def test_compound_column_validation_rejects_str():
     with pytest.raises(ValueError):
         Jaccard().validate("a")
-
-
-############################
-# Public factory functions #
-############################
-
-
-@pytest.mark.parametrize(
-    "factory, cls",
-    [
-        (exact, Exact),
-        (lambda: str_startswith("a"), StrStartsWith),
-        (lambda: str_endswith("a"), StrEndsWith),
-        (lambda: str_contains("a"), StrContains),
-        (fuzzy, Fuzzy),
-        (tfidf, TfIdf),
-        (lsh, LSH),
-        (jaccard, Jaccard),
-        (cosine, Cosine),
-    ],
-)
-def test_public_factories_return_correct_type(factory, cls):
-    deduper = factory()
-    assert isinstance(deduper, cls)

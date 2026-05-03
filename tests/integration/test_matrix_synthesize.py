@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import liken as lk
@@ -31,13 +29,7 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("schema, data", PARAMS)
-def test_matrix_synthesize(
-    schema,
-    data,
-    spark_session,
-    helpers,
-    request
-):
+def test_matrix_synthesize(schema, data, spark_session, helpers, request):
 
     backend = request.config.getoption("--backend")
 

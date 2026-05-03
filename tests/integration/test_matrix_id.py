@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import warnings
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import liken as lk
@@ -152,6 +150,7 @@ IDS = [
     "overwrite-numeric-to-string",
     "overwrite-string-to-string",
 ]
+
 
 # TODO!
 @pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)

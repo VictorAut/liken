@@ -21,14 +21,15 @@ COLS = ["id", "text", "num_1", "num_2", "num_3", "cat_1", "cat_2"]
 
 
 PARAMS = [
-    ("text", "fuzzy", {"threshold":0.6}),
-    ("text", "tfidf", {"threshold":0.6, "topn":2}),
-    ("text", "lsh", {"threshold":0.6, "ngram":2}),
-    (("cat_1", "cat_2"), "jaccard", {"threshold":0.6}),
-    (("num_1", "num_2", "num_3"), "cosine", {"threshold":0.6}),
+    ("text", "fuzzy", {"threshold": 0.6}),
+    ("text", "tfidf", {"threshold": 0.6, "topn": 2}),
+    ("text", "lsh", {"threshold": 0.6, "ngram": 2}),
+    (("cat_1", "cat_2"), "jaccard", {"threshold": 0.6}),
+    (("num_1", "num_2", "num_3"), "cosine", {"threshold": 0.6}),
 ]
 
 IDS = [i[1] for i in PARAMS]
+
 
 @pytest.mark.parametrize(
     "columns, deduper, kwargs",

@@ -9,6 +9,7 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
+
 PARTITION_1_PARAMS = (1, [1, 2, 3, 4, 5, 5, 7, 1, 5, 10])
 PARTITION_2_PARAMS = (2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 PARAMS = [PARTITION_1_PARAMS, PARTITION_2_PARAMS]
@@ -43,12 +44,7 @@ def test_matrix_spark(
 
     df = df.repartition(num_partitions, "blocking_key")
 
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(DEDUPERS)
-        .canonicalize(id="id")
-        .collect()
-    )
+    df = lk.dedupe(df, spark_session=spark_session).apply(DEDUPERS).canonicalize(id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
@@ -115,7 +111,6 @@ def test_matrix_dask(
     df = df.shuffle("_part", npartitions=num_partitions)
 
     df = df.drop(columns="_part")
-
 
     df = (
         lk.dedupe(df)

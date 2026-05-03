@@ -7,6 +7,7 @@ import pytest
 import liken as lk
 from liken.constants import CANONICAL_ID
 
+
 # fmt: off
 
 PARAMS = [
@@ -34,9 +35,7 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("deduper, expected_canonical_id", PARAMS)
-def test_matrix_negates(
-    deduper, expected_canonical_id, dataframe, helpers, spark_session
-):
+def test_matrix_negates(deduper, expected_canonical_id, dataframe, helpers, spark_session):
 
     df = (
         lk.dedupe(

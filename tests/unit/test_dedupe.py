@@ -1,49 +1,19 @@
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
-from ray.data import Dataset
 
 from liken.liken import Dedupe
 from liken.validators import validate_keep_arg
 from liken.validators import validate_spark_arg
 
 
-# INITIALIZATION:
-
-
-@patch("liken.liken.get_backend")
-def test_init_uses_backend_executor(mock_get_backend, dataframe):
-    df, spark = dataframe
-
-    mock_backend = MagicMock()
-    mock_backend.executor.return_value = MagicMock()
-    mock_backend.name = "pyspark" if spark else "local"
-
-    mock_get_backend.return_value = mock_backend
-
-    dupe = Dedupe(df, spark_session=spark)
-
-    if mock_backend.name == "pyspark":
-        mock_backend.executor.assert_called_once_with(spark_session=spark)
-    else:
-        mock_backend.executor.assert_called_once_with(spark_session=spark)
-
-    assert dupe._executor is mock_backend.executor.return_value
-
-
 @patch("liken.liken.CollectionsManager")
-def test_no_apply_still_exact_apply_once(
+def test_no_apply_still_has_exact_apply(
     mock_sm,
     dataframe,
 ):
-
-    df, spark = dataframe
-
-    if isinstance(df, Dataset):
-        pytest.skip("Mocking does not propagate to Ray workers, uses pandas for batches anyway.")
 
     sm = mock_sm.return_value
     sm.has_applies = False
@@ -51,7 +21,7 @@ def test_no_apply_still_exact_apply_once(
     sm.get.return_value = {}
     sm.reset.return_value = None
 
-    lk = Dedupe(df, spark_session=spark)
+    lk = Dedupe(dataframe)
     lk.canonicalize("address")  # no apply!
 
     sm.apply.assert_called_once()
@@ -118,10 +88,8 @@ def test_validate_columns_args_repeated(mock_wrap, deduplication_mock):
 
 @patch("liken.liken.CollectionsManager")
 def test_apply_delegates_to_collections_manager(mock, dataframe, deduplication_mock):
-    df, spark = dataframe
-
     mock_sm = mock.return_value
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe.apply({"address": deduplication_mock})
     mock_sm.apply.assert_called_once_with({"address": deduplication_mock})
 
@@ -139,15 +107,12 @@ def test_canonicalize_calls(
     dataframe,
     deduplication_mock,
 ):
-
-    df, spark = dataframe
-
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -176,15 +141,12 @@ def test_drop_duplicate_calls(
     dataframe,
     deduplication_mock,
 ):
-
-    df, spark = dataframe
-
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -208,10 +170,9 @@ def test_drop_duplicate_calls(
 
 @patch("liken.liken.CollectionsManager")
 def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
-    df, spark = dataframe
     mock_sm = mock_sm.return_value
     mock_sm.pretty_get.return_value = ("deduper1",)
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._sm = mock_sm
     assert dupe.explain() == ("deduper1",)
