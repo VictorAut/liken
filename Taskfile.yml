@@ -18,7 +18,7 @@ tasks:
     desc: Install project
     cmds:
       - uv sync --locked --all-extras --all-groups
-  
+
   format:
     desc: Format code
     cmds:
@@ -43,14 +43,14 @@ tasks:
     desc: Runs integration tests
     cmds:
       - for: { var: BACKENDS, as: BACKEND }
-        cmd: uv run --active --all-extras pytest tests/integration/ --backend -v
-          {{.BACKEND}}
-  
+        cmd: uv run --active --all-extras pytest tests/integration/ --backend
+          {{.BACKEND}} -v
+
   test-extras:
     desc: Runs tests for optional imports
     vars:
-      EXTRAS: '{{.EXTRAS | default "minimal"}}'
-      PY_VERSION: '{{.PY_VERSION | default "3.14"}}'
+      EXTRAS: "{{.EXTRAS | default \"minimal\"}}"
+      PY_VERSION: "{{.PY_VERSION | default \"3.14\"}}"
     cmds:
       - uv tool install tox --with tox-uv
       - tox run -e {{.EXTRAS}}-{{.PY_VERSION}}
@@ -63,7 +63,7 @@ tasks:
   coverage:
     desc: Runs integration tests
     vars:
-      COV_FORMAT: '{{.COV_FORMAT | default "html"}}'
+      COV_FORMAT: "{{.COV_FORMAT | default \"html\"}}"
     cmds:
       - uv run --active --all-extras pytest --cov=liken tests/unit/
       - for: { var: BACKENDS, as: BACKEND }

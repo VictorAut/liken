@@ -161,7 +161,7 @@ IDS = [
     ids=IDS,
 )
 @pytest.mark.parametrize("api_builder", API_BUILDERS)
-def test_matrix_dedupers(
+def test_matrix_drop(
     deduper,
     columns,
     drop_kwarg,

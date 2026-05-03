@@ -7,6 +7,7 @@ import pandas as pd
 import polars as pl
 import pytest
 import ray
+from dask.distributed import Client
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -84,6 +85,24 @@ def ray_session(request):
     )
     yield
     ray.shutdown()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def dask_client(request):
+    backend = request.config.getoption("--backend")
+
+    if backend != "dask":
+        yield
+        return
+
+    client = Client(
+        n_workers=2,
+        threads_per_worker=1,
+        processes=True,
+    )
+
+    yield client
+    client.close()
 
 
 def pytest_addoption(parser):
