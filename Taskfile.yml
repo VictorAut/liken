@@ -37,13 +37,13 @@ tasks:
   test-unit:
     desc: Runs unit tests
     cmds:
-      - uv run --active --all-extras pytest tests/unit/
+      - uv run --active --all-extras pytest tests/unit/ -v
 
   test-integration:
     desc: Runs integration tests
     cmds:
       - for: { var: BACKENDS, as: BACKEND }
-        cmd: uv run --active --all-extras pytest tests/integration/ --backend
+        cmd: uv run --active --all-extras pytest tests/integration/ --backend -v
           {{.BACKEND}}
   
   test-extras:
@@ -68,7 +68,7 @@ tasks:
       - uv run --active --all-extras pytest --cov=liken tests/unit/
       - for: { var: BACKENDS, as: BACKEND }
         cmd: uv run --active --all-extras pytest --cov=liken --cov-append
-          tests/integration/ --backend {{.BACKEND}}
+          tests/integration/ --backend {{.BACKEND}} -v
       - uv run --active coverage {{.COV_FORMAT}} --omit "tests/**/*"
 
   docs:
