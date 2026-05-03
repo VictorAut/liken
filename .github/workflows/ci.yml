@@ -15,25 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: python | setup
-        uses: actions/setup-python@v6
+      - uses: ./.github/actions/setup
         with:
-          python-version-file: "pyproject.toml"
-
-      - name: uv | install
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "0.10.4"
-
-      - name: task | install
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.48.0
-
-      - name: liken | project install
-        run: |
-          task install
+          python-version: '3.14'
 
       - name: lint
         run: |
@@ -49,25 +33,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: python | setup  ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+      - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: uv | install
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "0.10.4"
-
-      - name: task | install
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.48.0
-
-      - name: liken | project install
-        run: |
-          task install
 
       - name: tests | run
         run: |
@@ -115,21 +83,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: python | setup  ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+      - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: uv | install
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "0.10.4"
-
-      - name: task | install
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.48.0
 
       - name: test | optional imports
         run: |
