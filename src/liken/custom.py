@@ -24,7 +24,7 @@ PairGenerator: TypeAlias = Callable[[Iterable], Iterable[SimilarPairIndices]]
 
 
 @final
-class Custom(ThresholdDeduper):
+class _Custom(ThresholdDeduper):
     """
     Inherits from Threshold Dedupers for a generalised approach.
 
@@ -156,7 +156,7 @@ def register(f: PairGenerator) -> Callable:
     def wrapper(*args, **kwargs):
         if args:
             raise TypeError(f"{f.__name__} must be called with keyword arguments only")
-        return Custom(f, **kwargs)
+        return _Custom(f, **kwargs)
 
     # Add to registry
     dedupers_registry.register(f"{f.__name__}", func=wrapper)

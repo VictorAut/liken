@@ -13,7 +13,7 @@ from typing_extensions import override
 # BASE:
 
 
-class Preprocessor:
+class _Preprocessor:
     """Base class for all preprocessors."""
 
     def from_array(self, array: pa.Array) -> None:
@@ -27,7 +27,7 @@ class Preprocessor:
 # STRING PROCESSORS:
 
 
-class Strip(Preprocessor):
+class _Strip(_Preprocessor):
     """Remove leading/trailing whitespace"""
 
     @override
@@ -35,7 +35,7 @@ class Strip(Preprocessor):
         return pc.utf8_trim_whitespace(self._array)
 
 
-class Lower(Preprocessor):
+class _Lower(_Preprocessor):
     """Convert strings to lowercase"""
 
     @override
@@ -43,7 +43,7 @@ class Lower(Preprocessor):
         return pc.utf8_lower(self._array)
 
 
-class Alnum(Preprocessor):
+class _Alnum(_Preprocessor):
     """Remove non-alphanumeric characters, including spaces"""
 
     @override
@@ -51,7 +51,7 @@ class Alnum(Preprocessor):
         return pc.replace_substring_regex(self._array, "[^0-9A-Za-z]+", "")
 
 
-class RemovePunctuation(Preprocessor):
+class _RemovePunctuation(_Preprocessor):
     """Remove punctuation but preserve spaces"""
 
     @override
@@ -59,7 +59,7 @@ class RemovePunctuation(Preprocessor):
         return pc.replace_substring_regex(self._array, r"[^\w\s]+", "")
 
 
-class NormalizeUnicode(Preprocessor):
+class _NormalizeUnicode(_Preprocessor):
     """Normalize Unicode strings"""
 
     def __init__(
@@ -73,7 +73,7 @@ class NormalizeUnicode(Preprocessor):
         return pc.utf8_normalize(self._array, form=self._form)
 
 
-class AsciiFold(Preprocessor):
+class _AsciiFold(_Preprocessor):
     """Converts alphabetic, numeric, and symbolic characters that are not in
     the Basic Latin Unicode block (first 127 ASCII characters) to their ASCII
     equivalent, if one exists. For example, the filter changes à to a.
@@ -92,7 +92,7 @@ class AsciiFold(Preprocessor):
 # STOPWORDS PROCESSOR:
 
 
-class RemoveStopwords(Preprocessor):
+class _RemoveStopwords(_Preprocessor):
     """Remove stopwords"""
 
     def __init__(self, words: list[str] | None = None, language: str = "english"):
@@ -116,7 +116,7 @@ class RemoveStopwords(Preprocessor):
 # NAME PROCESSORS:
 
 
-class NormalizeName(Preprocessor):
+class _NormalizeName(_Preprocessor):
     """Normalize personal names"""
 
     @override
@@ -132,7 +132,7 @@ class NormalizeName(Preprocessor):
         return pa.array([_clean_name(x) if x is not None else None for x in pylist])
 
 
-class NormalizeCompany(Preprocessor):
+class _NormalizeCompany(_Preprocessor):
     """Normalize company names"""
 
     @override
@@ -146,69 +146,69 @@ class NormalizeCompany(Preprocessor):
 # PUBLIC:
 
 
-def strip() -> Strip:
+def strip() -> _Strip:
     """Remove leading/trailing whitespace."""
-    return Strip()
+    return _Strip()
 
 
-def lower() -> Lower:
+def lower() -> _Lower:
     """Convert strings to lowercase."""
-    return Lower()
+    return _Lower()
 
 
-def alnum() -> Alnum:
+def alnum() -> _Alnum:
     """Remove non-alphanumeric characters, including spaces."""
-    return Alnum()
+    return _Alnum()
 
 
-def remove_punctuation() -> RemovePunctuation:
+def remove_punctuation() -> _RemovePunctuation:
     """Remove punctuation but preserve spaces."""
-    return RemovePunctuation()
+    return _RemovePunctuation()
 
 
-def normalize_unicode(form: Literal["NFC", "NFKC", "NFD", "NFKD"] = "NFKD") -> NormalizeUnicode:
+def normalize_unicode(form: Literal["NFC", "NFKC", "NFD", "NFKD"] = "NFKD") -> _NormalizeUnicode:
     """Normalize Unicode strings.
 
     Args:
         form: Unicode normalization form. Accepted values are "NFC", "NFKC",
             "NFD", "NFKD".
     """
-    return NormalizeUnicode(form=form)
+    return _NormalizeUnicode(form=form)
 
 
-def ascii_fold() -> AsciiFold:
+def ascii_fold() -> _AsciiFold:
     """Converts alphabetic, numeric, and symbolic characters that are not in
     the Basic Latin Unicode block (first 127 ASCII characters) to their ASCII
     equivalent, if one exists. For example, the filter changes à to a.
     """
-    return AsciiFold()
+    return _AsciiFold()
 
 
 def remove_stopwords(
     words: list[str] | None = None,
     language: str = "english",
-) -> RemoveStopwords:
+) -> _RemoveStopwords:
     """Remove stopwords.
 
     Args:
         words: A list of words to ignore. If defined, `language` argument is
             ignored.
         language: The language to use for the stop words dictionary"""
-    return RemoveStopwords(words=words, language=language)
+    return _RemoveStopwords(words=words, language=language)
 
 
-def normalize_names() -> NormalizeName:
+def normalize_names() -> _NormalizeName:
     """Normalize personal names.
 
     Preserves only first name, middle name and last name. Titles and nicknames
     are stripped. Commas are cleaned.
     """
-    return NormalizeName()
+    return _NormalizeName()
 
 
-def normalize_company() -> NormalizeCompany:
+def normalize_company() -> _NormalizeCompany:
     """Normalize company names.
 
     Strips common company name nomenclature e.g. "Ltd.", or "LLC".
     """
-    return NormalizeCompany()
+    return _NormalizeCompany()

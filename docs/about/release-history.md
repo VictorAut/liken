@@ -2,6 +2,19 @@
 title: Release History
 ---
 
+## v0.8.0 (2026-05-03)
+
+**Features**
+
+
+- Added support for Modin dataframes
+- Added support for Dask dataframes
+- Added support for Ray datasets
+- Pandas and Polars as default installation, other backends as optional
+- Pandas "affordances" added as Pandas API extension
+- Documentation on features, installation and first steps updated
+
+
 ## v0.7.4 (2026-04-14)
 
 

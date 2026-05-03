@@ -1,4 +1,4 @@
-"""TODO"""
+"""TODO: add detail"""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def col(columns: Columns, /, *, preprocessors: InputPreprocessor = []) -> Col:
     return Col(columns, preprocessors=preprocessors)
 
 
-# ON:
+# COL:
 
 
 @final
