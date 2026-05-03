@@ -33,7 +33,7 @@ description = "Run full test suite for all extras"
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", "."]] # i.e. "minimal"
-commands = [["pytest", "tests_extras/test_minimal.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_minimal.py", "-vv", "--confcutdir=tests/extras"]]
 
 # ALL EXTRAS
 
@@ -42,7 +42,7 @@ description = "Run full test suite for all extras"
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[all]"]]
-commands = [["pytest", "tests_extras/test_all_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_all_extra.py", "-vv", "--confcutdir=tests/extras"]]
 
 # EXTRAS
 
@@ -50,25 +50,25 @@ commands = [["pytest", "tests_extras/test_all_extra.py", "-vv"]]
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[modin]"]]
-commands = [["pytest", "tests_extras/test_modin_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_modin_extra.py", "-vv", "--confcutdir=tests/extras"]]
 
 
 [env_base.dask]
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[dask]"]]
-commands = [["pytest", "tests_extras/test_dask_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_dask_extra.py", "-vv", "--confcutdir=tests/extras"]]
 
 
 [env_base.ray]
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[ray]"]]
-commands = [["pytest", "tests_extras/test_ray_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_ray_extra.py", "-vv", "--confcutdir=tests/extras"]]
 
 
 [env_base.pyspark]
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[pyspark]"]]
-commands = [["pytest", "tests_extras/test_pyspark_extra.py", "-vv"]]
+commands = [["pytest", "tests_extras/test_pyspark_extra.py", "-vv", "--confcutdir=tests/extras"]]

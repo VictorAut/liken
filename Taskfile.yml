@@ -3,7 +3,7 @@
 version: "3"
 
 vars:
-  ALL_PATHS: src/ tests/ tests_extras/
+  ALL_PATHS: src/ tests/
   UV: uv run --active --all-extras
   BACKENDS:
     - pandas
