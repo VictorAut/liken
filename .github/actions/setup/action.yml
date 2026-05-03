@@ -26,3 +26,4 @@ runs:
     - name: liken | install
       run: |
         task install
+      shell: bash
