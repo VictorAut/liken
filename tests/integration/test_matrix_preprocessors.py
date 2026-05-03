@@ -92,13 +92,10 @@ def test_matrix_preprocessors(
     pipeline_builder,
     spark_session,
     helpers,
-    request,
 ):
-    backend = request.config.getoption("--backend")
-
     pipeline = pipeline_builder(preprocessors)
 
-    df = helpers.create_df(backend, spark_session, data, SCHEMA)
+    df = helpers.create_df(data, SCHEMA)
     df = lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

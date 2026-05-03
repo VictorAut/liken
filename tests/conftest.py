@@ -8,7 +8,6 @@ import polars as pl
 import pytest
 import ray
 from dask.distributed import Client
-from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.functions import monotonically_increasing_id
@@ -16,7 +15,6 @@ from pyspark.sql.functions import row_number
 from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
-from ray.data import Dataset as RayDataset
 
 from liken.datasets import fake_10
 from liken.liken import BaseDeduper
@@ -151,40 +149,43 @@ def mock_spark_session():
 
 
 class Helpers:
-    @staticmethod
-    def get_column_as_list(df, col: str):
-        if isinstance(df, pd.DataFrame):
+    def __init__(self, request_object, spark_session=None):
+        self.backend = request_object.config.getoption("--backend")
+        self.spark_session = spark_session
+
+    def get_column_as_list(self, df, col: str):
+
+        if self.backend == "pandas":
             return [None if v is pd.NA else v for v in list(df[col])]
-        if isinstance(df, pl.DataFrame):
+
+        if self.backend == "polars":
             return list(df[col])
-        if isinstance(df, mpd.DataFrame):
+
+        if self.backend == "modin":
             return [None if v is pd.NA else v for v in list(df[col])]
-        if isinstance(df, RayDataset):
+
+        if self.backend == "ray":
             return [row[col] for row in df.take_all()]
-        if isinstance(df, dd.DataFrame):
+
+        if self.backend == "dask":
             df = df.compute()
             return df[col].tolist()
-        if isinstance(df, SparkDataFrame):
+
+        if self.backend == "pyspark":
             return [value[col] for value in df.select(col).collect()]
-        if isinstance(df, list):  # i.e. list[Row]
-            return [value[col] for value in df]
 
-    @staticmethod
-    def add_column(df, column: list, label: str, dtype=None):
+    def add_column(self, df, column: list, label: str, dtype=None):
 
-        if isinstance(df, pd.DataFrame):
-            df = df.assign(**{label: column})
-            return df
+        if self.backend == "pandas":
+            return df.assign(**{label: column})
 
-        if isinstance(df, pl.DataFrame):
-            df = df.with_columns(pl.Series(name=label, values=column))
-            return df
+        if self.backend == "polars":
+            return df.with_columns(pl.Series(name=label, values=column))
 
-        if isinstance(df, mpd.DataFrame):
-            df = df.assign(**{label: column})
-            return df
+        if self.backend == "modin":
+            return df.assign(**{label: column})
 
-        if isinstance(df, dd.DataFrame):
+        if self.backend == "dask":
 
             def add_col(partition, partition_info=None):
                 i = partition_info["number"]
@@ -200,7 +201,7 @@ class Helpers:
 
             return df.map_partitions(add_col, meta=meta)
 
-        if isinstance(df, RayDataset):
+        if self.backend == "ray":
 
             def add_col(batch):
                 batch = batch.copy()
@@ -209,7 +210,7 @@ class Helpers:
 
             return df.map_batches(add_col, batch_format="pandas")
 
-        if isinstance(df, SparkDataFrame):
+        if self.backend == "pyspark":
             if dtype is int:
                 _type = LongType()
             if dtype is str:
@@ -221,35 +222,32 @@ class Helpers:
             )
             df = df.withColumn(label, labels_udf("num_id"))
             return df.drop("num_id")
-        if isinstance(df, list):  # i.e. list[Row]
-            pass
 
-    @staticmethod
-    def create_df(backend, spark_session, data, schema):
-        if backend == "pandas":
+    def create_df(self, data, schema):
+        if self.backend == "pandas":
             df = pd.DataFrame(columns=schema, data=data)
 
-        if backend == "polars":
+        if self.backend == "polars":
             df = pl.DataFrame(schema=schema, data=data, orient="row")
 
-        if backend == "modin":
+        if self.backend == "modin":
             df = mpd.DataFrame(columns=schema, data=data)
 
-        if backend == "dask":
+        if self.backend == "dask":
             df = pd.DataFrame(columns=schema, data=data)
             df = dd.from_pandas(df)
 
-        if backend == "ray":
+        if self.backend == "ray":
             df = pd.DataFrame(columns=schema, data=data)
 
             df = ray.data.from_pandas(df)
 
-        if backend == "pyspark":
-            df = spark_session.createDataFrame(schema=schema, data=data)
+        if self.backend == "pyspark":
+            df = self.spark_session.createDataFrame(schema=schema, data=data)
 
         return df
 
 
 @pytest.fixture(scope="session", autouse=True)
-def helpers():
-    return Helpers
+def helpers(request, spark_session):
+    return Helpers(request, spark_session)

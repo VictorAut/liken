@@ -103,7 +103,7 @@ uv pip install liken
 
 ### Extras 
 
-**Liken** supports `pandas` and `polars` by default. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
+**Liken** supports `pandas` and `polars` in the default installation. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
 
 === "pip"
 
@@ -127,14 +127,6 @@ uv pip install liken
 
 
 
-
-## Pandas Affordances
-
-**Liken's** focus is on composable, complex, deduplication pipelines that scale to distributed datasets. But, extra-easy integration is provided for Pandas DataFrames. 
-
-If you are a pandas user looking for intuitive near-deduplication Pandas API extension and little more, head to the [Coming from Pandas?](tutorials/applying-dedupers.md#coming-from-pandas) section!
-
-
 ## Use `liken` In Your Code
 
 ```python
@@ -148,7 +140,13 @@ df = (
     .drop_duplicates("name")
 )
 ```
+Jump to the [tutorial](tutorials/first-steps.md) to dive deeper.
 
+### Pandas Affordances
+
+**Liken's** focus is on composable, complex, deduplication pipelines that scale to distributed datasets. But, extra-easy integration is provided for Pandas DataFrames. 
+
+If you are a pandas user looking for intuitive near-deduplication Pandas API extension and little more, head to the [Coming from Pandas?](tutorials/applying-dedupers.md#coming-from-pandas) section!
 
 ## License
 

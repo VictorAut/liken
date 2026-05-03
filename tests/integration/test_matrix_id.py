@@ -154,12 +154,16 @@ IDS = [
 
 # TODO!
 @pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark_session, helpers, request):
+def test_matrix_id(
+    id,
+    schema,
+    data,
+    expected_canonical_id,
+    spark_session,
+    helpers,
+):
 
-    backend = request.config.getoption("--backend")
-
-    df = helpers.create_df(backend, spark_session, data, schema)
+    df = helpers.create_df(data, schema)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
