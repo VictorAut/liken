@@ -13,7 +13,7 @@ In this chapter we explore the configuring needed to canonicalize a dataset iter
 
 ## Canonical IDs
 
-A new canonical ID everytime we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally an **Liken** `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md#usage) for a recap.
+A new canonical ID everytime we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally an **Liken** `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
 
 ## The Problem
 

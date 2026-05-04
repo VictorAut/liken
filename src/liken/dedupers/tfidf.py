@@ -1,4 +1,4 @@
-"""TODO"""
+"""tfidf deduper"""
 
 from collections.abc import Iterator
 from typing import Any

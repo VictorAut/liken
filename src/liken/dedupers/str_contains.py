@@ -1,4 +1,4 @@
-"""TODO"""
+"""str contains predicate deduper"""
 
 import re
 from typing import ClassVar

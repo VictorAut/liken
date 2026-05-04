@@ -1,4 +1,4 @@
-"""TODO"""
+"""str endswith predicate deduper"""
 
 from typing import ClassVar
 from typing import final

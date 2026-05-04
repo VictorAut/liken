@@ -2,7 +2,7 @@
 title: Release History
 ---
 
-## v0.8.0 (2026-05-03)
+## v0.8.0 (2026-05-05)
 
 **Features**
 

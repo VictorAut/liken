@@ -1,4 +1,4 @@
-"""TODO"""
+"""cosine deduper"""
 
 from collections.abc import Iterator
 from typing import ClassVar

@@ -1,4 +1,4 @@
-"""TODO"""
+"""fuzzy deduper"""
 
 from collections.abc import Iterator
 from typing import Callable
