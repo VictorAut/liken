@@ -18,11 +18,13 @@ df = (
 
 ## Single Dedupers
 
-If you only need a single deduper, use it straight in an `apply` function as seen above. The column or columns to dedupe on are passed in `drop_duplicates`.
+If you only need a single deduper, use it straight in an `apply` function as seen above, i.e. `apply(lk.fuzzy())`, or any other deduper. The column or columns to dedupe on are passed in `drop_duplicates`.
+
+Usage of single dedupers is limited — you can only every use a single deduper on a single set of columns.
 
 ### Coming from Pandas?
 
-**Liken** is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
+When it comes it comes to single dedupers, as above, **Liken** is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
 
 === "With Pandas Affordance"
 
@@ -32,8 +34,10 @@ If you only need a single deduper, use it straight in an `apply` function as see
 
     df = pd.read_csv("...")
 
-    df = df.fuzzy.drop_duplicates("address", threshold=0.6) # kwargs here
+    df = df.fuzzy.drop_duplicates("address", threshold=0.6) # (1)!
     ```
+
+    1.  `kwargs` for `fuzzy` are delegated to `drop_duplicates`. This is also true for other dedupers; for example, when using the `tfidf` deduper, the `ngram` kwarg would be passed in `drop_duplicates too i.e. `df.tfidf.drop_duplicates("address", threshold=0.6, ngram=3)`
 
 === "Normal API Use"
 
@@ -45,18 +49,31 @@ If you only need a single deduper, use it straight in an `apply` function as see
 
     df = (
         lk.dedupe(df)
-        .apply(lk.fuzzy(threshold=0.6)) # kwargs here
+        .apply(lk.fuzzy(threshold=0.6)) # (1)!
         .drop_duplicates("address")
     )
     ```
 
+    1.  `kwargs` are applied in the function, as defined by the [API](../reference/liken.md)
+
+
 Pandas affordances are limited to [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine). Also, this special use is limited to single dedupers, and does not support the application of collections of dedupers, as shown next.
 
-## Dictionaries of Dedupers
+??? info "Pandas affordances"
+    **Liken's** Pandas extension is only useable if you actually *import* `liken`!
 
-**Liken** supports deduplicating with a collection of dedupers. This allows deduplicating multiple columns with different dedupers, or defining several dedupers to be run sequentially on a column.
+## Collections of Dedupers
 
-The **Liken** solves this with dictionaries. `drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary. 
+**Liken** supports deduplicating with a collection of dedupers. This allows:
+
+- Deduplicating multiple sets of columns with different dedupers
+- Defining several dedupers to be run sequentially on a set of columns
+
+Collections are supported in two formats. Dictionaries provide quick and easy composability; pipelines provide fully-featured compsability with support for logical rules and built-in preprocessors.
+
+### Dictionaries
+
+When defining a collection as a dictionary, `drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary. 
 
 ```python
 import liken as lk
@@ -76,12 +93,12 @@ df = (
 )
 ```
 
-In the above case, the defined collection reads as "Deduplicate exact emails. Then, similar addresses using Fuzzy and then TF-iDF. Finally, any deduplicate records that have 3 out of 4 of those categories matching".
+In the above example, the defined collection reads as "Deduplicate exact emails. Then, similar addresses using Fuzzy and then TF-iDF. Finally, any deduplicate records that have 3 out of 4 of those categories matching".
 
 ??? info "`keep` arg"
     The `keep` argument accepts the literals "first" or "last" which defines which record will be kept from a duplicate set of records, based on their position in the dataframe.
 
-## Pipelines of Dedupers
+### Pipelines of Dedupers
 
 **Liken** exposes a pipeline builder function for you to build complex, composable pipelines. 
 
@@ -110,7 +127,7 @@ A pipeline has the following features:
 - Column access is provided by `lk.col` expression.
 - Dedupers are provided as method calls to the `lk.col` expression.
 
-### AND semantics
+#### AND semantics
 
 Pipelines support combining the effects of multiple dedupers using implicit and statements.
 
@@ -140,9 +157,9 @@ df = (
 In the above case, for the first step, both conditions must hold — similar addresses will only be deduplicated if the length of addresses has a minimum length of 10 characters.
 
 ??? info "Effective combinations of dedupers"
-    AND semantics are supported between any **Liken** deduper but are especially effective when combining a similarity deduper with a predicate deduper. Additionally, **Liken** features an optimisation, "Rule Predication" which enforces the execution of the predicate deduper first given an AND semantic `step` — the subsequent dedupers will then only operate on the subset of identical records collected by the first predicate deduper. This optimisation works becase by their nature predicate dedupers operate close to *O(n)* whilst similarity dedupers generally operate at *O(^n^2)*.
+    AND semantics are supported between any **Liken** deduper but are especially effective when combining a similarity deduper with a predicate deduper. Additionally, **Liken** features an optimisation, "Rule Predication" which enforces the execution of the predicate deduper first given an AND semantic `step` — the subsequent dedupers will then only operate on the subset of identical records collected by the first predicate deduper. This optimisation works becase by their nature predicate dedupers operate close to *O(n)* whilst similarity dedupers generally operate at *O(n^2^)*.
 
-### OR semantics
+#### OR semantics
 
 OR semantics behaviour is captured by distinct steps in a pipeline. 
 
@@ -177,7 +194,7 @@ OR semantics are actually implicitely supported when using dictionaries and are 
 ??? info "OR in dictionaries "
     OR semantics are achieved in with dictionaries. If you are just using OR semantics in pipeline, consider sticking to defining collections of dedupers are dictionaries, which are simpler to use.
 
-### NOT semantics
+#### NOT semantics
 
 Predicate dedupers can be inverted to form a NOT semantic by using the `~` operator on the column accessor `lk.col` expression:
 
@@ -195,7 +212,7 @@ pipeline = (
 )
 ```
 
-### Preprocessors
+#### Preprocessors
 
 Pipelines support the addition of a powerful feature: preprocessors. **Liken's** preprocessors transform data solely within the internals of the library for the purposes of deduplication whilst still returning data to you in the original format. 
 
@@ -298,8 +315,8 @@ pipeline = (
 
 Different collections of dedupers, whether a single deduper, a dictionary or a pipeline, are best suited to different use cases:
 
-| Collection | Quick tasks | Multiple columns | OR semantics | AND semantics | NOT semantics | Preprocessors |
-| ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
-| Single | :white_check_mark: | :material-close: | :material-close: | :material-close: | :material-close: | :material-close: |
-| Dict | :white_check_mark: | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: | :material-close: |
-| Pipeline | :material-close: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Collection | Pandas extension | Quick tasks | Multiple columns | Logical rule semantics | Preprocessors |
+| ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| Single | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: | :material-close: |
+| Dict | :material-close: | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: |
+| Pipeline | :material-close: | :material-close: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
