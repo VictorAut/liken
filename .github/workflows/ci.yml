@@ -1,0 +1,93 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  linting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          python-version: '3.14'
+
+      - name: lint
+        run: |
+          task lint
+
+  test-coverage:
+    runs-on: ubuntu-latest
+    needs: linting
+
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: tests | run
+        run: |
+          task coverage COV_FORMAT=xml
+
+      - name: coverage | upload to codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+      - name: tests | coverage
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: "coverage.xml"
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+
+      - name: coverage | add header
+        run: |
+          echo "## Coverage Report" > coverage.md
+          cat code-coverage-results.md >> coverage.md
+
+      - name: tests | pr-comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: ${{ github.event_name == 'pull_request'}}
+        with:
+          header: Coverage Report
+          hide_and_recreate: true
+          path: coverage.md
+
+  test-extras:
+    runs-on: ubuntu-latest
+    needs: test-coverage
+
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        extras: [ "minimal", "all", "dask", "ray", "pyspark" ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: test | optional imports
+        run: |
+          task test-extras 
+          EXTRAS=${{ matrix.extras }}-PY_VERSION=${{ matrix.python-version }}

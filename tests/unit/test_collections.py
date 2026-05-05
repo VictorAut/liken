@@ -1,14 +1,14 @@
 import pytest
 
 import liken as lk
-from liken._collections import SEQUENTIAL_API_DEFAULT_KEY
-from liken._collections import CollectionsManager
-from liken._collections import DeduplicationDict
-from liken._collections import InvalidDeduperError
-from liken._dedupers import BaseDeduper
-from liken._pipelines import Pipeline
-from liken._pipelines import col
-from liken._registry import registry
+from liken.collections.base import CollectionsManager
+from liken.collections.base import InvalidDeduperError
+from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Pipeline
+from liken.collections.pipelines import col
+from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.core.deduper import BaseDeduper
+from liken.core.registries import dedupers_registry
 
 
 ###########
@@ -36,9 +36,9 @@ def s3():
     return DummyDeduper()
 
 
-registry.register("s1", func=lambda: s1)
-registry.register("s2", func=lambda: s2)
-registry.register("s3", func=lambda: s3)
+dedupers_registry.register("s1", func=lambda: s1)
+dedupers_registry.register("s2", func=lambda: s2)
+dedupers_registry.register("s3", func=lambda: s3)
 
 #####################
 # DeduplicationDict tests

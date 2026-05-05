@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import warnings
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # CONSTANTS:
@@ -154,21 +152,21 @@ IDS = [
 ]
 
 
+# TODO!
 @pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_matrix_id(backend, id, schema, data, expected_canonical_id, spark, helpers):
+def test_matrix_id(
+    id,
+    schema,
+    data,
+    expected_canonical_id,
+    spark_session,
+    helpers,
+):
 
-    if backend == "pandas":
-        df = pd.DataFrame(columns=schema, data=data)
-
-    if backend == "polars":
-        df = pl.DataFrame(schema=schema, data=data, orient="row")
-
-    if backend == "spark":
-        df = spark.createDataFrame(schema=schema, data=data)
+    df = helpers.create_df(data, schema)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        df = lk.dedupe(df, spark_session=spark).apply(lk.exact()).canonicalize(SINGLE_COL, id=id).collect()
+        df = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize(SINGLE_COL, id=id).collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

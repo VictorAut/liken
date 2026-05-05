@@ -1,6 +1,6 @@
 [project]
 name = "liken"
-version = "0.7.4"
+version = "0.8.0"
 description = "A Python library for near deduplication and record linkage."
 authors = [{ name = "VictorAut" }]
 requires-python = ">=3.11"
@@ -25,7 +25,6 @@ dependencies = [
     "scikit-learn>=1.6.1,<2",
     "sparse-dot-topn>=1.1.5,<2",
     "typing-extensions>=4.13.0,<5",
-    "pyspark>=3,<5",
     "datasketch>=1.8.0,<2",
     "networkx>=3.6.1,<4",
     "pyarrow>=23.0.1,<24",
@@ -36,9 +35,17 @@ dependencies = [
     "nltk>=3.9.3",
 ]
 
-[project.urls]
-Repository = "https://github.com/VictorAut/liken/"
-Documentation = "https://victoraut.github.io/liken/"
+[project.optional-dependencies]
+pyspark = ["pyspark>=3,<5"]
+modin = ["modin[dask,ray]>=0.37.1"]
+ray = ["ray>=2.55.0"]
+dask = ["dask[dataframe]>=2026.3.0"]
+all = [
+    "pyspark>=3,<5",
+    "modin[dask,ray]>=0.37.1",
+    "ray>=2.55.0",
+    "dask[dataframe]>=2026.3.0",
+]
 
 [dependency-groups]
 dev = [
@@ -58,9 +65,13 @@ docs = [
     "markdown-pycon>=1.0.1,<2",
     "mike",
     "mkdocstrings[python]>=1.0.3",
-    "zensical>=0.0.32",
+    "termynal>=0.14.0",
+    "zensical>=0.0.39",
 ]
 
+[project.urls]
+Repository = "https://github.com/VictorAut/liken/"
+Documentation = "https://victoraut.github.io/liken/"
 
 [tool.uv]
 default-groups = "all"
@@ -71,6 +82,13 @@ mike = { git = "https://github.com/squidfunk/mike.git" }
 [build-system]
 requires = ["uv_build>=0.10.4,<0.11.0"]
 build-backend = "uv_build"
+
+
+# TEST
+
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::FutureWarning", "ignore::DeprecationWarning"]
 
 
 # LINTING
@@ -87,13 +105,9 @@ force-single-line = true
 lines-after-imports = 2
 
 [tool.mypy]
-warn_no_return = false
-allow_redefinition = true
-
-
-[[tool.mypy.overrides]]
-module = ["datasketch.*", "sklearn.*", "sparse_dot_topn.*", "pyarrow.*"]
 ignore_missing_imports = true
+disable_error_code = ["no-redef"]
+
 
 [tool.pylint]
 max-line-length = 120

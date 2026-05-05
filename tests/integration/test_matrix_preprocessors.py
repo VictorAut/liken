@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # SET UP:
@@ -86,39 +84,18 @@ IDS = [
 
 
 @pytest.mark.parametrize("preprocessors, data, expected_canonical_id", PARAMS, ids=IDS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
 @pytest.mark.parametrize("pipeline_builder", PIPELINE_BUILDERS)
 def test_matrix_preprocessors(
-    backend,
     preprocessors,
     data,
     expected_canonical_id,
     pipeline_builder,
-    spark,
+    spark_session,
     helpers,
 ):
     pipeline = pipeline_builder(preprocessors)
 
-    df = create_df(backend, spark, data)
-    df = dedupe_df(df, spark, pipeline)
+    df = helpers.create_df(data, SCHEMA)
+    df = lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-# HELPERS:
-
-
-def create_df(backend, spark, data):
-    if backend == "pandas":
-        df = pd.DataFrame(columns=SCHEMA, data=data)
-
-    if backend == "polars":
-        df = pl.DataFrame(schema=SCHEMA, data=data, orient="row")
-
-    if backend == "spark":
-        df = spark.createDataFrame(schema=SCHEMA, data=data)
-    return df
-
-
-def dedupe_df(df, spark, pipeline):
-    return lk.dedupe(df, spark_session=spark).apply(pipeline).canonicalize().collect()

@@ -59,7 +59,6 @@ df = (
     lk.dedupe(df)
     .apply(lk.pipeline().step(lk.col("email").exact()))
     .drop_duplicates()
-    .collect()
 )
 ```
 
@@ -77,7 +76,6 @@ df = (
         )
     )
     .drop_duplicates()
-    .collect()
 )
 ```
 

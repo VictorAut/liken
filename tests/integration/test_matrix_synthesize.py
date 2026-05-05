@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # SET UP:
@@ -31,25 +29,11 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("schema, data", PARAMS)
-@pytest.mark.parametrize("backend", ["pandas", "polars", "spark"])
-def test_matrix_preprocessors(
-    backend,
-    schema,
-    data,
-    spark,
-    helpers,
-):
+def test_matrix_synthesize(schema, data, spark_session, helpers):
 
-    if backend == "pandas":
-        df = pd.DataFrame(columns=schema, data=data)
+    df = helpers.create_df(data, schema)
 
-    if backend == "polars":
-        df = pl.DataFrame(schema=schema, data=data, orient="row")
-
-    if backend == "spark":
-        df = spark.createDataFrame(schema=schema, data=data)
-
-    result = lk.dedupe(df, spark_session=spark).apply(lk.exact()).canonicalize("address")
+    result = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize("address")
 
     df = result.collect()
     synthesized = result.synthesize()

@@ -2,32 +2,33 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Hashable
 from typing import Self
 
-import pandas as pd
-import polars as pl
-import pyspark.sql as spark
-from pyspark.sql import SparkSession
+from liken.collections.base import CollectionsManager
+from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Pipeline
+from liken.core.backend import Backend
+from liken.core.deduper import BaseDeduper
+from liken.core.dispatcher import get_backend
+from liken.core.dispatcher import wrap
+from liken.core.executor import Executor
+from liken.core.executor import LocalExecutor
+from liken.core.wrapper import DF
+from liken.dedupers.exact import exact
+from liken.types import Columns
+from liken.types import InternalDataFrame
+from liken.types import Keep
+from liken.types import UserDataFrame
+from liken.validators import validate_columns_arg
+from liken.validators import validate_keep_arg
+from liken.validators import validate_spark_arg
 
-from liken._collections import CollectionsManager
-from liken._collections import DeduplicationDict
-from liken._dataframe import Frame
-from liken._dataframe import wrap
-from liken._dedupers import BaseDeduper
-from liken._dedupers import exact
-from liken._executors import Executor
-from liken._executors import LocalExecutor
-from liken._executors import SparkExecutor
-from liken._pipelines import Pipeline
-from liken._types import Columns
-from liken._types import DataFrameLike
-from liken._types import Keep
-from liken._types import UserDataFrame
-from liken._validators import validate_columns_arg
-from liken._validators import validate_df_arg
-from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_arg
+
+if TYPE_CHECKING:
+    from pyspark.sql import Row
+    from pyspark.sql import SparkSession
 
 
 class Dedupe:
@@ -40,9 +41,6 @@ class Dedupe:
         spark_session: optional spark session if initializing with PySpark
             backend.
 
-    Returns:
-        An Dedupe object with which to "apply" a deduper
-
     Raises:
         ValueError: Initialized with PySpark DataFrame but no Spark Session.
 
@@ -50,7 +48,7 @@ class Dedupe:
 
         import liken as lk
 
-        lk.dedupe(df).apply(exact()).drop_duplicates().collect()
+        lk.dedupe(df).apply(exact()).drop_duplicates()
     """
 
     _executor: Executor
@@ -62,22 +60,23 @@ class Dedupe:
         *,
         spark_session: SparkSession | None = None,
     ):
-        self._df: DataFrameLike = validate_df_arg(df)
+        self._df: InternalDataFrame = df
 
         self._collection = CollectionsManager()
 
-        if isinstance(df, spark.DataFrame):
+        backend: Backend = get_backend(self._df)
+
+        if backend.name == "pyspark":
             spark_session = validate_spark_arg(spark_session)
-            self._executor = SparkExecutor(spark_session=spark_session)
-        else:
-            self._executor = LocalExecutor()
+
+        self._executor: Executor = backend.executor(spark_session=spark_session)
 
         self.has_been_canonicalized: bool = False
 
     @classmethod
     def _from_rows(
         cls,
-        rows: list[spark.Row],
+        rows: list[Row],
     ) -> Dedupe:
         """bypass initialization and initialize explicitely with no validation.
 
@@ -136,7 +135,7 @@ class Dedupe:
         columns: Columns | None = None,
         *,
         keep: Keep = "first",
-    ) -> Self:
+    ) -> UserDataFrame:
         """Drop duplicates by enacting the applied dedupers.
 
         If no dedupers are explicitely provided, will carry out an exact
@@ -160,14 +159,14 @@ class Dedupe:
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
-        wdf: Frame = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        wdf: DF = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
             self._collection.apply(exact())
         dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
-        self._df: DataFrameLike = self._executor.execute(
+        self._df: InternalDataFrame = self._executor.execute(
             wdf,
             columns=columns,
             dedupers=dedupers,
@@ -179,7 +178,7 @@ class Dedupe:
 
         self._collection.reset()
 
-        return self
+        return self._df
 
     def canonicalize(
         self,
@@ -194,6 +193,12 @@ class Dedupe:
         If no dedupers are explicitely provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
 
+        Warning:
+            Leaving `id` to it's default `None` value forces collection to
+            driver node when using `Ray` Datasets and `Dask` DataFrames, which
+            is not recommended. Use the dataset's unique identier with the `id`
+            arg, instead.
+
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
                 dataframe to deduplicate.
@@ -207,8 +212,9 @@ class Dedupe:
                 canonical_id.
 
         Returns:
-            A canonicalised DataFrame. By default canonicalization is tracked
-                in a new `canonical_id` field.
+            Self. Access the dataframe with `.collect`, or numbers of repeated
+                canonicals ids with `.canonicals`, or synthetic records with
+                `.synthesize`.
 
         Raises:
             ValueError: Incorrect value to `keep` arg.
@@ -219,14 +225,14 @@ class Dedupe:
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
-        wdf: Frame = wrap(self._df, id)
+        wdf: DF = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
             self.apply(exact())
         dedupers: DeduplicationDict | Pipeline = self._collection.get()
 
-        self._df: DataFrameLike = self._executor.execute(
+        self._df: InternalDataFrame = self._executor.execute(
             wdf,
             columns=columns,
             dedupers=dedupers,
@@ -250,6 +256,12 @@ class Dedupe:
         Args:
             n: the number of records per canonical id, defaulted at 2
 
+        Warning:
+            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            function forces the collection of data to the driver node.
+            Additionally, this function only supports usage with PySpark `v4`
+            and up.
+
         Returns:
             A dictionary of canonical ids, where values are counts.
 
@@ -264,7 +276,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
 
-        wdf: Frame = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, id=None)
 
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
@@ -272,11 +284,9 @@ class Dedupe:
         for cid in canonical_array:
             counts[cid] = counts.get(cid, 0) + 1
 
-        self._canonical_id_counts = counts
+        return {cid: count for cid, count in counts.items() if count >= n}
 
-        return {cid: count for cid, count in self._canonical_id_counts.items() if count >= n}
-
-    def synthesize(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
+    def synthesize(self) -> UserDataFrame:
         """Synthesizes a record combining the first intance of non null values
         of all records associated to a canonical id.
 
@@ -293,23 +303,24 @@ class Dedupe:
             as `min` and `max` for numerical data.
 
         Warning:
-            For PySpark dataframes, this function forces the collection of data
-            to the driver node. Additionally, this function only supports usage
-            with PySpark `v4` and up.
+            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            function forces the collection of data to the driver node.
+            Additionally, this function only supports usage with PySpark `v4`
+            and up.
 
         Returns:
             A dataframe of synthesized records.
         """
 
-        wdf: Frame = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, id=None)
 
         return wdf.synthesize_record()
 
-    def collect(self) -> pd.DataFrame | pl.DataFrame | spark.DataFrame:
-        """Collect results and return the dataframe."""
+    def collect(self) -> UserDataFrame:
+        """Collect canonicalization results and returns the dataframe."""
         return self._df
 
-    def explain(self):
+    def explain(self) -> str | None:
         """
         Returns the dedupers as currently stored in the collections manager.
 

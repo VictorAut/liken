@@ -7,7 +7,7 @@ import typing
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # CONSTANTS:
@@ -27,6 +27,8 @@ NUMERICAL_COMPOUND_COL = (
     "property_sea_level_elevation_m",
     "property_num_rooms",
 )
+
+# HELPERS:
 
 
 def simple_api(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg):
@@ -159,7 +161,7 @@ IDS = [
     ids=IDS,
 )
 @pytest.mark.parametrize("api_builder", API_BUILDERS)
-def test_matrix_dedupers(
+def test_matrix_drop(
     deduper,
     columns,
     drop_kwarg,
@@ -168,10 +170,16 @@ def test_matrix_dedupers(
     api_builder,
     dataframe,
     helpers,
+    spark_session,
 ):
 
-    df, spark_session = dataframe
-
-    df = api_builder(df, spark_session, columns, deduper, deduper_kwarg, drop_kwarg)
+    df = api_builder(
+        df=dataframe,
+        spark_session=spark_session,
+        columns=columns,
+        deduper=deduper,
+        deduper_kwarg=deduper_kwarg,
+        drop_kwarg=drop_kwarg,
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

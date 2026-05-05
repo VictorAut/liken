@@ -1,3 +1,5 @@
+/* THEMES */
+
 [data-md-color-scheme="slate"] {
   --md-default-bg-color: #1e2629;
   --md-primary-bg-color: #265f14;
@@ -10,6 +12,8 @@
 [data-md-color-scheme="slate"] .md-tabs {
   background-color:  rgba(20, 24, 27, 0.6);
 }
+
+/* LIKEN DICTIONARY DEFINTION */
 
 .liken-definition {
   margin: 2rem 0;
@@ -30,4 +34,55 @@
 .liken-definition strong {
   display: block;
   margin-top: 0.25rem;
+}
+
+/* SUPPORTED LOGOS */
+
+.logo-grid {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+
+  justify-content: center;
+  
+  background-color: white;
+  padding: 1rem 1rem;
+  border-radius: 6px;
+  }
+  
+
+.logo-grid a {
+  display: inline-block;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.logo-grid img {
+  height: 48px; /* adjust to fit */
+  width: auto;
+  filter: grayscale(100%);
+  opacity: 1;
+  /* background-color: white;
+  border-radius: 5px; */
+}
+
+.logo-grid a:hover img {
+  filter: grayscale(0%);
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* TERMYNAL */
+
+body [data-termynal] {
+    background: #272c2e;
+    border-radius: 8px;
+}
+
+/* ANNOUNCEMENT BANNER */
+
+.md-banner {
+  background-color: #ff9d2c;
+  color: #000000;
 }

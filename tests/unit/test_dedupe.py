@@ -4,38 +4,16 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from liken._validators import validate_keep_arg
-from liken._validators import validate_spark_arg
 from liken.liken import Dedupe
-
-
-# INITIALIZATION:
-
-
-@patch("liken.liken.LocalExecutor")
-@patch("liken.liken.SparkExecutor")
-def test_init_uses_executor(mock_spark_executor, mock_local_executor, dataframe):
-    df, spark = dataframe
-
-    dupe = Dedupe(df, spark_session=spark)
-    if spark:
-        mock_spark_executor.assert_called_once_with(spark_session=spark)
-    else:
-        mock_local_executor.assert_called_once()
-
-    assert dupe._executor is not None
-
-
-# No apply still exact dedupes
+from liken.validators import validate_keep_arg
+from liken.validators import validate_spark_arg
 
 
 @patch("liken.liken.CollectionsManager")
-def test_no_apply_still_exact_apply_once(
+def test_no_apply_still_has_exact_apply(
     mock_sm,
     dataframe,
 ):
-
-    df, spark = dataframe
 
     sm = mock_sm.return_value
     sm.has_applies = False
@@ -43,8 +21,8 @@ def test_no_apply_still_exact_apply_once(
     sm.get.return_value = {}
     sm.reset.return_value = None
 
-    lk = Dedupe(df, spark_session=spark)
-    lk.canonicalize("address")  # <-- no apply!
+    lk = Dedupe(dataframe)
+    lk.canonicalize("address")  # no apply!
 
     sm.apply.assert_called_once()
 
@@ -58,7 +36,7 @@ def test_validate_keep_arg_valid(keep):
 
 
 def test_validate_keep_arg_invalid():
-    with pytest.raises(ValueError, match="Invalid arg: keep must be one of 'first' or 'last'"):
+    with pytest.raises(ValueError, match="Invalid arg: keep arg must be one of 'first' or 'last'"):
         validate_keep_arg("middle")
 
 
@@ -68,16 +46,11 @@ def test_validate_spark_arg_valid(mock_spark_session):
 
 
 def test_validate_spark_arg_missing_session():
-    with pytest.raises(ValueError, match="Invalid arg: spark_session must be provided for a spark dataframe"):
+    with pytest.raises(ValueError, match="Invalid arg: spark_session arg must be provided for a spark dataframe"):
         validate_spark_arg(None)
 
 
 # Misuse of public API:
-
-
-def test_validate_df_arg():
-    with pytest.raises(ValueError, match="Invalid arg: df must be istance of Pandas, Polars of Spark DataFrames"):
-        Dedupe(Mock())  # mock not specced to a df
 
 
 @patch("liken.liken.wrap")
@@ -115,10 +88,8 @@ def test_validate_columns_args_repeated(mock_wrap, deduplication_mock):
 
 @patch("liken.liken.CollectionsManager")
 def test_apply_delegates_to_collections_manager(mock, dataframe, deduplication_mock):
-    df, spark = dataframe
-
     mock_sm = mock.return_value
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe.apply({"address": deduplication_mock})
     mock_sm.apply.assert_called_once_with({"address": deduplication_mock})
 
@@ -136,15 +107,12 @@ def test_canonicalize_calls(
     dataframe,
     deduplication_mock,
 ):
-
-    df, spark = dataframe
-
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -173,15 +141,12 @@ def test_drop_duplicate_calls(
     dataframe,
     deduplication_mock,
 ):
-
-    df, spark = dataframe
-
     mock_wrap.return_value = Mock()
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
     dupe._sm = mock_sm
 
@@ -205,10 +170,9 @@ def test_drop_duplicate_calls(
 
 @patch("liken.liken.CollectionsManager")
 def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
-    df, spark = dataframe
     mock_sm = mock_sm.return_value
     mock_sm.pretty_get.return_value = ("deduper1",)
 
-    dupe = Dedupe(df, spark_session=spark)
+    dupe = Dedupe(dataframe)
     dupe._sm = mock_sm
     assert dupe.explain() == ("deduper1",)

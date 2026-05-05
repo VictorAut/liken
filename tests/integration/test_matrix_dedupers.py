@@ -7,7 +7,7 @@ import typing
 import pytest
 
 import liken as lk
-from liken._constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID
 
 
 # CONSTANTS:
@@ -27,6 +27,32 @@ NUMERICAL_COMPOUND_COL = (
     "property_sea_level_elevation_m",
     "property_num_rooms",
 )
+
+
+# HELPERS:
+
+
+def simple_api(df, spark_session, columns, deduper, deduper_kwarg):
+    return lk.dedupe(df, spark_session=spark_session).apply(deduper(**deduper_kwarg)).canonicalize(columns).collect()
+
+
+def dict_api(df, spark_session, columns, deduper, deduper_kwarg):
+
+    return (
+        lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**deduper_kwarg)]}).canonicalize().collect()
+    )
+
+
+def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg):
+    pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
+    return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
+
+
+API_BUILDERS = [
+    simple_api,
+    dict_api,
+    pipeline_api,
+]
 
 
 # REGISTER A CUSTOM CALLABLE:
@@ -157,35 +183,24 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_sequence_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
+@pytest.mark.parametrize("api_builder", API_BUILDERS)
+def test_matrix_dedupers(
+    deduper,
+    columns,
+    dedup_kwarg,
+    expected_canonical_id,
+    api_builder,
+    dataframe,
+    helpers,
+    spark_session,
+):
 
-    df, spark_session = dataframe
-
-    df = lk.dedupe(df, spark_session=spark_session).apply(deduper(**dedup_kwarg)).canonicalize(columns).collect()
-
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-@pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_dict_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
-
-    df, spark_session = dataframe
-
-    df = lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**dedup_kwarg)]}).canonicalize().collect()
-
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
-
-
-@pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
-def test_matrix_dedupers_rules_api(deduper, columns, dedup_kwarg, expected_canonical_id, dataframe, helpers):
-
-    df, spark_session = dataframe
-
-    df = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**dedup_kwarg)))
-        .canonicalize()
-        .collect()
+    df = api_builder(
+        df=dataframe,
+        spark_session=spark_session,
+        columns=columns,
+        deduper=deduper,
+        deduper_kwarg=dedup_kwarg,
     )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

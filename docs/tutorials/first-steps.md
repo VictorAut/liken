@@ -4,17 +4,16 @@ title: First Steps
 
 ## Installation
 
-```shell
-pip install liken
-```
+See [Installation](../index.md#installation).
 
 ## Introduction
 
-**Liken** is a deduplication library for DataFrames. Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, rather the emphasis is on how to set up near deduplication correctly. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, the emphasis is on how to set up near deduplication correctly with **Liken**. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+
 
 ## Instantiating
 
-A DataFrame must be passed to the top-level `dedupe` function. **Liken** currently supports three backends: Pandas, Polars and PySpark.
+A DataFrame must be passed to the top-level `dedupe` function.
 
 
 === "Pandas"
@@ -27,9 +26,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df)
-        # .apply(...)
         # ...
-        .collect()
     )
     ```
 
@@ -43,9 +40,49 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df)
-        # .apply(...)
         # ...
-        .collect()
+    )
+    ```
+
+=== "Modin"
+
+    ```python
+    import liken as lk
+    import modin.pandas as pd
+
+    df = pd.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
+=== "Dask"
+
+    ```python
+    import liken as lk
+    import dask.dataframe as dd
+
+    df = dd.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
+=== "Ray"
+
+    ```python
+    import liken as lk
+    import ray
+
+    df = ray.data.read_csv("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
     )
     ```
 
@@ -61,9 +98,7 @@ A DataFrame must be passed to the top-level `dedupe` function. **Liken** current
 
     df = (
         lk.dedupe(df, spark_session=spark)
-        # .apply(...)
         # ...
-        .collect()
     )
     ```
 
@@ -77,7 +112,7 @@ For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* d
 
     import liken as lk
 
-    df = dedupe(df).drop_duplicates("address").collect()
+    df = dedupe(df).drop_duplicates("address")
     ```
 
 === "Multiple Columns"
@@ -86,10 +121,10 @@ For the simplest use cases, **Liken** aims to provide familiar-feeling *exact* d
 
     import liken as lk
 
-    df = dedupe(df).drop_duplicates(columns=["address", "email"]).collect()
+    df = dedupe(df).drop_duplicates(columns=["address", "email"])
     ```
 
-However, dataframe records may not be *exactly* repeated. For example:
+However, dataframe records may not be *exactly* repeated:
 
  id   |  address  |         email       
 ------|-----------|---------------------
@@ -128,4 +163,4 @@ When things aren't *exactly* the same, you can still deduplicate data. **Liken**
 
 *Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
 
-To *use* dedupers, you have to *apply* them.
+To *use* dedupers, you have to *apply* them, which is covered in the next tutorial.

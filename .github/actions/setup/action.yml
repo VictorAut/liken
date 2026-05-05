@@ -1,0 +1,29 @@
+name: "Setup project"
+description: "Install Python, uv, task, and project"
+
+inputs:
+  python-version:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: python | setup
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: uv | install
+      uses: astral-sh/setup-uv@v7
+      with:
+        version: "0.10.4"
+
+    - name: task | install
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.48.0
+
+    - name: liken | install
+      run: |
+        task install
+      shell: bash

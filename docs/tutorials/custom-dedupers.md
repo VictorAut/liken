@@ -56,7 +56,6 @@ Registering your function means it can be *applied* with the `apply()` function.
         lk.dedupe(df)
         .apply(str_same_len(min_len=12))
         .drop_duplicates("address")
-        .collect()
     )
     ```
 
@@ -67,7 +66,6 @@ Registering your function means it can be *applied* with the `apply()` function.
         lk.dedupe(df)
         .apply({"address": str_same_len(min_len=12)})
         .drop_duplicates()
-        .collect()
     )
     ```
 
@@ -78,7 +76,6 @@ Registering your function means it can be *applied* with the `apply()` function.
         lk.dedupe(df)
         .apply(lk.pipeline().step(lk.col("address").str_same_len(min_len=12)))
         .drop_duplicates()
-        .collect()
     )
     ```
 
