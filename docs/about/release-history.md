@@ -2,6 +2,42 @@
 title: Release History
 ---
 
+## v0.9.1 (2026-09-23)
+
+**Features**
+
+
+- Documentation overhaul: positioning now covers entity resolution and canonicalization
+- New "Use Cases" section
+- Tip on installing Liken in a uv-managed Python project
+- Reworked "AI Agent Skills" section, with a fixed tessl registry link
+- Docs tooling: `zensical` 0.0.39 to 0.0.51, `rich` added to the docs extras, termynal extension config removed from `zensical.toml`
+
+
+**Fixes**
+
+
+- Fixed API reference links in the deduper table in the First Steps tutorial
+- CI badge now points at the `ci.yml` workflow
+
+
+## v0.9.0 (2026-06-04)
+
+**Features**
+
+
+- Agent skills bundle for agentic workflows, installed from the tessl registry with `tessl install victoraut/liken-skills`
+- New `.explore` function for exploratory duplicate-rate profiling
+- Skill workspace renamed from `liken/liken-skills` to `victoraut/liken-skills`
+
+
+**Fixes**
+
+
+- CI badge in README now points at the `ci.yml` workflow
+- Removed the under-development announcement banner from the docs
+
+
 ## v0.8.0 (2026-05-05)
 
 **Features**
