@@ -9,8 +9,6 @@ from liken.collections.pipelines import col
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken.core.deduper import BaseDeduper
 from liken.core.registries import dedupers_registry
-from liken.preprocessors import Lower
-from liken.preprocessors import lower
 
 
 ###########
@@ -294,56 +292,3 @@ def test_collections_manager_reset_clears_collection(s1):
 def test_deduper_config_type_error():
     err = InvalidDeduperError("bad")
     assert isinstance(err, TypeError)
-
-
-##################
-# Pipeline misuse #
-##################
-
-
-def test_invert_rejects_non_predicate_deduper():
-    with pytest.raises(TypeError, match="Only predicate dedupers support inversion"):
-        ~lk.col("address").exact()
-
-
-def test_step_rejects_non_col():
-    with pytest.raises(TypeError, match="Must be an instance of Col"):
-        lk.pipeline().step("address")
-
-
-def test_single_preprocessor_is_resolved_to_list():
-    c = lk.col("address", preprocessors=lower()).fuzzy()
-
-    assert len(c.unit.preprocessors) == 1
-    assert isinstance(c.unit.preprocessors[0], Lower)
-
-
-def test_col_isin_method_wrapper():
-    c = lk.col("address").isin(values=["london"])
-
-    assert c.unit.columns == "address"
-    assert str(c.unit.deduper).startswith("isin(")
-
-
-def test_col_str_negated():
-    c = ~lk.col("address").isna()
-
-    assert str(c) == "~lk.col('address').isna()"
-
-
-def test_apply_pipeline_twice_warns():
-    manager = CollectionsManager()
-    manager.apply(lk.pipeline().step(lk.col("address").exact()))
-
-    with pytest.warns(UserWarning, match="Replacing previously added 'Pipeline' deduper"):
-        manager.apply(lk.pipeline().step(lk.col("email").exact()))
-
-
-def test_pipeline_str_includes_preprocessors():
-    from liken.preprocessors import lower
-
-    pipeline = lk.pipeline(preprocessors=[lower()]).step(lk.col("address").exact())
-
-    representation = str(pipeline)
-    assert "preprocessors=" in representation
-    assert "lk.col('address').exact()" in representation

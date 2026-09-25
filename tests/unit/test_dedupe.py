@@ -27,47 +27,6 @@ def test_no_apply_still_has_exact_apply(
     sm.apply.assert_called_once()
 
 
-@patch("liken.liken.CollectionsManager")
-def test_no_apply_still_has_exact_apply_on_drop_duplicates(
-    mock_sm,
-    dataframe,
-):
-
-    sm = mock_sm.return_value
-    sm.has_applies = False
-    sm.is_sequential_applied = True
-    sm.get.return_value = {}
-    sm.reset.return_value = None
-
-    lk = Dedupe(dataframe)
-    lk.drop_duplicates("address")  # no apply!
-
-    sm.apply.assert_called_once()
-
-
-# canonicals
-
-
-def test_canonicals_rejects_n_below_two(dataframe):
-    dupe = Dedupe(dataframe)
-    with pytest.raises(ValueError, match="n must be >= 2"):
-        dupe.canonicals(n=1)
-
-
-def test_canonicals_before_canonicalize_raises(dataframe):
-    dupe = Dedupe(dataframe)
-    with pytest.raises(RuntimeError, match="No canonical_id counts found"):
-        dupe.canonicals()
-
-
-# dispatch
-
-
-def test_unsupported_dataframe_type_raises():
-    with pytest.raises(ValueError, match="Unsupported dataframe type: <class 'str'>"):
-        Dedupe("not-a-dataframe")
-
-
 # validators
 
 

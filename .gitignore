@@ -3,14 +3,13 @@
 .dev/*
 
 scrap*
-CLAUDE.md
 
 **/__pycache__/*
 .python-version
 
 .coverage
 htmlcov/
-coverage.*
+coverage.xml
 
 site/
 
