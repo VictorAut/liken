@@ -2,6 +2,21 @@
 title: Release History
 ---
 
+## v0.9.2 (2026-09-24)
+
+**Features**
+
+
+- Documentation overhaul: new documentation pages and added detail on tutorials.
+- Additional tests
+
+
+**Fixes**
+
+- Tooling dependencies pinned
+- Pre-commit included
+
+
 ## v0.9.1 (2026-09-23)
 
 **Features**

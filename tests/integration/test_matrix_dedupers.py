@@ -175,6 +175,19 @@ PARAMS = [
     (lk.tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.80, "topn": 2}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
     (lk.tfidf, SINGLE_COL, {"ngram": 1, "threshold": 0.80, "topn": 3}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 1]),
     #
+    # ISIN:
+    # rows 1 and 8 share the address "123ab, OL5 9PL, UK"
+    (lk.isin, SINGLE_COL, {"values": ["123ab, OL5 9PL, UK"]}, [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
+    # two distinct addresses matched, merging rows 3 and 4
+    (
+        lk.isin,
+        SINGLE_COL,
+        {"values": ["Calle Ancho, 12, 05688, Rioja, Navarra, Espana", "Calle Sueco, 56, 05688, Rioja, Navarra"]},
+        [0, 1, 2, 2, 4, 5, 6, 7, 8, 9],
+    ),
+    # no address in the given set, so no deduping
+    (lk.isin, SINGLE_COL, {"values": ["zzzzz"]}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    #
     # ISNA:
     (lk.isna, SINGLE_COL, {}, [0, 1, 2, 3, 4, 5, 6, 7, 4, 9]),
 ]

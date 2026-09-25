@@ -29,9 +29,9 @@ tasks:
   lint:
     desc: lint and type-check
     cmds:
-      - uv run ruff check --select I src/
-      - uv run ruff format --check src/
-      - uv run ruff check src/
+      - uv run ruff check --select I src/ tests/
+      - uv run ruff format --check src/ tests/
+      - uv run ruff check src/ tests/
       - uv run mypy src/
 
   test-unit:
@@ -72,6 +72,6 @@ tasks:
       - uv run --active coverage {{.COV_FORMAT}} --omit "tests/**/*"
 
   docs:
-    desc: locally build and serve MkDocs
+    desc: locally build and serve zensical
     cmds:
       - uv run zensical serve

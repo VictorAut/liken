@@ -32,7 +32,7 @@
 
 ## Why...
 
-**Liken** provides enhanced deduplication tooling, entity resolution and canonicalization for DataFrames, scaling from single node to massively parallel processed implementations.
+**Liken** deduplicates DataFrames, resolves entities and canonicalizes records. One syntax covers pandas on a laptop and PySpark in production.
 
 ### Features
 
@@ -56,21 +56,15 @@ The key features are:
 - Easy to understand syntax
 - Dummy datasets for practice
 
-**Liken** aims to answer the call for as-easy-to-use near deduplication as possible, with as natural and easy to understand syntax as possible.
-
-Cut boilerplate code to simple deduplication pipelines with **Liken**.
+**Liken** makes near deduplication as approachable as exact deduplication. Describe the rules, apply them, and get deduplicated or canonicalized DataFrames back.
 
 ### Use Cases
 
-- **Find near-duplicate records.** Identify records that represent the same real-world entity despite differences in spelling, formatting or missing values.
-- **Perform fuzzy joins between datasets.** Join DataFrames using approximate rather than exact matching to combine imperfect data sources.
-- **Link records from multiple data sources.** Connect related records across databases, spreadsheets or data lakes using configurable matching rules.
-- **Resolve entities from messy data.** Determine when different records refer to the same person, company, product or other real-world entity.
-- **Match names, addresses and companies.** Handle abbreviations, misspellings, inconsistent formatting and other common data quality issues.
-- **Canonicalize duplicate records.** Merge groups of duplicate records into a single canonical representation using customizable aggregation rules.
-- **Build golden datasets.** Create clean, trusted master datasets by consolidating overlapping information from multiple sources.
-- **Clean and standardize messy data.** Apply preprocessing, normalization and deduplication to improve overall data quality.
-- **Prepare data for analytics and machine learning.** Reduce duplicate bias and improve data quality before reporting, modelling or downstream processing.
+- **Find near-duplicate records.** Catch what exact matching misses — spelling variants, formatting drift, typos — with fuzzy and token dedupers.
+- **Link records that describe the same entity.** Combine datasets and label duplicates across the lot with configurable matching rules instead of exact keys — `canonicalize()` keeps every record and gives each duplicate group a shared id.
+- **Canonicalize duplicate groups.** Collapse each group of duplicates to a single row and keep a canonical id on every record.
+- **Build golden records.** Consolidate each duplicate group into one synthetic record with `synthesize()`.
+- **Explore duplicate rates first.** Profile how much duplication each column carries, per threshold, with `explore()` before committing to rules.
 
 ## Supported DataFrame Libraries
 
@@ -92,10 +86,10 @@ Cut boilerplate code to simple deduplication pipelines with **Liken**.
   </a>
 
   <a href="https://docs.ray.io/en/latest/" target="_blank">
-    <img src="images/supported-libraries/ray.svg" alt="PySpark">
+    <img src="images/supported-libraries/ray.svg" alt="Ray">
   </a>
 
-  <a href="https://docs.ray.io/en/latest/" target="_blank">
+  <a href="https://docs.dask.org/en/latest/" target="_blank">
     <img src="images/supported-libraries/dask.png" alt="Dask">
   </a>
 
@@ -116,7 +110,7 @@ Install with `uv`:
 uv pip install liken
 ```
 
-### Extras 
+### Extras
 
 **Liken** supports `pandas` and `polars` in the default installation. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
 
@@ -162,21 +156,20 @@ import liken as lk
 
 df = (
     lk.dedupe(df)
-    .apply(lk.fuzzy())
+    .apply(lk.fuzzy(threshold=0.7))
     .drop_duplicates("name")
 )
 ```
+
 Jump to the [tutorial](tutorials/first-steps.md) to dive deeper into how to build incrementally complex pipelines.
 
 ### Pandas Affordances
 
-**Liken's** focus is on composable, complex, deduplication pipelines that scale to distributed datasets. But, extra-easy integration is provided for Pandas DataFrames.
-
-If you are a pandas user looking for intuitive near-deduplication Pandas API extension and little more, head to the [Coming from Pandas?](tutorials/applying-dedupers.md#coming-from-pandas) section!
+**Liken's** focus is on composable deduplication pipelines that scale to distributed datasets. Pandas users who want intuitive near-deduplication as a pandas API extension get a dedicated entry point: head to the [Coming from Pandas?](tutorials/applying-dedupers.md#coming-from-pandas) section!
 
 ## AI Agent Skills
 
-**Liken**  makes available agent skills for use in agentic workflows. This is an optional inclusion to your project, and will help you navigate the various APIs so as to best help you solve your problem. 
+**Liken** makes available agent skills for use in agentic workflows. This is an optional inclusion to your project, and will help you navigate the various APIs so as to best help you solve your problem.
 
 Install the bundle from the [tessl](https://tessl.io/registry/victoraut/liken-skills) registry:
 

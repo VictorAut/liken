@@ -20,20 +20,23 @@ Performance of **Liken's** dedupers measured as execution time against increasin
 
 ### Scaling
 
-Above we same the performance of **Liken's** liken's dedupers. The following graphic provides a normalized view of how the deduper's scale with complexity (dataset size).
+Above we saw the performance of **Liken's** dedupers. The following graphic provides a normalized view of how the dedupers scale with complexity (dataset size).
 
 ![Liken](../images/liken-scaling.png)
 
 /// caption
-Computational complexity scaling of Liken's dedupers. 
+Computational complexity scaling of **Liken's** dedupers.
 ///
 
-The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would results in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
+The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would result in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
+
+??? note "Performance with distributed computing"
+    These figures are single-machine measurements. On the distributed backends (dask, ray and pyspark), the calculus changes: work is spread across workers but deduplication runs per partition, so both the per-worker data size and the partitioning strategy determine performance. See [Backends](backends.md) for what differs, and [Use Partitioned Data](#use-partitioned-data) below.
 
 ### Performance Caveats
 
 - Individual deduper performance can be greatly affected by the average string length of a column.
-- The performance of the `str_*` dedupers is highly performant when selecting patterns that exist sparesely. A generic choice of a pattern such as `'a'` in `str_contains`, for example, results in an explosive runtime increase. Pattern choices should be limited those that have a meaning, for example, `'street'` in an address column. Or, `'ltd'` in a company name column. This is similarily true for `str_len` which is fast when the selected length boundaries do not exist in the data!
+- The performance of the `str_*` dedupers is highly performant when selecting patterns that exist sparsely. A generic choice of a pattern such as `'a'` in `str_contains`, for example, results in an explosive runtime increase. Pattern choices should be limited to those that have a meaning, for example, `'street'` in an address column. Or, `'ltd'` in a company name column. This is similarly true for `str_len` which is fast when the selected length boundaries do not exist in the data!
 - For large datasets, `lsh` is exceptionally performant. Note that for the above benchmarks it is estimated `lsh` could handle 10 million rows in single digit hours, on a standard personal machine.
 
 ## Optimising Performance
@@ -50,6 +53,7 @@ id| address                  | email
 4 | 65 lindberg way, 90345   | extreme.trees@plants.co.uk
 
 /// caption
+Dummy data: two records with a null address, two records sharing an email.
 ///
 
 Deduplicating this data on the "email" column with an exact deduper could be implemented like:
@@ -88,21 +92,18 @@ id| address                  | email
 3 | 43 queensbridge, n99 6lt | extreme.trees@plants.co.uk
 
 /// caption
+The result is unchanged here — the two duplicate emails both have non-null addresses, so qualification cost nothing and bought the pushdown speed-up.
 ///
 
 ### Use the LSH deduper
 
 The LSH deduper is faster than *O(n^2^)* (but slower than *O(n)*). In fact it is approximately *O(nk)* where *k << n*. LSH, however, requires extensive testing and must be tuned.
 
-As noted in the above [benchmarks](../in-practice/performance.md#benchmarking), LSH can easily scale to huge datasets.
+As noted in the above [benchmarks](#benchmarking), LSH can easily scale to huge datasets.
 
 ### Use Partitioned Data
 
-**Liken** [supports the use of PySpark](../tutorials/first-steps.md#instantiating). **Liken** is re-instantiatedin every Spark worker node, where each worker node recieves a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.
+**Liken** [supports the use of PySpark](../tutorials/first-steps.md#instantiating). **Liken** is re-instantiated in every Spark worker node, where each worker node receives a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.
 
-!!! Note
-    Re-partitioning in for deduplication workloads often makes use of a "Blocking Key". A blocking key is generated in the dataset and each partition is chosen based on the value of a blocking key. This is especially useful when we know that duplicates are never (or very unlikely) going to be found *across* blocking keys. As an example, the blocking key could be the first letter of a customer's name. This can then be used to divide (partition) a dataset into more manageable chunks that are already related by an inherently meaningful feature.
-
-
-
-
+??? Note "Blocking keys"
+    Re-partitioning for deduplication workloads often makes use of a "Blocking Key". A blocking key is generated in the dataset and each partition is chosen based on the value of a blocking key. This is especially useful when we know that duplicates are never (or very unlikely) going to be found *across* blocking keys. As an example, the blocking key could be the first letter of a customer's name. This can then be used to divide (partition) a dataset into more manageable chunks that are already related by an inherently meaningful feature.

@@ -46,12 +46,12 @@
   flex-wrap: wrap;
 
   justify-content: center;
-  
+
   background-color: white;
   padding: 1rem 1rem;
   border-radius: 6px;
   }
-  
+
 
 .logo-grid a {
   display: inline-block;

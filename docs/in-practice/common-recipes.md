@@ -18,7 +18,7 @@ The above explanation might still sound tricky, especially regarding predicate d
 4. ...in that regard it's generally recommended to use predicate dedupers **only** when defining pipelines with `lk.pipeline()` — you can use them outside of pipelines, but the use cases are limited.
 5. Because they are fundamentally based on the same base classes as similarity dedupers, they are also accessed with the `lk.col()` expression.
 6. The "filter" paradigm is especially useful when considering that **Liken** implements "rule predication" optimizations. Rule Predication states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent similarity dedupers will operate on a subset of data.
-7. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics)
+7. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics).
 
 ## Powerful Pipelines
 
@@ -68,3 +68,77 @@ A few key points are worth noting:
 1. [`strip`](../reference/preprocessors.md), [`remove_punctuation`](../reference/preprocessors.md), [`normalize_unicode`](../reference/preprocessors.md) should be made ample use of. There are few instances where not using them is meaningful.
 2. [`lower`](../reference/preprocessors.md) and [`ascii_fold`](../reference/preprocessors.md) are more nuanced and should be used with more care.
 3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based similarity dedupers (namely, `lk.tfidf` and `lk.lsh`).
+
+## Recipes
+
+Each recipe states the problem, shows the code, and explains the result in one sentence.
+
+### Matching company names
+
+**Problem.** Company columns carry legal suffixes — `Ltd`, `LLC`, `SE`, `GmbH` — that defeat fuzzy matching and even exact matching on casing:
+
+```python
+import liken as lk
+
+pipeline = lk.pipeline().step(
+    lk.col(
+        "company",
+        preprocessors=[
+            lk.preprocessors.normalize_company(),
+            lk.preprocessors.lower(),
+        ],
+    ).fuzzy(threshold=0.9)
+)
+
+df = lk.dedupe(df).apply(pipeline).drop_duplicates()
+```
+
+`normalize_company` strips the legal-form suffix and `lower` removes the casing, so `BASF SE` and `basf` merge, as do `Acme Ltd.` and `ACME Limited`.
+
+### Cleaning free text before exact matching
+
+**Problem.** Descriptions and titles that differ only by filler words — `the`, `a` — are the same text to you, but not to an exact matcher:
+
+```python
+import liken as lk
+
+pipeline = lk.pipeline().step(
+    lk.col(
+        "description",
+        preprocessors=[
+            lk.preprocessors.remove_stopwords(),
+            lk.preprocessors.strip(),
+        ],
+    ).exact()
+)
+
+df = lk.dedupe(df).apply(pipeline).drop_duplicates()
+```
+
+`remove_stopwords` deletes the filler words and `strip` cleans up the leftover spacing, so `the quick brown fox` and `quick brown fox` become equal strings for the `exact` deduper.
+
+### Canonicalizing person names
+
+**Problem.** Names arrive with titles, suffixes, punctuation and casing that hide the fact they are the same person:
+
+```python
+import liken as lk
+
+pipeline = lk.pipeline().step(
+    lk.col(
+        "name",
+        preprocessors=[
+            lk.preprocessors.normalize_names(),
+            lk.preprocessors.remove_punctuation(),
+            lk.preprocessors.lower(),
+        ],
+    ).exact()
+)
+
+df = lk.dedupe(df).apply(pipeline).canonicalize()
+```
+
+`normalize_names` keeps only first, middle and last names, and the punctuation and casing preprocessors remove the rest, so `Dr. John A. Smith Jr.` and `john a smith` become one exact match.
+
+??? tip "Preprocessor order"
+    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.

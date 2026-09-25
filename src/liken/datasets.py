@@ -26,7 +26,7 @@ Faker.seed(123)
 
 _SCHEMA10 = [
     "id", "address", "email", "account",
-    "birth_country", "marital_status", "number_children", "property_type", 
+    "birth_country", "marital_status", "number_children", "property_type",
     "property_height", "property_area_sq_ft", "property_sea_level_elevation_m", "property_num_rooms"
 ]
 
