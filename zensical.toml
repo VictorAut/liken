@@ -20,6 +20,7 @@ nav = [
     { "In Practice" = [
         "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
+        "in-practice/backends.md",
         "in-practice/performance.md",
     ] },
     { "API Reference" = [
