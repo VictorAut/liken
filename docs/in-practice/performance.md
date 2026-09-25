@@ -30,8 +30,8 @@ Computational complexity scaling of **Liken's** dedupers.
 
 The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would result in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
 
-!!! note
-    These figures are single-machine measurements. On the distributed backends — dask, ray and pyspark — the calculus changes: work is spread across workers but deduplication runs per partition, so both the per-worker data size and the partitioning strategy determine performance. See [Backends](backends.md) for what differs, and [Use Partitioned Data](#use-partitioned-data) below.
+??? note "Performance with distributed computing" 
+    These figures are single-machine measurements. On the distributed backends (dask, ray and pyspark), the calculus changes: work is spread across workers but deduplication runs per partition, so both the per-worker data size and the partitioning strategy determine performance. See [Backends](backends.md) for what differs, and [Use Partitioned Data](#use-partitioned-data) below.
 
 ### Performance Caveats
 
@@ -105,5 +105,5 @@ As noted in the above [benchmarks](#benchmarking), LSH can easily scale to huge 
 
 **Liken** [supports the use of PySpark](../tutorials/first-steps.md#instantiating). **Liken** is re-instantiated in every Spark worker node, where each worker node receives a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.
 
-!!! Note
+??? Note "Blocking keys"
     Re-partitioning for deduplication workloads often makes use of a "Blocking Key". A blocking key is generated in the dataset and each partition is chosen based on the value of a blocking key. This is especially useful when we know that duplicates are never (or very unlikely) going to be found *across* blocking keys. As an example, the blocking key could be the first letter of a customer's name. This can then be used to divide (partition) a dataset into more manageable chunks that are already related by an inherently meaningful feature.

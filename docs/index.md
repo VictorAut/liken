@@ -38,18 +38,23 @@
 
 The key features are:
 
-- Near deduplication with fuzzy string matching
-- Token deduplication with TF-IDF and LSH
-- Set deduplication with Jaccard and cosine
-- Exact and predicate dedupers for building rules
-- AND, OR and NOT rules in composable pipelines
-- Built-in preprocessors: lowercasing, stopword removal, name and company normalisation
-- Duplicate-rate profiling with `Dedupe.explore`
-- Record linkage with canonical ids and golden records
-- Custom dedupers in pure Python
+- Near deduplication tooling
+- Exploratory duplicate-rate profiling
+- Fuzzy string matching deduper
+- TF-IDF tokenization deduper
+- LSH tokenization deduper
+- Jaccard set deduper
+- Cosine set deduper
+- Pandas API extension
+- Composable, rules-based, deduplication pipelines
+- Predicate dedupers for rules
+- Record linkage and canonicalization
+- Built-in Preprocessors
+- Pandas, Polars, Modin, Ray, Dask and PySpark support
+- Customizable in pure Python
 - Synthetic record creation
+- Easy to understand syntax
 - Dummy datasets for practice
-- Backends for pandas, polars, modin, dask, ray and pyspark
 
 **Liken** makes near deduplication as approachable as exact deduplication. Describe the rules, apply them, and get deduplicated or canonicalized DataFrames back.
 

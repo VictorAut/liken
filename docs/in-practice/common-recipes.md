@@ -140,5 +140,5 @@ df = lk.dedupe(df).apply(pipeline).canonicalize()
 
 `normalize_names` keeps only first, middle and last names, and the punctuation and casing preprocessors remove the rest, so `Dr. John A. Smith Jr.` and `john a smith` become one exact match.
 
-!!! tip
-    These recipes chain preprocessors, which run left to right. Order matters: `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.
+??? tip "Preprocessor order"
+    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.

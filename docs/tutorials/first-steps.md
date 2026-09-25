@@ -111,10 +111,10 @@ A DataFrame must be passed to the top-level `dedupe` function.
 
 ## The Dedupe Lifecycle
 
-Every **Liken** workflow follows the same three beats:
+Every **Liken** workflow follows the same formula:
 
-1. **Construct.** `lk.dedupe(df)` wraps your DataFrame. **Liken** detects which backend to use from the DataFrame's type. Nothing has run yet.
-2. **Stage.** `.apply(...)` adds dedupers to a collection. You can stage one deduper, a dict of per-column rules, or a pipeline. Nothing has run yet.
+1. **Construct.** `lk.dedupe(df)` wraps your DataFrame. **Liken** detects which backend to use from the DataFrame's type. Nothing runs yet.
+2. **Stage.** `.apply(...)` adds dedupers to a collection. You can stage one deduper, a dict of per-column rules, or a pipeline. Nothing runs yet.
 3. **Enact.** `.drop_duplicates()` or `.canonicalize()` runs the staged rules, matches records, and returns a new DataFrame. Your original DataFrame is left untouched.
 
 ```python
@@ -125,7 +125,7 @@ deduper = deduper.apply(lk.fuzzy())     # stage
 df = deduper.drop_duplicates("address") # enact
 ```
 
-Every later tutorial builds on these three beats. Construct, stage, enact.
+Every later tutorial builds on this formula.
 
 ## The Simplest Example
 
@@ -196,8 +196,8 @@ To *use* dedupers, you have to *apply* them, which is covered in the next tutori
 
 Similarity dedupers compare values pairwise and keep the pairs whose score beats their `threshold`. All thresholds are on a 0–1 scale, and matching is strict: a pair must score *above* the threshold to match. Thresholds differ in what they measure:
 
-- `fuzzy` uses [rapidfuzz](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive — `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale.
-- `tfidf` splits each value into character n-grams (`ngram`, default 3), weights them, and compares the resulting vectors by cosine similarity. It tolerates more drift than `fuzzy`, but its default `topn=2` keeps only the two best candidate matches per row — one of which is the row itself. In dense clusters of near-duplicates, raise `topn`.
+- `fuzzy` uses [rapidfuzz](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive: `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale.
+- `tfidf` splits each value into character n-grams (`ngram`, default 3), weights them, and compares the resulting vectors by cosine similarity. It tolerates more drift than `fuzzy`, but its default `topn=2` keeps only the two best candidate matches per row, one of which is the row itself. In dense clusters of near-duplicates, raise `topn`.
 - `lsh` builds MinHash signatures over character n-grams and matches approximately: the threshold estimates the Jaccard similarity of the n-gram sets. It scales well to very large data, but a match is probabilistic — pairs near the threshold can be missed.
 
 `explore` shows where your data's duplicate rates actually fall, so you can pick a threshold from evidence rather than guesswork.
@@ -212,26 +212,26 @@ import liken as lk
 lk.dedupe(df).explore(["address", "email"])
 ```
 
-        address     email
-metric
-exact       0.0  0.000000
-0.5         0.0  0.333333
-0.75        0.0  0.333333
-0.9         0.0  0.000000
-0.95        0.0  0.000000
-0.99        0.0  0.000000
+metric | address | email |
+|--- | --- | --- |
+|exact | 0.0  | 0.000000 |
+|0.5   | 0.0  | 0.333333 |
+|0.75  | 0.0  | 0.333333 |
+|0.9   | 0.0  | 0.000000 |
+|0.95  | 0.0  | 0.000000 |
+|0.99  | 0.0  | 0.000000 |
 
 /// caption
-Duplicate rates for the dataset above. The two email variants register at 0.5 and 0.75, but not at 0.9.
+Duplicate rates for the [dataset](#the-simplest-example) above. Email variants registers at 0.5 and 0.75, but not at >0.9.
 ///
 
-Read it like this:
+Which can read as:
 
 - The `exact` row is the exact-matching duplicate rate. It is 0.0 for both columns: all three emails are distinct strings, as are the addresses.
 - Each numbered row is one fuzzy threshold. The default sweep is 0.5, 0.75, 0.9, 0.95 and 0.99. At 0.5 and 0.75 the two email variants match, so one of three records is a redundant duplicate: a rate of 0.333. At 0.9 they no longer match.
 - A rate of 0.333 on 3 records means `drop_duplicates` would remove exactly one record under that rule.
 
-On larger data, sample instead of scanning everything. `frac` takes a fraction in (0, 1]; the default 1.0 uses every row:
+On larger data, use a sample instead of scanning everything, for a faster exploration. `frac` takes a fraction where the default of 1.0 uses every row:
 
 ```python
 lk.dedupe(df).explore(["email"], frac=0.1)
@@ -243,7 +243,7 @@ By default, each column is profiled with `fuzzy`. To profile a column with a dif
 lk.dedupe(df).explore({"email": lk.tfidf()})
 ```
 
-`explore` runs on the pandas, polars and modin backends. On dask, ray or pyspark it raises a `ValueError`.
+`explore` runs on the pandas, polars and modin backends. On dask, ray or pyspark, `explore` is not supported and raises a `ValueError`.
 
 ## Missing Values
 
@@ -255,10 +255,10 @@ Real data has nulls. **Liken** does not drop them silently. For single-column ru
 | `fuzzy` | Nulls match nulls — `"na"` vs `"na"` scores a perfect match. |
 | `tfidf` | Depends on `ngram`: not matched at the default `ngram=3`, matched at `ngram=1`. |
 | `lsh` | Matched: empty signatures bucket together. |
-| `isna` | Matches exactly the nulls. The only deduper that sees nulls as nulls. |
+| `isna` | Matches exactly the nulls. |
 | Other predicates | The string `"na"` is tested like any other value. |
 
-Two practical consequences:
+Two practical consequences are worth noting:
 
-- If `"na"` could collide with your data — a real value, or a predicate pattern such as `str_startswith("na")` — handle nulls explicitly with `isna` rules.
+- If `"na"` could collide with your data (a real value, or a predicate pattern such as `str_startswith("na")`), handle nulls explicitly with `isna` rules.
 - Compound-column dedupers skip the substitution. `jaccard` ignores null values when building each record's set; `cosine` fills numeric NaNs with 0.

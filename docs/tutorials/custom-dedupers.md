@@ -8,7 +8,7 @@ title: Custom Dedupers
 
 ## The Callable Contract
 
-A custom deduper is a plain Python function with a strict shape. It receives **one positional argument**: a plain Python list of the column's values, in DataFrame row order. From this list it must yield pairs of positional indices — two-element tuples `(i, j)` — naming the records it wants linked. Indices are 0-based positions into the list as handed to the function, which is the DataFrame's row order.
+A custom deduper is a plain Python function with a strict shape. It receives **one positional argument**: a plain Python list of the column's values, in DataFrame row order. From this list it must yield pairs of positional indices — two-element tuples `(i, j)` — naming the records needing linkage. Indices are 0-based positions into the list as handed to the function, which is the DataFrame's row order.
 
 ```python
 def str_same_len(array, *, min_len: int):
@@ -23,7 +23,7 @@ The properties of the contract:
 
 - The function sees **no DataFrame** — no column labels, no dtypes, no backend. `array` is a generic iterable of values. This is what makes the function backend-agnostic.
 - Each yielded pair links two records. **Liken** unions the pairs: chain `(0, 1)` and `(1, 2)` and all three records land in one group.
-- The function is a *generator*, which **Liken** consumes pair by pair without materialising the result. You can build a list and return that instead — it works, but holds every pair in memory at once.
+- The function is a *generator*, which **Liken** consumes pair by pair without materialising the result. You can build a list and return that instead but holds every pair in memory at once, and is not recommended.
 - Every further argument must be keyword-only (`(array, *, **kwargs)`). Positional call-site arguments are rejected.
 
 ## Defining a Custom Deduper
@@ -109,7 +109,7 @@ Rows 0 and 1 were linked and collapsed; the rest survive.
 
 Note how `array` isn't passed as an argument in any instance. `dedupe` will retrieve an array representation of the `address` column, ensuring that usage of the custom deduper matches that of other **Liken** dedupers.
 
-The keyword arguments you pass at the call site — `min_len=12` above — are stored on the registered deduper and forwarded to your function only when deduplication runs. The registered name also becomes available as a method on the `lk.col(...)` expression, so pipelines treat it like any built-in deduper (as the Pipeline tab shows). Registering a name that a built-in already uses shadows the built-in *on the `lk.col(...)` expression* — choose distinct names.
+The keyword arguments you pass at the call site (`min_len=12` above) are stored on the registered deduper and forwarded to your function only when deduplication runs. The registered name also becomes available as a method on the `lk.col(...)` expression, so pipelines treat it like any built-in deduper (as the Pipeline tab shows). Registering a name that a built-in already uses shadows the built-in *on the `lk.col(...)` expression*, so ensure you choose distinct names.
 
 ## Predicate-Style Results
 
@@ -157,8 +157,8 @@ The two `@gmail.com` records share a canonical id; the others keep their own.
 
 Two limitations apply to custom dedupers, and both have reasons:
 
-- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of dicts (one per record) — but that shape is not a tested guarantee. The single-column shape is: nulls are substituted with the literal string `"na"` before your function sees them, consistently across backends. Compound columns receive raw values, nulls included, with no substitution.
-- **`~` negation is unavailable.** Negation is defined for *predicate* dedupers only, and a registered custom deduper is a threshold deduper regardless of what it yields. Applying `~` raises `TypeError: Only predicate dedupers support inversion`. To get the negated behaviour, define a second custom function — a `not_str_same_len`, say — that yields the complementary pairs.
+- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of dicts (one per record) but that shape is not a tested guarantee. The single-column shape is: nulls are substituted with the literal string `"na"` before your function sees them, consistently across backends. Compound columns receive raw values, nulls included, with no substitution.
+- **`~` negation is unavailable.** Negation is defined for *predicate* dedupers only, and a registered custom deduper is a threshold deduper regardless of what it yields. Applying `~` raises `TypeError: Only predicate dedupers support inversion`. To get the negated behaviour, define a second custom function — a `not_str_same_len`, say, that yields the complementary pairs.
 
 Custom dedupers **can** be combined using AND semantics in pipelines with other dedupers.
 
@@ -166,35 +166,7 @@ Custom dedupers **can** be combined using AND semantics in pipelines with other 
 
 Your function always receives a plain Python list, which **Liken** produces from the column's in-memory representation. That has consequences for size and placement:
 
-- The list holds one Python object per value, so memory use is proportional to the column — a cost your function pays before it yields anything.
+- The list holds one Python object per value, so memory use is proportional to the column, a cost your function pays before it yields anything.
 - On local backends (pandas, polars, modin) the list covers the whole column.
-- On distributed backends (dask, ray, pyspark) **Liken** runs your function per partition — per batch, on ray — on the worker holding it. The DataFrame is not pulled to one machine — but each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
+- On distributed backends (dask, ray, pyspark) **Liken** runs your function per partition, per batch; on ray, the worker holding it. The DataFrame is not pulled to one machine, but instead each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
 - Your function must survive being sent to workers: keep it importable and picklable, and avoid closures over unserialisable state.
-
-## Testing a Custom Deduper
-
-Validate a custom deduper on the smallest DataFrame that exercises it before pointing it at real data:
-
-```python
-import pandas as pd
-import liken as lk
-
-@lk.custom.register
-def str_same_len(array, *, min_len: int):
-    n = len(array)
-    for i in range(n):
-        for j in range(i + 1, n):
-            if len(array[i]) == len(array[j]) and len(array[i]) > min_len:
-                yield i, j
-
-df = pd.DataFrame({"address": ["10 high street", "99 high street", "5 low road"]})
-
-out = lk.dedupe(df).apply(str_same_len(min_len=12)).drop_duplicates("address")
-assert out.shape[0] == 2
-```
-
-/// caption
-Two 14-character addresses merge; the 10-character one is below `min_len`.
-///
-
-If the assert fails, the pairs your function yields are not what you intended — fix the function, not the test.
