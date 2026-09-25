@@ -103,5 +103,6 @@ jobs:
     uses: ./.github/workflows/docs.yml
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
+      contents: read
       pages: write
       id-token: write # mandatory for trusted publishing
