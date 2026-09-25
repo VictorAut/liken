@@ -39,5 +39,30 @@ import liken as lk
 df = lk.dedupe(df).apply(lk.fuzzy()).drop_duplicates("address")
 ```
 
+## Development
+
+Local setup, checks, and prek hooks:
+
+```shell
+# Install the project
+task install
+
+# Format code
+task format
+
+# Lint and type-check
+task lint
+
+# Run unit and integration tests
+task test
+```
+
+prek runs the same checks on every commit. Install the hooks once:
+
+```shell
+uv tool install prek
+prek install
+```
+
 ## License
 This project is licensed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.html). See the [LICENSE](LICENSE) file for more details.

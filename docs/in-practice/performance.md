@@ -30,7 +30,7 @@ Computational complexity scaling of **Liken's** dedupers.
 
 The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would result in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
 
-??? note "Performance with distributed computing" 
+??? note "Performance with distributed computing"
     These figures are single-machine measurements. On the distributed backends (dask, ray and pyspark), the calculus changes: work is spread across workers but deduplication runs per partition, so both the per-worker data size and the partitioning strategy determine performance. See [Backends](backends.md) for what differs, and [Use Partitioned Data](#use-partitioned-data) below.
 
 ### Performance Caveats

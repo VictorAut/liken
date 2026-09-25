@@ -89,7 +89,21 @@ build-backend = "uv_build"
 
 
 [tool.pytest.ini_options]
-filterwarnings = ["ignore::FutureWarning", "ignore::DeprecationWarning"]
+# Warnings are shown, not failed (spec F11). Targeted ignores below carry a
+# comment naming the noisy third-party source.
+filterwarnings = [
+    # Ray logs a SyntaxWarning from its own usage-reporting module.
+    "ignore:'return' in a 'finally' block:SyntaxWarning",
+    # Ray warns on every run that it overrides accelerator env vars for
+    # zero-GPU workers.
+    "ignore::FutureWarning:ray._private.worker",
+    # Modin warns each time an API defaults to the pandas implementation.
+    "ignore::UserWarning:modin.error_message",
+    # Dask deprecation notices for renamed config options.
+    "ignore:`use_push_based_shuffle` is deprecated.*:DeprecationWarning",
+    "ignore:`use_polars` is deprecated.*:DeprecationWarning",
+    "ignore:`use_arrow_tensor_v2` is deprecated.*:DeprecationWarning",
+]
 
 
 # LINTING

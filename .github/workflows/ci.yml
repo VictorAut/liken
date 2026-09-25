@@ -6,12 +6,16 @@ on:
     branches: [ main ]
 
 permissions:
-  pull-requests: write
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   linting:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v6
@@ -26,6 +30,9 @@ jobs:
   test-coverage:
     runs-on: ubuntu-latest
     needs: linting
+    timeout-minutes: 45
+    permissions:
+      pull-requests: write
 
     strategy:
       matrix:
@@ -42,13 +49,13 @@ jobs:
           task coverage COV_FORMAT=xml
 
       - name: coverage | upload to codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           files: coverage.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
       - name: tests | coverage
-        uses: irongut/CodeCoverageSummary@v1.3.0
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
         with:
           filename: "coverage.xml"
           badge: true
@@ -65,7 +72,7 @@ jobs:
           cat code-coverage-results.md >> coverage.md
 
       - name: tests | pr-comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2.9.4
         if: ${{ github.event_name == 'pull_request'}}
         with:
           header: Coverage Report
@@ -75,11 +82,12 @@ jobs:
   test-extras:
     runs-on: ubuntu-latest
     needs: test-coverage
+    timeout-minutes: 30
 
     strategy:
       matrix:
         python-version: [ "3.11", "3.12", "3.13", "3.14" ]
-        extras: [ "minimal", "all", "dask", "ray", "pyspark" ]
+        extras: [ "minimal", "all", "dask", "ray", "pyspark", "modin" ]
 
     steps:
       - uses: actions/checkout@v6
@@ -89,5 +97,4 @@ jobs:
 
       - name: test | optional imports
         run: |
-          task test-extras 
-          EXTRAS=${{ matrix.extras }}-PY_VERSION=${{ matrix.python-version }}
+          task test-extras EXTRAS=${{ matrix.extras }} PY_VERSION=${{ matrix.python-version }}
