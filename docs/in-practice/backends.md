@@ -2,7 +2,7 @@
 title: Backends
 ---
 
-**Liken** runs on six DataFrame backends: pandas, polars, modin, dask, ray and pyspark. You do not choose a backend — **Liken** detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `ray.data.Dataset` gets the ray backend. Passing an unsupported type raises `ValueError: Unsupported dataframe type`.
+**Liken** runs on six DataFrame backends: pandas, polars, modin, dask, ray and pyspark. You do not need choose a backend, **Liken** detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `ray.data.Dataset` gets the ray backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
 
 The deduplication API is the same on every backend. What differs is where the work runs and what you get back. This page lays out those differences; the [First Steps](../tutorials/first-steps.md#instantiating) tabs show the instantiation code for each.
 
@@ -22,18 +22,26 @@ pandas and polars ship with **Liken** itself. The other backends are optional ex
 === "pip"
 
     ```bash
-    pip install 'liken[modin]'
+    pip install 'liken[dask]'     # deduplicate dask dataframes
+    pip install 'liken[modin]'    # deduplicate modin dataframes
+    pip install 'liken[ray]'      # deduplicate ray datasets
+    pip install 'liken[pyspark]'  # deduplicate pyspark dataframes
+    pip install 'liken[all]'      # deduplicate with any of the above
     ```
 
 === "uv"
 
     ```bash
-    uv pip install 'liken[modin]'
+    uv pip install 'liken[dask]'    # deduplicate dask dataframes
+    uv pip install 'liken[modin]'   # deduplicate modin dataframes
+    uv pip install 'liken[ray]'     # deduplicate ray datasets
+    uv pip install 'liken[pyspark]' # deduplicate pyspark dataframes
+    uv pip install 'liken[all]'     # deduplicate with any of the above
     ```
 
 ## Instantiating
 
-Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all six. One requirement stands out:
+Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all six.
 
 PySpark requires a `SparkSession`. Pass it explicitly, or **Liken** raises `ValueError: spark_session arg must be provided for a spark dataframe`:
 
