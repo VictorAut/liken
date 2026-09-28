@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           python-version: '3.14'
@@ -39,7 +39,7 @@ jobs:
         python-version: [ "3.11", "3.12", "3.13", "3.14" ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
@@ -90,7 +90,7 @@ jobs:
         extras: [ "minimal", "all", "dask", "ray", "pyspark", "modin" ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
