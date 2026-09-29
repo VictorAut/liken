@@ -2,17 +2,17 @@
 title: Backends
 ---
 
-**Liken** runs on six DataFrame backends: pandas, polars, modin, dask, ray and pyspark. You do not need choose a backend, **Liken** detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `ray.data.Dataset` gets the ray backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
+**Liken** runs on seven DataFrame backends: pandas, polars, modin, dask, ray, pyspark and pyarrow. You do not need choose a backend, **Liken** detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `pyarrow.Table` gets the pyarrow backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
 
 The deduplication API is the same on every backend. What differs is where the work runs and what you get back. This page lays out those differences; the [First Steps](../tutorials/first-steps.md#instantiating) tabs show the instantiation code for each.
 
 ## Installing
 
-pandas and polars ship with **Liken** itself. The other backends are optional extras:
+pandas, polars and pyarrow ship with **Liken** itself. The other backends are optional extras:
 
 | Extra | Installs | For |
 | ----- | ----- | ----- |
-| *(default)* | pandas, polars | Single-machine work |
+| *(default)* | pandas, polars, pyarrow | Single-machine work |
 | `liken[modin]` | modin (with dask and ray kernels) | Drop-in pandas replacement |
 | `liken[dask]` | dask | Partitioned DataFrames |
 | `liken[ray]` | ray | Ray datasets |
@@ -41,7 +41,7 @@ pandas and polars ship with **Liken** itself. The other backends are optional ex
 
 ## Instantiating
 
-Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all six.
+Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all seven.
 
 PySpark requires a `SparkSession`. Pass it explicitly, or **Liken** raises `ValueError: spark_session arg must be provided for a spark dataframe`:
 
@@ -58,6 +58,7 @@ For every other backend the `spark_session` argument is ignored.
 The first split is execution scope:
 
 - **pandas, polars, modin** run over the whole DataFrame in one process. modin is a drop-in for pandas — its DataFrames are pandas-like, and **Liken** treats them locally.
+- **pyarrow** runs over the whole table in one process. Arrow tables are columnar in memory, the same format **Liken** uses internally.
 - **dask, ray, pyspark** run over partitions — over batches, on ray. Deduplication executes per partition or batch, on the worker holding it.
 
 The partitioned execution has a consequence you must plan around: **records are only matched within a partition**. Two identical rows in different partitions will not be deduplicated, and each partition's duplicates get ids from that partition's own numbering. Partition your data so that likely duplicates land together, or use `repartition` on the columns your rules match against — see [Use Partitioned Data](performance.md#use-partitioned-data).
@@ -71,6 +72,7 @@ The partitioned execution has a consequence you must plan around: **records are 
 | pandas | `pandas.DataFrame` |
 | polars | `polars.DataFrame` |
 | modin | `modin.pandas.DataFrame` |
+| pyarrow | `pyarrow.Table` |
 | dask | `dask.dataframe.DataFrame` (lazy) |
 | ray | `ray.data.Dataset` (lazy) |
 | pyspark | `pyspark.sql.DataFrame` (lazy) |
@@ -89,16 +91,17 @@ Passing an existing id column (`canonicalize(id="uid")`) avoids the auto-increme
 
 One API difference to know before you write code against a distributed backend:
 
-- `explore` runs on the pandas, polars and modin backends only. On dask, ray or pyspark it raises `ValueError`. Profile a sample locally first, then apply the chosen rules to the full distributed DataFrame.
+- `explore` runs on the pandas, polars, modin and pyarrow backends only. On dask, ray or pyspark it raises `ValueError`. Profile a sample locally first, then apply the chosen rules to the full distributed DataFrame. On pandas and modin the result is indexed by `metric`; on polars and pyarrow there is no index and `metric` is a regular column.
 - Custom dedupers receive a plain Python list built per partition on the worker (see [Data Size and Distributed Backends](../tutorials/custom-dedupers.md#data-size-and-distributed-backends)). Keep the function importable so it can be shipped to workers.
 
 ## Which One Do I Pick?
 
 - **pandas** — in-memory frames. The reference backend: everything works, and results are the easiest to inspect.
 - **polars** — in-memory frames on a modern, multithreaded execution engine.
+- **pyarrow** — in-memory Arrow tables, when your data is already Arrow (for example loaded from Parquet with `pyarrow.parquet`).
 - **modin** — pandas code that has outgrown one core. Scales pandas across cores while keeping the pandas API.
 - **dask** — partitioned, pandas-like processing on one machine or a small cluster, when data does not fit in memory.
 - **ray** — dataset-oriented pipelines with ray already in your stack.
 - **pyspark** — data already lives in Spark. Deduplicate where the data is, rather than moving it.
 
-All six accept the same dedupers, dict collections and pipelines. The choice is about where your data lives and how far it must scale, not about which rules you can write.
+All seven accept the same dedupers, dict collections and pipelines. The choice is about where your data lives and how far it must scale, not about which rules you can write.

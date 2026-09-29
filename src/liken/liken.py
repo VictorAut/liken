@@ -160,7 +160,7 @@ class Dedupe:
         analyse a random sample of the data for a faster, approximate result.
 
         Note:
-            Only supported for the pandas, polars and modin backends.
+            Only supported for the pandas, polars, modin and pyarrow backends.
 
         Args:
             columns (list[str] | dict[str, BaseDeduper]): The column labels to

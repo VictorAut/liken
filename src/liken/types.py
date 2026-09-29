@@ -13,17 +13,20 @@ import polars as pl
 if TYPE_CHECKING:
     import dask.dataframe as dd
     import modin.pandas as mpd
+    import pyarrow as pa
     import pyspark.sql as spark
     from ray.data import Dataset as RayDataset
 
-    UserDataFrame: TypeAlias = pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayDataset | dd.DataFrame | spark.DataFrame
+    UserDataFrame: TypeAlias = (
+        pd.DataFrame | pl.DataFrame | mpd.DataFrame | RayDataset | dd.DataFrame | spark.DataFrame | pa.Table
+    )
     InternalDataFrame: TypeAlias = UserDataFrame | list[spark.Row]
 else:
     UserDataFrame = object
     InternalDataFrame = object
 
 
-SupportedBackends: TypeAlias = Literal["pandas", "polars", "modin", "pyspark", "ray", "dask"]
+SupportedBackends: TypeAlias = Literal["pandas", "polars", "modin", "pyspark", "ray", "dask", "pyarrow"]
 
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
 Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule

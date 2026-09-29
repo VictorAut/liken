@@ -8,4 +8,5 @@ def test_backends_are_registered():
         "dask",
         "ray",
         "pyspark",
+        "pyarrow",
     }

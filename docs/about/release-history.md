@@ -2,6 +2,14 @@
 title: Release History
 ---
 
+## Unreleased
+
+**Features**
+
+
+- PyArrow Table input support: deduplicate, canonicalize and explore pyarrow Tables natively
+
+
 ## v0.9.2 (2026-09-24)
 
 **Features**

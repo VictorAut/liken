@@ -126,7 +126,7 @@ def fake_10(
     """Synthetic 10 rows.
 
     Args:
-        backend: One of "pandas", "polars" or "spark".
+        backend: One of "pandas", "polars", "modin", "pyspark", "ray", "dask" or "pyarrow".
         spark_session: The pyspark spark session if requesting data using
             "spark" backend.
 
@@ -151,7 +151,7 @@ def fake_1K(
     """Synthetic 1K (one thousand) rows.
 
     Args:
-        backend: One of "pandas", "polars" or "spark".
+        backend: One of "pandas", "polars", "modin", "pyspark", "ray", "dask" or "pyarrow".
         spark_session: The pyspark spark session if requesting data using
             "spark" backend.
 
@@ -179,7 +179,7 @@ def fake_100K(
     """Synthetic 100K (one hundred thousand) rows.
 
     Args:
-        backend: One of "pandas", "polars" or "spark".
+        backend: One of "pandas", "polars", "modin", "pyspark", "ray", "dask" or "pyarrow".
         spark_session: The pyspark spark session if requesting data using
             "spark" backend.
 
@@ -207,7 +207,7 @@ def fake_1M(
     """Synthetic 1M (one million) rows.
 
     Args:
-        backend: One of "pandas", "polars" or "spark".
+        backend: One of "pandas", "polars", "modin", "pyspark", "ray", "dask" or "pyarrow".
         spark_session: The pyspark spark session if requesting data using
             "spark" backend.
 

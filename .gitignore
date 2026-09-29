@@ -4,6 +4,8 @@
 
 scrap*
 CLAUDE.md
+tasks/*
+SPEC*
 
 **/__pycache__/*
 .python-version

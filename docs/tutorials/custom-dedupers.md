@@ -167,6 +167,6 @@ Custom dedupers **can** be combined using AND semantics in pipelines with other 
 Your function always receives a plain Python list, which **Liken** produces from the column's in-memory representation. That has consequences for size and placement:
 
 - The list holds one Python object per value, so memory use is proportional to the column, a cost your function pays before it yields anything.
-- On local backends (pandas, polars, modin) the list covers the whole column.
+- On local backends (pandas, polars, modin, pyarrow) the list covers the whole column.
 - On distributed backends (dask, ray, pyspark) **Liken** runs your function per partition, per batch; on ray, the worker holding it. The DataFrame is not pulled to one machine, but instead each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
 - Your function must survive being sent to workers: keep it importable and picklable, and avoid closures over unserialisable state.
