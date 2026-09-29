@@ -5,7 +5,6 @@ def test_all_extras(expect_backends):
             "pandas",
             "polars",
             "pyarrow",
-            
             # OPTIONAL:
             "modin",
             "dask",
