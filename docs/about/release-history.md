@@ -2,7 +2,7 @@
 title: Release History
 ---
 
-## Unreleased
+## v0.10.0 (2029-09-29)
 
 **Features**
 

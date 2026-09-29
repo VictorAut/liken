@@ -94,7 +94,7 @@ The key features are:
   </a>
 
   <a href="https://arrow.apache.org/docs/python/" target="_blank">
-    PyArrow
+    <img src="images/supported-libraries/arrow.png" alt="Dask">
   </a>
 
 </div>
