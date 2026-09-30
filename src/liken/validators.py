@@ -1,4 +1,4 @@
-"""This moduel contains argument validation for classes.
+"""This module contains argument validation for classes.
 
 Most validations are for public arguments of the 'Dedupe' class.
 
@@ -42,8 +42,14 @@ def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSes
 
 
 def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:
-    """Validates Keep arg in the 'Dedupe' class"""
-    # TODO: do a type check and TypeError raise here too
+    """Validates Keep arg in the 'Dedupe' class
+
+    Raises:
+        TypeError: if `keep` is not a string
+        ValueError: if `keep` is a string outside ("first", "last")
+    """
+    if not isinstance(keep, str):
+        raise TypeError(INVALID_KEEP.format(keep))
     if keep not in ("first", "last"):
         raise ValueError(INVALID_KEEP.format(keep))
     return keep
@@ -71,7 +77,7 @@ def validate_columns_arg(
     - Dict API: .canonicalize with NO columns defined
     - Pipeline API: .canonicalize with NO columns defined
 
-    Any other combination/repetion raises a value error
+    Any other combination/repetition raises a value error
     """
     if is_sequential_applied:
         if not columns:

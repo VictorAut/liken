@@ -4,7 +4,7 @@ E.g. "fuzzy"
 
 Dedupers are either:
     - "Threshold" dedupers: deduplication is decided according to a
-        smiilarity. Routed through main package.
+        similarity. Routed through main package.
     - "Predicate" dedupers: deduplication is decided according to discrete
         outcomes. As this choice is fit for combinations using "and"
         operations, this is routed via the "rules" module.
@@ -227,7 +227,7 @@ class PredicateDeduper(BaseDeduper):
 
         mask: pa.Array | None = self._vectorized_matches(array)
 
-        if mask:
+        if mask is not None:
             indices = pc.indices_nonzero(mask).to_pylist()
 
             if indices:

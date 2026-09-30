@@ -1,4 +1,4 @@
-"""Deduplication collectionexecutors.
+"""Deduplication collection executors.
 
 `PysparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`

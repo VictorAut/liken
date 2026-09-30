@@ -83,7 +83,7 @@ class Dedupe:
         cls,
         rows: list[Row],
     ) -> Dedupe:
-        """bypass initialization and initialize explicitely with no validation.
+        """bypass initialization and initialize explicitly with no validation.
 
         Use as internal constructor with spark `Rows`.
         """
@@ -104,14 +104,14 @@ class Dedupe:
             deduper: The deduper or dedupers to apply
 
         Returns:
-            None
+            Self
 
         Raises:
             InvalidDeduperError: For any invalid deduper or collection of
                 dedupers
 
         Example:
-            Import and prepate data:
+            Import and prepare data:
 
                 import liken as lk
 
@@ -121,7 +121,7 @@ class Dedupe:
 
             Dict API:
 
-                lk.dedupe(df).apply({"address": (exact(), tfidf())}
+                lk.dedupe(df).apply({"address": (exact(), tfidf())})
 
             Pipeline API:
 
@@ -194,14 +194,14 @@ class Dedupe:
     ) -> UserDataFrame:
         """Drop duplicates by enacting the applied dedupers.
 
-        If no dedupers are explicitely provided, will carry out an exact
+        If no dedupers are explicitly provided, will carry out an exact
         deduplication on any number of columns provided in `columns`.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
                 dataframe to deduplicate.
-            keep: Accepted as "first" or "last". Whether to keep the first intance
-                of a duplicate or the last intance, as found in the DataFrame.
+            keep: Accepted as "first" or "last". Whether to keep the first instance
+                of a duplicate or the last instance, as found in the DataFrame.
 
         Returns:
             A deduplicated DataFrame.
@@ -246,20 +246,20 @@ class Dedupe:
     ) -> Self:
         """Canonicalize by enacting the applied dedupers.
 
-        If no dedupers are explicitely provided, will carry out an exact
+        If no dedupers are explicitly provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
 
         Warning:
             Leaving `id` to it's default `None` value forces collection to
             driver node when using `Ray` Datasets and `Dask` DataFrames, which
-            is not recommended. Use the dataset's unique identier with the `id`
+            is not recommended. Use the dataset's unique identifier with the `id`
             arg, instead.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
                 dataframe to deduplicate.
             keep: Accepted as "first" or "last". Whether to keep the first
-                intance of a duplicate or the last intance, as found in the
+                instance of a duplicate or the last instance, as found in the
                 DataFrame.
             drop_duplicates: Optionally drop duplicates, whilst preserving a
                 canonical_id, contrary to `drop_duplicates`.
@@ -313,7 +313,7 @@ class Dedupe:
             n: the number of records per canonical id, defaulted at 2
 
         Warning:
-            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            For PySpark dataframes, Dask dataframes and Ray datasets, this
             function forces the collection of data to the driver node.
             Additionally, this function only supports usage with PySpark `v4`
             and up.
@@ -343,7 +343,7 @@ class Dedupe:
         return {cid: count for cid, count in counts.items() if count >= n}
 
     def synthesize(self) -> UserDataFrame:
-        """Synthesizes a record combining the first intance of non null values
+        """Synthesizes a record combining the first instance of non null values
         of all records associated to a canonical id.
 
         The resulting "golden" record essentially contains coalesced values of
@@ -359,7 +359,7 @@ class Dedupe:
             as `min` and `max` for numerical data.
 
         Warning:
-            For PySpark dataframes, Dask dataframes and Ray datasets, this#
+            For PySpark dataframes, Dask dataframes and Ray datasets, this
             function forces the collection of data to the driver node.
             Additionally, this function only supports usage with PySpark `v4`
             and up.

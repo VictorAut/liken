@@ -104,7 +104,7 @@ def exact() -> BaseDeduper:
             |  2   |   null    |  foobar@gmail.com   |
             +------+-----------+---------------------+
 
-        By default `exact` is used when no dedupers are explicitely applied:
+        By default `exact` is used when no dedupers are explicitly applied:
 
             # OK, still dedupes.
             df = Dedupe(df).drop_duplicates("address")

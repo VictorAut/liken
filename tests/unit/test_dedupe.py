@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+import liken as lk
 from liken.liken import Dedupe
 from liken.validators import validate_keep_arg
 from liken.validators import validate_spark_arg
@@ -217,3 +218,26 @@ def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
     dupe = Dedupe(dataframe)
     dupe._sm = mock_sm
     assert dupe.explain() == ("deduper1",)
+
+
+# explain() with sequential dedupers
+
+
+def test_explain_single_sequential_deduper_returns_that_deduper_str(dataframe):
+    exact = lk.exact()
+    dupe = Dedupe(dataframe).apply(exact)
+
+    assert dupe.explain() == str(exact)
+
+
+def test_explain_two_sequential_dedupers_returns_both_names_comma_separated(dataframe):
+    exact = lk.exact()
+    fuzzy = lk.fuzzy()
+    dupe = Dedupe(dataframe).apply(exact).apply(fuzzy)
+
+    out = dupe.explain()
+    assert isinstance(out, str)
+    lowered = out.lower()
+    assert "exact" in lowered
+    assert "fuzzy" in lowered
+    assert "," in out

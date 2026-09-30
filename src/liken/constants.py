@@ -20,7 +20,9 @@ SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
 # For argument validations
 
 INVALID: Final[str] = "Invalid arg: "
-INVALID_DF: Final[str] = INVALID + "df must be istance of Pandas, Polars, Modin, Ray or Spark DataFrames, got {}"
+INVALID_DF: Final[str] = (
+    INVALID + "df must be instance of Pandas, Polars, PyArrow, Modin, Ray, Dask or Spark DataFrames, got {}"
+)
 INVALID_SPARK: Final[str] = INVALID + "spark_session arg must be provided for a spark dataframe"
 INVALID_KEEP: Final[str] = INVALID + "keep arg must be one of 'first' or 'last', got {}"
 INVALID_DEDUPER: Final[str] = INVALID + "deduper must be instance of BaseDeduper, got {}"

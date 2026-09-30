@@ -4,6 +4,7 @@ import liken as lk
 from liken.collections.base import CollectionsManager
 from liken.collections.base import InvalidDeduperError
 from liken.collections.dict import DeduplicationDict
+from liken.collections.pipelines import Col
 from liken.collections.pipelines import Pipeline
 from liken.collections.pipelines import col
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
@@ -257,7 +258,7 @@ def test_pretty_get_rules_api():
     pretty = sm.pretty_get()
     assert (
         pretty == "("
-        "\n\tlk.rules.builder()"
+        "\n\tlk.pipeline()"
         "\n\t\t.step(["
         "\n\t\t\tlk.col('col_a').exact(),"
         "\n\t\t])"
@@ -347,3 +348,40 @@ def test_pipeline_str_includes_preprocessors():
     representation = str(pipeline)
     assert "preprocessors=" in representation
     assert "lk.col('address').exact()" in representation
+
+
+def test_pipeline_str_emits_pasteable_pipeline():
+    p = lk.pipeline().step(lk.col("email").fuzzy())
+
+    s = str(p)
+
+    assert "lk.pipeline" in s
+    assert "lk.col" in s
+    assert "lk.rules" not in s
+
+
+###########################
+# Col deduper stubs guard #
+###########################
+
+
+BUILTIN_DEDUPER_NAMES = [
+    "exact",
+    "fuzzy",
+    "tfidf",
+    "lsh",
+    "jaccard",
+    "cosine",
+    "isin",
+    "isna",
+    "str_contains",
+    "str_endswith",
+    "str_len",
+    "str_startswith",
+]
+
+
+@pytest.mark.parametrize("name", BUILTIN_DEDUPER_NAMES)
+def test_col_has_stub_method_for_every_builtin_deduper(name):
+    # A new deduper registered without a Col stub fails here.
+    assert hasattr(Col, name)

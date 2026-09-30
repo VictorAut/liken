@@ -2,6 +2,7 @@ import pytest
 from ray.data import Dataset
 
 from liken.constants import CANONICAL_ID
+from liken.constants import INVALID_DF
 from liken.core.dispatcher import wrap
 
 
@@ -41,3 +42,10 @@ def _assert(df, _not: bool):
             assert CANONICAL_ID not in df.columns
         else:
             assert CANONICAL_ID in df.columns
+
+
+def test_invalid_df_message_lists_all_supported_backends():
+    msg = INVALID_DF.format("list")
+
+    for name in ("pandas", "polars", "modin", "ray", "spark", "dask", "pyarrow"):
+        assert name in msg.lower(), msg

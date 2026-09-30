@@ -1,27 +1,4 @@
-"""
-This module provides wrappers to allow for a uniform interface across different
-backends. The backends covered are:
-    - Pandas
-    - Polars
-    - Spark DataFrames
-    - Spark RDDs
-    - Spark Rows
-
-Whilst Pandas and Polars wrappers are similarly wrapped, note the following:
-- Spark Rows inherits the majority of functionality related to getting
-    columns, puting columns, fill na etc
-- Conversely, Spark DataFrames take care of adding canonical IDs
-
-Additional Points regarding Spark. Upon initialising the public API with a
-Spark DataFrame, the wrapper will call the PysparkDF class which will create
-canonical IDs. However the output to this is RDDs which are then processed
-by the executor into Spark Rows which are dispatched to worker nodes. Spark
-Rows can be fully recovered to a Spark DataFrame using the same PysparkDF class.
-
-TODO:
-    - CanonicalIdMixin should be defined first when inherited
-    - A full interface can then be defined
-"""
+"""Base DataFrame wrapper defining the uniform wrapper interface across backends."""
 
 from __future__ import annotations
 
@@ -64,7 +41,7 @@ class DF(Generic[D]):
         return self._df
 
     def __getattr__(self, name: str) -> Any:
-        """Delegation: use ._df without using property explicitely.
+        """Delegation: use ._df without using property explicitly.
 
         So, the use of Self even with no attribute returns ._df attribute.
         Therefore calling Self == call Self._df. This is useful as it makes the

@@ -9,6 +9,7 @@ from liken.validators import validate_deduper_arg
 from liken.validators import validate_explore_column_exists
 from liken.validators import validate_explore_columns_arg
 from liken.validators import validate_frac_arg
+from liken.validators import validate_keep_arg
 from liken.validators import validate_thresholds_arg
 
 
@@ -123,3 +124,13 @@ def test_threshold_deduper_accepts_threshold_below_one(threshold):
 def test_threshold_deduper_rejects_threshold_outside_bounds(threshold):
     with pytest.raises(ValueError, match="threshold value must be greater or equal to 0 and less than 1"):
         ThresholdDeduper(threshold=threshold)
+
+
+def test_validate_keep_arg_rejects_non_str_with_type_error():
+    with pytest.raises(TypeError):
+        validate_keep_arg(1)
+
+
+def test_validate_keep_arg_rejects_unknown_str_with_value_error():
+    with pytest.raises(ValueError):
+        validate_keep_arg("middle")
