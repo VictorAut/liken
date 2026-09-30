@@ -2,7 +2,17 @@
 title: Release History
 ---
 
-## v0.10.0 (2029-09-29)
+## v0.10.1 (2029-09-30)
+
+**Fixes**
+
+
+- Missing typing in backends
+- Module docstrings, typos fixed
+- Validation of keep arg fixed
+
+
+## v0.10.0 (2029-09-30)
 
 **Features**
 
