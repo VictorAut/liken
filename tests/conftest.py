@@ -5,6 +5,7 @@ import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 import ray
 from dask.distributed import Client
@@ -177,6 +178,9 @@ class Helpers:
         if self.backend == "pyspark":
             return [value[col] for value in df.select(col).collect()]
 
+        if self.backend == "pyarrow":
+            return df.column(col).to_pylist()
+
     def add_column(self, df, column: list, label: str, dtype=None):
 
         if self.backend == "pandas":
@@ -187,6 +191,9 @@ class Helpers:
 
         if self.backend == "modin":
             return df.assign(**{label: column})
+
+        if self.backend == "pyarrow":
+            return df.append_column(label, pa.array(column, type=pa.string() if dtype is str else None))
 
         if self.backend == "dask":
 
@@ -244,6 +251,13 @@ class Helpers:
             df = pd.DataFrame(columns=schema, data=data)
 
             df = ray.data.from_pandas(df)
+
+        if self.backend == "pyarrow":
+            return (
+                pa.Table.from_pylist([dict(zip(schema, row)) for row in data])
+                if data
+                else pa.table({name: pa.array([], type=pa.null()) for name in schema})
+            )
 
         if self.backend == "pyspark":
             df = self.spark_session.createDataFrame(schema=schema, data=data)

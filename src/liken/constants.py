@@ -37,7 +37,7 @@ INVALID_COLUMNS_NOT_NONE: Final[str] = (
 # explore errors
 
 INVALID_EXPLORE_BACKEND: Final[str] = (
-    INVALID + "explore is only supported for the pandas, polars and modin backends, got '{}'"
+    INVALID + "explore is only supported for the pandas, polars, modin and pyarrow backends, got '{}'"
 )
 INVALID_FRAC: Final[str] = INVALID + "frac must be a number in the range (0, 1], got {}"
 INVALID_THRESHOLDS: Final[str] = INVALID + "thresholds must be a non-empty list of floats in the range (0, 1), got {}"

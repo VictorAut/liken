@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import copy
+import random
 from typing import Any
 from typing import Final
 from typing import cast
+
+import pyarrow as pa
 
 from liken.constants import INVALID_EXPLORE_BACKEND
 from liken.core.backend import Backend
@@ -22,7 +25,7 @@ from liken.validators import validate_explore_column_exists
 
 DEFAULT_EXPLORE_THRESHOLDS: Final[list[float]] = [0.5, 0.75, 0.9, 0.95, 0.99]
 
-_SUPPORTED_BACKENDS: Final[frozenset[str]] = frozenset({"pandas", "polars", "modin"})
+_SUPPORTED_BACKENDS: Final[frozenset[str]] = frozenset({"pandas", "polars", "modin", "pyarrow"})
 
 _EXACT_LABEL: Final[str] = "exact"
 _METRIC_LABEL: Final[str] = "metric"
@@ -41,7 +44,7 @@ def run_explore(
     if backend.name not in _SUPPORTED_BACKENDS:
         raise ValueError(INVALID_EXPLORE_BACKEND.format(backend.name))
 
-    df_columns: list[str] = list(df.columns)
+    df_columns: list[str] = _column_labels(df, backend.name)
 
     if isinstance(columns, dict):
         col_names: list[str] = list(columns.keys())
@@ -83,12 +86,30 @@ def run_explore(
     return result
 
 
+def _column_labels(df: UserDataFrame, backend_name: str) -> list[str]:
+    """Column labels of `df`.
+
+    `pyarrow.Table.columns` returns the column arrays, not the labels.
+    """
+    if backend_name == "pyarrow":
+        return list(cast(pa.Table, df).column_names)
+    return list(cast(Any, df).columns)
+
+
 def _sample(df: UserDataFrame, backend_name: str, frac: float) -> UserDataFrame:
     """Return a random `frac` of rows (a new frame), or the frame as-is."""
     if frac == 1.0:
         return df
     if backend_name == "polars":
         return cast(UserDataFrame, cast(Any, df).sample(fraction=frac))
+    if backend_name == "pyarrow":
+        # pa.Table has no sample; take a random subset of row indices. A typed
+        # index array keeps an empty take from failing on a null-typed
+        # empty indices argument.
+        n = cast(pa.Table, df).num_rows
+        k = round(frac * n)
+        indices = sorted(random.sample(range(n), k))
+        return cast(UserDataFrame, cast(pa.Table, df).take(pa.array(indices, type=pa.int64())))
     return cast(UserDataFrame, cast(Any, df).sample(frac=frac))
 
 

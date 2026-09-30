@@ -12,6 +12,7 @@ vars:
     - dask
     - ray
     - pyspark
+    - pyarrow
 
 tasks:
   install:

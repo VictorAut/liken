@@ -93,6 +93,10 @@ The key features are:
     <img src="images/supported-libraries/dask.png" alt="Dask">
   </a>
 
+  <a href="https://arrow.apache.org/docs/python/" target="_blank">
+    <img src="images/supported-libraries/arrow.png" alt="Dask">
+  </a>
+
 </div>
 
 
@@ -112,7 +116,7 @@ uv pip install liken
 
 ### Extras
 
-**Liken** supports `pandas` and `polars` in the default installation. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
+**Liken** supports `pandas`, `polars` and `pyarrow` in the default installation. **Liken** also supports [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries), install them optionally:
 
 === "pip"
 

@@ -2,6 +2,7 @@ import dask.dataframe as dd
 import modin.pandas as mpd
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import liken as lk
@@ -27,11 +28,24 @@ def make_pandas_df():
 def test_explore_rejects_unsupported_backend():
     df = dd.from_pandas(make_pandas_df(), npartitions=1)
 
-    with pytest.raises(ValueError, match="explore is only supported for the pandas, polars and modin backends"):
+    with pytest.raises(
+        ValueError, match="explore is only supported for the pandas, polars, modin and pyarrow backends"
+    ):
         lk.dedupe(df).explore(["address"])
 
 
 # duplicate rates
+
+
+def test_explore_reports_duplicate_rates_pyarrow():
+    df = pa.table({"id": [1, 2, 3], "address": ["london", "london", "paris"]})
+
+    result = lk.dedupe(df).explore(["address"])
+
+    assert isinstance(result, pa.Table)
+    assert result.column("metric").to_pylist() == DEFAULT_METRICS
+    # two of three rows share an address
+    assert result.column("address").to_pylist()[0] == pytest.approx(1 / 3)
 
 
 def test_explore_reports_duplicate_rates_pandas():
@@ -69,6 +83,26 @@ def test_explore_sampled_rates_are_well_formed(make_df):
     assert metrics == DEFAULT_METRICS
 
 
+def test_explore_sampled_rates_pyarrow():
+    df = pa.table({"id": [1, 2, 3], "address": ["london", "london", "paris"]})
+
+    result = lk.dedupe(df).explore(["address"], frac=0.5)
+
+    assert isinstance(result, pa.Table)
+    assert result.column("metric").to_pylist() == DEFAULT_METRICS
+    assert all(0 <= rate <= 1 for rate in result.column("address").to_pylist())
+
+
+def test_explore_reports_pyarrow_dict_dedupers():
+    df = pa.table({"id": [1, 2, 3], "email": ["a@x.com", "a@x.com", "b@x.com"]})
+
+    result = lk.dedupe(df).explore({"email": lk.tfidf()})
+
+    assert isinstance(result, pa.Table)
+    # two of three rows share an email
+    assert result.column("email").to_pylist()[0] == pytest.approx(1 / 3)
+
+
 def test_explore_sampled_rates_modin():
     df = mpd.DataFrame(data=DATA, columns=COLS)
 
@@ -78,8 +112,8 @@ def test_explore_sampled_rates_modin():
     assert list(result.index) == DEFAULT_METRICS
 
 
-# NOTE: no empty-frame test. Found during this task: on an empty pandas
-# dataframe the column converts to a pyarrow null-typed array, and the
-# NA-placeholder coalesce in DF.get_array raises ArrowNotImplementedError.
-# Affects explore, drop_duplicates and canonicalize alike. Recorded as a
-# bug finding; a source fix is out of scope for this change.
+# FIXME: on an empty dataframe the column converts to a pyarrow null-typed
+# array and the NA-placeholder coalesce in DF.get_array raises
+# ArrowNotImplementedError. Affects explore, drop_duplicates and
+# canonicalize on every backend, so there is no empty-frame explore test
+# here. Fixing the coalesce is a separate change.

@@ -93,6 +93,21 @@ A DataFrame must be passed to the top-level `dedupe` function.
     )
     ```
 
+=== "PyArrow"
+
+    ```python
+    import liken as lk
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    df = pq.read_table("...")
+
+    df = (
+        lk.dedupe(df)
+        # ...
+    )
+    ```
+
 === "PySpark"
 
     ```python
@@ -243,7 +258,7 @@ By default, each column is profiled with `fuzzy`. To profile a column with a dif
 lk.dedupe(df).explore({"email": lk.tfidf()})
 ```
 
-`explore` runs on the pandas, polars and modin backends. On dask, ray or pyspark, `explore` is not supported and raises a `ValueError`.
+`explore` runs on the pandas, polars, modin and pyarrow backends. On dask, ray or pyspark, `explore` is not supported and raises a `ValueError`.
 
 ## Missing Values
 
