@@ -5,9 +5,11 @@ import pytest
 
 import liken as lk
 from liken.core.deduper import BaseDeduper
+from liken.core.deduper import PredicateDeduper
 from liken.dedupers.exact import Exact
 from liken.dedupers.isin import isin
 from liken.dedupers.jaccard import Jaccard
+from liken.dedupers.str_contains import StrContains
 from liken.dedupers.str_startswith import StrStartsWith
 
 
@@ -246,3 +248,42 @@ def test_notna_groups_only_non_null_values(mock_df):
     assert n == 4
     assert uf[2] == uf[3]  # only the non-null values group
     assert uf[0] != uf[2] and uf[1] != uf[2]
+
+
+##########################
+# Vectorized mask guard #
+##########################
+
+
+class _FallbackOnlyStrContains(StrContains):
+    def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+        return None
+
+
+def test_vectorized_guard_dispatches_on_presence_not_truthiness(mock_df):
+    """The guard must read the mask's identity, not its truthiness.
+
+    A subclass may return an empty mask (falsy under pyarrow's len-based
+    ``__bool__``); the vectorized path must still be taken.
+    """
+
+    class EmptyMaskDeduper(PredicateDeduper):
+        def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+            return pa.array([], type=pa.bool_())
+
+        def _matches(self, value):
+            raise AssertionError("Python fallback must not run when a mask is present")
+
+    deduper = EmptyMaskDeduper().set_frame(mock_df)
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["a", "b"], type=pa.string()))) == []
+
+
+@pytest.mark.parametrize("values", [["apple"], []], ids=["one-row", "zero-rows"])
+def test_vectorized_matches_same_pairs_as_python_fallback(values):
+    array = pa.array(values, type=pa.string())
+
+    vectorized = StrContains(pattern="app")
+    fallback = _FallbackOnlyStrContains(pattern="app")
+
+    assert list(vectorized._gen_similarity_pairs(array)) == list(fallback._gen_similarity_pairs(array))

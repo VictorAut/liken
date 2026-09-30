@@ -1,4 +1,4 @@
-"""Deduplication collectionexecutors.
+"""Deduplication collection executors.
 
 `PysparkExecutor` simply calls a partition processor where each partition will
 then be processed with the `LocalExecutor`
@@ -94,9 +94,9 @@ class PysparkExecutor(Executor):
         liken API is executed *per* worker node.
 
         Args:
-            paritition_iter: a partition
+            partition: a partition
             dedupers: the collection of dedupers
-            id: the unique identified of the dataset a.k.a "business key"
+            id: the unique identifier of the dataset a.k.a "business key"
             columns: the attribute on which to deduplicate
 
         Returns:

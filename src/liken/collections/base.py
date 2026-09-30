@@ -32,7 +32,7 @@ class CollectionsManager:
     - Pipeline
 
     For Sequential dedupers, as instances of `BaseDeduper` are sequentially
-    to an idential structure of the Dict API but under a single default
+    to an identical structure of the Dict API but under a single default
     dictionary key. Keys are columns names, and values are iterables of
     dedupers.
 
@@ -100,14 +100,15 @@ class CollectionsManager:
     def pretty_get(self) -> None | str:
         """string representation of dedupers.
 
-        Output string must be formatted approximately such that it can be used
-        with .apply(), i.e. a string representation of one of:
+        Output string is formatted such that it can be used with `.apply()`,
+        i.e. a string representation of one of:
             - BaseDeduper
             - DeduplicationDict
             - Pipeline
-        The seuqneital API with numerous additions of BaseStraegy means there
-        is not good way to retried this such that is available to "apply". So,
-        default to returning it as a list representation.
+        For the Sequential API with a single deduper, the deduper's own string
+        representation is returned. With multiple sequential dedupers, the
+        list representation is returned instead: there is no single-deduper
+        string that is re-pasteable for `.apply()`.
         """
         dedupers = self.get()
 
@@ -116,7 +117,9 @@ class CollectionsManager:
                 deduper: list = dedupers[SEQUENTIAL_API_DEFAULT_KEY]
                 if not deduper:
                     return None
-                return str(*deduper)
+                if len(deduper) == 1:
+                    return str(deduper[0])
+                return str(deduper)
             return str(dedupers)
         return str(dedupers)
 

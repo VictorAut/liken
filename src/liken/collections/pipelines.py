@@ -61,15 +61,15 @@ class Col:
 
             import liken as lk
 
-            lk.pipeline().step(on("address").exact())
+            lk.pipeline().step(lk.col("address").exact())
 
         Dedupers are combined as "and" statements when passed as a members
         of a list in a step:
 
             lk.pipeline().step(
                 [
-                    on("email").fuzzy(threshold=0.95),
-                    on("email").str_endswith("UK"),
+                    lk.col("email").fuzzy(threshold=0.95),
+                    lk.col("email").str_endswith("UK"),
                 ]
             )
 
@@ -78,8 +78,8 @@ class Col:
 
             lk.pipeline().step(
                 [
-                    on("email").fuzzy(threshold=0.95),
-                    ~on("address").isna(),
+                    lk.col("email").fuzzy(threshold=0.95),
+                    ~lk.col("address").isna(),
                 ]
             )
 
@@ -92,7 +92,7 @@ class Col:
             )
 
         But, a global pipeline preprocessor will not override an explicit
-        deduper's preprocessor. Similarily, a step's preprocessor will not
+        deduper's preprocessor. Similarly, a step's preprocessor will not
         override the deduper's:
 
             pipeline = (
@@ -125,7 +125,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").exact())
+                pipeline = lk.pipeline().step(lk.col("col").exact())
 
         """
         return self.__getattr__("exact")(*args, **kwargs)
@@ -140,7 +140,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").fuzzy())
+                pipeline = lk.pipeline().step(lk.col("col").fuzzy())
 
         """
         return self.__getattr__("fuzzy")(*args, **kwargs)
@@ -155,7 +155,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").tfidf())
+                pipeline = lk.pipeline().step(lk.col("col").tfidf())
 
         """
         return self.__getattr__("tfidf")(*args, **kwargs)
@@ -170,7 +170,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").lsh())
+                pipeline = lk.pipeline().step(lk.col("col").lsh())
 
         """
         return self.__getattr__("lsh")(*args, **kwargs)
@@ -185,7 +185,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").jaccard())
+                pipeline = lk.pipeline().step(lk.col("col").jaccard())
 
         """
         return self.__getattr__("jaccard")(*args, **kwargs)
@@ -200,7 +200,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").cosine())
+                pipeline = lk.pipeline().step(lk.col("col").cosine())
 
         """
         return self.__getattr__("cosine")(*args, **kwargs)
@@ -215,7 +215,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").isin())
+                pipeline = lk.pipeline().step(lk.col("col").isin())
 
         """
         return self.__getattr__("isin")(*args, **kwargs)
@@ -230,7 +230,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").isna())
+                pipeline = lk.pipeline().step(lk.col("col").isna())
 
         """
         return self.__getattr__("isna")(*args, **kwargs)
@@ -245,7 +245,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").str_startswith())
+                pipeline = lk.pipeline().step(lk.col("col").str_startswith())
 
         """
         return self.__getattr__("str_startswith")(*args, **kwargs)
@@ -260,7 +260,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").str_endswith())
+                pipeline = lk.pipeline().step(lk.col("col").str_endswith())
 
         """
         return self.__getattr__("str_endswith")(*args, **kwargs)
@@ -275,7 +275,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").str_contains())
+                pipeline = lk.pipeline().step(lk.col("col").str_contains())
 
         """
         return self.__getattr__("str_contains")(*args, **kwargs)
@@ -290,7 +290,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(on("col").str_len())
+                pipeline = lk.pipeline().step(lk.col("col").str_len())
 
         """
         return self.__getattr__("str_len")(*args, **kwargs)
@@ -321,11 +321,11 @@ class Col:
         return wrapper
 
     def __invert__(self) -> Col:
-        """Propagate inverstion to the deduper. Allows for following syntax:
+        """Propagate inversion to the deduper. Allows for following syntax:
 
-        ~on("email").isna()
+        ~lk.col("email").isna()
 
-        Where the inversion get's propagated to act on isna().
+        Where the inversion gets propagated to act on isna().
         """
 
         columns, deduper, preprocessors = self._unit
@@ -485,7 +485,7 @@ class Pipeline:
             for on in step:
                 inner += "\n\t\t\t" + str(on) + ","
             inner += "\n\t\t" + "])"
-        return f"(\n\tlk.rules.builder({pros}){inner}\n)"
+        return f"(\n\tlk.pipeline({pros}){inner}\n)"
 
     @staticmethod
     def _has_any_predicate(step: list[tuple[Columns, BaseDeduper]]) -> bool:
