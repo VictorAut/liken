@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 from typing import final
@@ -10,7 +11,10 @@ import pyarrow as pa
 from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.types import Keep
+
+
+if TYPE_CHECKING:
+    from liken.types import Keep
 
 
 @final
@@ -105,9 +109,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
         columns: list[pa.Array] = [pa.array(keys, type=canonical_type)]
         for name in data_names:
             values = df.column(name).to_pylist()
-            merged: list[object] = []
-            for key in keys:
-                merged.append(_first_non_null(values, groups[key]))
+            merged: list[object] = [_first_non_null(values, groups[key]) for key in keys]
             columns.append(pa.array(merged, type=df.column(name).type))
 
         return pa.Table.from_arrays(columns, names=[CANONICAL_ID, *data_names])

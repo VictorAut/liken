@@ -1,7 +1,7 @@
 """isin predicate deduper"""
 
+from collections.abc import Iterable
 from typing import ClassVar
-from typing import Iterable
 from typing import final
 
 from typing_extensions import override

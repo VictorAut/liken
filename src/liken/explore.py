@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import random
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Final
 from typing import cast
@@ -11,16 +12,19 @@ from typing import cast
 import pyarrow as pa
 
 from liken.constants import INVALID_EXPLORE_BACKEND
-from liken.core.backend import Backend
-from liken.core.deduper import BaseDeduper
-from liken.core.deduper import ThresholdDeduper
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
-from liken.core.wrapper import DF
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
-from liken.types import UserDataFrame
 from liken.validators import validate_explore_column_exists
+
+
+if TYPE_CHECKING:
+    from liken.core.backend import Backend
+    from liken.core.deduper import BaseDeduper
+    from liken.core.deduper import ThresholdDeduper
+    from liken.core.wrapper import DF
+    from liken.types import UserDataFrame
 
 
 DEFAULT_EXPLORE_THRESHOLDS: Final[list[float]] = [0.5, 0.75, 0.9, 0.95, 0.99]
@@ -81,7 +85,7 @@ def run_explore(
     result: UserDataFrame = backend.create_df(data=rows, schema=[_METRIC_LABEL, *col_names])
 
     if backend.name in ("pandas", "modin"):
-        result = cast(Any, result).set_index(_METRIC_LABEL)
+        result = cast("Any", result).set_index(_METRIC_LABEL)
 
     return result
 
@@ -92,8 +96,8 @@ def _column_labels(df: UserDataFrame, backend_name: str) -> list[str]:
     `pyarrow.Table.columns` returns the column arrays, not the labels.
     """
     if backend_name == "pyarrow":
-        return list(cast(pa.Table, df).column_names)
-    return list(cast(Any, df).columns)
+        return list(cast("pa.Table", df).column_names)
+    return list(cast("Any", df).columns)
 
 
 def _sample(df: UserDataFrame, backend_name: str, frac: float) -> UserDataFrame:
@@ -101,16 +105,16 @@ def _sample(df: UserDataFrame, backend_name: str, frac: float) -> UserDataFrame:
     if frac == 1.0:
         return df
     if backend_name == "polars":
-        return cast(UserDataFrame, cast(Any, df).sample(fraction=frac))
+        return cast("UserDataFrame", cast("Any", df).sample(fraction=frac))
     if backend_name == "pyarrow":
         # pa.Table has no sample; take a random subset of row indices. A typed
         # index array keeps an empty take from failing on a null-typed
         # empty indices argument.
-        n = cast(pa.Table, df).num_rows
+        n = cast("pa.Table", df).num_rows
         k = round(frac * n)
         indices = sorted(random.sample(range(n), k))
-        return cast(UserDataFrame, cast(pa.Table, df).take(pa.array(indices, type=pa.int64())))
-    return cast(UserDataFrame, cast(Any, df).sample(frac=frac))
+        return cast("UserDataFrame", cast("pa.Table", df).take(pa.array(indices, type=pa.int64())))
+    return cast("UserDataFrame", cast("Any", df).sample(frac=frac))
 
 
 def _duplicate_rate(deduper: BaseDeduper, wdf: DF, column: str) -> float:
@@ -129,6 +133,6 @@ def _at_threshold(base: BaseDeduper, threshold: float) -> BaseDeduper:
     shallow copy with the threshold reassigned yields a correct variant without
     reconstructing the deduper.
     """
-    deduper = cast(ThresholdDeduper, copy.copy(base))
+    deduper = cast("ThresholdDeduper", copy.copy(base))
     deduper._threshold = threshold
     return deduper

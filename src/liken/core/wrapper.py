@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Generic
 from typing import Protocol
 from typing import TypeVar
 
-import pyarrow as pa
 from pyarrow.compute import coalesce
 
 from liken.constants import CANONICAL_ID
 from liken.constants import NA_PLACEHOLDER
-from liken.types import Columns
+
+
+if TYPE_CHECKING:
+    import pyarrow as pa
+
+    from liken.types import Columns
 
 
 # TYPES

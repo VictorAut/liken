@@ -21,7 +21,7 @@ class PyarrowBackend(Backend):
         del kwargs  # Unused
         if not data:
             return pa.table({name: pa.array([], type=pa.null()) for name in schema})
-        return pa.Table.from_pylist([dict(zip(schema, row)) for row in data])
+        return pa.Table.from_pylist([dict(zip(schema, row, strict=True)) for row in data])
 
     def executor(self, **kwargs):
         del kwargs  # Unused

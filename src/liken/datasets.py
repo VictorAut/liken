@@ -7,12 +7,13 @@ from typing import Any
 from faker import Faker
 
 from liken.core.registries import backends_registry
-from liken.types import SupportedBackends
-from liken.types import UserDataFrame
 
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
+
+    from liken.types import SupportedBackends
+    from liken.types import UserDataFrame
 
 
 Faker.seed(123)
@@ -81,8 +82,8 @@ def _return_df(
 
     try:
         backend_cls = backends_registry.get(backend)
-    except KeyError:
-        raise ValueError(f"Unsupported backend: {backend}")
+    except KeyError as err:
+        raise ValueError(f"Unsupported backend: {backend}") from err
 
     backend_instance = backend_cls()
 

@@ -27,11 +27,12 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import CompoundColumnMixin
 from liken.core.deduper import ThresholdDeduper
 from liken.preprocessors import Preprocessor
-from liken.types import Columns
 
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
+
+    from liken.types import Columns
 
 
 def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSession:

@@ -45,10 +45,7 @@ class StrLen(
         not_null = pc.invert(pc.is_null(array))
         not_empty = pc.greater(lengths, 0)
 
-        mask = pc.and_(mask, not_null)
-        mask = pc.and_(mask, not_empty)
-
-        return mask
+        return pc.and_(pc.and_(mask, not_null), not_empty)
 
     def __str__(self):
         return self.str_representation(self._NAME)

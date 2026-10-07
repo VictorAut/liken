@@ -12,7 +12,6 @@ Dedupers are either:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import Self
@@ -23,11 +22,14 @@ from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
 from liken.constants import CANONICAL_ID
-from liken.preprocessors import Preprocessor
 
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+    from collections.abc import Iterator
+
     from liken.core.wrapper import DF
+    from liken.preprocessors import Preprocessor
     from liken.types import Columns
     from liken.types import Keep
     from liken.types import MultiComponents
@@ -47,8 +49,8 @@ class Base(Protocol):
     def build_union_find(
         self,
         columns: Columns,
-        preprocessors: list[Preprocessor],
-        predicate: set = set(),
+        preprocessors: Collection[Preprocessor],
+        predicate: Collection[int] = (),
     ) -> tuple[UnionFind[int], int]: ...
     def canonicalizer(
         self,
@@ -61,7 +63,7 @@ class Base(Protocol):
     def validate(self, columns: Columns) -> None: ...
 
     @staticmethod
-    def preprocess(array: pa.Array | pa.Table, preprocessors: list[Preprocessor]) -> pa.Array | pa.Table: ...
+    def preprocess(array: pa.Array | pa.Table, preprocessors: Collection[Preprocessor]) -> pa.Array | pa.Table: ...
 
 
 # BASE DEDUPER:
@@ -91,7 +93,7 @@ class BaseDeduper(Base):
         raise NotImplementedError
 
     @staticmethod
-    def preprocess(array: pa.Array | pa.Table, preprocessors: list[Preprocessor]) -> pa.Array | pa.Table:
+    def preprocess(array: pa.Array | pa.Table, preprocessors: Collection[Preprocessor]) -> pa.Array | pa.Table:
         """apply a sequence of preprocessors"""
         if isinstance(array, pa.Table):
             return array
@@ -103,23 +105,25 @@ class BaseDeduper(Base):
     def build_union_find(
         self: Base,
         columns: Columns,
-        preprocessors: list[Preprocessor],
-        predicate: set = set(),
+        preprocessors: Collection[Preprocessor],
+        predicate: Collection[int] = (),
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
         array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
 
-        array: pa.Array | pa.Table = self.preprocess(array, preprocessors)
+        processed: pa.Array | pa.Table = self.preprocess(array, preprocessors)
 
         if predicate:
             # subsets the array on predicate indice list
-            array: pa.Array | pa.Table = array.take(sorted(predicate))
+            subset: pa.Array | pa.Table = processed.take(sorted(predicate))
+        else:
+            subset = processed
 
-        n = len(array)
+        n = len(subset)
 
         uf = UnionFind(range(n))
-        for i, j in self._gen_similarity_pairs(array):
+        for i, j in self._gen_similarity_pairs(subset):
             uf.union(i, j)
 
         return uf, n
@@ -238,14 +242,14 @@ class PredicateDeduper(BaseDeduper):
 
         # fallback to non vectorized, i.e. "Python" matching:
 
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
-        n = len(array)
+        n = len(values)
         for i in range(n):
-            if not self._matches(array[i]):
+            if not self._matches(values[i]):
                 continue
             for j in range(i + 1, n):
-                if self._matches(array[j]):
+                if self._matches(values[j]):
                     yield i, j
 
     def __invert__(self):
@@ -281,7 +285,7 @@ class _NegatedPredicateDeduper(PredicateDeduper):
 
     def validate(self, columns):
         "Get the inner instances validation mixin method"
-        return getattr(self._inner, "validate")(columns)
+        return self._inner.validate(columns)
 
 
 # THRESHOLD DEDUPERS:

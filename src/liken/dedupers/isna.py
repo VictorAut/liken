@@ -20,7 +20,10 @@ class IsNA(
     """
     Deduplicates all missing / null values into a single group.
 
-    Inversion operator here calls it's own negation class
+    Inversion operator here calls it's own negation class. The paired
+    `_gen_similarity_pairs` implementations are deliberately not factored
+    through `_NegatedPredicateDeduper` because NA needs its own inversion
+    logic.
     """
 
     _NAME: ClassVar[str] = "isna"
@@ -31,15 +34,16 @@ class IsNA(
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
         indices: list[int] = []
 
-        for i, v in enumerate(array):
+        for i, v in enumerate(values):
             if v is None:
                 indices.append(i)
                 continue
 
+            # NaN check: NaN != NaN is true by IEEE semantics
             if v != v:
                 indices.append(i)
 
@@ -72,20 +76,15 @@ class _NotNA(
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
         indices: list[int] = []
 
-        for i, v in enumerate(array):
-            notna = True
-            if v is None:
-                notna = False
-
-            elif v != v:
-                notna = False
-
-            if notna:
-                indices.append(i)
+        for i, v in enumerate(values):
+            # NaN check: NaN != NaN is true by IEEE semantics
+            if v is None or v != v:
+                continue
+            indices.append(i)
 
         for i in range(len(indices)):
             for j in range(i + 1, len(indices)):

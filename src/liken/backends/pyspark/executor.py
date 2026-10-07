@@ -6,9 +6,7 @@ then be processed with the `LocalExecutor`
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import Type
 from typing import final
 
 from liken.constants import CANONICAL_ID
@@ -16,6 +14,8 @@ from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from pyspark.sql import Row
     from pyspark.sql import SparkSession
 
@@ -79,7 +79,7 @@ class PysparkExecutor(Executor):
     @staticmethod
     def _process_partition(
         *,
-        factory: Type[Dedupe],
+        factory: type[Dedupe],
         partition: Iterator[Row],
         dedupers: DeduplicationDict | Pipeline,
         id: str | None,
@@ -110,7 +110,7 @@ class PysparkExecutor(Executor):
         # Core API reused per partition, per worker node
         df = (
             factory._from_rows(rows)
-            .apply(dedupers)  # type: ignore
+            .apply(dedupers)  # type: ignore[arg-type]
             .canonicalize(
                 columns,
                 keep=keep,
@@ -120,4 +120,4 @@ class PysparkExecutor(Executor):
             .collect()
         )
 
-        return iter(df)  # type: ignore
+        return iter(df)  # type: ignore[arg-type]

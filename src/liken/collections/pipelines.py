@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import NamedTuple
 from typing import Self
 from typing import TypeAlias
@@ -12,8 +13,11 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.registries import dedupers_registry
 from liken.preprocessors import Preprocessor
-from liken.types import Columns
 from liken.validators import validate_preprocessor_arg
+
+
+if TYPE_CHECKING:
+    from liken.types import Columns
 
 
 # TYPES:
@@ -28,17 +32,17 @@ class PipelineUnit(NamedTuple):
 PipelineStep: TypeAlias = list[PipelineUnit]
 PipelineCollection: TypeAlias = list[PipelineStep]
 
-InputPreprocessor: TypeAlias = Preprocessor | list[Preprocessor]
+InputPreprocessor: TypeAlias = Preprocessor | list[Preprocessor] | tuple[Preprocessor, ...]
 
 # PUBLIC ON API:
 
 
-def pipeline(preprocessors: InputPreprocessor = []) -> Pipeline:
+def pipeline(preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()) -> Pipeline:
     """Convenience function for `Pipeline` collection."""
     return Pipeline(preprocessors)
 
 
-def col(columns: Columns, /, *, preprocessors: InputPreprocessor = []) -> Col:
+def col(columns: Columns, /, *, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()) -> Col:
     """Convenience function for calling `Col` with a deduper."""
     return Col(columns, preprocessors=preprocessors)
 
@@ -295,7 +299,7 @@ class Col:
         """
         return self.__getattr__("str_len")(*args, **kwargs)
 
-    def __init__(self, columns: Columns, preprocessors: InputPreprocessor = []):
+    def __init__(self, columns: Columns, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
         self._columns: Columns = columns
         self._unit: PipelineUnit
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
@@ -350,7 +354,7 @@ class Col:
 
         rep = ""
         columns, deduper, _ = self._unit
-        deduper_str: str = cast(str, str(deduper))
+        deduper_str: str = cast("str", str(deduper))
         if deduper_str.startswith("~"):
             deduper_str = deduper_str[1:]
             on = "~" + on
@@ -366,7 +370,7 @@ class Pipeline:
 
     Defines deduplication steps as chainable calls. Accepts preprocessors.
     Preprocessors are propagate to each step and on each column, unless
-    explicit overriden in those stages.
+    explicit overridden in those stages.
 
     Args:
         preprocessors: a preprocessor, or list of preprocessors to apply to the
@@ -376,7 +380,7 @@ class Pipeline:
         TypeError: if passed preprocessor not a member of `liken.preprocessors`
     """
 
-    def __init__(self, preprocessors: InputPreprocessor = []):
+    def __init__(self, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
         self._cols: list[list[Col]] = []
         self._steps: PipelineCollection = []
@@ -386,7 +390,7 @@ class Pipeline:
         cols: Col | list[Col],
         /,
         *,
-        preprocessors: InputPreprocessor = [],
+        preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = (),
     ) -> Self:
         """Define a deduplication pipeline step
 
@@ -397,7 +401,7 @@ class Pipeline:
 
         Args:
             cols: `Col` deduper, or list of the same.
-            preprocessors: a preprocessor, or list of preprocessors to appy the
+            preprocessors: a preprocessor, or list of preprocessors to apply the
                 whole step (i.e. to all dedupers if more than one deduper).
 
         Returns:
@@ -456,7 +460,7 @@ class Pipeline:
         if isinstance(cols, list):
             cols_list = cols
         elif isinstance(cols, Col):
-            cols_list: list[Col] = cast(list, [cols])
+            cols_list: list[Col] = cast("list", [cols])
         else:
             raise TypeError("Must be an instance of Col, used as `lk.col(...)` or a list of the same.")
 
@@ -494,7 +498,7 @@ class Pipeline:
 
         Private! not public API.
         """
-        return any([isinstance(x[1], PredicateDeduper) for x in step])
+        return any(isinstance(x[1], PredicateDeduper) for x in step)
 
     @property
     def steps(self):
@@ -505,9 +509,9 @@ class Pipeline:
 
 
 def resolve_preprocessors(
-    preprocessors: InputPreprocessor,
+    preprocessors: InputPreprocessor | tuple[Preprocessor, ...],
 ) -> list[Preprocessor]:
-    if isinstance(preprocessors, list):
+    if isinstance(preprocessors, (list, tuple)):
         return [validate_preprocessor_arg(p) for p in preprocessors]
     # i.e. a single preprocessor
     return [validate_preprocessor_arg(preprocessors)]

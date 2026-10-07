@@ -3,26 +3,16 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Hashable
 from typing import Self
 
 from liken.collections.base import CollectionsManager
-from liken.collections.dict import DeduplicationDict
-from liken.collections.pipelines import Pipeline
-from liken.core.backend import Backend
-from liken.core.deduper import BaseDeduper
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
-from liken.core.wrapper import DF
 from liken.dedupers.exact import exact
 from liken.explore import DEFAULT_EXPLORE_THRESHOLDS
 from liken.explore import run_explore
-from liken.types import Columns
-from liken.types import InternalDataFrame
-from liken.types import Keep
-from liken.types import UserDataFrame
 from liken.validators import validate_columns_arg
 from liken.validators import validate_explore_columns_arg
 from liken.validators import validate_frac_arg
@@ -32,8 +22,20 @@ from liken.validators import validate_thresholds_arg
 
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from pyspark.sql import Row
     from pyspark.sql import SparkSession
+
+    from liken.collections.dict import DeduplicationDict
+    from liken.collections.pipelines import Pipeline
+    from liken.core.backend import Backend
+    from liken.core.deduper import BaseDeduper
+    from liken.core.wrapper import DF
+    from liken.types import Columns
+    from liken.types import InternalDataFrame
+    from liken.types import Keep
+    from liken.types import UserDataFrame
 
 
 class Dedupe:

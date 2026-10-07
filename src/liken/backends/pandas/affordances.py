@@ -47,7 +47,7 @@ def register_pd_affordances():
 
     def make_accessor(name: str, fn) -> None:
         @pd.api.extensions.register_dataframe_accessor(name)
-        class _Accessor(Accessor):  # noqa
+        class _Accessor(Accessor):
             @staticmethod
             def func(**kwargs):
                 return fn(**kwargs)
