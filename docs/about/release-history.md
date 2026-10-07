@@ -2,6 +2,15 @@
 title: Release History
 ---
 
+## v0.10.2 (2029-10-07)
+
+**Fixes**
+
+
+- Typing related imports relegated to checking only
+- General Python conventions review
+
+
 ## v0.10.1 (2029-09-30)
 
 **Fixes**
