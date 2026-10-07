@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Self
 from typing import final
 
@@ -11,7 +12,10 @@ import pyarrow as pa
 from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
-from liken.types import Keep
+
+
+if TYPE_CHECKING:
+    from liken.types import Keep
 
 
 @final

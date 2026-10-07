@@ -17,8 +17,8 @@ from pyspark.sql.types import LongType
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
+from liken.core.deduper import BaseDeduper
 from liken.datasets import fake_10
-from liken.liken import BaseDeduper
 
 
 # ADDITIONAL DATA COLUMNS:
@@ -129,8 +129,8 @@ def dataframe(
         return fake_10("pyspark", spark_session=spark_session)
     try:
         return fake_10(backend)
-    except Exception:
-        raise ValueError(f"Unknown backend: {backend}")
+    except Exception as err:
+        raise ValueError(f"Unknown backend: {backend}") from err
 
 
 # MOCKS:
@@ -180,6 +180,8 @@ class Helpers:
 
         if self.backend == "pyarrow":
             return df.column(col).to_pylist()
+
+        raise ValueError(f"Unknown backend: {self.backend}")
 
     def add_column(self, df, column: list, label: str, dtype=None):
 
@@ -233,6 +235,8 @@ class Helpers:
             df = df.withColumn(label, labels_udf("num_id"))
             return df.drop("num_id")
 
+        raise ValueError(f"Unknown backend: {self.backend}")
+
     def create_df(self, data, schema):
         if self.backend == "pandas":
             df = pd.DataFrame(columns=schema, data=data)
@@ -254,7 +258,7 @@ class Helpers:
 
         if self.backend == "pyarrow":
             return (
-                pa.Table.from_pylist([dict(zip(schema, row)) for row in data])
+                pa.Table.from_pylist([dict(zip(schema, row, strict=True)) for row in data])
                 if data
                 else pa.table({name: pa.array([], type=pa.null()) for name in schema})
             )

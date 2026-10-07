@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING
 from typing import Literal
 from typing import TypeAlias
 
-import pandas as pd
-import polars as pl
-
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
     import modin.pandas as mpd
+    import pandas as pd
+    import polars as pl
     import pyarrow as pa
     import pyspark.sql as spark
     from ray.data import Dataset as RayDataset

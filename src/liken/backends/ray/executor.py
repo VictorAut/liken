@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-import pandas as pd
-
 from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from liken.backends.ray.wrapper import RayDF
     from liken.collections.base import Pipeline
     from liken.collections.dict import DeduplicationDict
@@ -51,8 +51,8 @@ class RayExecutor(Executor):
 
         def _process_batch(batch: pd.DataFrame) -> pd.DataFrame:
             return (
-                Dedupe(batch)  # type: ignore
-                .apply(dedupers)  # type: ignore
+                Dedupe(batch)  # type: ignore[return-value]
+                .apply(dedupers)  # type: ignore[arg-type]
                 .canonicalize(
                     columns,
                     keep=keep,
@@ -63,7 +63,7 @@ class RayExecutor(Executor):
             )
 
         # IMPORTANT: "pandas" batch
-        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))  # type: ignore
+        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))  # type: ignore[arg-type]
 
         if drop_canonical_id:
             return df.drop_col("canonical_id")

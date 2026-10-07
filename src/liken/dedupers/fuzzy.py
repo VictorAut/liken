@@ -1,7 +1,7 @@
 """fuzzy deduper"""
 
+from collections.abc import Callable
 from collections.abc import Iterator
-from typing import Callable
 from typing import ClassVar
 from typing import Literal
 from typing import final
@@ -24,11 +24,14 @@ class Fuzzy(
 ):
     """
     Fuzzy string matching deduper
+
+    An unknown scorer name raises `KeyError` in `get_scorer` rather than
+    falling back to a default scorer.
     """
 
     _NAME: ClassVar[str] = "fuzzy"
 
-    _SCORERS: dict[str, Callable] = {
+    _SCORERS: ClassVar[dict[str, Callable]] = {
         "simple_ratio": fuzz.ratio,
         "partial_ratio": fuzz.partial_ratio,
         "token_sort_ratio": fuzz.token_sort_ratio,
@@ -57,23 +60,23 @@ class Fuzzy(
         self._scorer = scorer
 
     def get_scorer(self):
-        return self._SCORERS.get(self._scorer, fuzz.ratio)
+        return self._SCORERS[self._scorer]
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
-        array: list = array.to_pylist()
-        n = len(array)
+        values: list = array.to_pylist()
+        n = len(values)
 
         threshold = 100 * self._threshold
 
         scorer = self.get_scorer()
 
-        for i, s1 in enumerate(array):
+        for i, s1 in enumerate(values):
             if i + 1 >= n:
                 break
 
             scores = process.cdist(
                 [s1],
-                array[i + 1 :],
+                values[i + 1 :],
                 scorer=scorer,
             )[0]
 

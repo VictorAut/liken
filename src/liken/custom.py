@@ -1,9 +1,9 @@
 """Define custom dedupers"""
 
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from functools import wraps
-from typing import Callable
 from typing import TypeAlias
 from typing import final
 
@@ -41,8 +41,8 @@ class _Custom(ThresholdDeduper):
         **kwargs,
     ):
         super().__init__(
-            pair_fn=pair_fn,
             *args,
+            pair_fn=pair_fn,
             **kwargs,
         )
         self._pair_fn = pair_fn
@@ -60,8 +60,8 @@ class _Custom(ThresholdDeduper):
     @override
     def _gen_similarity_pairs(self, array) -> Iterator[SimilarPairIndices]:
         """generator or function implementation"""
-        array: list = array.to_pylist()
-        yield from self._pair_fn(array, *self._args, **self._kwargs)
+        values: list = array.to_pylist()
+        yield from self._pair_fn(values, *self._args, **self._kwargs)
 
     def __str__(self):
         return self.__repr__()
@@ -123,7 +123,7 @@ def register(f: PairGenerator) -> Callable:
 
             df = (
                 lk.dedupe(df)
-                .apply(eq_str_len()) # array arg implicitely passed
+                .apply(eq_str_len()) # array arg implicitly passed
                 .drop_duplicates("address")
             )
 

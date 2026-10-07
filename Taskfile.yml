@@ -34,6 +34,9 @@ tasks:
       - uv run ruff format --check src/ tests/
       - uv run ruff check src/ tests/
       - uv run mypy src/
+      # codespell covers src/ only: docs/ has false positives it cannot be
+      # silenced from without ignore entries outside this work item's scope
+      - uv run codespell src/
 
   test-unit:
     desc: Runs unit tests

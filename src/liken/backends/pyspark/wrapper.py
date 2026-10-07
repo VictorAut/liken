@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Hashable
 from typing import TYPE_CHECKING
 from typing import Self
 from typing import TypeAlias
@@ -17,6 +16,8 @@ from liken.core.wrapper import CanonicalIdMixin
 
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from pyspark.rdd import RDD
     from pyspark.sql import DataFrame
     from pyspark.sql import Row
@@ -226,7 +227,7 @@ class PysparkRows(DF["list[Row]"]):
     def put_col(self, column: str, array: list) -> Self:
         from pyspark.sql import Row
 
-        self._df = [Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array)]
+        self._df = [Row(**{**row.asDict(), column: value}) for row, value in zip(self._df, array, strict=True)]
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:

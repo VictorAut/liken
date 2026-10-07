@@ -1,6 +1,5 @@
 """str contains predicate deduper"""
 
-import re
 from typing import ClassVar
 from typing import final
 
@@ -33,18 +32,13 @@ class StrContains(
         self._case = case
         self._regex = regex
 
-        if self._regex:
-            flags = 0 if self._case else re.IGNORECASE
-            self._compiled_pattern = re.compile(self._pattern, flags)
-
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
 
         if self._regex:
             if self._case:
                 return pc.match_substring_regex(array, self._pattern)
-            else:
-                return pc.match_substring_regex(array, self._pattern, ignore_case=True)
+            return pc.match_substring_regex(array, self._pattern, ignore_case=True)
 
         if self._case:
             return pc.match_substring(array, self._pattern)

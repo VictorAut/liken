@@ -9,13 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-import pandas as pd
-
 from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from liken.backends.dask.wrapper import DaskDF
     from liken.collections.base import Pipeline
     from liken.collections.dict import DeduplicationDict
@@ -50,7 +50,7 @@ class DaskExecutor(Executor):
 
         process_partition = self._process_partition
 
-        df = DaskDF(
+        return DaskDF(
             df._df.map_partitions(
                 process_partition,
                 dedupers=dedupers,
@@ -65,8 +65,6 @@ class DaskExecutor(Executor):
             preserve_schema=True,
         )
 
-        return df
-
     @staticmethod
     def _process_partition(
         df: pd.DataFrame,
@@ -80,8 +78,8 @@ class DaskExecutor(Executor):
         from liken.liken import Dedupe
 
         df = (
-            Dedupe(df)  # type: ignore
-            .apply(dedupers)  # type: ignore
+            Dedupe(df)  # type: ignore[assignment]
+            .apply(dedupers)  # type: ignore[arg-type]
             .canonicalize(
                 columns,
                 keep=keep,

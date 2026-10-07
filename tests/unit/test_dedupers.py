@@ -7,6 +7,7 @@ import liken as lk
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.dedupers.exact import Exact
+from liken.dedupers.fuzzy import Fuzzy
 from liken.dedupers.isin import isin
 from liken.dedupers.jaccard import Jaccard
 from liken.dedupers.str_contains import StrContains
@@ -287,3 +288,9 @@ def test_vectorized_matches_same_pairs_as_python_fallback(values):
     fallback = _FallbackOnlyStrContains(pattern="app")
 
     assert list(vectorized._gen_similarity_pairs(array)) == list(fallback._gen_similarity_pairs(array))
+
+
+def test_fuzzy_unknown_scorer_raises_key_error():
+    """An unregistered scorer name surfaces a KeyError, not a silent fallback."""
+    with pytest.raises(KeyError):
+        Fuzzy(threshold=0.95, scorer="no_such_scorer").get_scorer()

@@ -62,11 +62,11 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
 
         # Assign offsets per block
         def _add_id_generator():
-            for i, block in enumerate(df.iter_batches(batch_format="pandas")):
+            for i, batch in enumerate(df.iter_batches(batch_format="pandas")):
                 offset = offsets[i]
-                block = block.reset_index(drop=True)
-                block[CANONICAL_ID] = range(offset, offset + len(block))
-                yield block
+                batch = batch.reset_index(drop=True)
+                batch[CANONICAL_ID] = range(offset, offset + len(batch))
+                yield batch
 
         return ray.data.from_pandas_refs([ray.put(batch) for batch in _add_id_generator()])
 

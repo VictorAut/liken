@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from functools import partial
+from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import TypeVar
-
-from networkx.utils.union_find import UnionFind
 
 from liken.collections.base import Pipeline
 from liken.collections.dict import DeduplicationDict
@@ -20,11 +19,18 @@ from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.wrapper import DF
-from liken.preprocessors import Preprocessor
-from liken.types import Columns
-from liken.types import Keep
-from liken.types import MultiComponents
-from liken.types import SingleComponents
+
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from networkx.utils.union_find import UnionFind
+
+    from liken.preprocessors import Preprocessor
+    from liken.types import Columns
+    from liken.types import Keep
+    from liken.types import MultiComponents
+    from liken.types import SingleComponents
 
 
 # TYPES:
@@ -143,8 +149,8 @@ class LocalExecutor(Executor):
         deduper: BaseDeduper,
         df: DF,
         columns: Columns,
-        preprocessors: list[Preprocessor] = [],
-        predicate: set = set(),
+        preprocessors: Collection[Preprocessor] = (),
+        predicate: Collection[int] = (),
     ) -> tuple[UnionFind[int], int]:
         return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
 

@@ -73,11 +73,11 @@ class CollectionsManager:
         if isinstance(deduper, BaseDeduper):
             if not self.is_sequential_applied:
                 raise InvalidDeduperError(INVALID_SEQUENCE_AFTER_DICT_MSG)
-            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore
+            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore[index]
             return
 
         if isinstance(deduper, dict | DeduplicationDict):
-            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore
+            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index]
                 warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
             self._dedupers = DeduplicationDict(deduper)
             return
@@ -89,7 +89,7 @@ class CollectionsManager:
             if isinstance(self._dedupers, Pipeline):
                 warn(WARN_RULES_REPLACES_RULES_MSG)
             # required for spark serialization
-            self._dedupers = deepcopy(deduper)  # type: ignore
+            self._dedupers = deepcopy(deduper)
             return
 
         raise InvalidDeduperError(INVALID_FALLBACK_MSG.format(type(deduper).__name__))

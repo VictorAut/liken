@@ -1,7 +1,5 @@
 """Dispatches a dataframe to its matching backend implementation."""
 
-# from __future__ import annotations
-
 from typing import Any
 
 from liken.core.backend import Backend
@@ -16,7 +14,9 @@ def get_backend(df: Any) -> Backend:
         try:
             if backend.is_match(df):
                 return backend
-        except Exception:
+        except ImportError:
+            # backend is_match implementations only catch the optional-
+            # dependency import; anything else must surface
             continue
     raise ValueError(f"Unsupported dataframe type: {type(df)}")
 
