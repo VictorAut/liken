@@ -6,12 +6,14 @@ title: "liken.preprocessors"
     options:
       members:
       - strip
+      - collapse_whitespace
       - lower
       - alnum
       - remove_punctuation
       - normalize_unicode
       - ascii_fold
       - remove_stopwords
+      - regex_replace
       - normalize_names
       - normalize_company
       inherited_members: false

@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 
 import liken as lk
@@ -108,3 +109,73 @@ def test_pipeline_rejects_invalid_step_preprocessor(bad_preprocessor):
 def test_pipeline_rejects_invalid_on_preprocessor(bad_preprocessor):
     with pytest.raises(TypeError, match="Invalid arg: preprocessor must be instance of Preprocessor"):
         lk.pipeline().step(lk.col("email", preprocessors=[bad_preprocessor]).exact())
+
+
+# COLLAPSE WHITESPACE:
+
+
+def test_collapse_whitespace_collapses_internal_runs():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array(["quick  brown\tfox"]))
+
+    assert pp.process().to_pylist() == ["quick brown fox"]
+
+
+def test_collapse_whitespace_collapses_tabs_and_newlines():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array(["a\tb\nc\rd"]))
+
+    assert pp.process().to_pylist() == ["a b c d"]
+
+
+def test_collapse_whitespace_edge_runs_become_single_space():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array(["  quick  brown  "]))
+
+    assert pp.process().to_pylist() == [" quick brown "]
+
+
+def test_collapse_whitespace_propagates_nulls():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array(["a  b", None]))
+
+    assert pp.process().to_pylist() == ["a b", None]
+
+
+def test_collapse_whitespace_keeps_empty_strings():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array([""]))
+
+    assert pp.process().to_pylist() == [""]
+
+
+# REGEX REPLACE:
+
+
+def test_regex_replace_literal_match():
+    pp = lk.preprocessors.regex_replace(",", " ")
+    pp.from_array(pa.array(["123ab,OL5"]))
+
+    assert pp.process().to_pylist() == ["123ab OL5"]
+
+
+def test_regex_replace_group_pattern():
+    pp = lk.preprocessors.regex_replace(r"(ol)", "xx")
+    pp.from_array(pa.array(["holey molley"]))
+
+    assert pp.process().to_pylist() == ["hxxey mxxley"]
+
+
+def test_regex_replace_propagates_nulls():
+    pp = lk.preprocessors.regex_replace(",", " ")
+    pp.from_array(pa.array(["a,b", None]))
+
+    assert pp.process().to_pylist() == ["a b", None]
+
+
+def test_regex_replace_invalid_pattern_raises():
+    pp = lk.preprocessors.regex_replace("[", "")
+    pp.from_array(pa.array(["a"]))
+
+    with pytest.raises(pa.ArrowInvalid, match="Invalid regular expression"):
+        pp.process()

@@ -35,6 +35,22 @@ class Strip(Preprocessor):
         return pc.utf8_trim_whitespace(self._array)
 
 
+class CollapseWhitespace(Preprocessor):
+    """Replace every run of whitespace with a single space.
+
+    Whitespace runs at the start or end of a string collapse to a single
+    space, they are not removed. Compose with `Strip` for that.
+
+    Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\v`, `\\f`,
+    `\\r` and space. Other Unicode whitespace, such as non-breaking spaces,
+    is not collapsed.
+    """
+
+    @override
+    def process(self) -> pa.Array:
+        return pc.replace_substring_regex(self._array, r"\s+", " ")
+
+
 class Lower(Preprocessor):
     """Convert strings to lowercase"""
 
@@ -113,6 +129,24 @@ class RemoveStopwords(Preprocessor):
         return pc.replace_substring_regex(self._array, pattern, "")
 
 
+class RegexReplace(Preprocessor):
+    """Replace every match of a regular expression pattern.
+
+    The pattern runs on RE2, not Python's `re`. RE2 guarantees linear-time
+    matching, so a pathological pattern fails fast rather than hanging.
+    Constructs RE2 does not support, and invalid patterns, raise
+    `pa.lib.ArrowInvalid`.
+    """
+
+    def __init__(self, pattern: str, replacement: str):
+        self._pattern = pattern
+        self._replacement = replacement
+
+    @override
+    def process(self) -> pa.Array:
+        return pc.replace_substring_regex(self._array, self._pattern, self._replacement)
+
+
 # NAME PROCESSORS:
 
 
@@ -149,6 +183,19 @@ class NormalizeCompany(Preprocessor):
 def strip() -> Strip:
     """Remove leading/trailing whitespace."""
     return Strip()
+
+
+def collapse_whitespace() -> CollapseWhitespace:
+    """Replace every run of whitespace with a single space.
+
+    Whitespace runs at the start or end of a string collapse to a single
+    space, they are not removed. Compose with `strip` for that.
+
+    Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\v`, `\\f`,
+    `\\r` and space. Other Unicode whitespace, such as non-breaking spaces,
+    is not collapsed.
+    """
+    return CollapseWhitespace()
 
 
 def lower() -> Lower:
@@ -195,6 +242,20 @@ def remove_stopwords(
             ignored.
         language: The language to use for the stop words dictionary"""
     return RemoveStopwords(words=words, language=language)
+
+
+def regex_replace(pattern: str, replacement: str) -> RegexReplace:
+    """Replace every match of a regular expression pattern.
+
+    Args:
+        pattern: The regular expression to match. It runs on RE2, not
+            Python's `re`. RE2 guarantees linear-time matching, so a
+            pathological pattern fails fast rather than hanging. Constructs
+            RE2 does not support, and invalid patterns, raise
+            `pa.lib.ArrowInvalid`.
+        replacement: The string to replace each match with.
+    """
+    return RegexReplace(pattern, replacement)
 
 
 def normalize_names() -> NormalizeName:
