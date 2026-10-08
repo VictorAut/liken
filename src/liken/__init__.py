@@ -9,6 +9,7 @@ from liken.collections.pipelines import Pipeline
 from liken.collections.pipelines import col
 from liken.collections.pipelines import pipeline
 from liken.dedupers.cosine import cosine
+from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
 from liken.dedupers.isin import isin
@@ -27,6 +28,7 @@ from liken.liken import dedupe
 __all__ = [
     "dedupe",
     "Dedupe",
+    "edit_distance",
     "exact",
     "fuzzy",
     "lsh",

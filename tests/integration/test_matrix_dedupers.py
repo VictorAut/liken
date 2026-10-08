@@ -95,6 +95,13 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.35}, [0, 0, 2, 2, 4, 2, 0, 0, 4, 0]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     #
+    # EDIT DISTANCE:
+    # absolute bound: nulls group ("na" placeholder), identical postcodes group
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    # emails one edit apart merge; a second edit joins the short variants
+    (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
+    (lk.edit_distance, "email", {"max_distance": 2}, [0, 1, 0, 3, 0, 0, 3, 3, 8, 0]),
+    #
     # COSINE:
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.999}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.99}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),

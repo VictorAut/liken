@@ -186,6 +186,7 @@ Liken comes with many deduplication methods built-in:
 |-------------| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
 | *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example)  |
 | *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching                                                                            |
+| *Similarity* |*single-column*| [`edit_distance`](../reference/liken/#liken.edit_distance) | Values within a maximum edit (Levenshtein) distance                                     |
 | *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf                                                                      |
 | *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH)                                            |
 | *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data                                |
@@ -208,6 +209,8 @@ Similarity dedupers compare values pairwise and keep the pairs whose score beats
 - `fuzzy` uses [rapidfuzz](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive: `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale.
 - `tfidf` splits each value into character n-grams (`ngram`, default 3), weights them, and compares the resulting vectors by cosine similarity. It tolerates more drift than `fuzzy`, but its default `topn=2` keeps only the two best candidate matches per row, one of which is the row itself. In dense clusters of near-duplicates, raise `topn`.
 - `lsh` builds MinHash signatures over character n-grams and matches approximately: the threshold estimates the Jaccard similarity of the n-gram sets. It scales well to very large data, but a match is probabilistic — pairs near the threshold can be missed.
+
+A relative threshold is not always the right contract. `edit_distance` skips thresholds altogether and matches two values when their Levenshtein distance — the count of single-character edits between them — is at most `max_distance` (default 2, inclusive). This suits short codes such as postcodes, phone numbers and product codes: a length-relative score lets two long values ten characters apart clear a 0.95 threshold, while two short values one edit apart fall below it. `edit_distance` bounds the number of edits instead, whatever the length.
 
 `explore` shows where your data's duplicate rates actually fall, so you can pick a threshold from evidence rather than guesswork.
 
@@ -262,6 +265,7 @@ Real data has nulls. Liken does not drop them silently. For single-column rules,
 | --- | --- |
 | `exact` | Nulls match nulls. |
 | `fuzzy` | Nulls match nulls — `"na"` vs `"na"` scores a perfect match. |
+| `edit_distance` | Nulls match nulls, never the values near the `"na"` placeholder. |
 | `tfidf` | Depends on `ngram`: not matched at the default `ngram=3`, matched at `ngram=1`. |
 | `lsh` | Matched: empty signatures bucket together. |
 | `isna` | Matches exactly the nulls. |

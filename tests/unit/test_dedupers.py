@@ -6,6 +6,7 @@ import pytest
 import liken as lk
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
+from liken.dedupers.edit_distance import EditDistance
 from liken.dedupers.exact import Exact
 from liken.dedupers.fuzzy import Fuzzy
 from liken.dedupers.isin import isin
@@ -127,6 +128,7 @@ def test_compound_column_validation_rejects_str():
 
 
 STR_PARAMS = [
+    ("edit_distance", lk.edit_distance(), ["edit_distance(", "max_distance=2"]),
     ("exact", lk.exact(), ["exact()"]),
     ("fuzzy", lk.fuzzy(), ["fuzzy(", "threshold=0.95"]),
     ("tfidf", lk.tfidf(ngram=1, topn=2), ["tfidf(", "threshold=0.95", "ngram=1", "topn=2"]),
@@ -294,3 +296,71 @@ def test_fuzzy_unknown_scorer_raises_key_error():
     """An unregistered scorer name surfaces a KeyError, not a silent fallback."""
     with pytest.raises(KeyError):
         Fuzzy(threshold=0.95, scorer="no_such_scorer").get_scorer()
+
+
+##################
+# edit_distance #
+##################
+
+
+def test_edit_distance_default_max_distance_is_two():
+    deduper = lk.edit_distance()
+
+    assert deduper._max_distance == 2
+
+
+def test_edit_distance_matches_pairs_at_inclusive_bound():
+    """Values exactly max_distance edits apart are still matched."""
+    deduper = EditDistance(max_distance=2)
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcde", "abcde", "abcxy"])))
+
+    assert (0, 2) in pairs
+
+
+def test_edit_distance_rejects_pairs_just_above_bound():
+    """One edit beyond the bound is not matched."""
+    deduper = EditDistance(max_distance=2)
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcde", "abcde", "abcxyz"])))
+
+    # only the identical pair matches; "abcde"/"abcxyz" are 3 edits apart
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_rejects_long_values_with_many_edits():
+    """The absolute bound holds regardless of string length."""
+    deduper = EditDistance(max_distance=2)
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["a" * 20 + "b", "a" * 20 + "b", "c" * 20 + "b"])))
+
+    # only the identical pair matches; the third value is 20 edits away
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_negative_max_distance_raises_value_error():
+    with pytest.raises(ValueError):
+        lk.edit_distance(max_distance=-1)
+
+
+def test_edit_distance_non_integer_max_distance_raises_value_error():
+    with pytest.raises(ValueError):
+        lk.edit_distance(max_distance=1.5)
+
+
+def test_edit_distance_requires_single_string_column():
+    with pytest.raises(ValueError):
+        EditDistance().validate(("a", "b"))
+
+
+def test_edit_distance_null_placeholder_matches_only_null_placeholder():
+    """A coalesced null ("na") must not match real values near it, matching
+    fuzzy's behaviour where nulls do not match anything but each other."""
+    deduper = EditDistance(max_distance=2)
+
+    # "na" stands for a coalesced null; the others are real values
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["na", "na", "NA", "", "nna"])))
+
+    # the nulls match each other; the real values "NA" and "" are 2 edits
+    # apart and match each other; no placeholder value pairs with a real one
+    assert pairs == [(0, 1), (2, 3)]

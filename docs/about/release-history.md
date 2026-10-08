@@ -2,6 +2,14 @@
 title: Release History
 ---
 
+## v0.11.0 (2026-10-08)
+
+**Features**
+
+
+- New `edit_distance` deduper: matches two values when their Levenshtein distance is at most `max_distance` (default 2). An absolute bound that does not scale with string length, unlike `fuzzy`'s relative threshold. Nulls match only nulls.
+
+
 ## v0.10.3 (2029-10-08)
 
 **Features**

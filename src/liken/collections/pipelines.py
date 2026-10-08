@@ -119,6 +119,21 @@ class Col:
     # must be manually maintained
     # add a new dummy method here upon adding a new deduper.
 
+    def edit_distance(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.edit_distance` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+        See [`lk.edit_distance`](../reference/liken.md#liken.edit_distance) reference for
+        complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").edit_distance())
+
+        """
+        return self.__getattr__("edit_distance")(*args, **kwargs)
+
     def exact(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.exact` function.
 
