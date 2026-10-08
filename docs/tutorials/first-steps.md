@@ -2,20 +2,14 @@
 title: First Steps
 ---
 
-## Installation
-
-See [Installation](../index.md#installation).
-
-## Agent Skills
-
-Using an AI coding agent? See [Agent Skills](../index.md#ai-agent-skills) to install the `liken-skills` bundle and have your agent follow these tutorials' APIs correctly.
-
-??? tip "Using skills"
-    You'll get much more efficient use from your agent by using `liken-skills`. **Liken** offers a lot of functionality, and the skills have been prepared to ensure that you match a solution to your use-case as ergonomically as possible.
 
 ## Introduction
 
-Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime. No efforts are made to specify the nature of the data in `df`, the emphasis is on how to set up near deduplication correctly with **Liken**. There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
+Code blocks shown in this tutorial assume that a DataFrame, labelled `df`, will be available at runtime.
+
+Rarely are efforts are made to specify the nature of the data in `df`. Instead, the emphasis is on how to set up near deduplication correctly with Liken.
+
+There are datasets available for experimentation in the [`liken.datasets`](../reference/datasets.md) module for easy access to dummy data.
 
 
 ## Instantiating
@@ -126,11 +120,11 @@ A DataFrame must be passed to the top-level `dedupe` function.
 
 ## The Dedupe Lifecycle
 
-Every **Liken** workflow follows the same formula:
+Every Liken workflow follows the same formula:
 
-1. **Construct.** `lk.dedupe(df)` wraps your DataFrame. **Liken** detects which backend to use from the DataFrame's type. Nothing runs yet.
-2. **Stage.** `.apply(...)` adds dedupers to a collection. You can stage one deduper, a dict of per-column rules, or a pipeline. Nothing runs yet.
-3. **Enact.** `.drop_duplicates()` or `.canonicalize()` runs the staged rules, matches records, and returns a new DataFrame. Your original DataFrame is left untouched.
+1. **Construct.** `lk.dedupe(df)` wraps your DataFrame. Liken detects which backend to use from the DataFrame's type.
+2. **Stage.** `.apply(...)` adds dedupers to a collection. You can stage one deduper, a dict of per-column rules, or a pipeline.
+3. **Enact.** `.drop_duplicates()` or `.canonicalize()` runs the staged rules, matches records, and returns a new DataFrame.
 
 ```python
 import liken as lk
@@ -144,7 +138,7 @@ Every later tutorial builds on this formula.
 
 ## The Simplest Example
 
-For the simplest use cases, **Liken** provides familiar-feeling *exact* deduplication, without ceremony:
+For the simplest use cases, Liken provides familiar-feeling *exact* deduplication, without ceremony:
 
 === "Single Column"
 
@@ -182,11 +176,11 @@ Using `drop_duplicates` straight from pandas won't do anything here, as "fizzpop
 
 ## Near Deduplication
 
-When things aren't *exactly* the same, you can still deduplicate data. **Liken** is built so that you can focus on defining *what* you want out of a near-deduplication process. The goal will be to be able to define neat and clear-cut ways to deduplicate data with the least amount of code possible. Before looking at how to use dedupers, let's look at what dedupers are available.
+When things aren't *exactly* the same, you can still deduplicate data. Liken is built so that you can focus on defining *what* you want out of a near-deduplication process. The goal will be to be able to define neat and clear-cut ways to deduplicate data with the least amount of code possible. Before looking at how to use dedupers, let's look at what dedupers are available.
 
 ## Built-in Dedupers
 
-**Liken** comes with many deduplication methods built-in:
+Liken comes with many deduplication methods built-in:
 
 | |               | Deduper                                              | Description                                                                 |
 |-------------| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
@@ -262,7 +256,7 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 
 ## Missing Values
 
-Real data has nulls. **Liken** does not drop them silently. For single-column rules, a missing value is replaced by the literal string `"na"` before matching, so nulls behave like that value:
+Real data has nulls. Liken does not drop them silently. For single-column rules, a missing value is replaced by the literal string `"na"` before matching, so nulls behave like that value:
 
 | Deduper | What happens to nulls |
 | --- | --- |

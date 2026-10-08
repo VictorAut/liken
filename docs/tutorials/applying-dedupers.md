@@ -2,7 +2,7 @@
 title: Applying Dedupers
 ---
 
-In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with **Liken** — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called the `drop_duplicates` function with no other deduper.
+In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with Liken — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called the `drop_duplicates` function with no other deduper.
 
 To use a [built-in deduper](./first-steps.md#built-in-dedupers), a deduper is *applied* with the `apply` function:
 
@@ -24,7 +24,7 @@ Usage of single dedupers is limited — you can only ever use a single deduper o
 
 ### Coming from Pandas?
 
-When it comes to single dedupers, as above, **Liken** is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
+When it comes to single dedupers, as above, Liken is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
 
 === "With Pandas Affordance"
 
@@ -60,11 +60,11 @@ When it comes to single dedupers, as above, **Liken** is easy to use, but especi
 Pandas affordances are limited to [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine). Also, this special use is limited to single dedupers, and does not support the application of collections of dedupers, as shown next.
 
 ??? info "Pandas affordances"
-    **Liken's** Pandas extension is only useable if you actually *import* `liken`!
+    Liken's Pandas extension is only useable if you actually *import* `liken`!
 
 ## Collections of Dedupers
 
-**Liken** supports deduplicating with a collection of dedupers. This allows:
+Liken supports deduplicating with a collection of dedupers. This allows:
 
 - Deduplicating multiple sets of columns with different dedupers
 - Defining several dedupers to be run sequentially on a set of columns
@@ -108,7 +108,7 @@ Keys run in insertion order, and the dedupers in a tuple value run in their list
 
 ### Pipelines of Dedupers
 
-**Liken** exposes a pipeline builder function for you to build complex, composable pipelines.
+Liken exposes a pipeline builder function for you to build complex, composable pipelines.
 
 At a minimum, pipelines can replicate a dictionary collection. For example, the dictionary collection we saw above can be instead represented as:
 
@@ -171,7 +171,7 @@ The same rule applies to dictionaries: keys run in insertion order. If your rule
 
 Pipelines support combining the effects of multiple dedupers using implicit and statements.
 
-AND semantics are supported in **Liken** when lists of dedupers are passed to a `step` in a pipeline. For a step of similarity dedupers, a pair of records is linked only when every deduper in the step matches it. For a step mixing predicate and similarity dedupers, the step runs as a chain: the predicates match first, and each later deduper sees only the records matched so far — so records are linked only when every condition holds on the way through:
+AND semantics are supported in Liken when lists of dedupers are passed to a `step` in a pipeline. For a step of similarity dedupers, a pair of records is linked only when every deduper in the step matches it. For a step mixing predicate and similarity dedupers, the step runs as a chain: the predicates match first, and each later deduper sees only the records matched so far — so records are linked only when every condition holds on the way through:
 
 ```python
 import liken as lk
@@ -219,7 +219,7 @@ With `fuzzy(0.8)` alone, all four records collapse to one row. With the AND step
 AND step output: only rows 0 and 1 were linked; the "99" records survive as two rows.
 ///
 
-AND steps are most effective when one of the dedupers is a *predicate* deduper. **Liken** optimises such steps with *rule predication*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. **Liken** reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself, and results are identical either way. The optimisation matters because predicate dedupers run in about O(n) time while similarity dedupers compare every pair of records at about O(n²): restricting the similarity deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
+AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *rule predication*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself, and results are identical either way. The optimisation matters because predicate dedupers run in about O(n) time while similarity dedupers compare every pair of records at about O(n²): restricting the similarity deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
 
 #### OR semantics
 
@@ -305,7 +305,7 @@ The un-negated `lk.col("address").isna()` is the mirror image: the two null reco
 
 #### Preprocessors
 
-Pipelines support the addition of a powerful feature: preprocessors. **Liken's** preprocessors transform data solely within the internals of the library for the purposes of deduplication whilst still returning data to you in the original format. Preprocessors never modify the data you get back — they run inside matching only, and your returned DataFrame keeps its original values.
+Pipelines support the addition of a powerful feature: preprocessors. Liken's preprocessors transform data solely within the internals of the library for the purposes of deduplication whilst still returning data to you in the original format. Preprocessors never modify the data you get back — they run inside matching only, and your returned DataFrame keeps its original values.
 
 Preprocessors can be used to refine deduplication pipelines, reduce boilerplate preprocessing code, reduce the number of "dummy" columns that you have to maintain, and reduces the risk of unacceptable false positive rates.
 

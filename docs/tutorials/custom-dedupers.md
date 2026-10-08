@@ -2,9 +2,9 @@
 title: Custom Dedupers
 ---
 
-**Liken** supports defining your own, custom, dedupers.
+Liken supports defining your own, custom, dedupers.
 
-**Liken** currently only guarantees usage of custom *single-column* dedupers. The reasons are covered in [Limitations](#limitations), along with the missing `~` negation.
+Liken currently only guarantees usage of custom *single-column* dedupers. The reasons are covered in [Limitations](#limitations), along with the missing `~` negation.
 
 ## The Callable Contract
 
@@ -22,13 +22,13 @@ def str_same_len(array, *, min_len: int):
 The properties of the contract:
 
 - The function sees **no DataFrame** — no column labels, no dtypes, no backend. `array` is a generic iterable of values. This is what makes the function backend-agnostic.
-- Each yielded pair links two records. **Liken** unions the pairs: chain `(0, 1)` and `(1, 2)` and all three records land in one group.
-- The function is a *generator*, which **Liken** consumes pair by pair without materialising the result. You can build a list and return that instead but holds every pair in memory at once, and is not recommended.
+- Each yielded pair links two records. Liken unions the pairs: chain `(0, 1)` and `(1, 2)` and all three records land in one group.
+- The function is a *generator*, which Liken consumes pair by pair without materialising the result. You can build a list and return that instead but holds every pair in memory at once, and is not recommended.
 - Every further argument must be keyword-only (`(array, *, **kwargs)`). Positional call-site arguments are rejected.
 
 ## Defining a Custom Deduper
 
-Although **Liken** provides a [`str_len`](../reference/liken.md#liken.str_len) predicate deduper, we'll define our own, similar, implementation: `str_same_len`. `str_same_len` will deduplicate records whose values share a length, as long as that length is above a minimum. The function from the contract above, registered:
+Although Liken provides a [`str_len`](../reference/liken.md#liken.str_len) predicate deduper, we'll define our own, similar, implementation: `str_same_len`. `str_same_len` will deduplicate records whose values share a length, as long as that length is above a minimum. The function from the contract above, registered:
 
 ```python {hl_lines="3"}
 import liken as lk
@@ -75,7 +75,7 @@ Rows 0 and 1 were linked and collapsed; the rest survive.
 
 ## Using a Custom Deduper
 
-`lk.custom.register` wraps your function in a deduper object and registers it under the function's name. Registration is what lets you forget about `array` — **Liken** constructs it from the column(s) your deduper is applied to:
+`lk.custom.register` wraps your function in a deduper object and registers it under the function's name. Registration is what lets you forget about `array` — Liken constructs it from the column(s) your deduper is applied to:
 
 === "Single deduper"
 
@@ -107,7 +107,7 @@ Rows 0 and 1 were linked and collapsed; the rest survive.
     )
     ```
 
-Note how `array` isn't passed as an argument in any instance. `dedupe` will retrieve an array representation of the `address` column, ensuring that usage of the custom deduper matches that of other **Liken** dedupers.
+Note how `array` isn't passed as an argument in any instance. `dedupe` will retrieve an array representation of the `address` column, ensuring that usage of the custom deduper matches that of other Liken dedupers.
 
 The keyword arguments you pass at the call site (`min_len=12` above) are stored on the registered deduper and forwarded to your function only when deduplication runs. The registered name also becomes available as a method on the `lk.col(...)` expression, so pipelines treat it like any built-in deduper (as the Pipeline tab shows). Registering a name that a built-in already uses shadows the built-in *on the `lk.col(...)` expression*, so ensure you choose distinct names.
 
@@ -164,9 +164,9 @@ Custom dedupers **can** be combined using AND semantics in pipelines with other 
 
 ## Data Size and Distributed Backends
 
-Your function always receives a plain Python list, which **Liken** produces from the column's in-memory representation. That has consequences for size and placement:
+Your function always receives a plain Python list, which Liken produces from the column's in-memory representation. That has consequences for size and placement:
 
 - The list holds one Python object per value, so memory use is proportional to the column, a cost your function pays before it yields anything.
 - On local backends (pandas, polars, modin, pyarrow) the list covers the whole column.
-- On distributed backends (dask, ray, pyspark) **Liken** runs your function per partition, per batch; on ray, the worker holding it. The DataFrame is not pulled to one machine, but instead each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
+- On distributed backends (dask, ray, pyspark) Liken runs your function per partition, per batch; on ray, the worker holding it. The DataFrame is not pulled to one machine, but instead each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
 - Your function must survive being sent to workers: keep it importable and picklable, and avoid closures over unserialisable state.

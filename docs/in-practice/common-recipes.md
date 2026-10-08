@@ -6,7 +6,7 @@ Variously common scenarios are explored here.
 
 ## Similarity vs Predicate
 
-**Liken's** [built-in dedupers](../tutorials/first-steps.md#built-in-dedupers) are classed as being "Similarity" or "Predicate" dedupers.
+Liken's [built-in dedupers](../tutorials/first-steps.md#built-in-dedupers) are classed as being "Similarity" or "Predicate" dedupers.
 
 Similarity dedupers are easy to understand — things are likened one-to-another when a similarity exceeds a threshold. Predicate dedupers operate based on a binary choice: something either is or isn't something, where that something is what the predicate deduper selects for.
 
@@ -17,7 +17,7 @@ The above explanation might still sound tricky, especially regarding predicate d
 3. Predicate Dedupers feel like "filters" because they can be powerfully composed using [AND semantics](../tutorials/applying-dedupers.md#and-semantics) with similarity dedupers in pipelines...
 4. ...in that regard it's generally recommended to use predicate dedupers **only** when defining pipelines with `lk.pipeline()` — you can use them outside of pipelines, but the use cases are limited.
 5. Because they are fundamentally based on the same base classes as similarity dedupers, they are also accessed with the `lk.col()` expression.
-6. The "filter" paradigm is especially useful when considering that **Liken** implements "rule predication" optimizations. Rule Predication states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent similarity dedupers will operate on a subset of data.
+6. The "filter" paradigm is especially useful when considering that Liken implements "rule predication" optimizations. Rule Predication states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent similarity dedupers will operate on a subset of data.
 7. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics).
 
 ## Powerful Pipelines
@@ -61,7 +61,7 @@ Now, only on longer `address` strings is more tolerance allowed.
 
 ## Which Preprocessor When?
 
-Preprocessors are great additions to pipelines for fine tuning of deduplication behaviour. Favour their usage over boilerplate preprocessing done before using **Liken**.
+Preprocessors are great additions to pipelines for fine tuning of deduplication behaviour. Favour their usage over boilerplate preprocessing done before using Liken.
 
 A few key points are worth noting:
 
