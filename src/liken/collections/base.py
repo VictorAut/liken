@@ -73,11 +73,15 @@ class CollectionsManager:
         if isinstance(deduper, BaseDeduper):
             if not self.is_sequential_applied:
                 raise InvalidDeduperError(INVALID_SEQUENCE_AFTER_DICT_MSG)
-            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore[index]
+            # The check above guarantees a `DeduplicationDict` here, but mypy
+            # cannot narrow through `is_sequential_applied` (`index`); the
+            # tuple member of the value union is only stored by the Dict API
+            # path (`union-attr`).
+            self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore[index, union-attr]
             return
 
         if isinstance(deduper, dict | DeduplicationDict):
-            if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index]
+            if isinstance(self._dedupers, DeduplicationDict) and self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
                 warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
             self._dedupers = DeduplicationDict(deduper)
             return
@@ -114,7 +118,7 @@ class CollectionsManager:
 
         if isinstance(dedupers, DeduplicationDict):
             if self.is_sequential_applied:
-                deduper: list = dedupers[SEQUENTIAL_API_DEFAULT_KEY]
+                deduper: list[BaseDeduper] | tuple[BaseDeduper, ...] = dedupers[SEQUENTIAL_API_DEFAULT_KEY]
                 if not deduper:
                     return None
                 if len(deduper) == 1:

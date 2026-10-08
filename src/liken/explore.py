@@ -64,11 +64,11 @@ def run_explore(
     # dataframe is never mutated.
     wdf: DF = wrap(_sample(df, backend.name, frac), id=None)
 
-    rows: list[list[str | float]] = []
+    rows: list[tuple[str | float, ...]] = []
 
     exact_row: list[str | float] = [_EXACT_LABEL]
     exact_row.extend(_duplicate_rate(exact(), wdf, col) for col in col_names)
-    rows.append(exact_row)
+    rows.append(tuple(exact_row))
 
     for threshold in thresholds:
         row: list[str | float] = [str(threshold)]
@@ -80,7 +80,7 @@ def run_explore(
             )
             for col in col_names
         )
-        rows.append(row)
+        rows.append(tuple(row))
 
     result: UserDataFrame = backend.create_df(data=rows, schema=[_METRIC_LABEL, *col_names])
 

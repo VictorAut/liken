@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import NamedTuple
 from typing import Self
 from typing import TypeAlias
@@ -17,6 +18,8 @@ from liken.validators import validate_preprocessor_arg
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from liken.types import Columns
 
 
@@ -319,7 +322,7 @@ class Col:
         self._unit: PipelineUnit
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Callable[..., Col]:
         """Make deduper functions available as method calls to Col.
 
         Functions are retrieved from registry. Includes any prior custom
@@ -332,7 +335,7 @@ class Col:
 
         func = dedupers_registry.get(f"{attr}")
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Col:
             deduper = func(*args, **kwargs)
             self._unit = PipelineUnit(self._columns, deduper, self._preprocessors)
             return self

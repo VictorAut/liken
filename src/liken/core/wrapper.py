@@ -32,11 +32,13 @@ D = TypeVar("D")  # dataframe
 class DF(Generic[D]):
     """Base class defining a dataframe wrapper
 
-    Defines inheritable methods as well as some of the interface
+    Defines inheritable methods as well as some of the interface.
 
-    TODO:
-        - define a protocol interface
-        - tighten generics
+    The type variable `D` is deliberately loose: it is not bounded to the
+    supported frame types. The pyspark wrappers wrap frame types beyond
+    `UserDataFrame` (Spark `DataFrame | RDD[Row]` and `list[Row]`), so no
+    single bound covers every concrete wrapper. Concrete wrappers
+    parametrize `D` with their own frame type instead.
     """
 
     def __init__(self, df: D):
@@ -92,14 +94,14 @@ class DF(Generic[D]):
 # CANONICAL ID
 
 
-class AddsCanonical(Protocol):
+class AddsCanonical(Protocol[D]):
     """Mixin protocol"""
 
-    def _df_as_is(self, df): ...
-    def _df_overwrite_id(self, df, id: str): ...
-    def _df_copy_id(self, df, id: str): ...
-    def _df_autoincrement_id(self, df): ...
-    def _column_labels_list(self, df): ...
+    def _df_as_is(self, df: D) -> D: ...
+    def _df_overwrite_id(self, df: D, id: str) -> D: ...
+    def _df_copy_id(self, df: D, id: str) -> D: ...
+    def _df_autoincrement_id(self, df: D) -> D: ...
+    def _column_labels_list(self, df: D) -> list[str]: ...
 
 
 class CanonicalIdMixin(AddsCanonical):

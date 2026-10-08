@@ -212,9 +212,10 @@ class PredicateDeduper(BaseDeduper):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def _matches(self, value):
-        del value  # Unused
-        pass
+    def _matches(self, value: object) -> bool:
+        # Stub: concrete predicate dedupers define the match logic.
+        # `False` is the neutral "no match" default for the base instance.
+        return False
 
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
         """
@@ -265,7 +266,7 @@ class _NegatedPredicateDeduper(PredicateDeduper):
     def __init__(self, inner: PredicateDeduper):
         self._inner = inner
 
-    def _matches(self, value):
+    def _matches(self, value: object) -> bool:
         """simply return the inner classes opposed set of matches"""
         return not self._inner._matches(value)
 

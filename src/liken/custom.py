@@ -4,6 +4,7 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from functools import wraps
+from typing import Any
 from typing import TypeAlias
 from typing import final
 
@@ -17,7 +18,7 @@ from liken.types import SimilarPairIndices
 # TYPES:
 
 
-PairGenerator: TypeAlias = Callable[[Iterable], Iterable[SimilarPairIndices]]
+PairGenerator: TypeAlias = Callable[[Iterable[object]], Iterable[SimilarPairIndices]]
 
 
 # CUSTOM:
@@ -67,7 +68,7 @@ class _Custom(ThresholdDeduper):
         return self.__repr__()
 
 
-def register(f: PairGenerator) -> Callable:
+def register(f: PairGenerator) -> Callable[..., _Custom]:
     """Register a custom function as a deduper.
 
     Custom functions can be registered for use as dedupers recognised by the
@@ -153,7 +154,7 @@ def register(f: PairGenerator) -> Callable:
     """
 
     @wraps(f)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> _Custom:
         if args:
             raise TypeError(f"{f.__name__} must be called with keyword arguments only")
         return _Custom(f, **kwargs)

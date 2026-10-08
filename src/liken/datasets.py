@@ -94,11 +94,11 @@ def _return_df(
     )
 
 
-def maybe_null(value, p):
+def maybe_null(value: Any, p: float) -> Any:
     return value if random.random() > p else None
 
 
-def fake_row():
+def fake_row() -> tuple[Any, ...]:
     return (
         fake.uuid4(),
         maybe_null(fake.first_name(), 0.02),
