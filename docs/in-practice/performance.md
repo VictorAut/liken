@@ -2,7 +2,7 @@
 title: "Performance"
 ---
 
-Near Deduplication is a complex, compute-intensive task. Generally speaking, deduplication scales as *O(n^2^)*, as any given record has to be looked up against every other record. Below we benchmark **Liken's** dedupers, investigate their scaling properties, and discuss three techniques to make deduplication scale more efficiently.
+Near Deduplication is a complex, compute-intensive task. Generally speaking, deduplication scales as *O(n^2^)*, as any given record has to be looked up against every other record. Below we benchmark Liken's dedupers, investigate their scaling properties, and discuss three techniques to make deduplication scale more efficiently.
 
 ## Measuring Performance
 
@@ -15,17 +15,17 @@ Benchmarking was carried out on a standard personal machine.
 ![Liken](../images/liken-benchmarks.png)
 
 /// caption
-Performance of **Liken's** dedupers measured as execution time against increasing dataset sizes. In instances where a dataset size caused a deduper's projected runtime to greatly exceed 1 hour, it was excluded. The single minute and hour marks are provided for orientative benchmarking. The "million-class" dedupers are highlighted in red.
+Performance of Liken's dedupers measured as execution time against increasing dataset sizes. In instances where a dataset size caused a deduper's projected runtime to greatly exceed 1 hour, it was excluded. The single minute and hour marks are provided for orientative benchmarking. The "million-class" dedupers are highlighted in red.
 ///
 
 ### Scaling
 
-Above we saw the performance of **Liken's** dedupers. The following graphic provides a normalized view of how the dedupers scale with complexity (dataset size).
+Above we saw the performance of Liken's dedupers. The following graphic provides a normalized view of how the dedupers scale with complexity (dataset size).
 
 ![Liken](../images/liken-scaling.png)
 
 /// caption
-Computational complexity scaling of **Liken's** dedupers.
+Computational complexity scaling of Liken's dedupers.
 ///
 
 The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would result in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
@@ -43,7 +43,7 @@ The scaling of deduper's can be useful to provide approximate estimates of the p
 
 ### Use Pipelines
 
-[Pipelines](../tutorials/applying-dedupers.md#pipelines-of-dedupers) make ideal use cases for using [predicate dedupers](../tutorials/first-steps.md#built-in-dedupers), given the number of use cases that motivate AND semantics. When using predicate dedupers in a pipeline, **Liken** implements predicate pushdown. Let's look at what that means by using an example based on the following dummy data:
+[Pipelines](../tutorials/applying-dedupers.md#pipelines-of-dedupers) make ideal use cases for using [predicate dedupers](../tutorials/first-steps.md#built-in-dedupers), given the number of use cases that motivate AND semantics. When using predicate dedupers in a pipeline, Liken implements predicate pushdown. Let's look at what that means by using an example based on the following dummy data:
 
 id| address                  | email
 --|--------------------------|-------
@@ -66,7 +66,7 @@ df = (
 )
 ```
 
-In such a case, **Liken** would loop through all 4 email records and identify the last 2 as duplicates. But, you may be well placed to "qualify" your deduplication step with a predicate deduper, using AND semantics. This might be that you only want to consider "email" instances as valid for deduplication if the "address" column is itself not null (as seen in the data):
+In such a case, Liken would loop through all 4 email records and identify the last 2 as duplicates. But, you may be well placed to "qualify" your deduplication step with a predicate deduper, using AND semantics. This might be that you only want to consider "email" instances as valid for deduplication if the "address" column is itself not null (as seen in the data):
 
 ``` python
 df = (
@@ -103,7 +103,7 @@ As noted in the above [benchmarks](#benchmarking), LSH can easily scale to huge 
 
 ### Use Partitioned Data
 
-**Liken** [supports the use of PySpark](../tutorials/first-steps.md#instantiating). **Liken** is re-instantiated in every Spark worker node, where each worker node receives a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.
+Liken [supports the use of PySpark](../tutorials/first-steps.md#instantiating). Liken is re-instantiated in every Spark worker node, where each worker node receives a partition. You can achieve this by reading in an already partitioned dataset, or by re-partitioning a dataset.
 
 ??? Note "Blocking keys"
     Re-partitioning for deduplication workloads often makes use of a "Blocking Key". A blocking key is generated in the dataset and each partition is chosen based on the value of a blocking key. This is especially useful when we know that duplicates are never (or very unlikely) going to be found *across* blocking keys. As an example, the blocking key could be the first letter of a customer's name. This can then be used to divide (partition) a dataset into more manageable chunks that are already related by an inherently meaningful feature.

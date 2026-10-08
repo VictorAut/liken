@@ -4,7 +4,7 @@ title: "Iterative Workloads"
 
 ## Reminder
 
-In the [Record Linkage tutorial](../tutorials/record-linkage.md) you found out that **Liken** creates a `canonical_id`. By default this `canonical_id` is an autoincrementing numeric identifier starting from zero.
+In the [Record Linkage tutorial](../tutorials/record-linkage.md) you found out that Liken creates a `canonical_id`. By default this `canonical_id` is an autoincrementing numeric identifier starting from zero.
 
 In this chapter we explore the configuring needed to canonicalize a dataset iteratively. By iteratively we mean appending to the same dataset — for example a dataset of customers that is appended to with new customers in a given time interval.
 
@@ -13,11 +13,11 @@ In this chapter we explore the configuring needed to canonicalize a dataset iter
 
 ## Canonical IDs
 
-A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally an **Liken** `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
+A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally an Liken `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
 
 ## The Problem
 
-Preparing an existing `canonical_id` column for an append is your job, not **Liken's**: new records need identifiers that continue the existing numbering before they are stacked onto the canonicalized dataset. **Liken** provides the preprocessors and dedupers; the identifier bookkeeping below is the part you carry out yourself. The suggested steps to take are:
+Preparing an existing `canonical_id` column for an append is your job, not Liken's: new records need identifiers that continue the existing numbering before they are stacked onto the canonicalized dataset. Liken provides the preprocessors and dedupers; the identifier bookkeeping below is the part you carry out yourself. The suggested steps to take are:
 
 1. Add a column, `canonical_id`, to the append dataset that continues the existing numbering: if the existing dataset holds `N` rows (ids `0` to `N-1`), the `n` appended rows get ids `N` to `N + n - 1`.
 2. Append ("stack") your datasets.

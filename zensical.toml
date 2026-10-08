@@ -11,6 +11,7 @@ site_dir = "site"
 extra_css = ["stylesheets/extra.css"]
 nav = [
     { "Liken" = "index.md" },
+    { "Installation and Quick Start" = "installation-quick-start.md" },
     { "Tutorials" = [
         "tutorials/first-steps.md",
         "tutorials/applying-dedupers.md",
@@ -21,6 +22,7 @@ nav = [
         "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
         "in-practice/backends.md",
+        "in-practice/ai-agent-skills.md",
         "in-practice/performance.md",
     ] },
     { "API Reference" = [
@@ -64,6 +66,10 @@ primary = "custom"
 scheme = "slate"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
+
+# LEGACY PLUGINS:
+
+[project.plugins.markdown-exec]
 
 # DOCSTRINGS:
 

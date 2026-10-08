@@ -46,9 +46,9 @@
 }
 
 .logo-grid img {
-  height: 48px; /* adjust to fit */
+  height: 56px; /* adjust to fit */
   width: auto;
-  filter: grayscale(100%);
+  /* filter: grayscale(100%); */
   opacity: 1;
   /* background-color: white;
   border-radius: 5px; */

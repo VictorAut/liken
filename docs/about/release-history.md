@@ -2,6 +2,16 @@
 title: Release History
 ---
 
+## v0.10.3 (2029-10-08)
+
+**Features**
+
+
+- Installation guide get's it's own page
+- AI Agents documentation relegated to "In Practice"
+- General documentation revision
+
+
 ## v0.10.2 (2029-10-07)
 
 **Fixes**

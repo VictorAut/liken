@@ -2,13 +2,13 @@
 title: Backends
 ---
 
-**Liken** runs on seven DataFrame backends: pandas, polars, modin, dask, ray, pyspark and pyarrow. You do not need choose a backend, **Liken** detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `pyarrow.Table` gets the pyarrow backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
+Liken runs on seven DataFrame backends: pandas, polars, modin, dask, ray, pyspark and pyarrow. You do not need choose a backend, Liken detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `pyarrow.Table` gets the pyarrow backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
 
 The deduplication API is the same on every backend. What differs is where the work runs and what you get back. This page lays out those differences; the [First Steps](../tutorials/first-steps.md#instantiating) tabs show the instantiation code for each.
 
 ## Installing
 
-pandas, polars and pyarrow ship with **Liken** itself. The other backends are optional extras:
+pandas, polars and pyarrow ship with Liken itself. The other backends are optional extras:
 
 | Extra | Installs | For |
 | ----- | ----- | ----- |
@@ -43,7 +43,7 @@ pandas, polars and pyarrow ship with **Liken** itself. The other backends are op
 
 Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all seven.
 
-PySpark requires a `SparkSession`. Pass it explicitly, or **Liken** raises `ValueError: spark_session arg must be provided for a spark dataframe`:
+PySpark requires a `SparkSession`. Pass it explicitly, or Liken raises `ValueError: spark_session arg must be provided for a spark dataframe`:
 
 ```python
 import liken as lk
@@ -57,8 +57,8 @@ For every other backend the `spark_session` argument is ignored.
 
 The first split is execution scope:
 
-- **pandas, polars, modin** run over the whole DataFrame in one process. modin is a drop-in for pandas — its DataFrames are pandas-like, and **Liken** treats them locally.
-- **pyarrow** runs over the whole table in one process. Arrow tables are columnar in memory, the same format **Liken** uses internally.
+- **pandas, polars, modin** run over the whole DataFrame in one process. modin is a drop-in for pandas — its DataFrames are pandas-like, and Liken treats them locally.
+- **pyarrow** runs over the whole table in one process. Arrow tables are columnar in memory, the same format Liken uses internally.
 - **dask, ray, pyspark** run over partitions — over batches, on ray. Deduplication executes per partition or batch, on the worker holding it.
 
 The partitioned execution has a consequence you must plan around: **records are only matched within a partition**. Two identical rows in different partitions will not be deduplicated, and each partition's duplicates get ids from that partition's own numbering. Partition your data so that likely duplicates land together, or use `repartition` on the columns your rules match against — see [Use Partitioned Data](performance.md#use-partitioned-data).

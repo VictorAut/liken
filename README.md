@@ -9,7 +9,7 @@
 
 # Introduction
 
-**Liken** is a library providing enhanced deduplication tooling for DataFrames.
+Liken is a library providing enhanced deduplication tooling for DataFrames.
 
 The key features are:
 

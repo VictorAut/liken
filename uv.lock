@@ -1015,7 +1015,7 @@ wheels = [
 
 [[package]]
 name = "liken"
-version = "0.10.2"
+version = "0.10.3"
 source = { editable = "." }
 dependencies = [
     { name = "catalogue" },
@@ -1061,6 +1061,7 @@ dev = [
     { name = "matplotlib" },
 ]
 docs = [
+    { name = "markdown-exec", extra = ["ansi"] },
     { name = "markdown-pycon" },
     { name = "mike" },
     { name = "mkdocstrings", extra = ["python"] },
@@ -1115,6 +1116,7 @@ dev = [
     { name = "matplotlib", specifier = ">=3.10.8" },
 ]
 docs = [
+    { name = "markdown-exec", extras = ["ansi"], specifier = ">=1.12.4" },
     { name = "markdown-pycon", specifier = ">=1.0.1,<2" },
     { name = "mike", git = "https://github.com/squidfunk/mike.git" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.3" },
@@ -1151,6 +1153,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/ab/7dd27d9d863b3376fcf23a5a13cb5d024aed1db46f963f1b5735ae43b3be/markdown-3.10.tar.gz", hash = "sha256:37062d4f2aa4b2b6b32aefb80faa300f82cc790cb949a35b8caede34f2b68c0e", size = 364931, upload-time = "2025-11-03T19:51:15.007Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/81/54e3ce63502cd085a0c556652a4e1b919c45a446bd1e5300e10c44c8c521/markdown-3.10-py3-none-any.whl", hash = "sha256:b5b99d6951e2e4948d939255596523444c0e677c669700b1d17aa4a8a464cb7c", size = 107678, upload-time = "2025-11-03T19:51:13.887Z" },
+]
+
+[[package]]
+name = "markdown-exec"
+version = "1.12.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+    { name = "pymdown-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/11/4484c13c38c293cb485fb730790ace11f898dd98ff758c27647369574ecd/markdown_exec-1.12.4.tar.gz", hash = "sha256:9eb8d535f69bbc85dc70b62dd9d04e65f29144de57448a87e25788c61667fbd8", size = 80857, upload-time = "2026-10-06T09:31:59.381Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/97/912d221d873cfd6b03a76957503897b31a3e40ce6df7dcf4ed2efdd332cc/markdown_exec-1.12.4-py3-none-any.whl", hash = "sha256:a688e1e91bc84d8b08a26e6b8380b6ca0d83a7235f81c1609de9d832ee1b49c8", size = 54712, upload-time = "2026-10-06T09:31:58.116Z" },
+]
+
+[package.optional-dependencies]
+ansi = [
+    { name = "pygments-ansi-color" },
 ]
 
 [[package]]
@@ -2118,6 +2138,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
+]
+
+[[package]]
+name = "pygments-ansi-color"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/f9/7f417aaee98a74b4f757f2b72971245181fcf25d824d2e7a190345669eaf/pygments-ansi-color-0.3.0.tar.gz", hash = "sha256:7018954cf5b11d1e734383a1bafab5af613213f246109417fee3f76da26d5431", size = 7317, upload-time = "2023-05-18T22:44:35.792Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/17/8306a0bcd8c88d7761c2e73e831b0be026cd6873ce1f12beb3b4c9a03ffa/pygments_ansi_color-0.3.0-py3-none-any.whl", hash = "sha256:7eb063feaecadad9d4d1fd3474cbfeadf3486b64f760a8f2a00fc25392180aba", size = 10242, upload-time = "2023-05-18T22:44:34.287Z" },
 ]
 
 [[package]]
