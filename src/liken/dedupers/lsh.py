@@ -66,9 +66,9 @@ class LSH(
         return lsh
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
-        minhashes: list[MinHash] = self._build_minhashes(array)
+        minhashes: list[MinHash] = self._build_minhashes(values)
         lsh: MinHashLSH = self._lsh(minhashes)
 
         for idx, minhash in enumerate(minhashes):

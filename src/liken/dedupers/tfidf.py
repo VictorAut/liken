@@ -76,9 +76,9 @@ class TfIdf(
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
         loads up results into a tuple of arrays"""
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
-        sparse = self._get_sparse_matrix(array)
+        sparse = self._get_sparse_matrix(values)
 
         sparse_coo = sparse.tocoo()
 

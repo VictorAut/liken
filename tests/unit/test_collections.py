@@ -382,6 +382,7 @@ BUILTIN_DEDUPER_NAMES = [
     "lsh",
     "jaccard",
     "cosine",
+    "edit_distance",
     "isin",
     "isna",
     "str_contains",

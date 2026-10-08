@@ -28,11 +28,11 @@ from liken.liken import dedupe
 __all__ = [
     "dedupe",
     "Dedupe",
-    "edit_distance",
     "exact",
     "fuzzy",
     "lsh",
     "tfidf",
+    "edit_distance",
     "cosine",
     "jaccard",
     "isin",
