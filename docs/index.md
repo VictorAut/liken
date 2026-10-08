@@ -23,16 +23,9 @@
 **Source Code**: [https://github.com/VictorAut/liken](https://github.com/VictorAut/liken)
 ***
 
-<div class="liken-definition">
-  <em>Liken</em>:<br>
-  <small><i>phrasal verb</i></small><br>
-  <small>/ˈlaɪ.kən/</small><br>
-  <strong>to say that something is similar to or has the same qualities as something else</strong>
-</div>
-
 ## Why...
 
-**Liken** deduplicates DataFrames, resolves entities and canonicalizes records. One syntax covers pandas on a laptop and PySpark in production.
+**Liken** deduplicates DataFrames, resolves entities and canonicalizes records.
 
 ### Features
 

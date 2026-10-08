@@ -1,3 +1,12 @@
+.md-typeset ol li,
+.md-typeset ul li {
+  margin-bottom: 0.1em !important;
+}
+.md-main__inner.md-grid {
+  max-width: initial;
+  margin-left: 5vw;
+}
+
 /* THEMES */
 
 [data-md-color-scheme="slate"] {
@@ -13,28 +22,6 @@
   background-color:  rgba(20, 24, 27, 0.6);
 }
 
-/* LIKEN DICTIONARY DEFINTION */
-
-.liken-definition {
-  margin: 2rem 0;
-  padding: 1rem 1.25rem;
-  border-left: 4px solid var(--md-primary-bg-color);
-  background: var(--md-code-bg-color);
-
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-.liken-definition em {
-  font-style: italic;
-  font-weight: 600;
-}
-
-.liken-definition strong {
-  display: block;
-  margin-top: 0.25rem;
-}
 
 /* SUPPORTED LOGOS */
 
@@ -71,18 +58,4 @@
   filter: grayscale(0%);
   opacity: 1;
   transform: scale(1.2);
-}
-
-/* TERMYNAL */
-
-body [data-termynal] {
-    background: #272c2e;
-    border-radius: 8px;
-}
-
-/* ANNOUNCEMENT BANNER */
-
-.md-banner {
-  background-color: #ff9d2c;
-  color: #000000;
 }

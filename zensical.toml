@@ -44,15 +44,13 @@ nav = [
 logo = "images/favicon-transparent.png"
 favicon = "images/favicon-transparent.png"
 features = [
-    "navigation.top",
-    "navigation.tabs",
-    "navigation.sections",
-    "navigation.tracking",
-    "navigation.footer",
     "content.code.annotate",
     "content.code.copy",
     "content.code.select",
-    "announce.dismiss",
+    "navigation.top",
+    "navigation.tracking",
+    "navigation.footer",
+    "search.highlight",
 ]
 
 [[project.theme.palette]]
@@ -105,8 +103,3 @@ custom_fences = [
 alternate_style = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
-
-# VERSIONING:
-
-[project.extra.version]
-provider = "mike"

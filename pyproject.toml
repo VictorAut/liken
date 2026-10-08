@@ -68,7 +68,7 @@ docs = [
     "mkdocstrings[python]>=1.0.3",
     "rich>=15.0.0",
     "termynal>=0.14.0",
-    "zensical>=0.0.51",
+    "zensical>=0.0.68",
 ]
 
 [project.urls]
@@ -116,6 +116,7 @@ extend-select = ["I", "UP", "B", "SIM", "C4", "RET", "RUF", "TC", "ERA", "PGH"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/liken/**" = ["A002"]
+"src/liken/__init__.py" = ["RUF022"]
 "src/liken/backends/{dask,modin,ray,pyspark}/**" = ["PLC0415"]
 
 [tool.ruff.lint.isort]
