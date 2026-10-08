@@ -36,15 +36,7 @@ class Strip(Preprocessor):
 
 
 class CollapseWhitespace(Preprocessor):
-    """Replace every run of whitespace with a single space.
-
-    Whitespace runs at the start or end of a string collapse to a single
-    space, they are not removed. Compose with `Strip` for that.
-
-    Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\v`, `\\f`,
-    `\\r` and space. Other Unicode whitespace, such as non-breaking spaces,
-    is not collapsed.
-    """
+    """Replace every run of whitespace with a single space."""
 
     @override
     def process(self) -> pa.Array:
@@ -135,7 +127,7 @@ class RegexReplace(Preprocessor):
     The pattern runs on RE2, not Python's `re`. RE2 guarantees linear-time
     matching, so a pathological pattern fails fast rather than hanging.
     Constructs RE2 does not support, and invalid patterns, raise
-    `pa.lib.ArrowInvalid`.
+    `pa.ArrowInvalid`.
     """
 
     def __init__(self, pattern: str, replacement: str):
@@ -191,9 +183,9 @@ def collapse_whitespace() -> CollapseWhitespace:
     Whitespace runs at the start or end of a string collapse to a single
     space, they are not removed. Compose with `strip` for that.
 
-    Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\v`, `\\f`,
-    `\\r` and space. Other Unicode whitespace, such as non-breaking spaces,
-    is not collapsed.
+    Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\f`, `\\r`
+    and space. Other Unicode whitespace, such as non-breaking spaces, is
+    not collapsed.
     """
     return CollapseWhitespace()
 
@@ -252,7 +244,7 @@ def regex_replace(pattern: str, replacement: str) -> RegexReplace:
             Python's `re`. RE2 guarantees linear-time matching, so a
             pathological pattern fails fast rather than hanging. Constructs
             RE2 does not support, and invalid patterns, raise
-            `pa.lib.ArrowInvalid`.
+            `pa.ArrowInvalid`.
         replacement: The string to replace each match with.
     """
     return RegexReplace(pattern, replacement)

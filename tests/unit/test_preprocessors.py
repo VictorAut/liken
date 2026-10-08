@@ -149,6 +149,13 @@ def test_collapse_whitespace_keeps_empty_strings():
     assert pp.process().to_pylist() == [""]
 
 
+def test_collapse_whitespace_leaves_non_ascii_whitespace():
+    pp = lk.preprocessors.collapse_whitespace()
+    pp.from_array(pa.array(["a\x0bb", "a\xa0b"]))
+
+    assert pp.process().to_pylist() == ["a\x0bb", "a\xa0b"]
+
+
 # REGEX REPLACE:
 
 
