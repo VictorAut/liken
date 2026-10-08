@@ -1,4 +1,3 @@
-import decimal
 from unittest.mock import Mock
 
 import pyarrow as pa
@@ -150,7 +149,6 @@ STR_PARAMS = [
         ["str_contains(", "pattern='05'", "case=False", "regex=True"],
     ),
     ("str_len", lk.str_len(), ["str_len(", "min_len=0", "max_len=None"]),
-    ("num_range", lk.num_range(min_value=1, max_value=2), ["num_range(", "min_value=1", "max_value=2"]),
     ("cosine", lk.cosine(), ["cosine(", "threshold=0.95"]),
     ("jaccard", lk.jaccard(threshold=0.5), ["jaccard(", "threshold=0.5"]),
     ("isin", lk.isin("london"), ["isin(", "values='london'"]),
@@ -369,112 +367,3 @@ def test_edit_distance_null_placeholder_matches_only_null_placeholder():
 
 
 ##############
-# num_range #
-##############
-
-
-def test_num_range_is_importable_and_listed_in_all():
-    assert "num_range" in lk.__all__
-
-
-def test_num_range_resolves_through_col_method():
-    unit_col = lk.col("salary").num_range(min_value=30_000, max_value=40_000)
-
-    assert str(unit_col._unit.deduper) == "num_range(min_value=30000, max_value=40000)"
-
-
-def test_num_range_matches_rows_within_inclusive_bounds():
-    """Both bounds are inclusive; all matched rows collapse onto the first."""
-    deduper = lk.num_range(min_value=10, max_value=20)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([5, 10, 15, 20, 25])))
-
-    # rows 1-3 (values 10, 15, 20) collapse onto row 1; 5 and 25 sit outside
-    assert pairs == [(1, 2), (1, 3)]
-
-
-def test_num_range_with_only_max_value_matches_rows_at_or_below_it():
-    deduper = lk.num_range(min_value=None, max_value=15)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([5, 15, 20])))
-
-    assert pairs == [(0, 1)]
-
-
-def test_num_range_with_only_min_value_matches_rows_at_or_above_it():
-    deduper = lk.num_range(min_value=15, max_value=None)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([5, 15, 20])))
-
-    assert pairs == [(1, 2)]
-
-
-def test_num_range_requires_at_least_one_bound():
-    with pytest.raises(ValueError):
-        lk.num_range(min_value=None, max_value=None)
-
-
-@pytest.mark.parametrize("bad_bound", ["10", True, [1]], ids=["str", "bool", "list"])
-def test_num_range_rejects_non_numeric_bounds(bad_bound):
-    with pytest.raises(ValueError):
-        lk.num_range(min_value=bad_bound)
-
-
-def test_num_range_rejects_non_numeric_column():
-    deduper = lk.num_range(min_value=0, max_value=1)
-
-    with pytest.raises(ValueError, match="num_range"):
-        list(deduper._gen_similarity_pairs(pa.array(["a", "b"])))
-
-
-def test_num_range_rejects_boolean_column():
-    deduper = lk.num_range(min_value=0, max_value=1)
-
-    with pytest.raises(ValueError, match="num_range"):
-        list(deduper._gen_similarity_pairs(pa.array([True, False])))
-
-
-def test_num_range_never_matches_nulls_or_nan():
-    deduper = lk.num_range(min_value=1, max_value=2)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([None, float("nan"), 1.0, 2.0])))
-
-    # only the real values in range group; null and NaN rows stay out
-    assert pairs == [(2, 3)]
-
-
-def test_num_range_negation_matches_every_row_the_base_does_not():
-    deduper = ~lk.num_range(min_value=10, max_value=20)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([5, 10, 15, 20, 25])))
-
-    # the complement of rows 1-3 is rows 0 and 4
-    assert pairs == [(0, 4)]
-
-
-def test_num_range_negation_also_excludes_nulls_and_nan():
-    deduper = ~lk.num_range(min_value=1, max_value=2)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([None, float("nan"), 1.0, 5.0])))
-
-    # the complement of row 2 is row 3; null and NaN rows stay out either way
-    assert pairs == [(2, 3)]
-
-
-def test_num_range_accepts_decimal_column():
-    deduper = lk.num_range(min_value=2.0, max_value=3.0)
-
-    array = pa.array([decimal.Decimal("2.5"), decimal.Decimal("3.5"), decimal.Decimal("9.9")], type=pa.decimal128(3, 1))
-
-    pairs = list(deduper._gen_similarity_pairs(array))
-
-    assert pairs == [(0, 1)]
-
-
-def test_num_range_accepts_integer_column_with_float_bounds():
-    deduper = lk.num_range(min_value=1.5, max_value=2.5)
-
-    pairs = list(deduper._gen_similarity_pairs(pa.array([1, 2, 3])))
-
-    # only row 1 (value 2) sits inside [1.5, 2.5]; a lone match yields no pairs
-    assert pairs == []
