@@ -28,8 +28,9 @@ PARAMS = [
     (~lk.col("address").isna(), [0, 0, 0, 0, 4, 0, 0, 0, 8, 0]),
     #
     (lk.col("address").isin(values=["123ab, OL5 9PL, UK"]), [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
-    # everything negates-matches "zzzzz", nulls included
-    (~lk.col("address").isin(values=["zzzzz"]), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    # values negate-match "zzzzz"; nulls never satisfy a negated predicate,
+    # so rows 5 and 9 (nulls) keep their own ids
+    (~lk.col("address").isin(values=["zzzzz"]), [0, 0, 0, 0, 4, 0, 0, 0, 8, 0]),
 ]
 
 # fmt: on

@@ -8,10 +8,7 @@ from typing import Generic
 from typing import Protocol
 from typing import TypeVar
 
-from pyarrow.compute import coalesce
-
 from liken.constants import CANONICAL_ID
-from liken.constants import NA_PLACEHOLDER
 
 
 if TYPE_CHECKING:
@@ -68,19 +65,15 @@ class DF(Generic[D]):
         del columns
         raise NotImplementedError
 
-    def get_array(self, columns: Columns, with_na: bool = False) -> pa.Array | pa.Table:
+    def get_array(self, columns: Columns) -> pa.Array | pa.Table:
         """Generalise the getting of a column, or columns of a df to an array.
 
-        Handles single column and multicolumn. For instances of single column
-        the initial column can initially be filled null placeholders, to allow
-        for use by dedupers. This is optional so that specific dedupers
-        that do care about nulls are not affected (e.g. IsNA).
+        Handles single column and multicolumn. The array carries raw values:
+        nulls stay null, and a missing value is one classified by
+        `liken.core.missing.is_missing` — `None` and every IEEE NaN.
         """
         if isinstance(columns, str):
-            col: pa.Array = self._get_col(columns)
-            if with_na:
-                return coalesce(col, NA_PLACEHOLDER)
-            return col
+            return self._get_col(columns)
         return self._get_cols(columns)
 
     def get_canonical(self) -> pa.Array:

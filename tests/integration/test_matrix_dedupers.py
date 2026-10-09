@@ -86,7 +86,12 @@ PARAMS = [
     #
     # FUZZY:
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.95}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 2, 5, 6, 0, 2, 9]),
+    # recomputed for true null handling: the old group {2, 3, 4, 8} was
+    # bridged by partial_ratio("na", ...) = 100 (the placeholder inside
+    # "Ancho"). Raw nulls never score; only the identical-address pair
+    # (rows 1 and 8) clears 0.95, and the null rows 5 and 9 pair with
+    # each other only
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.85}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.75}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.65}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
@@ -96,7 +101,7 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     #
     # EDIT DISTANCE:
-    # absolute bound: nulls group ("na" placeholder), identical postcodes group
+    # absolute bound: nulls group (missing matches missing), identical postcodes group
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # emails one edit apart merge; a second edit joins the short variants
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),

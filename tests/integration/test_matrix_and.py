@@ -38,6 +38,10 @@ def str_same_len(array: typing.Iterable):
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
+            # custom dedupers receive raw values; a missing value has no
+            # length, and this deduper's rule is that it never matches
+            if array[i] is None or array[j] is None:
+                continue
             if len(array[i]) == len(array[j]):
                 yield i, j
 
@@ -50,7 +54,10 @@ PARAMS = [
     ([lk.col("email").fuzzy(0.95), lk.col("email").str_same_len()],  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
     # single column
     ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ([lk.col("address").fuzzy(0.70), lk.col("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    # recomputed for true null handling: nulls are raw None, so str_same_len
+    # never matches them; only rows 1 and 8 (equal addresses) survive both
+    # dedupers, and the null rows 5 and 9 keep their own ids
+    ([lk.col("address").fuzzy(0.70), lk.col("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
     # single column
     ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     ([lk.col("address").fuzzy(0.70), ~lk.col("address").isna()], [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),

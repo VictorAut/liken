@@ -29,7 +29,7 @@ def mock_df():
     df._get_col.return_value = pa.array([1, 2, 3])
     df._get_cols.return_value = pa.array([[1], [2], [3]])
     df.put_col.return_value = df
-    df.get_array.return_value = pa.array([1, 2, 3])  # here as a placeholder
+    df.get_array.return_value = pa.array([1, 2, 3])
     return df
 
 

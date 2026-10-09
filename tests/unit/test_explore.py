@@ -112,8 +112,7 @@ def test_explore_sampled_rates_modin():
     assert list(result.index) == DEFAULT_METRICS
 
 
-# FIXME: on an empty dataframe the column converts to a pyarrow null-typed
-# array and the NA-placeholder coalesce in DF.get_array raises
-# ArrowNotImplementedError. Affects explore, drop_duplicates and
-# canonicalize on every backend, so there is no empty-frame explore test
-# here. Fixing the coalesce is a separate change.
+# NOTE: on an empty dataframe the column converts to a pyarrow null-typed
+# array; the engines are skipped for empty and missing-only input, but
+# empty-frame behaviour is not pinned here. Empty-frame tests are added with
+# the D1-D8 public-API regression suite.

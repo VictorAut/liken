@@ -43,7 +43,6 @@ if TYPE_CHECKING:
 
 class Base(Protocol):
     wdf: DF
-    with_na_placeholder: bool
 
     def set_frame(self, wdf: DF) -> Self: ...
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
@@ -74,11 +73,10 @@ class BaseDeduper(Base):
     """
     Base Deduplication class
 
-    By default all dedupers will operate on filled nulls, thus treating them
-    as identical instances within a column(s) of values,
+    Dedupers operate on raw values. A missing value — `None` or any IEEE NaN,
+    as classified by `liken.core.missing.is_missing` — matches only another
+    missing value and is never confused with an ordinary value.
     """
-
-    with_na_placeholder: bool = True
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -111,7 +109,7 @@ class BaseDeduper(Base):
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
-        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+        array: pa.Array | pa.Table = self.wdf.get_array(columns)
 
         processed: pa.Array | pa.Table = self.preprocess(array, preprocessors)
 

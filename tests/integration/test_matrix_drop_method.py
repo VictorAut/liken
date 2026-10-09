@@ -14,7 +14,7 @@ from liken.constants import CANONICAL_ID
 
 
 # fake_10 address groups: rows 1 & 8 share an address, rows 5 & 9 are null
-# and nulls are grouped via the NA placeholder, so two rows drop in total
+# and nulls group as missing values, so two rows drop in total
 EXPECTED_IDS_FIRST = [1, 2, 3, 4, 5, 6, 7, 10]
 EXPECTED_IDS_LAST = [2, 3, 4, 6, 7, 8, 9, 10]
 
