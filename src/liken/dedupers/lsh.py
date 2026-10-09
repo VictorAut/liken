@@ -11,7 +11,7 @@ from datasketch import MinHashLSH
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
-from liken.core.missing import is_missing
+from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -69,13 +69,7 @@ class LSH(
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
 
-        missing: list[int] = []
-        present: list[int] = []
-        for i, value in enumerate(values):
-            if is_missing(value):
-                missing.append(i)
-            else:
-                present.append(i)
+        missing, present = partition_missing(values)
 
         # star-shaped missing pairs: k missing values cost k-1 pairs
         for i in missing[1:]:

@@ -13,7 +13,7 @@ from sparse_dot_topn import sp_matmul_topn
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
-from liken.core.missing import is_missing
+from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -79,13 +79,7 @@ class TfIdf(
         loads up results into a tuple of arrays"""
         values: list = array.to_pylist()
 
-        missing: list[int] = []
-        present: list[int] = []
-        for i, value in enumerate(values):
-            if is_missing(value):
-                missing.append(i)
-            else:
-                present.append(i)
+        missing, present = partition_missing(values)
 
         # star-shaped missing pairs: k missing values cost k-1 pairs
         for i in missing[1:]:
