@@ -18,7 +18,9 @@ from liken.core.missing import is_missing
 # is invoked with the column's values and fails unless missing values arrive
 # unsubstituted. Assertions rather than recorded state because distributed
 # backends (dask, ray, pyspark) pickle the callable to workers, where module
-# globals are copies.
+# globals are copies. The fixture holds one partition per backend, so every
+# invocation sees the missing row; a repartitioned frame would need a
+# weaker assertion.
 @lk.custom.register
 def require_raw_values(array):
     missing = [value for value in array if is_missing(value)]
@@ -40,8 +42,8 @@ CASES = [
         lk.col("address").exact(),
         [0, 1, 0, 1],
     ),
-    # D1/D8: null does not group with "", "n" or literal "na"; the values
-    # pair among themselves ("na" and "" are 2 edits apart)
+    # D1/D8: null does not group with "" or literal "na"; the values pair
+    # among themselves ("na" and "" are 2 edits apart)
     (
         "edit-distance-null-vs-values",
         ["address"],
@@ -236,7 +238,7 @@ def test_matrix_nulls(schema, data, step, expected_canonical_id, helpers, spark_
         # the float case: backends that convert NaN to null on the way into
         # Arrow deliver None; polars and pyarrow keep float NaN; both are
         # raw missing values for a custom deduper
-        (["number"], [(1.5,), (None,), (2.5,)]),
+        (["number"], [(1.5,), (float("nan"),), (2.5,)]),
     ],
     ids=["string-column", "float-column"],
 )
@@ -244,9 +246,20 @@ def test_custom_deduper_receives_raw_values(schema, data, helpers, spark_session
     """A registered custom deduper sees raw values, nulls included."""
     df = helpers.create_df(data, schema)
 
-    lk.dedupe(df, spark_session=spark_session).apply(
-        lk.pipeline().step(lk.col(schema[0]).require_raw_values())
-    ).canonicalize().collect()
+    out = (
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(lk.pipeline().step(lk.col(schema[0]).require_raw_values()))
+        .canonicalize()
+        .collect()
+    )
+
+    # reading the column forces the compute, so the callable's assertions
+    # also run on the lazy backends (dask, pyspark)
+    column = helpers.get_column_as_list(out, schema[0])
+
+    assert column[0] == data[0][0]
+    assert is_missing(column[1])
+    assert column[2] == data[2][0]
 
 
 def test_empty_frame_canonicalise_and_drop(helpers, spark_session, request):

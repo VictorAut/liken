@@ -169,10 +169,7 @@ class Helpers:
             return [row[col] for row in df.take_all()]
 
         if self.backend == "dask":
-            if isinstance(df, dd.DataFrame):
-                df = df.compute()
-                return df[col].tolist()
-            # i.e. pandas
+            df = df.compute() if isinstance(df, dd.DataFrame) else df
             return [None if v is pd.NA else v for v in list(df[col])]
 
         if self.backend == "pyspark":
