@@ -330,6 +330,22 @@ def test_exact_nan_groups_with_null(mock_df):
     assert uf[0] != uf[1]
 
 
+def test_exact_nested_typed_column_groups_by_content(mock_df):
+    """Nested-typed columns keep grouping by content.
+
+    Bucket keys stay pa.Scalar, which is hashable for list/struct types;
+    normalising through as_py() would raise TypeError on the unhashable
+    Python list or dict a nested scalar converts to.
+    """
+    mock_df.get_array = Mock(return_value=pa.array([[1], [1], [2]], type=pa.list_(pa.int64())))
+
+    uf, n = lk.exact().set_frame(mock_df).build_union_find("address", [])
+
+    assert n == 3
+    assert uf[0] == uf[1]  # equal contents group
+    assert uf[0] != uf[2]
+
+
 def test_exact_compound_missing_members_collapse(mock_df):
     """Missing members collapse per member: (None, "x") and (NaN, "x") are one key."""
     mock_df.get_array = Mock(

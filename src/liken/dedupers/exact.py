@@ -36,7 +36,8 @@ class Exact(BaseDeduper):
         if isinstance(array, pa.Array):
             for i, scalar in enumerate(array):
                 value = scalar.as_py()
-                key = None if is_missing(value) else value
+                # non-missing keys stay pa.Scalar: hashable for nested list/struct types
+                key = None if is_missing(value) else scalar
                 buckets[key].append(i)
 
         # multi column
