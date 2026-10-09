@@ -45,7 +45,7 @@ class Cosine(
             sims = normalized[i] @ normalized[i + 1 :].T
 
             for offset, val in enumerate(sims):
-                if val > self._threshold:
+                if val >= self._threshold:
                     yield i, i + 1 + offset
 
     def __str__(self):
@@ -61,7 +61,9 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose similarity is exactly equal
+            to the threshold matches.
 
     Returns:
         Instance of `BaseDeduper`.

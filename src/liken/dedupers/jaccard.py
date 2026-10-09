@@ -43,7 +43,7 @@ class Jaccard(
                 if not union:
                     continue  # zero div: guardrail
 
-                if len(intersection) / len(union) > self._threshold:
+                if len(intersection) / len(union) >= self._threshold:
                     yield idx, idy
 
     def __str__(self):
@@ -61,7 +61,9 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose similarity is exactly equal
+            to the threshold matches.
 
     Returns:
         Instance of `BaseDeduper`.

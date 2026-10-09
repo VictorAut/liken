@@ -1,5 +1,6 @@
 """tfidf deduper"""
 
+import math
 from collections.abc import Iterator
 from typing import Any
 from typing import ClassVar
@@ -64,11 +65,15 @@ class TfIdf(
 
         vectorizer = self._vectorize()
         matrix = vectorizer.fit_transform(array)
+        # `sparse_dot_topn` keeps only pairs strictly above the threshold it
+        # is given. Lowering the threshold by one ULP makes that strict
+        # comparison inclusive, so a pair scoring exactly `threshold` is
+        # kept.
         return sp_matmul_topn(
             matrix,
             matrix.T,
             top_n=self._topn,
-            threshold=self._threshold,
+            threshold=math.nextafter(self._threshold, -math.inf),
             sort=True,
         )
 
@@ -117,7 +122,9 @@ def tfidf(
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose similarity is exactly equal
+            to the threshold matches.
         ngram: the number of character ngrams to consider. For the `tfidf`
             implementation this is the ngram bounded range. If you pass this as
             an integer you are saying the bounds are the same. E.g. `ngram=1`

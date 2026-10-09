@@ -1,7 +1,11 @@
+import math
+from decimal import Decimal
 from unittest.mock import Mock
 
+import numpy as np
 import pyarrow as pa
 import pytest
+from rapidfuzz import fuzz
 
 import liken as lk
 from liken.core.deduper import BaseDeduper
@@ -901,3 +905,111 @@ def test_str_len_negated_fallback_never_matches_missing():
     assert deduper._matches("") is True
     assert deduper._matches("abc") is False
     assert deduper._matches("ab") is True
+
+
+##################################
+# threshold boundary semantics  #
+##################################
+
+
+@pytest.mark.parametrize(
+    "threshold",
+    [i / 100 for i in range(1, 100)],
+    ids=[f"{i / 100:.2f}" for i in range(1, 100)],
+)
+def test_fuzzy_matches_score_exactly_at_every_two_decimal_threshold(threshold, monkeypatch):
+    """A pair whose score is exactly `100 * threshold` matches, for every two-decimal threshold.
+
+    The stubbed scorer returns the exact product as a float. The drifted
+    `100 * threshold` (8 of the 99 two-decimal thresholds round away from
+    it, 5 of them upward) must not reject a pair sitting exactly on the
+    boundary.
+    """
+    exact_score = float(Decimal(str(threshold)) * 100)
+    deduper = lk.fuzzy(threshold=threshold)
+    monkeypatch.setattr(deduper, "get_scorer", lambda: lambda s1, s2, **kwargs: exact_score)
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_fuzzy_does_not_match_below_the_threshold(monkeypatch):
+    """A score more than the tolerance below the boundary never matches."""
+    deduper = lk.fuzzy(threshold=0.95)
+    monkeypatch.setattr(deduper, "get_scorer", lambda: lambda s1, s2, **kwargs: 94.0)
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["x", "y"]))) == []
+
+
+def test_fuzzy_matches_a_real_score_exactly_at_the_threshold():
+    """`fuzz.ratio("abcd", "abce")` is exactly 75.0, so threshold 0.75 matches and 0.76 does not."""
+    assert fuzz.ratio("abcd", "abce") == 75.0
+
+    pairs = list(lk.fuzzy(threshold=0.75)._gen_similarity_pairs(pa.array(["abcd", "abce"])))
+
+    assert pairs == [(0, 1)]
+
+    pairs = list(lk.fuzzy(threshold=0.76)._gen_similarity_pairs(pa.array(["abcd", "abce"])))
+
+    assert pairs == []
+
+
+def test_cosine_matches_a_pair_exactly_at_the_threshold():
+    """Rows [1, 1] and [1, 0] have similarity `1/sqrt(2)`; a threshold equal to it must match."""
+    threshold = float(1.0 / np.sqrt(2.0))
+
+    pairs = list(lk.cosine(threshold=threshold)._gen_similarity_pairs(pa.table({"x": [1.0, 1.0], "y": [1.0, 0.0]})))
+
+    assert pairs == [(0, 1)]
+
+
+def test_cosine_does_not_match_below_the_threshold():
+    threshold = float(math.nextafter(1.0 / np.sqrt(2.0), math.inf))
+
+    pairs = list(lk.cosine(threshold=threshold)._gen_similarity_pairs(pa.table({"x": [1.0, 1.0], "y": [1.0, 0.0]})))
+
+    assert pairs == []
+
+
+def test_jaccard_matches_a_pair_exactly_at_the_threshold():
+    """Two rows sharing 2 of their 4 members have jaccard similarity exactly 0.5."""
+    table = pa.table({"x": ["a", "a"], "y": ["b", "b"], "z": ["c", "d"]})
+
+    pairs = list(lk.jaccard(threshold=0.5)._gen_similarity_pairs(table))
+
+    assert pairs == [(0, 1)]
+
+
+def test_jaccard_does_not_match_below_the_threshold():
+    table = pa.table({"x": ["a", "a"], "y": ["b", "b"], "z": ["c", "d"]})
+
+    pairs = list(lk.jaccard(threshold=math.nextafter(0.5, math.inf))._gen_similarity_pairs(table))
+
+    assert pairs == []
+
+
+def test_tfidf_matches_a_pair_exactly_at_the_threshold():
+    """A pair whose similarity equals the threshold matches.
+
+    The threshold is lowered by one ULP before it reaches the delegate,
+    whose comparison is strict, so a pair stored at exactly the threshold
+    survives.
+    """
+    values = ["a b", "a c", "a b c"]
+
+    probe = lk.tfidf(ngram=1, topn=5, threshold=0.0)
+    sparse = probe._get_sparse_matrix(values).tocoo()
+    row, col, value = max(
+        ((int(r), int(c), float(v)) for r, c, v in zip(sparse.row, sparse.col, sparse.data, strict=False) if r < c),
+        key=lambda item: item[2],
+    )
+
+    pairs = list(lk.tfidf(ngram=1, topn=5, threshold=value)._gen_similarity_pairs(pa.array(values)))
+
+    assert (row, col) in pairs
+
+    above = math.nextafter(value, math.inf)
+    pairs = list(lk.tfidf(ngram=1, topn=5, threshold=above)._gen_similarity_pairs(pa.array(values)))
+
+    assert (row, col) not in pairs

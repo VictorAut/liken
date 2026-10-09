@@ -104,7 +104,10 @@ def lsh(
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. `lsh` matches
+            approximately: the threshold steers candidate generation and is not
+            a guarantee at the boundary, so pairs near the threshold may be
+            missed or kept whatever their exact similarity.
         ngram: the number of character ngrams to consider. For `lsh`, and
             unlike the `tfidf` implementation, this is single integer ngram
             number. So, `ngram=1` is only unigrams. Increasing ngrams reduces

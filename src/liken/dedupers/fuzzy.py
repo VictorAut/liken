@@ -18,6 +18,16 @@ from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
 
+# `100 * threshold` drifts by a few double-precision ULPs for some
+# two-decimal thresholds, which would make a pair scoring exactly the
+# threshold match or not depending on the rounding direction. The
+# comparison tolerates scores within this guard below the boundary. The
+# drift it repairs is ~1e-14 and real distinct similarity scores differ by
+# far more, so the guard only admits scores equal to the boundary at any
+# meaningful precision.
+_BOUNDARY_TOLERANCE = 1e-9
+
+
 @final
 class Fuzzy(
     SingleColumnMixin,
@@ -93,7 +103,7 @@ class Fuzzy(
             )[0]
 
             for offset, score in enumerate(scores):
-                if score > threshold:
+                if score >= threshold - _BOUNDARY_TOLERANCE:
                     yield present[pos], present[pos + 1 + offset]
 
     def __str__(self):
@@ -118,7 +128,12 @@ def fuzzy(
 
     Args:
         threshold: The minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose score is at or above
+            `100 * threshold` matches. A tolerance of 1e-9 absorbs the
+            floating-point drift of that scaling, so scores within the
+            tolerance below the boundary also match; real distinct scores
+            differ by far more.
         scorer: The fuzzy scorer. Defaults to "simple ratio". Options are
             "simple_ratio", "partial_ratio", "token_sort_ratio",
             "token_set_ratio", "weighted_ratio", "quick_ratio".
