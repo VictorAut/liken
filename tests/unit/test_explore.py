@@ -112,7 +112,14 @@ def test_explore_sampled_rates_modin():
     assert list(result.index) == DEFAULT_METRICS
 
 
-# NOTE: on an empty dataframe the column converts to a pyarrow null-typed
-# array; the engines are skipped for empty and missing-only input, but
-# empty-frame behaviour is not pinned here. Empty-frame tests are added with
-# the D1-D8 public-API regression suite.
+# empty frames
+
+
+def test_explore_empty_frame_reports_zero_rates():
+    """An empty frame yields zero duplicate rates instead of crashing (D6)."""
+    df = pd.DataFrame(data={"id": pd.Series([], dtype="int64"), "address": pd.Series([], dtype="object")})
+
+    result = lk.dedupe(df).explore(["address"])
+
+    assert list(result.index) == DEFAULT_METRICS
+    assert all(rate == 0 for rate in result["address"].tolist())
