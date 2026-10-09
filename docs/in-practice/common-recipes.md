@@ -57,8 +57,6 @@ pipeline = (
 )
 ```
 
-Bounds are inclusive, so each tier starts one past the previous tier's upper bound and no length falls in two tiers.
-
 Now, only on longer `address` strings is more tolerance allowed.
 
 ## Which Preprocessor When?
