@@ -642,6 +642,42 @@ def test_num_range_rejects_min_above_max():
         lk.num_range(min=40_000, max=30_000)
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"min": True},
+        {"max": True},
+        {"min": False},
+        {"min": "500"},
+        {"max": "500"},
+        {"min": float("nan")},
+        {"max": float("nan")},
+        {"min": float("nan"), "max": 5},
+    ],
+    ids=["min-bool", "max-bool", "min-false", "min-str", "max-str", "min-nan", "max-nan", "min-nan-with-max"],
+)
+def test_num_range_rejects_non_real_bounds(kwargs):
+    """A bound that is not a real number — bool, str, NaN — is refused at construction."""
+    with pytest.raises(ValueError):
+        lk.num_range(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"min": 1, "max": 2},
+        {"min": 1.5},
+        {"max": 1.5},
+        {"min": None, "max": 2},
+        {"min": 1, "max": None},
+    ],
+    ids=["ints", "min-float", "max-float", "min-none", "max-none"],
+)
+def test_num_range_allows_real_or_none_bounds(kwargs):
+    """An int or float bound is a real number; `None` means unbounded."""
+    lk.num_range(**kwargs)
+
+
 def test_num_range_min_equals_max_is_allowed():
     """A one-value interval is a valid, non-empty range."""
     lk.num_range(min=5, max=5)
@@ -734,6 +770,38 @@ def test_num_range_str_renders_name_and_bounds():
 ##############
 #  str_len  #
 ##############
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"min_len": True},
+        {"max_len": True},
+        {"min_len": False},
+        {"min_len": "3"},
+        {"max_len": "3"},
+        {"min_len": 3.0},
+        {"max_len": 3.0},
+        {"min_len": None},
+    ],
+    ids=["min-bool", "max-bool", "min-false", "min-str", "max-str", "min-float", "max-float", "min-none"],
+)
+def test_str_len_rejects_non_integer_bounds(kwargs):
+    """A bound that is not an integer — bool, str, float, `None` — is refused at construction."""
+    with pytest.raises(ValueError):
+        lk.str_len(**kwargs)
+
+
+def test_str_len_rejects_inverted_bounds():
+    """An empty interval is refused at construction, like num_range."""
+    with pytest.raises(ValueError):
+        lk.str_len(min_len=10, max_len=9)
+
+
+def test_str_len_allows_int_bounds_and_none_upper():
+    """An int bound is valid; `max_len` may be `None`; `min_len == max_len` is legal."""
+    lk.str_len(min_len=3, max_len=None)
+    lk.str_len(min_len=3, max_len=3)
 
 
 @pytest.mark.parametrize(

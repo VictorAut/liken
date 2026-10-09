@@ -150,8 +150,6 @@ PARAMS = [
     (lk.str_endswith, SINGLE_COL, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 1]),
     #
     # STRING LEN:
-    # i.e. no deduping because no such thing as max_len and min_len being inversered
-    (lk.str_len, "email", {"min_len": 10, "max_len": 9}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # no deduping because bounds are out of range
     (lk.str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # total deduping given no bounds
@@ -223,6 +221,12 @@ PARAMS = [
 ]
 
 # fmt: on
+
+
+def test_str_len_rejects_inverted_bounds_at_construction():
+    """An inverted interval matches nothing and is refused at construction, like num_range."""
+    with pytest.raises(ValueError):
+        lk.str_len(min_len=10, max_len=9)
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
