@@ -368,6 +368,74 @@ def test_notna_groups_only_non_null_values(mock_df):
     assert uf[0] != uf[2] and uf[1] != uf[2]
 
 
+##############################
+# fuzzy null partitioning   #
+#############################
+
+
+def test_fuzzy_nulls_pair_with_nulls_only(mock_df):
+    """Missing values pair with each other, never with a value.
+
+    fuzz.ratio("nathan", "nadia") is ~54.5, so the two values also pair at a
+    0.5 threshold; the nulls form their own group either way.
+    """
+    mock_df.get_array = Mock(return_value=pa.array(["nathan", None, "nadia", None]))
+
+    uf, n = lk.fuzzy(threshold=0.5).set_frame(mock_df).build_union_find("address", [])
+
+    assert n == 4
+    assert uf[1] == uf[3]  # the two nulls group
+    assert uf[0] == uf[2]  # the values group at this threshold
+    assert uf[0] != uf[1]  # a null never groups with a value
+
+
+@pytest.mark.parametrize(
+    "threshold, expected_pairs",
+    [(0.0, [(0, 2), (1, 3)]), (0.55, [(1, 3)])],
+    ids=["threshold-zero", "just-above-the-value-pair"],
+)
+def test_fuzzy_null_never_pairs_with_value(threshold, expected_pairs):
+    """At any threshold a null pairs only with another null."""
+    array = pa.array(["nathan", None, "nadia", None])
+
+    pairs = sorted(lk.fuzzy(threshold=threshold)._gen_similarity_pairs(array))
+
+    assert pairs == expected_pairs
+
+
+def test_fuzzy_all_null_input_yields_star_pairs():
+    """All-null input yields star-shaped null pairs without touching the scorer."""
+    array = pa.array([None, None, None])
+
+    assert list(lk.fuzzy(threshold=0.5)._gen_similarity_pairs(array)) == [(0, 1), (0, 2)]
+
+
+def test_fuzzy_nan_and_null_pair():
+    """NaN is missing and pairs with a null, never with a value."""
+    array = pa.array([float("nan"), 1.0, None])
+
+    assert list(lk.fuzzy(threshold=0.5)._gen_similarity_pairs(array)) == [(0, 2)]
+
+
+def test_fuzzy_cdist_receives_no_missing_values(monkeypatch):
+    """process.cdist scores non-missing values only."""
+    from rapidfuzz import process
+
+    from liken.core.missing import is_missing
+
+    real_cdist = process.cdist
+
+    def spy_cdist(queries, choices, **kwargs):
+        assert all(not is_missing(value) for value in (*queries, *choices))
+        return real_cdist(queries, choices, **kwargs)
+
+    monkeypatch.setattr(process, "cdist", spy_cdist)
+
+    array = pa.array(["nathan", None, "nadia", None])
+
+    assert list(lk.fuzzy(threshold=0.95)._gen_similarity_pairs(array)) == [(1, 3)]
+
+
 ##########################
 # Vectorized mask guard #
 ##########################

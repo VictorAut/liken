@@ -13,6 +13,7 @@ from rapidfuzz import process
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -64,25 +65,42 @@ class Fuzzy(
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
-        n = len(values)
+
+        missing: list[int] = []
+        present: list[int] = []
+        for i, value in enumerate(values):
+            if is_missing(value):
+                missing.append(i)
+            else:
+                present.append(i)
+
+        # star-shaped missing pairs: k missing values cost k-1 pairs
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
 
         threshold = 100 * self._threshold
 
         scorer = self.get_scorer()
 
-        for i, s1 in enumerate(values):
-            if i + 1 >= n:
+        # the scorer receives non-missing values only
+        scored = [values[i] for i in present]
+
+        for pos, s1 in enumerate(scored):
+            if pos + 1 >= len(scored):
                 break
 
             scores = process.cdist(
                 [s1],
-                values[i + 1 :],
+                scored[pos + 1 :],
                 scorer=scorer,
             )[0]
 
             for offset, score in enumerate(scores):
                 if score > threshold:
-                    yield i, i + 1 + offset
+                    yield present[pos], present[pos + 1 + offset]
 
     def __str__(self):
         return self.str_representation(self._NAME)
