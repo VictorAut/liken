@@ -8,11 +8,14 @@ title: Release History
 
 
 - New `edit_distance` deduper: matches two values when their Levenshtein distance is at most `max_distance` (default 2). An absolute bound that does not scale with string length, unlike `fuzzy`'s relative threshold. Nulls match only nulls.
+- New `num_range` deduper: matches numeric values inside the inclusive interval `[min, max]`. Either bound may be left `None` (unbounded on that side). A missing value (`None` or NaN) never matches, positive or negated (`~num_range`).
+- Two new preprocessors: `collapse_whitespace` replaces every run of whitespace with a single space; `regex_replace` applies a regular-expression replacement. Both usable in pipelines, steps and `on` preprocessor lists.
 
 **Fixes**
 
 
 - True null handling: a missing value (`None` or NaN) groups only with another missing value. `"na"` placeholder machinery is removed; nulls no longer collide with literal `"na"` values.
+- Core type contracts annotated: the backend protocol, DataFrame wrapper interfaces and collections.
 
 
 ## v0.10.3 (2029-10-08)

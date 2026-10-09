@@ -202,6 +202,19 @@ PARAMS = [
     #
     # ISNA:
     (lk.isna, SINGLE_COL, {}, [0, 1, 2, 3, 4, 5, 6, 7, 4, 9]),
+    #
+    # NUM RANGE:
+    # property_area_sq_ft in [500, 620]: rows 0 (545), 6 (509) and 7 (500)
+    # match and collapse into one group
+    (lk.num_range, "property_area_sq_ft", {"min": 500, "max": 620}, [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    # min-only: rows 2 (623), 3 (2077), 4 (1045), 5 (1323) and 9 (4000)
+    # match and collapse into one group
+    (lk.num_range, "property_area_sq_ft", {"min": 600}, [0, 1, 2, 2, 2, 2, 6, 7, 8, 2]),
+    # max-only: rows 0 (545), 1 (452), 6 (509), 7 (500) and 8 (345)
+    # match and collapse into one group
+    (lk.num_range, "property_area_sq_ft", {"max": 600}, [0, 0, 2, 3, 4, 5, 0, 0, 0, 9]),
+    # no value in range: no deduping
+    (lk.num_range, "property_area_sq_ft", {"min": 5000, "max": 6000}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
 ]
 
 # fmt: on

@@ -31,6 +31,12 @@ PARAMS = [
     # values negate-match "zzzzz"; nulls never satisfy a negated predicate,
     # so rows 5 and 9 (nulls) keep their own ids
     (~lk.col("address").isin(values=["zzzzz"]), [0, 0, 0, 0, 4, 0, 0, 0, 8, 0]),
+    #
+    (lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    # everything outside [500, 620] negate-matches into one group: rows 1, 2,
+    # 3, 4, 5, 8, 9 (452, 623, 2077, 1045, 1323, 345, 4000); rows 0, 6, 7
+    # (545, 509, 500) stay put
+    (~lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 1, 1, 1, 1, 6, 7, 1, 1]),
 ]
 
 # fmt: on

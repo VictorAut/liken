@@ -1,4 +1,4 @@
-"""TODO: add detail"""
+"""Defines the Pipeline collection: a `Pipeline` of `PipelineStep`s of `Col`s"""
 
 from __future__ import annotations
 
@@ -316,6 +316,21 @@ class Col:
 
         """
         return self.__getattr__("str_len")(*args, **kwargs)
+
+    def num_range(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.num_range` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+        See [`lk.num_range`](../reference/liken.md#liken.num_range) reference for
+        complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").num_range())
+
+        """
+        return self.__getattr__("num_range")(*args, **kwargs)
 
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
         self._columns: Columns = columns

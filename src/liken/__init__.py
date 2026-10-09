@@ -16,6 +16,7 @@ from liken.dedupers.isin import isin
 from liken.dedupers.isna import isna
 from liken.dedupers.jaccard import jaccard
 from liken.dedupers.lsh import lsh
+from liken.dedupers.num_range import num_range
 from liken.dedupers.str_contains import str_contains
 from liken.dedupers.str_endswith import str_endswith
 from liken.dedupers.str_len import str_len
@@ -37,6 +38,7 @@ __all__ = [
     "jaccard",
     "isin",
     "isna",
+    "num_range",
     "str_contains",
     "str_endswith",
     "str_len",
