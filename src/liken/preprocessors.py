@@ -181,7 +181,7 @@ def collapse_whitespace() -> CollapseWhitespace:
     """Replace every run of whitespace with a single space.
 
     Whitespace runs at the start or end of a string collapse to a single
-    space, they are not removed. Compose with `strip` for that.
+    space, they are *not* removed. Compose with `strip` for that.
 
     Whitespace here is ASCII whitespace only: `\\t`, `\\n`, `\\f`, `\\r`
     and space. Other Unicode whitespace, such as non-breaking spaces, is
@@ -240,12 +240,11 @@ def regex_replace(pattern: str, replacement: str) -> RegexReplace:
     """Replace every match of a regular expression pattern.
 
     Args:
-        pattern: The regular expression to match. It runs on RE2, not
-            Python's `re`. RE2 guarantees linear-time matching, so a
-            pathological pattern fails fast rather than hanging. Constructs
-            RE2 does not support, and invalid patterns, raise
-            `pa.ArrowInvalid`.
+        pattern: The regular expression to match.
         replacement: The string to replace each match with.
+
+    Raises:
+        `pa.ArrowInvalid` for an invalid pattern
     """
     return RegexReplace(pattern, replacement)
 
