@@ -13,6 +13,7 @@ from sparse_dot_topn import sp_matmul_topn
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -78,14 +79,30 @@ class TfIdf(
         loads up results into a tuple of arrays"""
         values: list = array.to_pylist()
 
-        sparse = self._get_sparse_matrix(values)
+        missing: list[int] = []
+        present: list[int] = []
+        for i, value in enumerate(values):
+            if is_missing(value):
+                missing.append(i)
+            else:
+                present.append(i)
+
+        # star-shaped missing pairs: k missing values cost k-1 pairs
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
+
+        # the vectoriser receives non-missing values only
+        sparse = self._get_sparse_matrix([values[i] for i in present])
 
         sparse_coo = sparse.tocoo()
 
         rows, cols = sparse_coo.row, sparse_coo.col
 
         for i in range(len(rows)):
-            yield rows[i], cols[i]
+            yield present[rows[i]], present[cols[i]]
 
     def __str__(self):
         return self.str_representation(self._NAME)

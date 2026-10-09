@@ -563,4 +563,50 @@ def test_edit_distance_literal_na_is_an_ordinary_value():
     assert pairs == [(0, 2), (0, 3), (2, 3)]
 
 
+################################
+# tfidf and lsh null handling #
+###############################
+
+
+@pytest.mark.parametrize("ngram", [1, 2, 3])
+def test_tfidf_null_never_pairs_with_value(ngram):
+    """A null pairs only with another null, at any ngram.
+
+    "nathan" and "nadia" share no character 3-grams, so at the default ngram
+    the null-null pair is the only pair; the assertion allows value pairs but
+    forbids any pair touching a null other than the null-null pair.
+    """
+    array = pa.array(["nathan", None, "nadia", None])
+
+    pairs = sorted(lk.tfidf(ngram=ngram)._gen_similarity_pairs(array))
+
+    assert (1, 3) in pairs
+    assert all(1 not in pair and 3 not in pair for pair in pairs if pair != (1, 3))
+
+
+def test_tfidf_all_null_input_yields_star_pairs():
+    """All-null input yields star-shaped null pairs without touching the vectoriser."""
+    array = pa.array([None, None, None])
+
+    assert list(lk.tfidf()._gen_similarity_pairs(array)) == [(0, 1), (0, 2)]
+
+
+@pytest.mark.parametrize("ngram", [1, 2, 3])
+def test_lsh_null_never_pairs_with_value(ngram):
+    """A null pairs only with another null, at any ngram."""
+    array = pa.array(["nathan", None, "nadia", None])
+
+    pairs = sorted(lk.lsh(ngram=ngram)._gen_similarity_pairs(array))
+
+    assert (1, 3) in pairs
+    assert all(1 not in pair and 3 not in pair for pair in pairs if pair != (1, 3))
+
+
+def test_lsh_all_null_input_yields_star_pairs():
+    """All-null input yields star-shaped null pairs without touching datasketch."""
+    array = pa.array([None, None, None])
+
+    assert list(lk.lsh()._gen_similarity_pairs(array)) == [(0, 1), (0, 2)]
+
+
 ##############
