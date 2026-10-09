@@ -9,6 +9,11 @@ title: Release History
 
 - New `edit_distance` deduper: matches two values when their Levenshtein distance is at most `max_distance` (default 2). An absolute bound that does not scale with string length, unlike `fuzzy`'s relative threshold. Nulls match only nulls.
 
+**Fixes**
+
+
+- True null handling: a missing value (`None` or NaN) groups only with another missing value, is never scored against a value, and never satisfies a predicate (positive `isin` still matches a null when `None` is listed). The `"na"` placeholder machinery is removed, so nulls no longer collide with literal `"na"` values, non-string and empty frames no longer crash, and custom dedupers receive raw values.
+
 
 ## v0.10.3 (2029-10-08)
 
