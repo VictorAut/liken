@@ -69,7 +69,7 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
     Note:
         Missing numeric values are filled with 0.0 in that row's vector; the
         column is not dropped. A 0.0 entry contributes nothing to the dot
-        product, so a missing value lowers that row's similarity to others
+        product, so a missing value can lower that row's similarity to others
         rather than being ignored.
 
         If deduplicating columns `col_1`, `col_2` and `col_3` with `cosine`,
@@ -81,10 +81,10 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
         to the product and nothing to row `i`'s norm.
 
         Taking this into account you may find it best to avoid cosine similarity
-        calculations for sparse datasets. Alternatively, you may opt to your
-        approach by either preprocessing the Nulls beforehand, or, by
+        calculations for sparse datasets. Alternatively, you may refine your
+        approach by either preprocessing the missing values beforehand or by
         limiting yourself to using the `cosine` deduplicator with the `Pipeline`
-        API using combinations for non null fields.
+        API using combinations for non-null fields.
 
     Warning:
         Normalization is a standard approach to ensure that the results of

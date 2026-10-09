@@ -260,8 +260,9 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 ## Missing Values
 
 Real data has nulls. Liken does not drop them silently, and it never
-substitutes them. A missing value is `None` or any IEEE NaN. Missing values
-group with each other and with nothing else:
+substitutes them. A missing value is `None` or any IEEE NaN. For the
+comparison dedupers, missing values group with each other and with nothing
+else:
 
 | Deduper | What happens to missing values |
 | --- | --- |
@@ -270,10 +271,10 @@ group with each other and with nothing else:
 | `edit_distance` | Same as `fuzzy`. |
 | `tfidf` | Group with each other at any `ngram`; the vectoriser receives non-missing values only. |
 | `lsh` | Same as `tfidf`. |
-| `isna` | Matches exactly the missing values. |
-| Other predicates | A missing value never satisfies the predicate, on either polarity. |
+| `isna` | Matches exactly the missing values; `~isna` matches exactly the non-missing values. |
+| Other predicates | A missing value never satisfies the predicate, on either polarity — except positive `isin`, where a missing value matches iff `None` is listed in `values`. |
 
 Two practical consequences are worth noting:
 
 - Missing handling is backend-independent: the pandas-family backends convert NaN to null on the way into Arrow, while polars and pyarrow keep float NaN. Both are one missing class.
-- Compound columns collapse missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` ignores null values when building each record's set; `cosine` fills numeric NaNs with 0.
+- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` excludes `None` values when building each record's set; `cosine` fills numeric NaNs with 0.

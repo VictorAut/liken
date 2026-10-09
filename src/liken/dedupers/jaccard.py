@@ -55,9 +55,9 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using jaccard similarity.
 
     Usage is on multiple columns of a dataframe. Appropriate for categorical
-    data. Null values are handled out-of-box with jaccard: they are excluded
-    from each record's set, so they neither match values nor add to a
-    record's overlap.
+    data. Null handling out-of-box: `None` members are excluded from each
+    record's set, so they neither match values nor add to a record's overlap.
+    A float NaN member stays in the set where the backend keeps it.
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
