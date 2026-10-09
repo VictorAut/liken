@@ -83,7 +83,7 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
         Taking this into account you may find it best to avoid cosine similarity
         calculations for sparse datasets. Alternatively, you may refine your
         approach by either preprocessing the missing values beforehand or by
-        limiting yourself to using the `cosine` deduplicator with the `Pipeline`
+        limiting yourself to using the `cosine` deduper with the `Pipeline`
         API using combinations for non-null fields.
 
     Warning:

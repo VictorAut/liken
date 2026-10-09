@@ -261,7 +261,7 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 
 Real data has nulls. Liken does not drop them silently, and it never
 substitutes them. A missing value is `None` or any IEEE NaN. For the
-comparison dedupers, missing values group with each other and with nothing
+similarity dedupers, missing values group with each other and with nothing
 else:
 
 | Deduper | What happens to missing values |
