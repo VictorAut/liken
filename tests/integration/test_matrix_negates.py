@@ -12,8 +12,10 @@ from liken.constants import CANONICAL_ID
 
 PARAMS = [
     #
-    (lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
-    (~lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 1, 3, 1, 1, 6, 7, 1, 1]),
+    # row 9 ("bab@example.com", length 15) sits exactly on min_len and
+    # matches under the inclusive interval, so it leaves the negated group
+    (lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 2, 0, 4, 5, 0, 0, 8, 0]),
+    (~lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 1, 3, 1, 1, 6, 7, 1, 9]),
     #
     (lk.col("email").str_startswith(pattern="a"), [0, 1, 1, 3, 4, 5, 6, 7, 8, 9]),
     (~lk.col("email").str_startswith(pattern="a"), [0, 1, 2, 0, 0, 0, 0, 0, 0, 0]),

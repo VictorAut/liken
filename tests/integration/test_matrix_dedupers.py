@@ -156,8 +156,13 @@ PARAMS = [
     (lk.str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # total deduping given no bounds
     (lk.str_len, "email", {}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    # resasonable bounds, given the column
-    (lk.str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
+    # reasonable bounds, given the column; row 9 ("bab@example.com", length
+    # 15) sits exactly on min_len and matches under the inclusive interval
+    (lk.str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 0]),
+    # exact-length idiom: only rows 3 and 7 ("hellothere@example.com" and
+    # "hellathere@example.com") have length 22; pairs are star-shaped from
+    # the first matched index (3)
+    (lk.str_len, "email", {"min_len": 22, "max_len": 22}, [0, 1, 2, 3, 4, 5, 6, 3, 8, 9]),
     #
     # STRING CONTAINS:
     # i.e. no deduping because no string starts with the pattern
