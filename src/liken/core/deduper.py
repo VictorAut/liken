@@ -22,6 +22,7 @@ from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
 from liken.constants import CANONICAL_ID
+from liken.core.missing import is_missing
 
 
 if TYPE_CHECKING:
@@ -267,7 +268,14 @@ class _NegatedPredicateDeduper(PredicateDeduper):
         self._inner = inner
 
     def _matches(self, value: object) -> bool:
-        """simply return the inner classes opposed set of matches"""
+        """Match a value by inverting the inner predicate.
+
+        A missing value never satisfies a negated predicate: the guard runs
+        before the inner test, so `~isin` does not group nulls even when the
+        inner membership test would reject them.
+        """
+        if is_missing(value):
+            return False
         return not self._inner._matches(value)
 
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
