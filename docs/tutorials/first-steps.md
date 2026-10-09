@@ -259,19 +259,21 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 
 ## Missing Values
 
-Real data has nulls. Liken does not drop them silently. For single-column rules, a missing value is replaced by the literal string `"na"` before matching, so nulls behave like that value:
+Real data has nulls. Liken does not drop them silently, and it never
+substitutes them. A missing value is `None` or any IEEE NaN. Missing values
+group with each other and with nothing else:
 
-| Deduper | What happens to nulls |
+| Deduper | What happens to missing values |
 | --- | --- |
-| `exact` | Nulls match nulls. |
-| `fuzzy` | Nulls match nulls — `"na"` vs `"na"` scores a perfect match. |
-| `edit_distance` | Nulls match nulls, never the values near the `"na"` placeholder. |
-| `tfidf` | Depends on `ngram`: not matched at the default `ngram=3`, matched at `ngram=1`. |
-| `lsh` | Matched: empty signatures bucket together. |
-| `isna` | Matches exactly the nulls. |
-| Other predicates | The string `"na"` is tested like any other value. |
+| `exact` | Group with each other, never with a value. |
+| `fuzzy` | Group with each other without being scored; a missing value is never scored against a value. |
+| `edit_distance` | Same as `fuzzy`. |
+| `tfidf` | Group with each other at any `ngram`; the vectoriser receives non-missing values only. |
+| `lsh` | Same as `tfidf`. |
+| `isna` | Matches exactly the missing values. |
+| Other predicates | A missing value never satisfies the predicate, on either polarity. |
 
 Two practical consequences are worth noting:
 
-- If `"na"` could collide with your data (a real value, or a predicate pattern such as `str_startswith("na")`), handle nulls explicitly with `isna` rules.
-- Compound-column dedupers skip the substitution. `jaccard` ignores null values when building each record's set; `cosine` fills numeric NaNs with 0.
+- Missing handling is backend-independent: the pandas-family backends convert NaN to null on the way into Arrow, while polars and pyarrow keep float NaN. Both are one missing class.
+- Compound columns collapse missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` ignores null values when building each record's set; `cosine` fills numeric NaNs with 0.

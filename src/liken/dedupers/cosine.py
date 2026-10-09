@@ -67,22 +67,18 @@ def cosine(threshold: float = 0.95) -> BaseDeduper:
         Instance of `BaseDeduper`.
 
     Note:
-        In the case of null types, that column is ignore, and only the
-        similarity is taken of the remaining columns is taken.
+        Missing numeric values are filled with 0.0 in that row's vector; the
+        column is not dropped. A 0.0 entry contributes nothing to the dot
+        product, so a missing value lowers that row's similarity to others
+        rather than being ignored.
 
-        So, if deduplicating columns `col_1`, `col_2` and `col_3` with `cosine`,
-        any similarity is usually the dot product for a given pairwise evaluation
-        i.e.
+        If deduplicating columns `col_1`, `col_2` and `col_3` with `cosine`,
+        the pairwise similarity is the dot product of the two full rows:
 
             (`col_1i`, `col_2i`, `col_3i`) . (`col_1j`, `col_2j`, `col_3j`)
 
-        However, if `col_1i` is Null then the following is evaluated:
-
-            (`col_2i`, `col_3i`) . (`col_2j`, `col_3j`)
-
-        Additionally, if `col_j2` is *also* Null then the following is evaluated:
-
-            (`col_3i`) . (`col_3j`)
+        If `col_1i` is missing it is treated as 0.0: it contributes nothing
+        to the product and nothing to row `i`'s norm.
 
         Taking this into account you may find it best to avoid cosine similarity
         calculations for sparse datasets. Alternatively, you may opt to your

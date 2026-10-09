@@ -157,7 +157,7 @@ The two `@gmail.com` records share a canonical id; the others keep their own.
 
 Two limitations apply to custom dedupers, and both have reasons:
 
-- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of dicts (one per record) but that shape is not a tested guarantee. The single-column shape is: nulls are substituted with the literal string `"na"` before your function sees them, consistently across backends. Compound columns receive raw values, nulls included, with no substitution.
+- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of dicts (one per record) but that shape is not a tested guarantee. The single-column shape is: your function receives raw values, nulls included — `None`, and float NaN where the backend keeps it — consistently across backends. Compound columns receive the same raw values, with missing members collapsed to `None`. There is no substitution on any shape, on any backend.
 - **`~` negation is unavailable.** Negation is defined for *predicate* dedupers only, and a registered custom deduper is a threshold deduper regardless of what it yields. Applying `~` raises `TypeError: Only predicate dedupers support inversion`. To get the negated behaviour, define a second custom function — a `not_str_same_len`, say, that yields the complementary pairs.
 
 Custom dedupers **can** be combined using AND semantics in pipelines with other dedupers.
