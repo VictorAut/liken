@@ -69,7 +69,7 @@ A few key points are worth noting:
 2. [`lower`](../reference/preprocessors.md) and [`ascii_fold`](../reference/preprocessors.md) are more nuanced and should be used with more care.
 3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based similarity dedupers (namely, `lk.tfidf` and `lk.lsh`).
 4. [`collapse_whitespace`](../reference/preprocessors.md) collapses internal whitespace runs to single spaces. It complements `strip`, which only trims the edges. Whitespace at the start or end collapses to one space, it is not removed.
-5. [`regex_replace`](../reference/preprocessors.md) is the escape hatch for any other cleaning. Its pattern runs on RE2, so pathological patterns fail fast rather than hang.
+5. [`regex_replace`](../reference/preprocessors.md) a useful fail-safe option for all other cleaning processes.
 
 ## Recipes
 
