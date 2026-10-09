@@ -39,23 +39,25 @@ pipeline = (
     .step(
         [
             lk.col("address").fuzzy(threshold=0.95),
-            lk.col("address").str_len(min_len=5, max_len=10),
+            lk.col("address").str_len(min_len=6, max_len=10),
         ],
     )
     .step(
         [
             lk.col("address").fuzzy(threshold=0.85),
-            lk.col("address").str_len(min_len=10, max_len=20),
+            lk.col("address").str_len(min_len=11, max_len=20),
         ]
     )
     .step(
         [
             lk.col("address").fuzzy(threshold=0.75),
-            lk.col("address").str_len(min_len=20),
+            lk.col("address").str_len(min_len=21),
         ]
     )
 )
 ```
+
+Bounds are inclusive, so each tier starts one past the previous tier's upper bound and no length falls in two tiers.
 
 Now, only on longer `address` strings is more tolerance allowed.
 

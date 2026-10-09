@@ -2,7 +2,13 @@
 title: Release History
 ---
 
-## v0.11.0 (2026-10-08)
+## v0.11.0 (2026-10-09)
+
+**Breaking changes**
+
+
+- Bound convention is now uniform: all bounds are inclusive. `str_len` matches lengths in the closed interval `[min_len, max_len]`; a value whose length equals `min_len` now matches (it previously did not), and `min_len == max_len` is the exact-length idiom, matching `num_range`'s one-value interval. The threshold family (`fuzzy`, `cosine`, `jaccard`, `tfidf`) matches a pair whose similarity is exactly equal to the threshold (previously strictly above). `fuzzy`'s `100 * threshold` scaling no longer drifts at the boundary; scores within a 1e-9 tolerance below the boundary also match. The tiered recipe in "Common Recipes" is retiled so its tiers no longer overlap.
+- `str_len` and `num_range` validate their bounds at construction and raise `ValueError`: bounds must be real numbers (`num_range`) or integers (`str_len`), booleans and NaN are refused, and inverted bounds (`min > max`, `min_len > max_len`) are refused. Previously `str_len` accepted inverted bounds and silently matched nothing, and both accepted wrong-typed bounds that only crashed at run time.
 
 **Features**
 

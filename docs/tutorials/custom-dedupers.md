@@ -15,7 +15,7 @@ def str_same_len(array, *, min_len: int):
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
-            if len(array[i]) == len(array[j]) and len(array[i]) > min_len:
+            if len(array[i]) == len(array[j]) and len(array[i]) >= min_len:
                 yield i, j
 ```
 
@@ -28,7 +28,7 @@ The properties of the contract:
 
 ## Defining a Custom Deduper
 
-Although Liken provides a [`str_len`](../reference/liken.md#liken.str_len) predicate deduper, we'll define our own, similar, implementation: `str_same_len`. `str_same_len` will deduplicate records whose values share a length, as long as that length is above a minimum. The function from the contract above, registered:
+Although Liken provides a [`str_len`](../reference/liken.md#liken.str_len) predicate deduper, we'll define our own, similar, implementation: `str_same_len`. `str_same_len` will deduplicate records whose values share a length, as long as that length is at or above a minimum. The function from the contract above, registered:
 
 ```python {hl_lines="3"}
 import liken as lk
@@ -38,7 +38,7 @@ def str_same_len(array, *, min_len: int):
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
-            if len(array[i]) == len(array[j]) and len(array[i]) > min_len:
+            if len(array[i]) == len(array[j]) and len(array[i]) >= min_len:
                 yield i, j
 ```
 
@@ -52,7 +52,7 @@ See it work on a small dataset:
   3   |  5 low road
 
 /// caption
-Lengths are 14, 14, 16 and 10. With `min_len=12`, rows 0 and 1 share a length above the minimum; row 2 has no equal-length partner; row 3 is excluded outright.
+Lengths are 14, 14, 16 and 10. With `min_len=12`, rows 0 and 1 share a length at or above the minimum; row 2 has no equal-length partner; row 3 is excluded outright.
 ///
 
 Applying it with `min_len=12`:
