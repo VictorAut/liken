@@ -12,7 +12,7 @@ title: Release History
 **Fixes**
 
 
-- True null handling: a missing value (`None` or NaN) groups only with another missing value, is never scored against a value, and never satisfies a predicate (positive `isin` still matches a null when `None` is listed). The `"na"` placeholder machinery is removed, so nulls no longer collide with literal `"na"` values, non-string and empty frames no longer crash, and custom dedupers receive raw values.
+- True null handling: a missing value (`None` or NaN) groups only with another missing value. `"na"` placeholder machinery is removed; nulls no longer collide with literal `"na"` values.
 
 
 ## v0.10.3 (2029-10-08)
@@ -165,7 +165,7 @@ title: Release History
 
 - `.canonicals` method returns canonical ids with more than one record
 
-- `.synthesize method returns a "golden" record
+- `.synthesize` method returns a "golden" record
 
 - Python 3.14 support
 
