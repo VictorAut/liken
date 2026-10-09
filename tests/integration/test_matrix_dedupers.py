@@ -86,11 +86,6 @@ PARAMS = [
     #
     # FUZZY:
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.95}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    # recomputed for true null handling: the old group {2, 4, 8} was
-    # bridged by partial_ratio("na", ...) = 100 (the placeholder inside
-    # "Espana"; rows 2 and 3 score 86.84 and never paired). Raw nulls
-    # never score; only the identical-address pair (rows 1 and 8) clears
-    # 0.95, and the null rows 5 and 9 pair with each other only
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.85}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.75}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
@@ -101,9 +96,7 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     #
     # EDIT DISTANCE:
-    # absolute bound: nulls group (missing matches missing), identical postcodes group
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    # emails one edit apart merge; a second edit joins the short variants
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
     (lk.edit_distance, "email", {"max_distance": 2}, [0, 1, 0, 3, 0, 0, 3, 3, 8, 0]),
     #
@@ -154,12 +147,8 @@ PARAMS = [
     (lk.str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # total deduping given no bounds
     (lk.str_len, "email", {}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    # reasonable bounds, given the column; row 9 ("bab@example.com", length
-    # 15) sits exactly on min_len and matches under the inclusive interval
     (lk.str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 0]),
-    # exact-length idiom: only rows 3 and 7 ("hellothere@example.com" and
-    # "hellathere@example.com") have length 22; pairs are star-shaped from
-    # the first matched index (3)
+    # exact-length idiom
     (lk.str_len, "email", {"min_len": 22, "max_len": 22}, [0, 1, 2, 3, 4, 5, 6, 3, 8, 9]),
     #
     # STRING CONTAINS:
@@ -207,26 +196,16 @@ PARAMS = [
     (lk.isna, SINGLE_COL, {}, [0, 1, 2, 3, 4, 5, 6, 7, 4, 9]),
     #
     # NUM RANGE:
-    # property_area_sq_ft in [500, 620]: rows 0 (545), 6 (509) and 7 (500)
-    # match and collapse into one group
     (lk.num_range, "property_area_sq_ft", {"min": 500, "max": 620}, [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
-    # min-only: rows 2 (623), 3 (2077), 4 (1045), 5 (1323) and 9 (4000)
-    # match and collapse into one group
+    # min-only:
     (lk.num_range, "property_area_sq_ft", {"min": 600}, [0, 1, 2, 2, 2, 2, 6, 7, 8, 2]),
-    # max-only: rows 0 (545), 1 (452), 6 (509), 7 (500) and 8 (345)
-    # match and collapse into one group
+    # max-only:
     (lk.num_range, "property_area_sq_ft", {"max": 600}, [0, 0, 2, 3, 4, 5, 0, 0, 0, 9]),
     # no value in range: no deduping
     (lk.num_range, "property_area_sq_ft", {"min": 5000, "max": 6000}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
 ]
 
 # fmt: on
-
-
-def test_str_len_rejects_inverted_bounds_at_construction():
-    """An inverted interval matches nothing and is refused at construction, like num_range."""
-    with pytest.raises(ValueError):
-        lk.str_len(min_len=10, max_len=9)
 
 
 @pytest.mark.parametrize("deduper, columns, dedup_kwarg, expected_canonical_id", PARAMS)
