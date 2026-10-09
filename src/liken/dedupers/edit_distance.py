@@ -8,9 +8,9 @@ import pyarrow as pa
 from rapidfuzz import process
 from rapidfuzz.distance import Levenshtein
 
-from liken.constants import NA_PLACEHOLDER
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -27,10 +27,8 @@ class EditDistance(
     `max_distance`. The bound is absolute: it does not scale with string
     length, unlike the ratio scorers of `fuzzy`.
 
-    Nulls are filled with the `NA_PLACEHOLDER` string before matching. As the
-    placeholder is short, it would fall inside the distance bound of nearby
-    real values. A placeholder is therefore matched only against another
-    placeholder, so nulls match nulls and nothing else.
+    Missing values match only each other, never a value, regardless of
+    distance.
     """
 
     _NAME: ClassVar[str] = "edit_distance"
@@ -44,29 +42,40 @@ class EditDistance(
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
-        n = len(values)
 
-        for i, s1 in enumerate(values):
-            if i + 1 >= n:
+        missing: list[int] = []
+        present: list[int] = []
+        for i, value in enumerate(values):
+            if is_missing(value):
+                missing.append(i)
+            else:
+                present.append(i)
+
+        # star-shaped missing pairs: k missing values cost k-1 pairs
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
+
+        # the scorer receives non-missing values only
+        scored = [values[i] for i in present]
+
+        for pos, s1 in enumerate(scored):
+            if pos + 1 >= len(scored):
                 break
 
             distances = process.cdist(
                 [s1],
-                values[i + 1 :],
+                scored[pos + 1 :],
                 scorer=Levenshtein.distance,
             )[0]
 
             for offset, distance in enumerate(distances):
-                s2 = values[i + 1 + offset]
-
                 if distance > self._max_distance:
                     continue
 
-                # a placeholder (coalesced null) matches only another placeholder
-                if (s1 == NA_PLACEHOLDER) != (s2 == NA_PLACEHOLDER):
-                    continue
-
-                yield i, i + 1 + offset
+                yield present[pos], present[pos + 1 + offset]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -84,8 +93,8 @@ def edit_distance(max_distance: int = 2) -> BaseDeduper:
     Use it for short codes, such as postcodes, phone numbers and product
     codes, where a relative similarity threshold is the wrong contract.
 
-    Nulls are matched only against other nulls, never against values within
-    the distance bound of the null placeholder.
+    Missing values are matched only against other missing values, never
+    against a value.
 
     Args:
         max_distance: The maximum Levenshtein distance at which two values

@@ -536,17 +536,31 @@ def test_edit_distance_requires_single_string_column():
         EditDistance().validate(("a", "b"))
 
 
-def test_edit_distance_null_placeholder_matches_only_null_placeholder():
-    """A coalesced null ("na") must not match real values near it, matching
-    fuzzy's behaviour where nulls do not match anything but each other."""
+def test_edit_distance_nulls_pair_with_nulls_only():
+    """Missing values pair only with each other; a null never pairs with a value.
+
+    Recomputed from the null contract, replacing the placeholder-guard test:
+    nulls never reach the scorer; Levenshtein("n", "na") is 1, so the two
+    values pair at max_distance=2 as ordinary values.
+    """
     deduper = EditDistance(max_distance=2)
 
-    # "na" stands for a coalesced null; the others are real values
-    pairs = list(deduper._gen_similarity_pairs(pa.array(["na", "na", "NA", "", "nna"])))
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["n", None, None, "na"])))
 
-    # the nulls match each other; the real values "NA" and "" are 2 edits
-    # apart and match each other; no placeholder value pairs with a real one
-    assert pairs == [(0, 1), (2, 3)]
+    assert pairs == [(0, 3), (1, 2)]
+
+
+def test_edit_distance_literal_na_is_an_ordinary_value():
+    """Literal "na" values pair as values; a lone null pairs with nothing.
+
+    Recomputed from the null contract: Levenshtein("na", "") is 2, so the
+    empty string pairs with both "na" literals at max_distance=2.
+    """
+    deduper = EditDistance(max_distance=2)
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["na", None, "na", ""])))
+
+    assert pairs == [(0, 2), (0, 3), (2, 3)]
 
 
 ##############
