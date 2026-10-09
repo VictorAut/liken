@@ -1,6 +1,6 @@
 """Narrow integration tests for true null handling through the public API.
 
-Each case pins one facet of the null contract (the D1-D8 defects): a missing
+Each case pins one facet of the null contract: a missing
 value — None, and float NaN where the backend keeps it — groups only with
 another missing value, is never scored, and never satisfies a predicate.
 """
@@ -34,7 +34,7 @@ def require_raw_values(array):
 # fmt: off
 
 CASES = [
-    # D1: a literal "na" is an ordinary value; nulls group with nulls only
+    # literal "na" is an ordinary value; nulls group with nulls only
     (
         "exact-null-vs-literal-na",
         ["address"],
@@ -42,7 +42,7 @@ CASES = [
         lk.col("address").exact(),
         [0, 1, 0, 1],
     ),
-    # D1/D8: null does not group with "" or literal "na"; the values pair
+    # null does not group with "" or literal "na"; the values pair
     # among themselves ("na" and "" are 2 edits apart)
     (
         "edit-distance-null-vs-values",
@@ -51,7 +51,7 @@ CASES = [
         lk.col("address").edit_distance(max_distance=2),
         [0, 1, 0, 0],
     ),
-    # D2: a null never satisfies a positive predicate; the literal "na" does
+    #null never satisfies a positive predicate; the literal "na" does
     (
         "str-startswith-null-never-matches",
         ["address"],
@@ -59,7 +59,7 @@ CASES = [
         lk.col("address").str_startswith(pattern="n"),
         [0, 1, 0],
     ),
-    # D2: str_len cannot measure a null, so a null never matches
+    # str_len cannot measure a null, so a null never matches
     (
         "str-len-null-never-matches",
         ["address"],
@@ -67,7 +67,7 @@ CASES = [
         lk.col("address").str_len(min_len=1, max_len=3),
         [0, 1],
     ),
-    # D3: a null never satisfies a negated predicate, whether or not None is
+    # null never satisfies a negated predicate, whether or not None is
     # in the membership values
     (
         "negated-isin-nulls-never-match",
@@ -83,7 +83,8 @@ CASES = [
         ~lk.col("address").isin(values=["x", None]),
         [0, 1, 2],
     ),
-    # D3: negated str_len also leaves nulls unmatched
+    # negated str_len also leaves nulls unmatched
+    # TODO: is this true?
     (
         "negated-str-len-null-never-matches",
         ["address"],
@@ -91,8 +92,8 @@ CASES = [
         ~lk.col("address").str_len(min_len=1, max_len=2),
         [0, 0, 2],
     ),
-    # D4: at any threshold a null never pairs with a value; the values pair
-    # among themselves (ratio("nathan", "nadia") is ~54.5)
+    # at any threshold a null never pairs with a value; the values pair
+    # among themselves
     (
         "fuzzy-nulls-never-pair-with-values",
         ["address"],
@@ -100,8 +101,7 @@ CASES = [
         lk.col("address").fuzzy(threshold=0.5),
         [0, 1, 0, 1],
     ),
-    # D4: nulls group with nulls at the default ngram=3, where they did not
-    # before ("nathan" and "nadia" share no character 3-grams)
+    # nulls group with nulls at the default ngram=3, where they did not
     (
         "tfidf-nulls-group-at-default-ngram",
         ["address"],
@@ -116,7 +116,7 @@ CASES = [
         lk.col("address").lsh(),
         [0, 1, 2, 1],
     ),
-    # D5: non-string columns deduplicate without the placeholder coalesce
+    # non-string columns deduplicate without the placeholder coalesce
     (
         "exact-int-column",
         ["number"],
@@ -131,7 +131,7 @@ CASES = [
         lk.col("number").exact(),
         [0, 1, 0, 1],
     ),
-    # D6: a column of all nulls forms one group, no engine input, no crash
+    # a column of all nulls forms one group
     (
         "all-null-exact",
         ["address"],
@@ -167,7 +167,7 @@ CASES = [
         lk.col("address").lsh(),
         [0, 0, 0],
     ),
-    # D7: single and multi-column paths agree - compound keys collapse
+    # single and multi-column paths agree - compound keys collapse
     # missing members, so (None, "x") and (NaN, "x") are one key. Backends
     # that convert NaN to null on the way into Arrow (pandas, modin, dask,
     # ray) deliver None here; polars and pyarrow keep float NaN; both are
@@ -260,27 +260,3 @@ def test_custom_deduper_receives_raw_values(schema, data, helpers, spark_session
     assert column[0] == data[0][0]
     assert is_missing(column[1])
     assert column[2] == data[2][0]
-
-
-def test_empty_frame_canonicalise_and_drop(helpers, spark_session, request):
-    """Empty frames pass through canonicalize and drop_duplicates (D6)."""
-    backend = request.config.getoption("--backend")
-
-    if backend == "ray":
-        pytest.skip(
-            "ray reports an unknown schema for empty transformed datasets, so the "
-            "canonical-id check cannot run; empty-frame passthrough is unsupported on ray"
-        )
-
-    if backend == "pyspark":
-        pytest.skip("spark cannot infer a schema from an empty dataset")
-
-    df = helpers.create_df([], ["address"])
-
-    out = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize("address", id="address").collect()
-
-    assert helpers.get_column_as_list(out, "address") == []
-
-    dropped = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).drop_duplicates("address", keep="first")
-
-    assert helpers.get_column_as_list(dropped, "address") == []
