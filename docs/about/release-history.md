@@ -2,29 +2,29 @@
 title: Release History
 ---
 
-## v0.11.0 (2026-10-09)
+## v0.11.0 (2026-10-10)
 
 **Breaking changes**
 
 
 - Deduper bounding convention is now uniformly inclusive:
-    - `str_len` matches lengths in the closed interval `[min_len, max_len]`; a value whose length equals `min_len` now matches (it previously did not), and `min_len == max_len` is the exact-length idiom, matching `num_range`'s one-value interval.
+    - `str_len` matches lengths in the closed interval `[min_len, max_len]`; a value whose length equals `min_len` now matches (it previously did not), and `min_len == max_len` is the exact-length idiom, matching the new `num_range`'s one-value interval.
     - The threshold family (`fuzzy`, `cosine`, `jaccard`, `tfidf`) matches a pair whose similarity is exactly equal to the threshold (previously strictly above).
-    - `fuzzy`'s `100 * threshold` scaling no longer drifts at the boundary; scores within a 1e-9 tolerance below the boundary also match.
-- `str_len` and `num_range` validate their bounds at construction and raise `ValueError`: bounds must be real numbers (`num_range`) or integers (`str_len`), booleans and NaN are refused, and inverted bounds (`min > max`, `min_len > max_len`) are refused. Previously `str_len` accepted inverted bounds and silently matched nothing.
+- `str_len` validates bounds at construction and raises `ValueError` for malformed calls. Previously `str_len` accepted inverted bounds and silently matched nothing.
 
 **Features**
 
 
 - New `edit_distance` deduper: matches two values when their Levenshtein distance is at most `max_distance` (default 2).
-- New `num_range` deduper: matches numeric values inside the inclusive interval `[min, max]`. Either bound may be left `None` (unbounded on that side). A missing value (`None` or NaN) never matches, positive or negated (`~num_range`).
-- Two new preprocessors: `collapse_whitespace` replaces every run of whitespace with a single space; `regex_replace` applies a regular-expression replacement. Both usable in pipelines, steps and `on` preprocessor lists.
+- New `num_range` deduper: matches numeric values inside the inclusive interval `[min, max]`. Available in it's negated form (`~num_range`).
+- Two new preprocessors: `collapse_whitespace` replaces every run of whitespace with a single space; `regex_replace` applies a regular-expression replacement.
 
 **Fixes**
 
 
-- True null handling: a missing value (`None` or NaN) groups only with another missing value. `"na"` placeholder machinery is removed; nulls no longer collide with literal `"na"` values.
+- True null handling: a missing value (`None` or NaN) groups only with another missing value. `"na"` placeholder machinery is removed (so nulls no longer collide with literal `"na"` values)
 - Core type contracts annotated: the backend protocol, DataFrame wrapper interfaces and collections.
+- `fuzzy`'s `100 * threshold` scaling no longer drifts at the boundary; scores within a 1e-9 tolerance below the boundary also match.
 
 
 ## v0.10.3 (2029-10-08)
