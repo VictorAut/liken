@@ -3,6 +3,23 @@ name: ⚙️ docs | build and deploy
 on:
   workflow_dispatch:
   workflow_call:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "zensical.toml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "zensical.toml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
 
 # security: restrict permissions for CI jobs.
 permissions:
@@ -44,9 +61,11 @@ jobs:
           path: site/
 
   # Deploy the artifact to GitHub pages; separate job so only actions/deploy-pages has the necessary permissions.
+  # PR and main-push runs build without deploying; dispatch and release calls deploy.
   deploy:
     name: Deploy
     needs: build
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

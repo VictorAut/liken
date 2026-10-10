@@ -7,8 +7,17 @@ permissions:
   contents: read
 
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      pull-requests: write # ceiling for the callee's test-coverage job; its
+                           # PR-comment step auto-skips outside pull_request
+
   build:
     name: Package | Build
+    needs: [ci]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
