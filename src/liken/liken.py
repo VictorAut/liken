@@ -302,7 +302,7 @@ class Dedupe:
 
         self._collection.reset()
 
-        self.has_been_canonicalized: bool = True
+        self.has_been_canonicalized = True
 
         return self
 

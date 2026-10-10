@@ -39,19 +39,19 @@ pipeline = (
     .step(
         [
             lk.col("address").fuzzy(threshold=0.95),
-            lk.col("address").str_len(min_len=5, max_len=10),
+            lk.col("address").str_len(min_len=6, max_len=10),
         ],
     )
     .step(
         [
             lk.col("address").fuzzy(threshold=0.85),
-            lk.col("address").str_len(min_len=10, max_len=20),
+            lk.col("address").str_len(min_len=11, max_len=20),
         ]
     )
     .step(
         [
             lk.col("address").fuzzy(threshold=0.75),
-            lk.col("address").str_len(min_len=20),
+            lk.col("address").str_len(min_len=21),
         ]
     )
 )
@@ -68,6 +68,8 @@ A few key points are worth noting:
 1. [`strip`](../reference/preprocessors.md), [`remove_punctuation`](../reference/preprocessors.md), [`normalize_unicode`](../reference/preprocessors.md) should be made ample use of. There are few instances where not using them is meaningful.
 2. [`lower`](../reference/preprocessors.md) and [`ascii_fold`](../reference/preprocessors.md) are more nuanced and should be used with more care.
 3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based similarity dedupers (namely, `lk.tfidf` and `lk.lsh`).
+4. [`collapse_whitespace`](../reference/preprocessors.md) collapses internal whitespace runs to single spaces. It complements `strip`, which only trims the edges. Whitespace at the start or end collapses to one space, it is not removed.
+5. [`regex_replace`](../reference/preprocessors.md) a useful fail-safe option for all other cleaning processes.
 
 ## Recipes
 
@@ -107,6 +109,7 @@ pipeline = lk.pipeline().step(
         "description",
         preprocessors=[
             lk.preprocessors.remove_stopwords(),
+            lk.preprocessors.collapse_whitespace(),
             lk.preprocessors.strip(),
         ],
     ).exact()
@@ -115,7 +118,7 @@ pipeline = lk.pipeline().step(
 df = lk.dedupe(df).apply(pipeline).drop_duplicates()
 ```
 
-`remove_stopwords` deletes the filler words and `strip` cleans up the leftover spacing, so `the quick brown fox` and `quick brown fox` become equal strings for the `exact` deduper.
+`remove_stopwords` deletes the filler words, `collapse_whitespace` closes the gaps it leaves behind, and `strip` removes the outer spacing, so `the quick brown fox` and `quick  brown fox` become equal strings for the `exact` deduper.
 
 ### Canonicalizing person names
 
@@ -141,4 +144,4 @@ df = lk.dedupe(df).apply(pipeline).canonicalize()
 `normalize_names` keeps only first, middle and last names, and the punctuation and casing preprocessors remove the rest, so `Dr. John A. Smith Jr.` and `john a smith` become one exact match.
 
 ??? tip "Preprocessor order"
-    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.
+    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `collapse_whitespace` then `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.

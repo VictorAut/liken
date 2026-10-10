@@ -1,6 +1,7 @@
+"""PyArrow DataFrame wrapper"""
+
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
@@ -9,6 +10,7 @@ from typing import final
 import pyarrow as pa
 
 from liken.constants import CANONICAL_ID
+from liken.core.missing import is_missing
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -79,7 +81,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
         keep_last = keep == "last"
         kept: dict[Any, int] = {}
         for index, value in enumerate(canonical):
-            key = None if _is_missing(value) else value
+            key = None if is_missing(value) else value
             if keep_last or key not in kept:
                 kept[key] = index
 
@@ -99,7 +101,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
         groups: dict[Any, list[int]] = {}
         for index, value in enumerate(canonical.to_pylist()):
             # Missing canonical ids carry no group; the pandas reference drops them.
-            if _is_missing(value):
+            if is_missing(value):
                 continue
             groups.setdefault(value, []).append(index)
 
@@ -115,13 +117,8 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
         return pa.Table.from_arrays(columns, names=[CANONICAL_ID, *data_names])
 
 
-def _is_missing(value: object) -> bool:
-    """True for nulls and float NaNs, matching how pandas treats missing values."""
-    return value is None or (isinstance(value, float) and math.isnan(value))
-
-
 def _first_non_null(values: list[Any], indices: list[int]) -> Any:
     for index in indices:
-        if not _is_missing(values[index]):
+        if not is_missing(values[index]):
             return values[index]
     return None

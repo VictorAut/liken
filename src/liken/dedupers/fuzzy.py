@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from collections.abc import Iterator
 from typing import ClassVar
+from typing import Final
 from typing import Literal
 from typing import final
 
@@ -13,8 +14,19 @@ from rapidfuzz import process
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
+from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
+
+
+# `100 * threshold` drifts by a few double-precision ULPs for some
+# two-decimal thresholds, which would make a pair scoring exactly the
+# threshold match or not depending on the rounding direction. The
+# comparison tolerates scores within this guard below the boundary. The
+# drift it repairs is ~1e-14 and real distinct similarity scores differ by
+# far more, so the guard only admits scores equal to the boundary at any
+# meaningful precision.
+_BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
 
 @final
@@ -64,25 +76,36 @@ class Fuzzy(
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
-        n = len(values)
+
+        missing, present = partition_missing(values)
+
+        # star-shaped missing pairs: k missing values cost k-1 pairs
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
 
         threshold = 100 * self._threshold
 
         scorer = self.get_scorer()
 
-        for i, s1 in enumerate(values):
-            if i + 1 >= n:
+        # the scorer receives non-missing values only
+        scored = [values[i] for i in present]
+
+        for pos, s1 in enumerate(scored):
+            if pos + 1 >= len(scored):
                 break
 
             scores = process.cdist(
                 [s1],
-                values[i + 1 :],
+                scored[pos + 1 :],
                 scorer=scorer,
             )[0]
 
             for offset, score in enumerate(scores):
-                if score > threshold:
-                    yield i, i + 1 + offset
+                if score >= threshold - _BOUNDARY_TOLERANCE:
+                    yield present[pos], present[pos + 1 + offset]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -108,8 +131,12 @@ def fuzzy(
         threshold: The minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
         scorer: The fuzzy scorer. Defaults to "simple ratio". Options are
-            "simple_ratio", "partial_ratio", "token_sort_ratio",
-            "token_set_ratio", "weighted_ratio", "quick_ratio".
+            - "simple_ratio"
+            - "partial_ratio"
+            - "token_sort_ratio"
+            - "token_set_ratio"
+            - "weighted_ratio"
+            - "quick_ratio"
 
     Returns:
         Instance of `BaseDeduper`.

@@ -22,6 +22,7 @@ from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
 from liken.constants import CANONICAL_ID
+from liken.core.missing import is_missing
 
 
 if TYPE_CHECKING:
@@ -42,7 +43,6 @@ if TYPE_CHECKING:
 
 class Base(Protocol):
     wdf: DF
-    with_na_placeholder: bool
 
     def set_frame(self, wdf: DF) -> Self: ...
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]: ...
@@ -70,14 +70,7 @@ class Base(Protocol):
 
 
 class BaseDeduper(Base):
-    """
-    Base Deduplication class
-
-    By default all dedupers will operate on filled nulls, thus treating them
-    as identical instances within a column(s) of values,
-    """
-
-    with_na_placeholder: bool = True
+    """Base Deduplication class"""
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -110,7 +103,7 @@ class BaseDeduper(Base):
     ) -> tuple[UnionFind[int], int]:
         self.validate(columns)
 
-        array: pa.Array | pa.Table = self.wdf.get_array(columns, with_na=self.with_na_placeholder)
+        array: pa.Array | pa.Table = self.wdf.get_array(columns)
 
         processed: pa.Array | pa.Table = self.preprocess(array, preprocessors)
 
@@ -212,9 +205,10 @@ class PredicateDeduper(BaseDeduper):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def _matches(self, value):
-        del value  # Unused
-        pass
+    def _matches(self, value: object) -> bool:
+        # Stub: concrete predicate dedupers define the match logic.
+        # `False` is the neutral "no match" default for the base instance.
+        return False
 
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
         """
@@ -265,8 +259,15 @@ class _NegatedPredicateDeduper(PredicateDeduper):
     def __init__(self, inner: PredicateDeduper):
         self._inner = inner
 
-    def _matches(self, value):
-        """simply return the inner classes opposed set of matches"""
+    def _matches(self, value: object) -> bool:
+        """Match a value by inverting the inner predicate.
+
+        A missing value never satisfies a negated predicate: the guard runs
+        before the inner test, so `~isin` does not group nulls even when the
+        inner membership test would reject them.
+        """
+        if is_missing(value):
+            return False
         return not self._inner._matches(value)
 
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:

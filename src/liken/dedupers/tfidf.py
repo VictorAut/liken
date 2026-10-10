@@ -1,5 +1,6 @@
 """tfidf deduper"""
 
+import math
 from collections.abc import Iterator
 from typing import Any
 from typing import ClassVar
@@ -13,6 +14,7 @@ from sparse_dot_topn import sp_matmul_topn
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
+from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -63,11 +65,15 @@ class TfIdf(
 
         vectorizer = self._vectorize()
         matrix = vectorizer.fit_transform(array)
+        # `sparse_dot_topn` keeps only pairs strictly above the threshold it
+        # is given. Lowering the threshold by one ULP makes that strict
+        # comparison inclusive, so a pair scoring exactly `threshold` is
+        # kept.
         return sp_matmul_topn(
             matrix,
             matrix.T,
             top_n=self._topn,
-            threshold=self._threshold,
+            threshold=math.nextafter(self._threshold, -math.inf),
             sort=True,
         )
 
@@ -76,16 +82,26 @@ class TfIdf(
 
         Filter's out _approximate_ perfect scores (i.e. decimal handling) and
         loads up results into a tuple of arrays"""
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
-        sparse = self._get_sparse_matrix(array)
+        missing, present = partition_missing(values)
+
+        # star-shaped missing pairs: k missing values cost k-1 pairs
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
+
+        # the vectoriser receives non-missing values only
+        sparse = self._get_sparse_matrix([values[i] for i in present])
 
         sparse_coo = sparse.tocoo()
 
         rows, cols = sparse_coo.row, sparse_coo.col
 
         for i in range(len(rows)):
-            yield rows[i], cols[i]
+            yield present[rows[i]], present[cols[i]]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -106,7 +122,9 @@ def tfidf(
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose similarity is exactly equal
+            to the threshold matches.
         ngram: the number of character ngrams to consider. For the `tfidf`
             implementation this is the ngram bounded range. If you pass this as
             an integer you are saying the bounds are the same. E.g. `ngram=1`

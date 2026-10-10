@@ -16,7 +16,7 @@ from liken.exceptions import InvalidDeduperError
 
 
 @final
-class DeduplicationDict(UserDict):
+class DeduplicationDict(UserDict[str | tuple[str, ...], list[BaseDeduper] | tuple[BaseDeduper, ...]]):
     """Dict collection for dedupers in the Sequential and Dict APIs
 
     For Sequential API all values (dedupers) are added under a default key.

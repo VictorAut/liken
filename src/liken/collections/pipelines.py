@@ -1,8 +1,9 @@
-"""TODO: add detail"""
+"""Defines the Pipeline collection: a `Pipeline` of `PipelineStep`s of `Col`s"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import NamedTuple
 from typing import Self
 from typing import TypeAlias
@@ -17,6 +18,8 @@ from liken.validators import validate_preprocessor_arg
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from liken.types import Columns
 
 
@@ -118,6 +121,21 @@ class Col:
     # for IDE autocompletion only!
     # must be manually maintained
     # add a new dummy method here upon adding a new deduper.
+
+    def edit_distance(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.edit_distance` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+        See [`lk.edit_distance`](../reference/liken.md#liken.edit_distance) reference for
+        complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").edit_distance())
+
+        """
+        return self.__getattr__("edit_distance")(*args, **kwargs)
 
     def exact(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.exact` function.
@@ -299,12 +317,27 @@ class Col:
         """
         return self.__getattr__("str_len")(*args, **kwargs)
 
+    def num_range(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.num_range` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+        See [`lk.num_range`](../reference/liken.md#liken.num_range) reference for
+        complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").num_range())
+
+        """
+        return self.__getattr__("num_range")(*args, **kwargs)
+
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
         self._columns: Columns = columns
         self._unit: PipelineUnit
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Callable[..., Col]:
         """Make deduper functions available as method calls to Col.
 
         Functions are retrieved from registry. Includes any prior custom
@@ -317,7 +350,7 @@ class Col:
 
         func = dedupers_registry.get(f"{attr}")
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Col:
             deduper = func(*args, **kwargs)
             self._unit = PipelineUnit(self._columns, deduper, self._preprocessors)
             return self

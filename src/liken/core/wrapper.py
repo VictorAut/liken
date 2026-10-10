@@ -8,10 +8,7 @@ from typing import Generic
 from typing import Protocol
 from typing import TypeVar
 
-from pyarrow.compute import coalesce
-
 from liken.constants import CANONICAL_ID
-from liken.constants import NA_PLACEHOLDER
 
 
 if TYPE_CHECKING:
@@ -32,11 +29,7 @@ D = TypeVar("D")  # dataframe
 class DF(Generic[D]):
     """Base class defining a dataframe wrapper
 
-    Defines inheritable methods as well as some of the interface
-
-    TODO:
-        - define a protocol interface
-        - tighten generics
+    Defines inheritable methods as well as some of the interface.
     """
 
     def __init__(self, df: D):
@@ -66,19 +59,10 @@ class DF(Generic[D]):
         del columns
         raise NotImplementedError
 
-    def get_array(self, columns: Columns, with_na: bool = False) -> pa.Array | pa.Table:
-        """Generalise the getting of a column, or columns of a df to an array.
-
-        Handles single column and multicolumn. For instances of single column
-        the initial column can initially be filled null placeholders, to allow
-        for use by dedupers. This is optional so that specific dedupers
-        that do care about nulls are not affected (e.g. IsNA).
-        """
+    def get_array(self, columns: Columns) -> pa.Array | pa.Table:
+        """Generalise the getting of a df's column, or columns, to an array."""
         if isinstance(columns, str):
-            col: pa.Array = self._get_col(columns)
-            if with_na:
-                return coalesce(col, NA_PLACEHOLDER)
-            return col
+            return self._get_col(columns)
         return self._get_cols(columns)
 
     def get_canonical(self) -> pa.Array:
@@ -92,14 +76,14 @@ class DF(Generic[D]):
 # CANONICAL ID
 
 
-class AddsCanonical(Protocol):
+class AddsCanonical(Protocol[D]):
     """Mixin protocol"""
 
-    def _df_as_is(self, df): ...
-    def _df_overwrite_id(self, df, id: str): ...
-    def _df_copy_id(self, df, id: str): ...
-    def _df_autoincrement_id(self, df): ...
-    def _column_labels_list(self, df): ...
+    def _df_as_is(self, df: D) -> D: ...
+    def _df_overwrite_id(self, df: D, id: str) -> D: ...
+    def _df_copy_id(self, df: D, id: str) -> D: ...
+    def _df_autoincrement_id(self, df: D) -> D: ...
+    def _column_labels_list(self, df: D) -> list[str]: ...
 
 
 class CanonicalIdMixin(AddsCanonical):

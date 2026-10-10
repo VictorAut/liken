@@ -112,8 +112,14 @@ def test_explore_sampled_rates_modin():
     assert list(result.index) == DEFAULT_METRICS
 
 
-# FIXME: on an empty dataframe the column converts to a pyarrow null-typed
-# array and the NA-placeholder coalesce in DF.get_array raises
-# ArrowNotImplementedError. Affects explore, drop_duplicates and
-# canonicalize on every backend, so there is no empty-frame explore test
-# here. Fixing the coalesce is a separate change.
+# empty frames
+
+
+def test_explore_empty_frame_reports_zero_rates():
+    """An empty frame yields zero duplicate rates instead of crashing (D6)."""
+    df = pd.DataFrame(data={"id": pd.Series([], dtype="int64"), "address": pd.Series([], dtype="object")})
+
+    result = lk.dedupe(df).explore(["address"])
+
+    assert list(result.index) == DEFAULT_METRICS
+    assert all(rate == 0 for rate in result["address"].tolist())

@@ -184,18 +184,20 @@ Liken comes with many deduplication methods built-in:
 
 | |               | Deduper                                              | Description                                                                 |
 |-------------| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example)  |
-| *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching                                                                            |
-| *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf                                                                      |
-| *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH)                                            |
-| *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data                                |
-| *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data                                   |
-| *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`                                        |
-| *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members                               |
-| *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern                                       |
-| *Predicate* |*single-column*| [`str_endswith`](../reference/liken/#liken.str_endswith)       | Records where the string ends with a pattern                                         |
-| *Predicate* |*single-column*| [`str_contains`](../reference/liken/#liken.str_contains)         | Records where the string contains a pattern. Accepts Regex.                          |
-| *Predicate* |*single-column*| [`str_len`](../reference/liken/#liken.str_len)              | Records where the string length is bounded by a minimum and maximum length           |
+| *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example).  |
+| *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching.                                                                            |
+| *Similarity* |*single-column*| [`edit_distance`](../reference/liken/#liken.edit_distance) | Values within a maximum edit (Levenshtein) distance.                                     |
+| *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf.                                                                      |
+| *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH).                                            |
+| *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                |
+| *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data.                                   |
+| *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`.                                        |
+| *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members.                               |
+| *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern. |
+| *Predicate* |*single-column*| [`str_endswith`](../reference/liken/#liken.str_endswith)       | Records where the string ends with a pattern. |
+| *Predicate* |*single-column*| [`str_contains`](../reference/liken/#liken.str_contains)         | Records where the string contains a pattern. Accepts Regex. |
+| *Predicate* |*single-column*| [`str_len`](../reference/liken/#liken.str_len) | Records where the string length is bounded by a minimum and maximum length. |
+| *Predicate* |*single-column*| [`num_range`](../reference/liken/#liken.num_range) | Records where the numeric value falls inside the inclusive interval. |
 
 *Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
 
@@ -203,7 +205,7 @@ To *use* dedupers, you have to *apply* them, which is covered in the next tutori
 
 ## Choosing a Threshold
 
-Similarity dedupers compare values pairwise and keep the pairs whose score beats their `threshold`. All thresholds are on a 0–1 scale, and matching is strict: a pair must score *above* the threshold to match. Thresholds differ in what they measure:
+Similarity dedupers compare values pairwise and keep the pairs whose score meets their `threshold`. All thresholds are on a 0–1 scale, and matching is inclusive: a pair scoring exactly *at* the threshold matches. At the extreme, `threshold=0` matches every pair, including pairs with no similarity at all. Thresholds differ in what they measure:
 
 - `fuzzy` uses [rapidfuzz](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive: `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale.
 - `tfidf` splits each value into character n-grams (`ngram`, default 3), weights them, and compares the resulting vectors by cosine similarity. It tolerates more drift than `fuzzy`, but its default `topn=2` keeps only the two best candidate matches per row, one of which is the row itself. In dense clusters of near-duplicates, raise `topn`.
@@ -256,18 +258,22 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 
 ## Missing Values
 
-Real data has nulls. Liken does not drop them silently. For single-column rules, a missing value is replaced by the literal string `"na"` before matching, so nulls behave like that value:
+Real data has nulls. Liken does not drop null values and treats a missing value as `None` or any `NaN`. For the
+similarity dedupers, missing values group with each other:
 
-| Deduper | What happens to nulls |
+| Deduper | What happens to missing values |
 | --- | --- |
-| `exact` | Nulls match nulls. |
-| `fuzzy` | Nulls match nulls — `"na"` vs `"na"` scores a perfect match. |
-| `tfidf` | Depends on `ngram`: not matched at the default `ngram=3`, matched at `ngram=1`. |
-| `lsh` | Matched: empty signatures bucket together. |
-| `isna` | Matches exactly the nulls. |
-| Other predicates | The string `"na"` is tested like any other value. |
+| `exact` | Group with each other|
+| `fuzzy` | Group with each other|
+| `edit_distance` | Group with each other|
+| `tfidf` | Group with each other at any given `ngram`; the vectoriser receives non-missing values only. |
+| `lsh` | Same as `tfidf`. |
+| `isna` | Matches exactly the missing values; `~isna` matches exactly the non-missing values. |
+| `num_range` | Never matches: a missing value is outside any interval, positive or negated (`~num_range`). |
+| Other predicates | A missing value never satisfies the predicate, on either polarity — except positive `isin`, where a missing value matches iff `None` is listed in `values`. |
 
 Two practical consequences are worth noting:
 
-- If `"na"` could collide with your data (a real value, or a predicate pattern such as `str_startswith("na")`), handle nulls explicitly with `isna` rules.
-- Compound-column dedupers skip the substitution. `jaccard` ignores null values when building each record's set; `cosine` fills numeric NaNs with 0.
+- Missing handling is backend-independent: the pandas-family backends convert NaN to null on the way into Arrow, while polars and pyarrow keep float NaN. Both are one missing class.
+- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` excludes `None` values when building each record's set; `cosine` fills numeric NaNs with 0.
+- The empty string is a value, not a missing one. `str_len` never matches it, whatever the bounds; under `~str_len` it matches, like every non-matching value.

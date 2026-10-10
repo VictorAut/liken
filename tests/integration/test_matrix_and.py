@@ -38,6 +38,8 @@ def str_same_len(array: typing.Iterable):
     n = len(array)
     for i in range(n):
         for j in range(i + 1, n):
+            if array[i] is None or array[j] is None:
+                continue
             if len(array[i]) == len(array[j]):
                 yield i, j
 
@@ -50,7 +52,7 @@ PARAMS = [
     ([lk.col("email").fuzzy(0.95), lk.col("email").str_same_len()],  [0, 1, 2, 3, 4, 4, 6, 3, 8, 9]),
     # single column
     ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
-    ([lk.col("address").fuzzy(0.70), lk.col("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    ([lk.col("address").fuzzy(0.70), lk.col("address").str_same_len()], [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
     # single column
     ([lk.col("address").fuzzy(0.70)], [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     ([lk.col("address").fuzzy(0.70), ~lk.col("address").isna()], [0, 1, 2, 2, 4, 5, 6, 0, 8, 9]),

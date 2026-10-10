@@ -11,6 +11,7 @@ from datasketch import MinHashLSH
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
+from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 
@@ -66,15 +67,24 @@ class LSH(
         return lsh
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
-        array: list = array.to_pylist()
+        values: list = array.to_pylist()
 
-        minhashes: list[MinHash] = self._build_minhashes(array)
+        missing, present = partition_missing(values)
+
+        for i in missing[1:]:
+            yield missing[0], i
+
+        if not present:
+            return
+
+        # minhasher receives non-missing values only
+        minhashes: list[MinHash] = self._build_minhashes([values[i] for i in present])
         lsh: MinHashLSH = self._lsh(minhashes)
 
         for idx, minhash in enumerate(minhashes):
             for idy in lsh.query(minhash):
                 if idx < idy:
-                    yield idx, idy
+                    yield present[idx], present[idy]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -93,7 +103,10 @@ def lsh(
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. `lsh` matches
+            approximately: the threshold steers candidate generation and is not
+            a guarantee at the boundary, so pairs near the threshold may be
+            missed or kept whatever their exact similarity.
         ngram: the number of character ngrams to consider. For `lsh`, and
             unlike the `tfidf` implementation, this is single integer ngram
             number. So, `ngram=1` is only unigrams. Increasing ngrams reduces

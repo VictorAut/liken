@@ -12,8 +12,8 @@ from liken.constants import CANONICAL_ID
 
 PARAMS = [
     #
-    (lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
-    (~lk.col("email").str_len(min_len=15, max_len=22), [0, 1, 1, 3, 1, 1, 6, 7, 1, 1]),
+    (lk.col("email").str_len(min_len=16, max_len=22), [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
+    (~lk.col("email").str_len(min_len=16, max_len=22), [0, 1, 1, 3, 1, 1, 6, 7, 1, 1]),
     #
     (lk.col("email").str_startswith(pattern="a"), [0, 1, 1, 3, 4, 5, 6, 7, 8, 9]),
     (~lk.col("email").str_startswith(pattern="a"), [0, 1, 2, 0, 0, 0, 0, 0, 0, 0]),
@@ -28,8 +28,10 @@ PARAMS = [
     (~lk.col("address").isna(), [0, 0, 0, 0, 4, 0, 0, 0, 8, 0]),
     #
     (lk.col("address").isin(values=["123ab, OL5 9PL, UK"]), [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
-    # everything negates-matches "zzzzz", nulls included
-    (~lk.col("address").isin(values=["zzzzz"]), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    (~lk.col("address").isin(values=["zzzzz"]), [0, 0, 0, 0, 4, 0, 0, 0, 8, 0]),
+    #
+    (lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    (~lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 1, 1, 1, 1, 6, 7, 1, 1]),
 ]
 
 # fmt: on

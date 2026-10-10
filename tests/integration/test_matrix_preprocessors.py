@@ -36,6 +36,9 @@ PARAMS = [
     # "STRIP"
     ([], [[0, "   123ab, OL5 "], [1, "123ab, OL5"]], [0, 1]),
     ([lk.preprocessors.strip()], [[0, "   123ab, OL5 "], [1, "123ab, OL5"]], [0, 0]),
+    # "COLLAPSE WHITESPACE"
+    ([], [[0, "123ab  OL5"], [1, "123ab\tOL5"]], [0, 1]),
+    ([lk.preprocessors.collapse_whitespace()], [[0, "123ab  OL5"], [1, "123ab\tOL5"]], [0, 0]),
     # "LOWER"
     ([], [[0, "123AB, OL5"], [1, "123ab, OL5"]], [0, 1]),
     ([lk.preprocessors.lower()], [[0, "123AB, OL5"], [1, "123ab, OL5"]], [0, 0]),
@@ -54,6 +57,9 @@ PARAMS = [
     # "REMOVE STOPWORDS"
     ([], [[0, "this is a Random Street"], [1, "   Random Street"]], [0, 1]),
     ([lk.preprocessors.remove_stopwords()], [[0, "this is a Random Street"], [1, "   Random Street"]], [0, 0]),
+    # "REGEX REPLACE"
+    ([], [[0, "123ab,OL5"], [1, "123ab OL5"]], [0, 1]),
+    ([lk.preprocessors.regex_replace(",", " ")], [[0, "123ab,OL5"], [1, "123ab OL5"]], [0, 0]),
     # "NORMALIZE NAMES"
     ([], [[0, "Mr. John H Doe (Da Legend)"], [1, "John H Doe"]], [0, 1]),
     ([lk.preprocessors.normalize_names()], [[0, "Mr. John H Doe (Da Legend)"], [1, "John H Doe"]], [0, 0]),
@@ -64,6 +70,8 @@ PARAMS = [
 IDS = [
     "strip-void",
     "strip-dedupes",
+    "collapse-whitespace-void",
+    "collapse-whitespace-dedupes",
     "lower-void",
     "lower-dedupes",
     "alnum-void",
@@ -76,6 +84,8 @@ IDS = [
     "ascii-fold-dedupes",
     "remove-stopwords-void",
     "remove-stopwords-dedupes",
+    "regex-replace-void",
+    "regex-replace-dedupes",
     "normalize-names-void",
     "normalize-names-dedupes",
     "normalize-company-void",

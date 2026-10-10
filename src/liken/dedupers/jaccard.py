@@ -43,7 +43,7 @@ class Jaccard(
                 if not union:
                     continue  # zero div: guardrail
 
-                if len(intersection) / len(union) > self._threshold:
+                if len(intersection) / len(union) >= self._threshold:
                     yield idx, idy
 
     def __str__(self):
@@ -55,12 +55,15 @@ def jaccard(threshold: float = 0.95) -> BaseDeduper:
     """Multi-column deduplication using jaccard similarity.
 
     Usage is on multiple columns of a dataframe. Appropriate for categorical
-    data. Null types are handled out-of-box with jaccard, they are simply
-    considered another category of a given field.
+    data. Null handling out-of-box: `None` members are excluded from each
+    record's set, so they neither match values nor add to a record's overlap.
+    A float NaN member stays in the set where the backend keeps it.
 
     Args:
         threshold: the minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication.
+            of values will be considered valid for deduplication. The
+            comparison is inclusive: a pair whose similarity is exactly equal
+            to the threshold matches.
 
     Returns:
         Instance of `BaseDeduper`.

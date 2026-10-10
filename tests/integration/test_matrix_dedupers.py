@@ -86,7 +86,7 @@ PARAMS = [
     #
     # FUZZY:
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.95}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
-    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 2, 5, 6, 0, 2, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "partial_ratio"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.85}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.75}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.65}, [0, 1, 2, 2, 4, 5, 1, 0, 4, 9]),
@@ -94,6 +94,11 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.45}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.35}, [0, 0, 2, 2, 4, 2, 0, 0, 4, 0]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
+    #
+    # EDIT DISTANCE:
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
+    (lk.edit_distance, "email", {"max_distance": 2}, [0, 1, 0, 3, 0, 0, 3, 3, 8, 0]),
     #
     # COSINE:
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.999}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
@@ -138,14 +143,13 @@ PARAMS = [
     (lk.str_endswith, SINGLE_COL, {"pattern": "kingdom", "case": False}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 1]),
     #
     # STRING LEN:
-    # i.e. no deduping because no such thing as max_len and min_len being inversered
-    (lk.str_len, "email", {"min_len": 10, "max_len": 9}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # no deduping because bounds are out of range
     (lk.str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # total deduping given no bounds
     (lk.str_len, "email", {}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    # resasonable bounds, given the column
-    (lk.str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
+    (lk.str_len, "email", {"min_len": 16, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
+    # exact-length idiom
+    (lk.str_len, "email", {"min_len": 22, "max_len": 22}, [0, 1, 2, 3, 4, 5, 6, 3, 8, 9]),
     #
     # STRING CONTAINS:
     # i.e. no deduping because no string starts with the pattern
@@ -190,6 +194,15 @@ PARAMS = [
     #
     # ISNA:
     (lk.isna, SINGLE_COL, {}, [0, 1, 2, 3, 4, 5, 6, 7, 4, 9]),
+    #
+    # NUM RANGE:
+    (lk.num_range, "property_area_sq_ft", {"min": 500, "max": 620}, [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    # min-only:
+    (lk.num_range, "property_area_sq_ft", {"min": 600}, [0, 1, 2, 2, 2, 2, 6, 7, 8, 2]),
+    # max-only:
+    (lk.num_range, "property_area_sq_ft", {"max": 600}, [0, 0, 2, 3, 4, 5, 0, 0, 0, 9]),
+    # no value in range: no deduping
+    (lk.num_range, "property_area_sq_ft", {"min": 5000, "max": 6000}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
 ]
 
 # fmt: on

@@ -211,6 +211,16 @@ def test_collections_manager_apply_warns_dict_after_sequence():
         sm.apply({"email": [deduper]})
 
 
+def test_collections_manager_apply_dict_after_pipeline(s1):
+    sm = CollectionsManager()
+    sm.apply(Pipeline().step(col("a").s1()))
+
+    sm.apply({"email": (s1,)})
+
+    result = sm.get()
+    assert isinstance(result, DeduplicationDict)
+
+
 #######
 # get #
 #######
@@ -372,6 +382,7 @@ BUILTIN_DEDUPER_NAMES = [
     "lsh",
     "jaccard",
     "cosine",
+    "edit_distance",
     "isin",
     "isna",
     "str_contains",

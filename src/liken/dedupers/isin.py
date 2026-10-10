@@ -29,7 +29,7 @@ class IsIn(
         self._values = values
 
     @override
-    def _matches(self, value: str | None) -> bool:
+    def _matches(self, value: object) -> bool:
         return value in self._values
 
     def __str__(self):

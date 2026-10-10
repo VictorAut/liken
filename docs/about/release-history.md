@@ -2,6 +2,31 @@
 title: Release History
 ---
 
+## v0.11.0 (2026-10-10)
+
+**Breaking changes**
+
+
+- Deduper bounding convention is now uniformly inclusive:
+    - `str_len` matches lengths in the closed interval `[min_len, max_len]`; a value whose length equals `min_len` now matches (it previously did not), and `min_len == max_len` is the exact-length idiom, matching the new `num_range`'s one-value interval.
+    - The threshold family (`fuzzy`, `cosine`, `jaccard`, `tfidf`) matches a pair whose similarity is exactly equal to the threshold (previously strictly above).
+- `str_len` validates bounds at construction and raises `ValueError` for malformed calls. Previously `str_len` accepted inverted bounds and silently matched nothing.
+
+**Features**
+
+
+- New `edit_distance` deduper: matches two values when their Levenshtein distance is at most `max_distance` (default 2).
+- New `num_range` deduper: matches numeric values inside the inclusive interval `[min, max]`. Available in it's negated form (`~num_range`).
+- Two new preprocessors: `collapse_whitespace` replaces every run of whitespace with a single space; `regex_replace` applies a regular-expression replacement.
+
+**Fixes**
+
+
+- True null handling: a missing value (`None` or NaN) groups only with another missing value. `"na"` placeholder machinery is removed (so nulls no longer collide with literal `"na"` values)
+- Core type contracts annotated: the backend protocol, DataFrame wrapper interfaces and collections.
+- `fuzzy`'s `100 * threshold` scaling no longer drifts at the boundary; scores within a 1e-9 tolerance below the boundary also match.
+
+
 ## v0.10.3 (2029-10-08)
 
 **Features**
@@ -152,7 +177,7 @@ title: Release History
 
 - `.canonicals` method returns canonical ids with more than one record
 
-- `.synthesize method returns a "golden" record
+- `.synthesize` method returns a "golden" record
 
 - Python 3.14 support
 

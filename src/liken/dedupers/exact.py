@@ -8,6 +8,7 @@ import pyarrow as pa
 from typing_extensions import override
 
 from liken.core.deduper import BaseDeduper
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 
 
@@ -33,7 +34,10 @@ class Exact(BaseDeduper):
 
         # single column
         if isinstance(array, pa.Array):
-            for i, key in enumerate(array):
+            for i, scalar in enumerate(array):
+                value = scalar.as_py()
+                # non-missing keys stay pa.Scalar: hashable for nested list/struct types
+                key = None if is_missing(value) else scalar
                 buckets[key].append(i)
 
         # multi column
@@ -43,7 +47,7 @@ class Exact(BaseDeduper):
             n = array.num_rows
 
             for i in range(n):
-                key = tuple(col[i].as_py() for col in columns)
+                key = tuple(None if is_missing(member) else member for member in (col[i].as_py() for col in columns))
                 buckets[key].append(i)
 
         for indices in buckets.values():

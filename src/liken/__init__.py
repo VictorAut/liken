@@ -9,12 +9,14 @@ from liken.collections.pipelines import Pipeline
 from liken.collections.pipelines import col
 from liken.collections.pipelines import pipeline
 from liken.dedupers.cosine import cosine
+from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
 from liken.dedupers.isin import isin
 from liken.dedupers.isna import isna
 from liken.dedupers.jaccard import jaccard
 from liken.dedupers.lsh import lsh
+from liken.dedupers.num_range import num_range
 from liken.dedupers.str_contains import str_contains
 from liken.dedupers.str_endswith import str_endswith
 from liken.dedupers.str_len import str_len
@@ -31,10 +33,12 @@ __all__ = [
     "fuzzy",
     "lsh",
     "tfidf",
+    "edit_distance",
     "cosine",
     "jaccard",
     "isin",
     "isna",
+    "num_range",
     "str_contains",
     "str_endswith",
     "str_len",

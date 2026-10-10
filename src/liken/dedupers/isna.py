@@ -9,6 +9,7 @@ from typing_extensions import override
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 
 
@@ -28,28 +29,15 @@ class IsNA(
 
     _NAME: ClassVar[str] = "isna"
 
-    # do NOT want to placehold Null values
-    # As we are deduping on them and need to keep them to identify them
-    with_na_placeholder: bool = False
-
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
         values: list = array.to_pylist()
 
-        indices: list[int] = []
+        missing: list[int] = [i for i, value in enumerate(values) if is_missing(value)]
 
-        for i, v in enumerate(values):
-            if v is None:
-                indices.append(i)
-                continue
-
-            # NaN check: NaN != NaN is true by IEEE semantics
-            if v != v:
-                indices.append(i)
-
-        for i in range(len(indices)):
-            for j in range(i + 1, len(indices)):
-                yield indices[i], indices[j]
+        for i in range(len(missing)):
+            for j in range(i + 1, len(missing)):
+                yield missing[i], missing[j]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -72,23 +60,15 @@ class _NotNA(
 
     _NAME: ClassVar[str] = "~isna"
 
-    with_na_placeholder: bool = False
-
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
         values: list = array.to_pylist()
 
-        indices: list[int] = []
+        present: list[int] = [i for i, value in enumerate(values) if not is_missing(value)]
 
-        for i, v in enumerate(values):
-            # NaN check: NaN != NaN is true by IEEE semantics
-            if v is None or v != v:
-                continue
-            indices.append(i)
-
-        for i in range(len(indices)):
-            for j in range(i + 1, len(indices)):
-                yield indices[i], indices[j]
+        for i in range(len(present)):
+            for j in range(i + 1, len(present)):
+                yield present[i], present[j]
 
     def __str__(self):
         return self.str_representation(self._NAME)

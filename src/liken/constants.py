@@ -7,10 +7,6 @@ from typing import Final
 # Default canonical_id label in the dataframe
 CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
 
-# Placeholder string for Null values
-# This is susceptible to erroneous results e.g. 'str_startswith' is used with `pattern`="n"!
-NA_PLACEHOLDER: Final[str] = "na"
-
 # Sequential API use will load to this dictionary key by default:
 SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
 
