@@ -2,6 +2,14 @@
 title: Release History
 ---
 
+## v0.12.0 (2026-10-10)
+
+**Breaking changes**
+
+
+- Minimum pandas version raised to 2.
+
+
 ## v0.11.0 (2026-10-10)
 
 **Breaking changes**
