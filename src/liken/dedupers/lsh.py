@@ -71,14 +71,13 @@ class LSH(
 
         missing, present = partition_missing(values)
 
-        # star-shaped missing pairs: k missing values cost k-1 pairs
         for i in missing[1:]:
             yield missing[0], i
 
         if not present:
             return
 
-        # datasketch receives non-missing values only
+        # minhasher receives non-missing values only
         minhashes: list[MinHash] = self._build_minhashes([values[i] for i in present])
         lsh: MinHashLSH = self._lsh(minhashes)
 

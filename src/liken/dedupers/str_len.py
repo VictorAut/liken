@@ -15,19 +15,6 @@ from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 
 
-def _validate_len(name: str, bound: int | None, *, allow_none: bool) -> None:
-    """Reject a bound that is not an integer, or not an explicit `None`."""
-    if bound is None:
-        if not allow_none:
-            raise ValueError(f"`{name}` must be an integer, not `None`")
-        return
-
-    # `bool` is an `int` subclass, so it needs its own guard before the
-    # type check.
-    if isinstance(bound, bool) or not isinstance(bound, int):
-        raise ValueError(f"`{name}` must be an integer")
-
-
 @final
 class StrLen(
     SingleColumnMixin,
@@ -44,9 +31,7 @@ class StrLen(
     _NAME: ClassVar[str] = "str_len"
 
     def __init__(self, min_len: int = 0, max_len: int | None = None):
-        # Type checks run before the ordering check, so a non-integer bound
-        # raises `ValueError` here rather than a `TypeError` from the
-        # comparison below.
+
         _validate_len("min_len", min_len, allow_none=False)
         _validate_len("max_len", max_len, allow_none=True)
 
@@ -164,3 +149,16 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
             +------+-----------+---------------------+
     """
     return StrLen(min_len=min_len, max_len=max_len)
+
+
+def _validate_len(name: str, bound: int | None, *, allow_none: bool) -> None:
+    """Reject a bound that is not an integer, or not an explicit `None`."""
+    if bound is None:
+        if not allow_none:
+            raise ValueError(f"`{name}` must be an integer, not `None`")
+        return
+
+    # `bool` is an `int` subclass, so it needs its own guard before the
+    # type check.
+    if isinstance(bound, bool) or not isinstance(bound, int):
+        raise ValueError(f"`{name}` must be an integer")

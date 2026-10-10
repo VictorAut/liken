@@ -20,20 +20,6 @@ from liken.core.registries import dedupers_registry
 Number: TypeAlias = float | int
 
 
-def _validate_bound(name: str, bound: Number | None) -> None:
-    """Reject a bound that is not a real number or an explicit `None`."""
-    if bound is None:
-        return
-
-    # `bool` is an `int` subclass, so it needs its own guard before the
-    # type check.
-    if isinstance(bound, bool) or not isinstance(bound, (int, float)):
-        raise ValueError(f"`{name}` must be a real number")
-
-    if math.isnan(bound):
-        raise ValueError(f"`{name}` must be a real number")
-
-
 @final
 class NumRange(
     SingleColumnMixin,
@@ -48,14 +34,12 @@ class NumRange(
     _NAME: ClassVar[str] = "num_range"
 
     def __init__(self, min: Number | None = None, max: Number | None = None):
-        # Type checks run before the ordering check, so a non-real bound
-        # raises `ValueError` here rather than a `TypeError` from the
-        # comparison below.
+
         _validate_bound("min", min)
         _validate_bound("max", max)
 
         if min is None and max is None:
-            raise ValueError("At least one of `min` or `max` must be given; a fully open range is refused")
+            raise ValueError("At least one of `min` or `max` must be given; got a fully unbounded range")
 
         if min is not None and max is not None and min > max:
             raise ValueError("`min` must be less than or equal to `max`")
@@ -109,8 +93,8 @@ def num_range(min: Number | None = None, max: Number | None = None) -> BaseDedup
     Deduplication will happen over the values inside the inclusive interval
     [min, max]. Each bound applies only when given; one side may be left
     `None` (unbounded), but not both. All matched rows collapse into one
-    group. A missing value — `None` or any IEEE NaN — never satisfies the
-    predicate, on either polarity.
+    group. Any missing value, `None` or NaN, never satisfies the
+    predicate.
 
     Args:
         min: the inclusive lower bound of the interval. `None` leaves the
@@ -167,3 +151,17 @@ def num_range(min: Number | None = None, max: Number | None = None) -> BaseDedup
             +------+-----------------+---------+
     """
     return NumRange(min=min, max=max)
+
+
+def _validate_bound(name: str, bound: Number | None) -> None:
+    """Reject a bound that is not a real number or an explicit `None`."""
+    if bound is None:
+        return
+
+    # `bool` is an `int` subclass, so it needs its own guard before the
+    # type check.
+    if isinstance(bound, bool) or not isinstance(bound, (int, float)):
+        raise ValueError(f"`{name}` must be a real number")
+
+    if math.isnan(bound):
+        raise ValueError(f"`{name}` must be a real number")

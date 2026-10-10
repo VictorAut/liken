@@ -30,12 +30,6 @@ class DF(Generic[D]):
     """Base class defining a dataframe wrapper
 
     Defines inheritable methods as well as some of the interface.
-
-    The type variable `D` is deliberately loose: it is not bounded to the
-    supported frame types. The pyspark wrappers wrap frame types beyond
-    `UserDataFrame` (Spark `DataFrame | RDD[Row]` and `list[Row]`), so no
-    single bound covers every concrete wrapper. Concrete wrappers
-    parametrize `D` with their own frame type instead.
     """
 
     def __init__(self, df: D):
@@ -66,12 +60,7 @@ class DF(Generic[D]):
         raise NotImplementedError
 
     def get_array(self, columns: Columns) -> pa.Array | pa.Table:
-        """Generalise the getting of a column, or columns of a df to an array.
-
-        Handles single column and multicolumn. The array carries raw values:
-        nulls stay null, and a missing value is one classified by
-        `liken.core.missing.is_missing` — `None` and every IEEE NaN.
-        """
+        """Generalise the getting of a df's column, or columns, to an array."""
         if isinstance(columns, str):
             return self._get_col(columns)
         return self._get_cols(columns)

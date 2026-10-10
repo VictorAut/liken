@@ -12,13 +12,9 @@ if TYPE_CHECKING:
 def is_missing(value: object) -> bool:
     """Report whether a value is missing.
 
-    A value is missing when it is ``None`` or not equal to itself. The latter
-    covers every IEEE NaN (float NaN, ``Decimal("NaN")``) by IEEE semantics,
-    so ``None`` and NaN are one missing class.
-
-    This is the one definition of missing for the library. Dedupers,
-    predicates and wrappers must use it rather than implementing their own
-    missing check.
+    A value is missing when it is `None` or not equal to itself. The latter
+    covers every IEEE NaN (float NaN, `Decimal("NaN")`), so `None` and NaN are
+    one missing class.
 
     Args:
         value: The value to test.
@@ -40,8 +36,8 @@ def is_missing(value: object) -> bool:
 def partition_missing(values: Sequence[object]) -> tuple[list[int], list[int]]:
     """Split values into the indices of missing and non-missing values.
 
-    Missing values are classified by :func:`is_missing`. Order is preserved
-    within each partition, so each index list is ascending.
+    Missing values are classified by `is_missing`. Order is preserved within
+    each partition, so each index list is ascending.
 
     Args:
         values: The values to partition.

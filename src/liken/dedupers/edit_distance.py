@@ -45,7 +45,6 @@ class EditDistance(
 
         missing, present = partition_missing(values)
 
-        # star-shaped missing pairs: k missing values cost k-1 pairs
         for i in missing[1:]:
             yield missing[0], i
 
@@ -85,10 +84,10 @@ def edit_distance(max_distance: int = 2) -> BaseDeduper:
     single-character edits between them - is at most `max_distance`. The
     bound is inclusive and absolute: it does not scale with string length.
     Use it for short codes, such as postcodes, phone numbers and product
-    codes, where a relative similarity threshold is the wrong contract.
+    codes, where a relative similarity threshold exists otherwise.
 
     Missing values are matched only against other missing values, never
-    against a value.
+    against other values.
 
     Args:
         max_distance: The maximum Levenshtein distance at which two values

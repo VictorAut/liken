@@ -70,13 +70,7 @@ class Base(Protocol):
 
 
 class BaseDeduper(Base):
-    """
-    Base Deduplication class
-
-    Dedupers operate on raw values. A missing value — `None` or any IEEE NaN,
-    as classified by `liken.core.missing.is_missing` — matches only another
-    missing value and is never confused with an ordinary value.
-    """
+    """Base Deduplication class"""
 
     def __init__(self, *args, **kwargs):
         self._init_args = args

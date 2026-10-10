@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from collections.abc import Iterator
 from typing import ClassVar
+from typing import Final
 from typing import Literal
 from typing import final
 
@@ -25,7 +26,7 @@ from liken.types import SimilarPairIndices
 # drift it repairs is ~1e-14 and real distinct similarity scores differ by
 # far more, so the guard only admits scores equal to the boundary at any
 # meaningful precision.
-_BOUNDARY_TOLERANCE = 1e-9
+_BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
 
 @final
@@ -128,15 +129,14 @@ def fuzzy(
 
     Args:
         threshold: The minimum threshold at which similarity between two pairs
-            of values will be considered valid for deduplication. The
-            comparison is inclusive: a pair whose score is at or above
-            `100 * threshold` matches. A tolerance of 1e-9 absorbs the
-            floating-point drift of that scaling, so scores within the
-            tolerance below the boundary also match; real distinct scores
-            differ by far more.
+            of values will be considered valid for deduplication.
         scorer: The fuzzy scorer. Defaults to "simple ratio". Options are
-            "simple_ratio", "partial_ratio", "token_sort_ratio",
-            "token_set_ratio", "weighted_ratio", "quick_ratio".
+            - "simple_ratio"
+            - "partial_ratio"
+            - "token_sort_ratio"
+            - "token_set_ratio"
+            - "weighted_ratio"
+            - "quick_ratio"
 
     Returns:
         Instance of `BaseDeduper`.
