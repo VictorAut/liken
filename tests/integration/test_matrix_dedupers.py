@@ -147,7 +147,7 @@ PARAMS = [
     (lk.str_len, "email", {"min_len": 101, "max_len": 201}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     # total deduping given no bounds
     (lk.str_len, "email", {}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    (lk.str_len, "email", {"min_len": 15, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 0]),
+    (lk.str_len, "email", {"min_len": 16, "max_len": 22}, [0, 1, 2, 0, 4, 5, 0, 0, 8, 9]),
     # exact-length idiom
     (lk.str_len, "email", {"min_len": 22, "max_len": 22}, [0, 1, 2, 3, 4, 5, 6, 3, 8, 9]),
     #
