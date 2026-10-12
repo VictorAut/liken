@@ -19,3 +19,4 @@ site/
 .memsearch
 
 scripts/benchmarks/results/
+scripts/profiling/results/

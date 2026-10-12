@@ -130,3 +130,9 @@ lines-after-imports = 2
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = ["no-redef"]
+# scripts/benchmarks/ and scripts/profiling/ both hold a flat common.py
+# imported from sibling scripts. Explicit bases plus the src/scripts roots
+# give every file a distinct module name (liken..., benchmarks.common,
+# profiling.common) instead of cwd-relative or colliding ones.
+explicit_package_bases = true
+mypy_path = ["src", "scripts"]
