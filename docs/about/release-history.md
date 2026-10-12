@@ -19,7 +19,7 @@ title: Release History
 **Features**
 
 
-- Python 3.15 support for the default install and the dask and pyspark extras. The ray and modin extras require Python 3.14 or lower until Ray publishes 3.15 wheels.
+- Python 3.15 support.
 
 ## v0.11.0 (2026-10-10)
 
