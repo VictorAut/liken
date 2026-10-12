@@ -12,16 +12,12 @@ pandas, polars and pyarrow ship with Liken itself. The other backends are option
 
 | Extra | Installs | Python | For |
 | ----- | ----- | ----- | ----- |
-| *(default)* | pandas, polars, pyarrow | 3.11–3.15 | Single-machine work |
-| `liken[modin]` | modin (with dask and ray kernels) | 3.11–3.14 | Drop-in pandas replacement |
-| `liken[dask]` | dask | 3.11–3.15 | Partitioned DataFrames |
-| `liken[ray]` | ray | 3.11–3.14 | Ray datasets |
-| `liken[pyspark]` | pyspark | 3.11–3.15 | Spark clusters |
-| `liken[all]` | all of the above | 3.11–3.14 | Everything |
-
-On Python 3.15 the default install resolves pandas 3, pyarrow 26 and
-scikit-learn 1.9. The ray and modin extras are limited to 3.14 until Ray
-publishes 3.15 wheels, and `all` inherits that limit.
+| *(default)* | pandas, polars, pyarrow | 3.11, 3.12, 3.13, 3.14, 3.15 | Single-machine work |
+| `liken[modin]` | modin (with dask and ray kernels) | 3.11, 3.12, 3.13, 3.14 | Drop-in pandas replacement |
+| `liken[dask]` | dask | 3.11, 3.12, 3.13, 3.14, 3.15 | Partitioned DataFrames |
+| `liken[ray]` | ray | 3.11, 3.12, 3.13, 3.14 | Ray datasets |
+| `liken[pyspark]` | pyspark | 3.11, 3.12, 3.13, 3.14, 3.15 | Spark clusters |
+| `liken[all]` | *all of the above* | *see above* | Everything |
 
 === "pip"
 
