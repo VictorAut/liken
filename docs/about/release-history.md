@@ -2,7 +2,7 @@
 title: Release History
 ---
 
-## Unreleased
+## v0.12.0 (2026-10-12)
 
 **Breaking changes**
 
