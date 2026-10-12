@@ -16,20 +16,8 @@ title: Release History
     - dask floor lowered from 2026.3.0 to 2024.8.0.
     - modin floor lowered from 0.37.1 to 0.22.0.
 
-**New features**
-
-- Versioned `benchmarks/` directory: measurement scripts (`benchmark.py`,
-  `scaling.py`) persist per-run JSON results; plot scripts
-  (`plot_benchmark.py`, `plot_scaling.py`) render PNGs from gathered results
-  without rerunning. Named `quick`/`full` presets with CLI overrides.
 
 
-## v0.12.0 (2026-10-10)
-
-**Breaking changes**
-
-
-- Minimum pandas version raised to 2.
 
 
 ## v0.11.0 (2026-10-10)
