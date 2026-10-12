@@ -2,6 +2,28 @@
 title: Release History
 ---
 
+## Unreleased
+
+**Breaking changes**
+
+
+- Dataframe backend floors generally changed, and all upper caps are removed
+    - pandas floor increased from 1 to 1.5.3.
+    - polars floor lowered from 1.24.0 to 0.20.4.
+    - pyarrow floor lowered from 23.0.1 to 13.0.0.
+    - pyspark floor is unchanged at 4.
+    - ray floor lowered from 2.55.0 to 2.50.0.
+    - dask floor lowered from 2026.3.0 to 2024.8.0.
+    - modin floor lowered from 0.37.1 to 0.22.0.
+
+**New features**
+
+- Versioned `benchmarks/` directory: measurement scripts (`benchmark.py`,
+  `scaling.py`) persist per-run JSON results; plot scripts
+  (`plot_benchmark.py`, `plot_scaling.py`) render PNGs from gathered results
+  without rerunning. Named `quick`/`full` presets with CLI overrides.
+
+
 ## v0.12.0 (2026-10-10)
 
 **Breaking changes**
