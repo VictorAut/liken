@@ -1,9 +1,7 @@
 """Shared machinery for the benchmark and scaling scripts.
 
 Holds the deduper registry, named presets, data loading, the timed
-`canonicalize()` runner, and JSON persistence. Measurement scripts
-(`benchmark.py`, `scaling.py`) and plot scripts (`plot_benchmark.py`,
-`plot_scaling.py`) import from here so no boilerplate is duplicated.
+`canonicalize()` runner, and JSON persistence.
 """
 
 from __future__ import annotations
