@@ -3,6 +3,7 @@ env_list = [
     "minimal-3.12",
     "minimal-3.13",
     "minimal-3.14",
+    "minimal-3.15",
     "all-3.11",
     "all-3.12",
     "all-3.13",
@@ -15,6 +16,7 @@ env_list = [
     "dask-3.12",
     "dask-3.13",
     "dask-3.14",
+    "dask-3.15",
     "ray-3.11",
     "ray-3.12",
     "ray-3.13",
@@ -23,6 +25,7 @@ env_list = [
     "pyspark-3.12",
     "pyspark-3.13",
     "pyspark-3.14",
+    "pyspark-3.15",
 ]
 
 
@@ -30,7 +33,7 @@ env_list = [
 
 [env_base.minimal]
 description = "Run full test suite for all extras"
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", "."]] # i.e. "minimal"
 commands = [
@@ -75,7 +78,7 @@ commands = [
 
 
 [env_base.dask]
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[dask]"]]
 commands = [
@@ -103,7 +106,7 @@ commands = [
 
 
 [env_base.pyspark]
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[pyspark]"]]
 commands = [
@@ -120,7 +123,7 @@ commands = [
 
 # tests lowest backend version + lowest compatible python version
 # and, highest backend version + highest compatible python version
-# e.g. pandas 1.5.3 with py3.11; pandas 3 with py3.14
+# e.g. pandas 1.5.3 with py3.11; pandas 3 with py3.15
 
 
 # PANDAS
@@ -168,8 +171,8 @@ commands = [
 ]
 
 [env.pandas-latest]
-description = "pandas latest | py3.14"
-base_python = "3.14"
+description = "pandas latest | py3.15"
+base_python = "3.15"
 labels = ["matrix"]
 setenv = { COVERAGE_FILE = ".coverage-{envname}" }
 deps = ["pytest", "pytest-cov<7"]
@@ -188,10 +191,10 @@ commands_pre = [
         "install",
         "pandas",
         "polars==1.35.2",
-        "pyarrow==23.0.1",
+        "pyarrow==26.0.0",
         "typing-extensions==4.15.0",
-        "rapidfuzz==3.14.3",
-        "scikit-learn==1.7.2",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
         "sparse-dot-topn==1.1.5",
         "datasketch==1.8.0",
         "networkx==3.6.1",
@@ -253,8 +256,8 @@ commands = [
 
 
 [env.polars-latest]
-description = "polars latest | py3.14"
-base_python = "3.14"
+description = "polars latest | py3.15"
+base_python = "3.15"
 labels = ["matrix"]
 setenv = { COVERAGE_FILE = ".coverage-{envname}" }
 deps = ["pytest", "pytest-cov<7"]
@@ -272,11 +275,11 @@ commands_pre = [
         "pip",
         "install",
         "polars",
-        "pandas==2.3.3",
-        "pyarrow==23.0.1",
+        "pandas==3.0.6",
+        "pyarrow==26.0.0",
         "typing-extensions==4.15.0",
-        "rapidfuzz==3.14.3",
-        "scikit-learn==1.7.2",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
         "sparse-dot-topn==1.1.5",
         "datasketch==1.8.0",
         "networkx==3.6.1",
@@ -339,8 +342,8 @@ commands = [
 
 
 [env.pyarrow-latest]
-description = "pyarrow latest | py3.14"
-base_python = "3.14"
+description = "pyarrow latest | py3.15"
+base_python = "3.15"
 labels = ["matrix"]
 setenv = { COVERAGE_FILE = ".coverage-{envname}" }
 deps = ["pytest", "pytest-cov<7"]
@@ -358,11 +361,11 @@ commands_pre = [
         "pip",
         "install",
         "pyarrow",
-        "pandas==2.3.3",
+        "pandas==3.0.6",
         "polars==1.35.2",
         "typing-extensions==4.15.0",
-        "rapidfuzz==3.14.3",
-        "scikit-learn==1.7.2",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
         "sparse-dot-topn==1.1.5",
         "datasketch==1.8.0",
         "networkx==3.6.1",
@@ -425,8 +428,8 @@ commands = [
 
 
 [env.pyspark-latest]
-description = "pyspark latest | py3.14"
-base_python = "3.14"
+description = "pyspark latest | py3.15"
+base_python = "3.15"
 labels = ["matrix"]
 setenv = { PYSPARK_PYTHON = "{envpython}", PYSPARK_DRIVER_PYTHON = "{envpython}", COVERAGE_FILE = ".coverage-{envname}" }
 deps = ["pytest", "pytest-cov<7"]
@@ -444,12 +447,12 @@ commands_pre = [
         "pip",
         "install",
         "pyspark",
-        "pandas==2.3.3",
+        "pandas==3.0.6",
         "polars==1.35.2",
-        "pyarrow==23.0.1",
+        "pyarrow==26.0.0",
         "typing-extensions==4.15.0",
-        "rapidfuzz==3.14.3",
-        "scikit-learn==1.7.2",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
         "sparse-dot-topn==1.1.5",
         "datasketch==1.8.0",
         "networkx==3.6.1",
@@ -514,8 +517,8 @@ commands = [
 
 
 [env.dask-latest]
-description = "dask latest | py3.14"
-base_python = "3.14"
+description = "dask latest | py3.15"
+base_python = "3.15"
 labels = ["matrix"]
 setenv = { COVERAGE_FILE = ".coverage-{envname}" }
 deps = ["pytest", "pytest-cov<7"]
@@ -534,12 +537,12 @@ commands_pre = [
         "install",
         "dask[dataframe]",
         "distributed",
-        "pandas==2.3.3",
+        "pandas==3.0.6",
         "polars==1.35.2",
-        "pyarrow==23.0.1",
+        "pyarrow==26.0.0",
         "typing-extensions==4.15.0",
-        "rapidfuzz==3.14.3",
-        "scikit-learn==1.7.2",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
         "sparse-dot-topn==1.1.5",
         "datasketch==1.8.0",
         "networkx==3.6.1",

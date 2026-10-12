@@ -43,14 +43,20 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14", "3.15" ]
         extras: [ "minimal", "all", "dask", "ray", "pyspark", "modin" ]
+        exclude:
+          # no cp315 wheels for ray (which modin and all pull in)
+          - { python-version: "3.15", extras: "all" }
+          - { python-version: "3.15", extras: "ray" }
+          - { python-version: "3.15", extras: "modin" }
 
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
+          install-liken: ${{ matrix.python-version != '3.15' }}
 
       - name: test | optional imports
         run: |
@@ -72,11 +78,11 @@ jobs:
           - { env: dask-floor, python-version: "3.11" }
           - { env: ray-floor, python-version: "3.11" }
           - { env: modin-floor, python-version: "3.11" }
-          - { env: pandas-latest, python-version: "3.14" }
-          - { env: polars-latest, python-version: "3.14" }
-          - { env: pyarrow-latest, python-version: "3.14" }
-          - { env: pyspark-latest, python-version: "3.14" }
-          - { env: dask-latest, python-version: "3.14" }
+          - { env: pandas-latest, python-version: "3.15" }
+          - { env: polars-latest, python-version: "3.15" }
+          - { env: pyarrow-latest, python-version: "3.15" }
+          - { env: pyspark-latest, python-version: "3.15" }
+          - { env: dask-latest, python-version: "3.15" }
           - { env: ray-latest, python-version: "3.14" }
           - { env: modin-latest, python-version: "3.14" }
 
@@ -85,6 +91,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
+          install-liken: ${{ matrix.python-version != '3.15' }}
 
       - name: test | dependency matrix
         run: |

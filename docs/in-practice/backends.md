@@ -10,14 +10,18 @@ The deduplication API is the same on every backend. What differs is where the wo
 
 pandas, polars and pyarrow ship with Liken itself. The other backends are optional extras:
 
-| Extra | Installs | For |
-| ----- | ----- | ----- |
-| *(default)* | pandas, polars, pyarrow | Single-machine work |
-| `liken[modin]` | modin (with dask and ray kernels) | Drop-in pandas replacement |
-| `liken[dask]` | dask | Partitioned DataFrames |
-| `liken[ray]` | ray | Ray datasets |
-| `liken[pyspark]` | pyspark | Spark clusters |
-| `liken[all]` | all of the above | Everything |
+| Extra | Installs | Python | For |
+| ----- | ----- | ----- | ----- |
+| *(default)* | pandas, polars, pyarrow | 3.11–3.15 | Single-machine work |
+| `liken[modin]` | modin (with dask and ray kernels) | 3.11–3.14 | Drop-in pandas replacement |
+| `liken[dask]` | dask | 3.11–3.15 | Partitioned DataFrames |
+| `liken[ray]` | ray | 3.11–3.14 | Ray datasets |
+| `liken[pyspark]` | pyspark | 3.11–3.15 | Spark clusters |
+| `liken[all]` | all of the above | 3.11–3.14 | Everything |
+
+On Python 3.15 the default install resolves pandas 3, pyarrow 26 and
+scikit-learn 1.9. The ray and modin extras are limited to 3.14 until Ray
+publishes 3.15 wheels, and `all` inherits that limit.
 
 === "pip"
 

@@ -6,6 +6,9 @@ title: Installation and Quick Start
 
 Liken requires **Python 3.11+**.
 
+Some optional extras support a narrower Python range; the Installing table
+in [Backends](in-practice/backends.md) lists the range per extra.
+
 Pick the workflow that matches your project's dependencies.
 
 === "uv"

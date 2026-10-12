@@ -4,6 +4,11 @@ description: "Install Python, uv, task, and project"
 inputs:
   python-version:
     required: true
+  install-liken:
+    description: "Run `task install` (lock-based install; skip on 3.15 lanes where tox installs fresh)"
+    required: false
+    type: boolean
+    default: true
 
 runs:
   using: "composite"
@@ -24,6 +29,7 @@ runs:
         version: 3.48.0
 
     - name: liken | install
+      if: ${{ inputs.install-liken == 'true' }}
       run: |
         task install
       shell: bash
