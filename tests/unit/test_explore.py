@@ -1,11 +1,20 @@
-import dask.dataframe as dd
-import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
 import liken as lk
+
+
+try:
+    import dask.dataframe as dd
+except Exception as exc:
+    pytest.skip(f"dask.dataframe unusable here: {exc}", allow_module_level=True)
+
+try:
+    import modin.pandas as mpd
+except Exception as exc:
+    pytest.skip(f"modin.pandas unusable here: {exc}", allow_module_level=True)
 
 
 DATA = [

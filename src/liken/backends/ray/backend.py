@@ -14,7 +14,7 @@ class RayBackend(Backend):
     def is_match(self, df):
         try:
             import ray
-        except ImportError:
+        except Exception:
             return False
         return isinstance(df, ray.data.Dataset)
 
