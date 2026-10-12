@@ -1,9 +1,11 @@
 import pytest
-from ray.data import Dataset
 
 from liken.constants import CANONICAL_ID
 from liken.constants import INVALID_DF
 from liken.core.dispatcher import wrap
+
+
+Dataset = pytest.importorskip("ray.data").Dataset
 
 
 @pytest.mark.parametrize(

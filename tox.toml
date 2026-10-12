@@ -3,6 +3,7 @@ env_list = [
     "minimal-3.12",
     "minimal-3.13",
     "minimal-3.14",
+    "minimal-3.15",
     "all-3.11",
     "all-3.12",
     "all-3.13",
@@ -15,6 +16,7 @@ env_list = [
     "dask-3.12",
     "dask-3.13",
     "dask-3.14",
+    "dask-3.15",
     "ray-3.11",
     "ray-3.12",
     "ray-3.13",
@@ -23,6 +25,7 @@ env_list = [
     "pyspark-3.12",
     "pyspark-3.13",
     "pyspark-3.14",
+    "pyspark-3.15",
 ]
 
 
@@ -30,10 +33,17 @@ env_list = [
 
 [env_base.minimal]
 description = "Run full test suite for all extras"
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", "."]] # i.e. "minimal"
-commands = [["pytest", "tests/extras/test_minimal.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_minimal.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
 
 # ALL EXTRAS
 
@@ -42,7 +52,14 @@ description = "Run full test suite for all extras"
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[all]"]]
-commands = [["pytest", "tests/extras/test_all_extra.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_all_extra.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
 
 # EXTRAS
 
@@ -50,25 +67,672 @@ commands = [["pytest", "tests/extras/test_all_extra.py", "-vv", "--confcutdir=te
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[modin]"]]
-commands = [["pytest", "tests/extras/test_modin_extra.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_modin_extra.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
 
 
 [env_base.dask]
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[dask]"]]
-commands = [["pytest", "tests/extras/test_dask_extra.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_dask_extra.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
 
 
 [env_base.ray]
 factors = [["3.11", "3.12", "3.13", "3.14"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[ray]"]]
-commands = [["pytest", "tests/extras/test_ray_extra.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_ray_extra.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
 
 
 [env_base.pyspark]
-factors = [["3.11", "3.12", "3.13", "3.14"]]
+factors = [["3.11", "3.12", "3.13", "3.14", "3.15"]]
 deps = ["pytest"]
 commands_pre = [["uv", "pip", "install", "-e", ".[pyspark]"]]
-commands = [["pytest", "tests/extras/test_pyspark_extra.py", "-vv", "--confcutdir=tests/extras"]]
+commands = [
+    [
+        "pytest",
+        "tests/extras/test_pyspark_extra.py",
+        "-vv",
+        "--confcutdir=tests/extras",
+    ],
+]
+
+
+# DEPENDENCY INTEGRATION MATRIX
+
+# tests lowest backend version + lowest compatible python version
+# and, highest backend version + highest compatible python version
+# e.g. pandas 1.5.3 with py3.11; pandas 3 with py3.15
+
+
+# PANDAS
+
+
+[env.pandas-floor]
+description = "pandas 1.5.3 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pandas==1.5.3",
+        "numpy<2",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pandas", "-vv", "--cov=liken", "--cov-append"],
+]
+
+[env.pandas-latest]
+description = "pandas latest | py3.15"
+base_python = "3.15"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pandas",
+        "polars==1.35.2",
+        "pyarrow==26.0.0",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pandas", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# POLARS
+
+
+[env.polars-floor]
+description = "polars 0.20.4 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "polars==0.20.4",
+        "pandas==2.3.3",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "polars", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+[env.polars-latest]
+description = "polars latest | py3.15"
+base_python = "3.15"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "polars",
+        "pandas==3.0.6",
+        "pyarrow==26.0.0",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "polars", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# PYARROW
+
+
+[env.pyarrow-floor]
+description = "pyarrow 13.0.0 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pyarrow==13.0.0",
+        "numpy<2",
+        "pandas==2.3.3",
+        "polars==1.35.2",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pyarrow", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+[env.pyarrow-latest]
+description = "pyarrow latest | py3.15"
+base_python = "3.15"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pyarrow",
+        "pandas==3.0.6",
+        "polars==1.35.2",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pyarrow", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# PYSPARK
+
+
+[env.pyspark-floor]
+description = "pyspark 4.0.0 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { PYSPARK_PYTHON = "{envpython}", PYSPARK_DRIVER_PYTHON = "{envpython}", COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pyspark==4.0.0",
+        "pandas==2.3.3",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pyspark", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+[env.pyspark-latest]
+description = "pyspark latest | py3.15"
+base_python = "3.15"
+labels = ["matrix"]
+setenv = { PYSPARK_PYTHON = "{envpython}", PYSPARK_DRIVER_PYTHON = "{envpython}", COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "pyspark",
+        "pandas==3.0.6",
+        "polars==1.35.2",
+        "pyarrow==26.0.0",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "pyspark", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# DASK
+
+
+[env.dask-floor]
+description = "dask 2024.8.0 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "dask[dataframe]==2024.8.0",
+        "distributed==2024.8.0",
+        "pandas==2.0.3",
+        "numpy<2",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "dask", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+[env.dask-latest]
+description = "dask latest | py3.15"
+base_python = "3.15"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "dask[dataframe]",
+        "distributed",
+        "pandas==3.0.6",
+        "polars==1.35.2",
+        "pyarrow==26.0.0",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.6",
+        "scikit-learn==1.9.1",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "dask", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# RAY
+
+
+[env.ray-floor]
+description = "ray 2.50.0 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "ray==2.50.0",
+        "pandas==2.0.3",
+        "numpy<2",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "ray", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+[env.ray-latest]
+description = "ray latest | py3.14"
+base_python = "3.14"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "ray",
+        "pandas==2.3.3",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "ray", "-vv", "--cov=liken", "--cov-append"],
+]
+
+
+# MODIN
+
+
+[env.modin-floor]
+description = "modin 0.22.0 | py3.11"
+base_python = "3.11"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "modin==0.22.0",
+        "dask[dataframe]==2023.9.2",
+        "distributed==2023.9.2",
+        "pandas==1.5.3",
+        "numpy<2",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "modin", "-vv", "--cov=liken", "--cov-append"],
+]
+
+[env.modin-latest]
+description = "modin latest | py3.14"
+base_python = "3.14"
+labels = ["matrix"]
+setenv = { COVERAGE_FILE = ".coverage-{envname}" }
+deps = ["pytest", "pytest-cov<7"]
+commands_pre = [
+    [
+        "uv",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+    ],
+    [
+        "uv",
+        "pip",
+        "install",
+        "modin[dask,ray]",
+        "dask[dataframe]",
+        "distributed",
+        "pandas==2.3.3",
+        "polars==1.35.2",
+        "pyarrow==23.0.1",
+        "typing-extensions==4.15.0",
+        "rapidfuzz==3.14.3",
+        "scikit-learn==1.7.2",
+        "sparse-dot-topn==1.1.5",
+        "datasketch==1.8.0",
+        "networkx==3.6.1",
+        "faker==37.12.0",
+        "catalogue==2.0.10",
+        "nameparser==1.1.3",
+        "cleanco==2.3",
+        "nltk==3.9.3",
+    ],
+]
+commands = [
+    ["pytest", "tests/unit/", "-q", "--cov=liken", "--cov-append"],
+    ["pytest", "tests/integration/", "--backend", "modin", "-vv", "--cov=liken", "--cov-append"],
+]

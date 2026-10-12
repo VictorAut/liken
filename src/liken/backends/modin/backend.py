@@ -12,7 +12,7 @@ class ModinBackend(Backend):
     def is_match(self, df):
         try:
             import modin.pandas as mpd
-        except ImportError:
+        except Exception:
             return False
         return isinstance(df, mpd.DataFrame)
 

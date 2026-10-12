@@ -14,7 +14,7 @@ class DaskBackend(Backend):
     def is_match(self, df):
         try:
             import dask.dataframe as dd
-        except ImportError:
+        except Exception:
             return False
         return isinstance(df, dd.DataFrame)
 

@@ -10,10 +10,12 @@ SPEC*
 **/__pycache__/*
 .python-version
 
-.coverage
+.coverage*
 htmlcov/
 coverage.*
 
 site/
 
 .memsearch
+
+scripts/benchmarks/results/

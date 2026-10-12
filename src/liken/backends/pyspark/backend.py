@@ -13,7 +13,7 @@ class PysparkBackend(Backend):
         try:
             import pyspark.sql as spark
             from pyspark.sql import Row
-        except ImportError:
+        except Exception:
             return False
 
         if isinstance(df, spark.DataFrame):

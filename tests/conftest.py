@@ -1,24 +1,18 @@
 from unittest.mock import Mock
 from unittest.mock import create_autospec
 
-import dask.dataframe as dd
-import modin.pandas as mpd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
-import ray
-from dask.distributed import Client
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.functions import monotonically_increasing_id
-from pyspark.sql.functions import row_number
-from pyspark.sql.types import LongType
-from pyspark.sql.types import StringType
-from pyspark.sql.window import Window
 
 from liken.core.deduper import BaseDeduper
 from liken.datasets import fake_10
+
+
+# dask, modin, ray and pyspark are optional extras. They are imported
+# inside the branches that use them so integration tests collect and run
+# in an environment with only one backend installed.
 
 
 # ADDITIONAL DATA COLUMNS:
@@ -56,6 +50,8 @@ def spark_session(request):
         yield None
         return
 
+    from pyspark.sql import SparkSession
+
     spark = (
         SparkSession.builder.master("local[1]")
         .appName("local-tests")
@@ -79,6 +75,8 @@ def ray_session(request):
         yield
         return
 
+    import ray
+
     ray.init(
         num_cpus=2,
     )
@@ -93,6 +91,8 @@ def dask_client(request):
     if backend != "dask":
         yield
         return
+
+    from dask.distributed import Client
 
     client = Client(
         n_workers=2,
@@ -143,6 +143,10 @@ def deduplication_mock():
 
 @pytest.fixture
 def mock_spark_session():
+    pytest.importorskip("pyspark")
+
+    from pyspark.sql import SparkSession
+
     return create_autospec(SparkSession)
 
 
@@ -154,23 +158,36 @@ class Helpers:
         self.backend = request_object.config.getoption("--backend")
         self.spark_session = spark_session
 
+    @staticmethod
+    def _pandas_missing_to_none(value):
+        """Map pandas missing values to None.
+
+        pandas 2 uses pd.NA; pandas 3's str dtype stores missing values
+        as nan. Both mean "no value here" to the tests.
+        """
+        if value is pd.NA or value != value:
+            return None
+        return value
+
     def get_column_as_list(self, df, col: str):
 
         if self.backend == "pandas":
-            return [None if v is pd.NA else v for v in list(df[col])]
+            return [self._pandas_missing_to_none(v) for v in list(df[col])]
 
         if self.backend == "polars":
             return list(df[col])
 
         if self.backend == "modin":
-            return [None if v is pd.NA else v for v in list(df[col])]
+            return [self._pandas_missing_to_none(v) for v in list(df[col])]
 
         if self.backend == "ray":
             return [row[col] for row in df.take_all()]
 
         if self.backend == "dask":
+            import dask.dataframe as dd
+
             df = df.compute() if isinstance(df, dd.DataFrame) else df
-            return [None if v is pd.NA else v for v in list(df[col])]
+            return [self._pandas_missing_to_none(v) for v in list(df[col])]
 
         if self.backend == "pyspark":
             return [value[col] for value in df.select(col).collect()]
@@ -220,6 +237,13 @@ class Helpers:
             return df.map_batches(add_col, batch_format="pandas")
 
         if self.backend == "pyspark":
+            from pyspark.sql import functions as F
+            from pyspark.sql.functions import monotonically_increasing_id
+            from pyspark.sql.functions import row_number
+            from pyspark.sql.types import LongType
+            from pyspark.sql.types import StringType
+            from pyspark.sql.window import Window
+
             if dtype is int:
                 _type = LongType()
             if dtype is str:
@@ -242,13 +266,19 @@ class Helpers:
             df = pl.DataFrame(schema=schema, data=data, orient="row")
 
         if self.backend == "modin":
+            import modin.pandas as mpd
+
             df = mpd.DataFrame(columns=schema, data=data)
 
         if self.backend == "dask":
+            import dask.dataframe as dd
+
             df = pd.DataFrame(columns=schema, data=data)
             df = dd.from_pandas(df)
 
         if self.backend == "ray":
+            import ray
+
             df = pd.DataFrame(columns=schema, data=data)
 
             df = ray.data.from_pandas(df)

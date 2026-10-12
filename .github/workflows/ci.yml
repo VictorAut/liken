@@ -1,9 +1,18 @@
 name: ci
 
 on:
+  workflow_dispatch: # manual full run; escape hatch if a path filter misjudges
+  workflow_call:
   pull_request:
-  push:
-    branches: [ main ]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tox.toml"
+      - "Taskfile.yml"
+      - ".github/actions/setup/**"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read
@@ -27,26 +36,99 @@ jobs:
         run: |
           task lint
 
-  test-coverage:
+  test-extras:
     runs-on: ubuntu-latest
     needs: linting
-    timeout-minutes: 45
-    permissions:
-      pull-requests: write
+    timeout-minutes: 30
 
     strategy:
       matrix:
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14", "3.15" ]
+        extras: [ "minimal", "all", "dask", "ray", "pyspark", "modin" ]
+        exclude:
+          # no cp315 wheels for ray (which modin and all pull in)
+          - { python-version: "3.15", extras: "all" }
+          - { python-version: "3.15", extras: "ray" }
+          - { python-version: "3.15", extras: "modin" }
 
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
+          install-liken: ${{ matrix.python-version != '3.15' }}
 
-      - name: tests | run
+      - name: test | optional imports
         run: |
-          task coverage COV_FORMAT=xml
+          task test-extras EXTRAS=${{ matrix.extras }} PY_VERSION=${{ matrix.python-version }}
+
+  test-matrix:
+    runs-on: ubuntu-latest
+    needs: linting
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { env: pandas-floor, python-version: "3.11" }
+          - { env: polars-floor, python-version: "3.11" }
+          - { env: pyarrow-floor, python-version: "3.11" }
+          - { env: pyspark-floor, python-version: "3.11" }
+          - { env: dask-floor, python-version: "3.11" }
+          - { env: ray-floor, python-version: "3.11" }
+          - { env: modin-floor, python-version: "3.11" }
+          - { env: pandas-latest, python-version: "3.15" }
+          - { env: polars-latest, python-version: "3.15" }
+          - { env: pyarrow-latest, python-version: "3.15" }
+          - { env: pyspark-latest, python-version: "3.15" }
+          - { env: dask-latest, python-version: "3.15" }
+          - { env: ray-latest, python-version: "3.14" }
+          - { env: modin-latest, python-version: "3.14" }
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+          install-liken: ${{ matrix.python-version != '3.15' }}
+
+      - name: test | dependency matrix
+        run: |
+          task test-matrix ENV=${{ matrix.env }}
+
+      - name: coverage | upload data file
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-${{ matrix.env }}
+          path: .coverage-${{ matrix.env }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  coverage-report:
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          python-version: '3.14'
+
+      - name: coverage | download data files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: .
+
+      - name: coverage | combine
+        run: |
+          uv run coverage combine .coverage-*
+          uv run coverage xml
 
       - name: coverage | upload to codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
@@ -78,23 +160,3 @@ jobs:
           header: Coverage Report
           hide_and_recreate: true
           path: coverage.md
-
-  test-extras:
-    runs-on: ubuntu-latest
-    needs: test-coverage
-    timeout-minutes: 30
-
-    strategy:
-      matrix:
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
-        extras: [ "minimal", "all", "dask", "ray", "pyspark", "modin" ]
-
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: test | optional imports
-        run: |
-          task test-extras EXTRAS=${{ matrix.extras }} PY_VERSION=${{ matrix.python-version }}

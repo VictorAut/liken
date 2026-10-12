@@ -3,7 +3,7 @@
 version: "3"
 
 vars:
-  ALL_PATHS: src/ tests/
+  ALL_PATHS: src/ tests/ scripts/
   UV: uv run --active --all-extras
   BACKENDS:
     - pandas
@@ -30,10 +30,10 @@ tasks:
   lint:
     desc: lint and type-check
     cmds:
-      - uv run ruff check --select I src/ tests/
-      - uv run ruff format --check src/ tests/
-      - uv run ruff check src/ tests/
-      - uv run mypy src/
+      - uv run ruff check --select I src/ tests/ scripts/
+      - uv run ruff format --check src/ tests/ scripts/
+      - uv run ruff check src/ tests/ scripts/
+      - uv run mypy src/ scripts/
 
   test-unit:
     desc: Runs unit tests
@@ -56,13 +56,24 @@ tasks:
       - uv tool install tox --with tox-uv
       - tox run -e {{.EXTRAS}}-{{.PY_VERSION}}
 
+  test-matrix:
+    desc: Runs dependency matrix envs; ENV=<name> for one
+    vars:
+      ENV: "{{.ENV | default \"\"}}"
+    cmds:
+      - uv tool install tox --with tox-uv
+      - cmd: if [ -n "{{.ENV}}" ]; then tox run -e {{.ENV}}; else tox run-parallel
+          -m matrix; fi
+
   test:
-    desc: Runs unit and integration tests
+    desc: Runs unit and integration tests against the lock only (local
+      fast-iteration tooling; CI tests the matrix)
     cmds:
       - task test-unit && task test-integration
 
   coverage:
-    desc: Runs integration tests
+    desc: Runs coverage against the lock only (local fast-iteration tooling;
+      CI coverage comes from the matrix)
     vars:
       COV_FORMAT: "{{.COV_FORMAT | default \"html\"}}"
     cmds:

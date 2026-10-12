@@ -12,11 +12,19 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: check-toml
+      - id: check-yaml
   - repo: local
     hooks:
       - id: uv-lock-check
         name: uv lock --check
         language: system
         entry: uv lock --check
+        pass_filenames: false
+        always_run: true
+      - id: uv-matrix-floors-check
+        name: backend floors agree (tox.toml vs pyproject.toml)
+        language: system
+        entry: uv run --no-sync python scripts/check_matrix_floors.py
         pass_filenames: false
         always_run: true
