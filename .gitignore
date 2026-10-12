@@ -17,3 +17,5 @@ coverage.*
 site/
 
 .memsearch
+
+benchmarks/results/
