@@ -27,10 +27,12 @@ from benchmarks.common import DEFAULT_SEED  # noqa: E402
 from benchmarks.common import DeduperEntry  # noqa: E402
 from benchmarks.common import build_run  # noqa: E402
 from benchmarks.common import load_data  # noqa: E402
+from benchmarks.common import now_iso  # noqa: E402
 from benchmarks.common import sample_data  # noqa: E402
 from benchmarks.common import select_entries  # noqa: E402
 from benchmarks.common import unique_path  # noqa: E402
 from benchmarks.common import validate_columns  # noqa: E402
+from benchmarks.common import write_results  # noqa: E402
 
 
 if TYPE_CHECKING:
@@ -50,6 +52,7 @@ __all__ = [
     "git_metadata",
     "load_data",
     "load_workload",
+    "now_iso",
     "prepare",
     "results_path",
     "run",
@@ -59,6 +62,7 @@ __all__ = [
     "source_name",
     "unique_path",
     "validate_columns",
+    "write_results",
 ]
 
 
