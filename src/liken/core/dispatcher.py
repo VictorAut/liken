@@ -5,6 +5,7 @@ from typing import Any
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 from liken.core.wrapper import DF
+from liken.exceptions import InvalidArgumentValueError
 
 
 def get_backend(df: Any) -> Backend:
@@ -18,7 +19,7 @@ def get_backend(df: Any) -> Backend:
             # backend is_match implementations only catch the optional-
             # dependency import; anything else must surface
             continue
-    raise ValueError(f"Unsupported dataframe type: {type(df)}")
+    raise InvalidArgumentValueError(f"Unsupported dataframe type: {type(df)}")
 
 
 # DISPATCHER:

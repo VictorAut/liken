@@ -2,6 +2,7 @@ from typing import final
 
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
+from liken.exceptions import InvalidArgumentValueError
 
 
 @final
@@ -26,7 +27,7 @@ class PysparkBackend(Backend):
 
     def create_df(self, data, schema, spark_session=None):
         if spark_session is None:
-            raise ValueError("Spark session required")
+            raise InvalidArgumentValueError("Spark session required")
         return spark_session.createDataFrame(data=data, schema=schema)
 
     def executor(self, spark_session=None):

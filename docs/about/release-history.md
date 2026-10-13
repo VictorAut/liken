@@ -2,6 +2,15 @@
 title: Release History
 ---
 
+## v0.12.2 (2026-10-13)
+
+**Misc**
+
+- Validation errors now carry liken-meaning exception classes.
+- Validation messages reworded.
+- Values that are `bool` are now rejected wherever a number or integer is
+  required (`threshold`, `frac`, `thresholds` items, `max_distance`).
+
 ## v0.12.1 (2026-10-13)
 
 **Misc**

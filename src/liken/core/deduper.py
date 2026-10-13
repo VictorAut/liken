@@ -23,6 +23,8 @@ from typing_extensions import override
 
 from liken.constants import CANONICAL_ID
 from liken.core.missing import is_missing
+from liken.validations import require_real_number
+from liken.validations import require_type
 
 
 if TYPE_CHECKING:
@@ -173,8 +175,7 @@ class SingleColumnMixin:
     """
 
     def validate(self, columns: Columns) -> None:
-        if not isinstance(columns, str):
-            raise ValueError("For single column dedupers, `columns` must be defined as a string")
+        require_type("columns", columns, str)
 
 
 class CompoundColumnMixin:
@@ -184,8 +185,7 @@ class CompoundColumnMixin:
     """
 
     def validate(self, columns: Columns) -> None:
-        if not isinstance(columns, tuple):
-            raise ValueError("For compound columns dedupers, `columns` must be defined as a tuple")
+        require_type("columns", columns, tuple)
 
 
 # PREDICATE DEDUPERS:
@@ -299,8 +299,6 @@ class ThresholdDeduper(BaseDeduper):
     """
 
     def __init__(self, threshold: float = 0.95, **kwargs):
+        threshold = require_real_number("threshold", threshold, low=0, high=1, low_inclusive=True, high_inclusive=False)
         super().__init__(threshold=threshold, **kwargs)
         self._threshold = threshold
-
-        if not (0 <= threshold < 1):
-            raise ValueError("The threshold value must be greater or equal to 0 and less than 1")

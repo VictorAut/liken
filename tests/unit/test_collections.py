@@ -313,12 +313,12 @@ def test_deduper_config_type_error():
 
 
 def test_invert_rejects_non_predicate_deduper():
-    with pytest.raises(TypeError, match="Only predicate dedupers support inversion"):
+    with pytest.raises(TypeError, match="`deduper` must be of type 'PredicateDeduper'"):
         ~lk.col("address").exact()
 
 
 def test_step_rejects_non_col():
-    with pytest.raises(TypeError, match="Must be an instance of Col"):
+    with pytest.raises(TypeError, match="`cols` must be of type 'Col'"):
         lk.pipeline().step("address")
 
 

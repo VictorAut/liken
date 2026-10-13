@@ -11,12 +11,12 @@ from typing import cast
 
 import pyarrow as pa
 
-from liken.constants import INVALID_EXPLORE_BACKEND
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
-from liken.validators import validate_explore_column_exists
+from liken.exceptions import InvalidArgumentValueError
+from liken.validations import validate_explore_column_exists
 
 
 if TYPE_CHECKING:
@@ -46,7 +46,9 @@ def run_explore(
     backend: Backend = get_backend(df)
 
     if backend.name not in _SUPPORTED_BACKENDS:
-        raise ValueError(INVALID_EXPLORE_BACKEND.format(backend.name))
+        raise InvalidArgumentValueError(
+            f"explore is only supported for the pandas, polars, modin and pyarrow backends, got '{backend.name}'"
+        )
 
     df_columns: list[str] = _column_labels(df, backend.name)
 

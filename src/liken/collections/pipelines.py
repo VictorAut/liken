@@ -14,7 +14,7 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.registries import dedupers_registry
 from liken.preprocessors import Preprocessor
-from liken.validators import validate_preprocessor_arg
+from liken.validations import require_type
 
 
 if TYPE_CHECKING:
@@ -367,8 +367,9 @@ class Col:
 
         columns, deduper, preprocessors = self._unit
 
-        if not isinstance(deduper, PredicateDeduper):
-            raise TypeError("Only predicate dedupers support inversion")
+        # `require_type` raises for a non-predicate deduper; the cast makes
+        # the guarantee visible to mypy for the inversion below.
+        deduper = cast("PredicateDeduper", require_type("deduper", deduper, PredicateDeduper))
 
         new_on = Col(columns)
         new_on._unit = PipelineUnit(columns, ~deduper, preprocessors)
@@ -492,10 +493,8 @@ class Pipeline:
 
         if isinstance(cols, list):
             cols_list = cols
-        elif isinstance(cols, Col):
-            cols_list: list[Col] = cast("list", [cols])
         else:
-            raise TypeError("Must be an instance of Col, used as `lk.col(...)` or a list of the same.")
+            cols_list: list[Col] = [require_type("cols", cols, Col)]
 
         self._cols.append(cols_list)
 
@@ -545,6 +544,6 @@ def resolve_preprocessors(
     preprocessors: InputPreprocessor | tuple[Preprocessor, ...],
 ) -> list[Preprocessor]:
     if isinstance(preprocessors, (list, tuple)):
-        return [validate_preprocessor_arg(p) for p in preprocessors]
+        return [require_type("preprocessor", p, Preprocessor) for p in preprocessors]
     # i.e. a single preprocessor
-    return [validate_preprocessor_arg(preprocessors)]
+    return [require_type("preprocessor", preprocessors, Preprocessor)]

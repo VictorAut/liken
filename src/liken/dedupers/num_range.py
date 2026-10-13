@@ -1,6 +1,5 @@
 """num range predicate deduper"""
 
-import math
 from typing import ClassVar
 from typing import TypeAlias
 from typing import cast
@@ -15,6 +14,8 @@ from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentValueError
+from liken.validations import require_real_number
 
 
 Number: TypeAlias = float | int
@@ -35,14 +36,14 @@ class NumRange(
 
     def __init__(self, min: Number | None = None, max: Number | None = None):
 
-        _validate_bound("min", min)
-        _validate_bound("max", max)
+        min = require_real_number("min", min, allow_none=True)
+        max = require_real_number("max", max, allow_none=True)
 
         if min is None and max is None:
-            raise ValueError("At least one of `min` or `max` must be given; got a fully unbounded range")
+            raise InvalidArgumentValueError("At least one of `min` or `max` must be given; got a fully unbounded range")
 
         if min is not None and max is not None and min > max:
-            raise ValueError("`min` must be less than or equal to `max`")
+            raise InvalidArgumentValueError("`min` must be less than or equal to `max`")
 
         super().__init__(min=min, max=max)
         self._min: Number | None = min
@@ -106,10 +107,9 @@ def num_range(min: Number | None = None, max: Number | None = None) -> BaseDedup
         Instance of `BaseDeduper`.
 
     Raises:
-        ValueError: if both bounds are `None` (a fully open range), if
-            `min > max` (an empty interval), or if a bound is not a real
-            number (`True`/`False`, a string, NaN or another non-numeric
-            type).
+        InvalidArgumentTypeError: if a bound is not a real number
+        InvalidArgumentValueError: if both bounds are `None` (i.e. a fully open
+            range), if `min > max`, or if a bound is `NaN`.
 
     Example:
         Applied to a single column:
@@ -151,17 +151,3 @@ def num_range(min: Number | None = None, max: Number | None = None) -> BaseDedup
             +------+-----------------+---------+
     """
     return NumRange(min=min, max=max)
-
-
-def _validate_bound(name: str, bound: Number | None) -> None:
-    """Reject a bound that is not a real number or an explicit `None`."""
-    if bound is None:
-        return
-
-    # `bool` is an `int` subclass, so it needs its own guard before the
-    # type check.
-    if isinstance(bound, bool) or not isinstance(bound, (int, float)):
-        raise ValueError(f"`{name}` must be a real number")
-
-    if math.isnan(bound):
-        raise ValueError(f"`{name}` must be a real number")

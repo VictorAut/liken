@@ -4,6 +4,7 @@ import pyarrow as pa
 import pytest
 
 import liken as lk
+from liken.exceptions import InvalidArgumentValueError
 
 
 try:
@@ -38,7 +39,8 @@ def test_explore_rejects_unsupported_backend():
     df = dd.from_pandas(make_pandas_df(), npartitions=1)
 
     with pytest.raises(
-        ValueError, match="explore is only supported for the pandas, polars, modin and pyarrow backends"
+        InvalidArgumentValueError,
+        match="explore is only supported for the pandas, polars, modin and pyarrow backends",
     ):
         lk.dedupe(df).explore(["address"])
 
