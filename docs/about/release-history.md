@@ -2,6 +2,13 @@
 title: Release History
 ---
 
+## v0.12.1 (2026-10-13)
+
+**Misc**
+
+- Adds profilers as part of developer tooling
+
+
 ## v0.12.0 (2026-10-12)
 
 **Breaking changes**

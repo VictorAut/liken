@@ -1015,7 +1015,7 @@ wheels = [
 
 [[package]]
 name = "liken"
-version = "0.12.0"
+version = "0.12.1"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [
