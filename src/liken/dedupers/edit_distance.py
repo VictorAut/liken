@@ -13,6 +13,7 @@ from liken.core.deduper import SingleColumnMixin
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
+from liken.validations import require_int
 
 
 @final
@@ -34,11 +35,9 @@ class EditDistance(
     _NAME: ClassVar[str] = "edit_distance"
 
     def __init__(self, max_distance: int = 2):
+        max_distance = require_int("max_distance", max_distance, low=0)
         super().__init__(max_distance=max_distance)
         self._max_distance = max_distance
-
-        if not isinstance(max_distance, int) or max_distance < 0:
-            raise ValueError("The max_distance value must be a non-negative integer")
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
@@ -95,6 +94,10 @@ def edit_distance(max_distance: int = 2) -> BaseDeduper:
 
     Returns:
         Instance of `BaseDeduper`.
+
+    Raises:
+        InvalidArgumentTypeError: if `max_distance` is not an integer.
+        InvalidArgumentValueError: if `max_distance` is negative.
 
     Example:
         Applied to a single column:

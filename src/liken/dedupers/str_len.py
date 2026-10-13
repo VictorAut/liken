@@ -13,6 +13,8 @@ from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentValueError
+from liken.validations import require_int
 
 
 @final
@@ -32,11 +34,11 @@ class StrLen(
 
     def __init__(self, min_len: int = 0, max_len: int | None = None):
 
-        _validate_len("min_len", min_len, allow_none=False)
-        _validate_len("max_len", max_len, allow_none=True)
+        min_len = require_int("min_len", min_len)
+        max_len = require_int("max_len", max_len, allow_none=True)
 
         if max_len is not None and min_len > max_len:
-            raise ValueError("`min_len` must be less than or equal to `max_len`")
+            raise InvalidArgumentValueError("`min_len` must be less than or equal to `max_len`")
 
         super().__init__(min_len=min_len, max_len=max_len)
         self._min_len = min_len
@@ -107,9 +109,10 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
         Instance of `BaseDeduper`.
 
     Raises:
-        ValueError: if `min_len` or `max_len` is not an integer (`None` is
-            allowed only for `max_len`), or if `min_len > max_len` (an
-            empty interval).
+        InvalidArgumentTypeError: if `min_len` or `max_len` is not an
+            integer (`None` is allowed only for `max_len`).
+        InvalidArgumentValueError: if `min_len > max_len` (an empty
+            interval).
 
     Example:
         Applied to a single column:
@@ -149,16 +152,3 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
             +------+-----------+---------------------+
     """
     return StrLen(min_len=min_len, max_len=max_len)
-
-
-def _validate_len(name: str, bound: int | None, *, allow_none: bool) -> None:
-    """Reject a bound that is not an integer, or not an explicit `None`."""
-    if bound is None:
-        if not allow_none:
-            raise ValueError(f"`{name}` must be an integer, not `None`")
-        return
-
-    # `bool` is an `int` subclass, so it needs its own guard before the
-    # type check.
-    if isinstance(bound, bool) or not isinstance(bound, int):
-        raise ValueError(f"`{name}` must be an integer")

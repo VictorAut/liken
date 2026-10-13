@@ -17,6 +17,8 @@ from liken.dedupers.isin import isin
 from liken.dedupers.jaccard import Jaccard
 from liken.dedupers.str_contains import StrContains
 from liken.dedupers.str_startswith import StrStartsWith
+from liken.exceptions import InvalidArgumentTypeError
+from liken.exceptions import InvalidArgumentValueError
 
 
 ############
@@ -113,7 +115,7 @@ def test_single_column_validation_accepts_str():
 
 
 def test_single_column_validation_rejects_tuple():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentTypeError):
         StrStartsWith("x").validate(("a", "b"))
 
 
@@ -122,7 +124,7 @@ def test_compound_column_validation_accepts_tuple():
 
 
 def test_compound_column_validation_rejects_str():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentTypeError):
         Jaccard().validate("a")
 
 
@@ -542,17 +544,18 @@ def test_edit_distance_rejects_long_values_with_many_edits():
 
 
 def test_edit_distance_negative_max_distance_raises_value_error():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentValueError, match="`max_distance` must be an integer in the range \\[0, inf\\)"):
         lk.edit_distance(max_distance=-1)
 
 
-def test_edit_distance_non_integer_max_distance_raises_value_error():
-    with pytest.raises(ValueError):
-        lk.edit_distance(max_distance=1.5)
+@pytest.mark.parametrize("value", [1.5, "2", True, np.int64(2)])
+def test_edit_distance_non_integer_max_distance_raises_type_error(value):
+    with pytest.raises(InvalidArgumentTypeError, match="`max_distance` must be an integer, got"):
+        lk.edit_distance(max_distance=value)
 
 
 def test_edit_distance_requires_single_string_column():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentTypeError):
         EditDistance().validate(("a", "b"))
 
 
@@ -654,15 +657,27 @@ def test_num_range_rejects_min_above_max():
         {"min": False},
         {"min": "500"},
         {"max": "500"},
+    ],
+    ids=["min-bool", "max-bool", "min-false", "min-str", "max-str"],
+)
+def test_num_range_rejects_non_number_bounds(kwargs):
+    """A bound that is not a real number — bool, str — is refused at construction."""
+    with pytest.raises(InvalidArgumentTypeError, match="must be a real number, got"):
+        lk.num_range(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
         {"min": float("nan")},
         {"max": float("nan")},
         {"min": float("nan"), "max": 5},
     ],
-    ids=["min-bool", "max-bool", "min-false", "min-str", "max-str", "min-nan", "max-nan", "min-nan-with-max"],
+    ids=["min-nan", "max-nan", "min-nan-with-max"],
 )
-def test_num_range_rejects_non_real_bounds(kwargs):
-    """A bound that is not a real number — bool, str, NaN — is refused at construction."""
-    with pytest.raises(ValueError):
+def test_num_range_rejects_nan_bounds(kwargs):
+    """A NaN bound is refused at construction as an invalid value."""
+    with pytest.raises(InvalidArgumentValueError, match="must be a real number, got NaN"):
         lk.num_range(**kwargs)
 
 
@@ -761,7 +776,7 @@ def test_num_range_negated_fallback_never_matches_missing():
 
 
 def test_num_range_requires_single_string_column():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentTypeError):
         lk.num_range(min=1).validate(("a", "b"))
 
 
@@ -792,7 +807,7 @@ def test_num_range_str_renders_name_and_bounds():
 )
 def test_str_len_rejects_non_integer_bounds(kwargs):
     """A bound that is not an integer — bool, str, float, `None` — is refused at construction."""
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentTypeError, match="must be an integer, got"):
         lk.str_len(**kwargs)
 
 

@@ -11,14 +11,15 @@ from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
 from liken.dedupers.exact import exact
+from liken.exceptions import InvalidArgumentValueError
 from liken.explore import DEFAULT_EXPLORE_THRESHOLDS
 from liken.explore import run_explore
-from liken.validators import validate_columns_arg
-from liken.validators import validate_explore_columns_arg
-from liken.validators import validate_frac_arg
-from liken.validators import validate_keep_arg
-from liken.validators import validate_spark_arg
-from liken.validators import validate_thresholds_arg
+from liken.validations import require_real_number
+from liken.validations import validate_columns_arg
+from liken.validations import validate_explore_columns_arg
+from liken.validations import validate_keep_arg
+from liken.validations import validate_spark_arg
+from liken.validations import validate_thresholds_arg
 
 
 if TYPE_CHECKING:
@@ -182,7 +183,7 @@ class Dedupe:
                 `thresholds`, invalid `columns`, or a column not in the
                 dataframe.
         """
-        validate_frac_arg(frac)
+        frac = require_real_number("frac", frac, low=0, high=1, low_inclusive=False, high_inclusive=True)
         thresholds = validate_thresholds_arg(thresholds if thresholds is not None else DEFAULT_EXPLORE_THRESHOLDS)
         validate_explore_columns_arg(columns)
 
@@ -329,7 +330,7 @@ class Dedupe:
         """
 
         if n < 2:
-            raise ValueError("n must be >= 2")
+            raise InvalidArgumentValueError("n must be >= 2")
 
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")

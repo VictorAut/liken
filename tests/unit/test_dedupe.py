@@ -5,9 +5,10 @@ import pandas as pd
 import pytest
 
 import liken as lk
+from liken.exceptions import InvalidArgumentValueError
 from liken.liken import Dedupe
-from liken.validators import validate_keep_arg
-from liken.validators import validate_spark_arg
+from liken.validations import validate_keep_arg
+from liken.validations import validate_spark_arg
 
 
 @patch("liken.liken.CollectionsManager")
@@ -51,7 +52,7 @@ def test_no_apply_still_has_exact_apply_on_drop_duplicates(
 
 def test_canonicals_rejects_n_below_two(dataframe):
     dupe = Dedupe(dataframe)
-    with pytest.raises(ValueError, match="n must be >= 2"):
+    with pytest.raises(InvalidArgumentValueError, match="n must be >= 2"):
         dupe.canonicals(n=1)
 
 
@@ -65,11 +66,11 @@ def test_canonicals_before_canonicalize_raises(dataframe):
 
 
 def test_unsupported_dataframe_type_raises():
-    with pytest.raises(ValueError, match="Unsupported dataframe type: <class 'str'>"):
+    with pytest.raises(InvalidArgumentValueError, match="Unsupported dataframe type: <class 'str'>"):
         Dedupe("not-a-dataframe")
 
 
-# validators
+# validations
 
 
 @pytest.mark.parametrize("keep", ["first", "last"])
@@ -78,7 +79,7 @@ def test_validate_keep_arg_valid(keep):
 
 
 def test_validate_keep_arg_invalid():
-    with pytest.raises(ValueError, match="Invalid arg: keep arg must be one of 'first' or 'last'"):
+    with pytest.raises(ValueError, match=r"`keep` must be one of \('first', 'last'\), got 'middle'"):
         validate_keep_arg("middle")
 
 
@@ -88,7 +89,7 @@ def test_validate_spark_arg_valid(mock_spark_session):
 
 
 def test_validate_spark_arg_missing_session():
-    with pytest.raises(ValueError, match="Invalid arg: spark_session arg must be provided for a spark dataframe"):
+    with pytest.raises(ValueError, match="spark_session arg must be provided for a spark dataframe"):
         validate_spark_arg(None)
 
 
@@ -99,7 +100,7 @@ def test_validate_spark_arg_missing_session():
 def test_validate_columns_args_not_used(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
-    with pytest.raises(ValueError, match="Invalid arg: columns cannot be None"):
+    with pytest.raises(ValueError, match="columns cannot be None, a column label of tuple of column labels"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply(deduplication_mock)
         lk.canonicalize()  # <-- shouldn't be empty
@@ -109,7 +110,7 @@ def test_validate_columns_args_not_used(mock_wrap, deduplication_mock):
 def test_validate_columns_args_not_none(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
-    with pytest.raises(ValueError, match="Invalid arg: columns must be None"):
+    with pytest.raises(ValueError, match="columns must be None when using the dict API"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply({"address": deduplication_mock})  # <-- label here
         lk.canonicalize("address")  # <-- so should not be used here
@@ -119,7 +120,7 @@ def test_validate_columns_args_not_none(mock_wrap, deduplication_mock):
 def test_validate_columns_args_repeated(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
-    with pytest.raises(ValueError, match="Invalid arg: columns labels cannot be repeated"):
+    with pytest.raises(ValueError, match="columns labels cannot be repeated"):
         lk = Dedupe(Mock(spec=pd.DataFrame))
         lk.apply(deduplication_mock)
         lk.canonicalize(("email", "email"))  # <-- shouldn't be repeated

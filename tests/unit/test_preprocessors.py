@@ -86,7 +86,7 @@ def test_preprocessors_only_fill_missing():
     BAD_PREPROCESSORS,
 )
 def test_pipeline_rejects_invalid_global_preprocessor(bad_preprocessor):
-    with pytest.raises(TypeError, match="Invalid arg: preprocessor must be instance of Preprocessor"):
+    with pytest.raises(TypeError, match=r"`preprocessor` must be of type .Preprocessor., got"):
         lk.pipeline(preprocessors=[bad_preprocessor]).step(lk.col("email").exact())
 
 
@@ -95,7 +95,7 @@ def test_pipeline_rejects_invalid_global_preprocessor(bad_preprocessor):
     BAD_PREPROCESSORS,
 )
 def test_pipeline_rejects_invalid_step_preprocessor(bad_preprocessor):
-    with pytest.raises(TypeError, match="Invalid arg: preprocessor must be instance of Preprocessor"):
+    with pytest.raises(TypeError, match=r"`preprocessor` must be of type .Preprocessor., got"):
         lk.pipeline().step(
             lk.col("email").exact(),
             preprocessors=[bad_preprocessor],
@@ -107,7 +107,7 @@ def test_pipeline_rejects_invalid_step_preprocessor(bad_preprocessor):
     BAD_PREPROCESSORS,
 )
 def test_pipeline_rejects_invalid_on_preprocessor(bad_preprocessor):
-    with pytest.raises(TypeError, match="Invalid arg: preprocessor must be instance of Preprocessor"):
+    with pytest.raises(TypeError, match=r"`preprocessor` must be of type .Preprocessor., got"):
         lk.pipeline().step(lk.col("email", preprocessors=[bad_preprocessor]).exact())
 
 

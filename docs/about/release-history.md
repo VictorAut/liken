@@ -2,6 +2,41 @@
 title: Release History
 ---
 
+## v0.12.2 (2026-10-13)
+
+**Breaking changes**
+
+- Validation errors now carry liken-meaning exception classes. New
+  `liken.exceptions.InvalidArgumentError` base, with
+  `InvalidArgumentTypeError` (subclasses `TypeError`) and
+  `InvalidArgumentValueError` (subclasses `ValueError`). `InvalidDeduperError`
+  now also subclasses `InvalidArgumentError`. Seven sites previously raised
+  `ValueError` for wrong argument *types* and now raise a `TypeError`
+  subclass; `except ValueError` handlers at these sites must change:
+    - `edit_distance`: wrong-type `max_distance`.
+    - `str_len`: wrong-type or disallowed-`None` length bounds.
+    - `num_range`: wrong-type bounds.
+    - single-column and compound-column deduper `columns` wrong type.
+    - `Dedupe.explore` `frac` wrong type.
+    - `Dedupe.explore` `thresholds` non-list or non-number items.
+    - `Dedupe.explore` threshold deduper `threshold` wrong type (previously
+      an opaque native `TypeError`).
+- Validation messages reworded; the `Invalid arg: ` prefix and the message
+  registry are gone. Tests pinning the old texts must update.
+- Values that are `bool` are now rejected wherever a number or integer is
+  required (`threshold`, `frac`, `thresholds` items, `max_distance`).
+  `np.float32` and `np.int64` scalars are rejected by `frac`, `threshold` and
+  `thresholds` items, which previously accepted them.
+- `liken.validators` renamed to `liken.validations` (internal module, import
+  path changed; no deprecation shim).
+
+**Features**
+
+- Shared validation primitives `require_type`, `require_real_number`,
+  `require_int` and `require_choice` in `liken.validations`, used by every
+  converted check; bounds and type errors are now reported with a uniform
+  message style.
+
 ## v0.12.1 (2026-10-13)
 
 **Misc**
