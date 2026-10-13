@@ -312,6 +312,30 @@ def validate_columns(df: pd.DataFrame, entries: Sequence[DeduperEntry]) -> None:
 # TIMED RUNNER:
 
 
+def build_run(df: pd.DataFrame, entry: DeduperEntry) -> Dedupe:
+    """Build one pipeline run: the `Dedupe` object with the entry applied.
+
+    Shared by `run_timed` and the profiling scripts, so the build is
+    reusable around a profiler.
+
+    Args:
+        df: The dataframe to deduplicate.
+        entry: The registry entry to run.
+
+    Returns:
+        The `Dedupe` object with the pipeline applied, ready to canonicalize.
+    """
+
+    lk = Dedupe(df)
+
+    # Single-column dedupers validate against a plain string, not a 1-tuple.
+    columns: str | tuple[str, ...] = entry.columns[0] if len(entry.columns) == 1 else entry.columns
+
+    lk.apply(Pipeline().step(getattr(col(columns), entry.method)(*entry.args, **entry.kwargs)))
+
+    return lk
+
+
 def run_timed(df: pd.DataFrame, entry: DeduperEntry) -> float:
     """Build and run one pipeline, timing `canonicalize()` only.
 
@@ -326,12 +350,7 @@ def run_timed(df: pd.DataFrame, entry: DeduperEntry) -> float:
         Elapsed seconds for `canonicalize()`.
     """
 
-    lk = Dedupe(df)
-
-    # Single-column dedupers validate against a plain string, not a 1-tuple.
-    columns: str | tuple[str, ...] = entry.columns[0] if len(entry.columns) == 1 else entry.columns
-
-    lk.apply(Pipeline().step(getattr(col(columns), entry.method)(*entry.args, **entry.kwargs)))
+    lk = build_run(df, entry)
 
     start = time.perf_counter()
     lk.canonicalize()

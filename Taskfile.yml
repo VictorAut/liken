@@ -87,3 +87,10 @@ tasks:
     desc: locally build and serve zensical
     cmds:
       - uv run zensical serve
+
+  profile:
+    desc: First-look profile of one canonicalize run
+    vars:
+      ARGS: '{{.ARGS | default "--deduper fuzzy --size 10000"}}'
+    cmds:
+      - uv run --active python scripts/profiling/profile.py {{.ARGS}}
