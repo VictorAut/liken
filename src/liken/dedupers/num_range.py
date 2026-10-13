@@ -108,10 +108,8 @@ def num_range(min: Number | None = None, max: Number | None = None) -> BaseDedup
 
     Raises:
         InvalidArgumentTypeError: if a bound is not a real number
-            (`True`/`False`, a string or another non-numeric type).
-        InvalidArgumentValueError: if both bounds are `None` (a fully open
-            range), if `min > max` (an empty interval), or if a bound is
-            `NaN`.
+        InvalidArgumentValueError: if both bounds are `None` (i.e. a fully open
+            range), if `min > max`, or if a bound is `NaN`.
 
     Example:
         Applied to a single column:

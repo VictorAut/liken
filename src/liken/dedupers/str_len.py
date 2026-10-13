@@ -110,9 +110,8 @@ def str_len(min_len: int = 0, max_len: int | None = None) -> BaseDeduper:
 
     Raises:
         InvalidArgumentTypeError: if `min_len` or `max_len` is not an
-            integer (`None` is allowed only for `max_len`).
-        InvalidArgumentValueError: if `min_len > max_len` (an empty
-            interval).
+            integer (`None` is allowed for `max_len`).
+        InvalidArgumentValueError: if `min_len > max_len`
 
     Example:
         Applied to a single column:
