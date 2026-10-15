@@ -75,19 +75,27 @@ class DaskExecutor(Executor):
         drop_canonical_id: bool,
         id: str | None = None,
     ) -> pd.DataFrame:
+        from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
+        from liken.collections.dict import DeduplicationDict as DictImpl
         from liken.liken import Dedupe
 
-        df = (
-            Dedupe(df)  # type: ignore[assignment]
-            .apply(dedupers)  # type: ignore[arg-type]
-            .canonicalize(
-                columns,
-                keep=keep,
-                drop_duplicates=drop_duplicates,
-                id=id,
-            )
-            .collect()
-        )
+        dupe = Dedupe(df)  # type: ignore[assignment]
+
+        # Internal handoff: the sequential API stores dedupers under the
+        # reserved `_default_` key, which a public dict apply must not use
+        # (U07). Re-apply them individually to keep the sequential semantics.
+        if isinstance(dedupers, DictImpl) and set(dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}:
+            for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
+                dupe.apply(deduper)
+        else:
+            dupe.apply(dedupers)  # type: ignore[arg-type]
+
+        df = dupe.canonicalize(
+            columns,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            id=id,
+        ).collect()  # type: ignore[assignment]
 
         if drop_canonical_id:
             return df.drop(columns=[CANONICAL_ID])

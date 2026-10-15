@@ -40,7 +40,7 @@ def test_explore_rejects_unsupported_backend():
 
     with pytest.raises(
         InvalidArgumentValueError,
-        match="explore is only supported for the pandas, polars, modin and pyarrow backends",
+        match="explore is not supported for the 'dask' backend",
     ):
         lk.dedupe(df).explore(["address"])
 

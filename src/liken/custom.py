@@ -1,5 +1,6 @@
 """Define custom dedupers"""
 
+import inspect
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -12,6 +13,7 @@ from typing_extensions import override
 
 from liken.core.deduper import ThresholdDeduper
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentTypeError
 from liken.types import SimilarPairIndices
 
 
@@ -91,6 +93,8 @@ def register(f: PairGenerator) -> Callable[..., _Custom]:
         Callable
 
     Raises:
+        InvalidArgumentTypeError: if the registered object is not callable or
+            has no inspectable signature.
         TypeError: If any positional arguments are used when calling the
             registered deduper.
 
@@ -153,10 +157,23 @@ def register(f: PairGenerator) -> Callable[..., _Custom]:
             Deduper(df).apply(my_func(True))                # Raises TypeError
     """
 
+    # U30: callable check and signature probe at registration, with clean
+    # named errors instead of AttributeError from @wraps or f.__name__.
+    if not callable(f):
+        raise InvalidArgumentTypeError(f"`f` must be callable, got '{type(f).__name__}'")
+    try:
+        inspect.signature(f)
+    except (TypeError, ValueError) as err:
+        raise InvalidArgumentTypeError(
+            f"`f` must be a callable with an inspectable signature, got '{type(f).__name__}'"
+        ) from err
+
+    f_name = getattr(f, "__name__", type(f).__name__)
+
     @wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> _Custom:
         if args:
-            raise TypeError(f"{f.__name__} must be called with keyword arguments only")
+            raise TypeError(f"{f_name} must be called with keyword arguments only")
         return _Custom(f, **kwargs)
 
     # Add to registry

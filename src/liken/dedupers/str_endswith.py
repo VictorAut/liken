@@ -11,6 +11,7 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.registries import dedupers_registry
+from liken.validations import require_non_empty_str
 
 
 @final
@@ -29,6 +30,7 @@ class StrEndsWith(
     _NAME: ClassVar[str] = "str_endswith"
 
     def __init__(self, pattern: str, case: bool = True):
+        pattern = require_non_empty_str("pattern", pattern)
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case

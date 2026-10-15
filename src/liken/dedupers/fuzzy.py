@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from typing import ClassVar
 from typing import Final
 from typing import Literal
+from typing import TypeAlias
 from typing import final
 
 import pyarrow as pa
@@ -17,6 +18,18 @@ from liken.core.deduper import ThresholdDeduper
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
+from liken.validations import require_choice
+from liken.validations import require_type
+
+
+ScorerName: TypeAlias = Literal[
+    "simple_ratio",
+    "partial_ratio",
+    "token_sort_ratio",
+    "token_set_ratio",
+    "weighted_ratio",
+    "quick_ratio",
+]
 
 
 # `100 * threshold` drifts by a few double-precision ULPs for some
@@ -28,6 +41,17 @@ from liken.types import SimilarPairIndices
 # meaningful precision.
 _BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
+_SCORERS: Final[dict[str, Callable]] = {
+    "simple_ratio": fuzz.ratio,
+    "partial_ratio": fuzz.partial_ratio,
+    "token_sort_ratio": fuzz.token_sort_ratio,
+    "token_set_ratio": fuzz.token_set_ratio,
+    "weighted_ratio": fuzz.WRatio,
+    "quick_ratio": fuzz.QRatio,
+}
+
+_SCORER_NAMES: Final[tuple[str, ...]] = tuple(_SCORERS)
+
 
 @final
 class Fuzzy(
@@ -37,33 +61,20 @@ class Fuzzy(
     """
     Fuzzy string matching deduper
 
-    An unknown scorer name raises `KeyError` in `get_scorer` rather than
-    falling back to a default scorer.
+    An unknown scorer name is rejected at construction.
     """
 
     _NAME: ClassVar[str] = "fuzzy"
 
-    _SCORERS: ClassVar[dict[str, Callable]] = {
-        "simple_ratio": fuzz.ratio,
-        "partial_ratio": fuzz.partial_ratio,
-        "token_sort_ratio": fuzz.token_sort_ratio,
-        "token_set_ratio": fuzz.token_set_ratio,
-        "weighted_ratio": fuzz.WRatio,
-        "quick_ratio": fuzz.QRatio,
-    }
+    _SCORERS: ClassVar[dict[str, Callable]] = _SCORERS
 
     def __init__(
         self,
         threshold: float = 0.95,
-        scorer: Literal[
-            "simple_ratio",
-            "partial_ratio",
-            "token_sort_ratio",
-            "token_set_ratio",
-            "weighted_ratio",
-            "quick_ratio",
-        ] = "simple_ratio",
+        scorer: ScorerName = "simple_ratio",
     ):
+        require_type("scorer", scorer, str)
+        require_choice("scorer", scorer, _SCORER_NAMES)
         super().__init__(
             threshold=threshold,
             scorer=scorer,
@@ -114,14 +125,7 @@ class Fuzzy(
 @dedupers_registry.register("fuzzy")
 def fuzzy(
     threshold: float = 0.95,
-    scorer: Literal[
-        "simple_ratio",
-        "partial_ratio",
-        "token_sort_ratio",
-        "token_set_ratio",
-        "weighted_ratio",
-        "quick_ratio",
-    ] = "simple_ratio",
+    scorer: ScorerName = "simple_ratio",
 ) -> BaseDeduper:
     """Near string deduplication.
 

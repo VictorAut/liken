@@ -8,6 +8,7 @@ from liken.core.registries import backends_registry
 @backends_registry.register("modin")
 class ModinBackend(Backend):
     name = "modin"
+    supports_explore = True
 
     def is_match(self, df):
         try:

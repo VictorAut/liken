@@ -1,3 +1,4 @@
+import warnings
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -5,6 +6,7 @@ import pandas as pd
 import pytest
 
 import liken as lk
+from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 from liken.liken import Dedupe
 from liken.validations import validate_keep_arg
@@ -50,10 +52,67 @@ def test_no_apply_still_has_exact_apply_on_drop_duplicates(
 # canonicals
 
 
+def test_re_enactment_after_drop_duplicates_reapplies_exact():
+    """U03: the exact fallback fires on every enact, not only the first.
+
+    The second enactment runs on a clean frame: `drop_duplicates` reset the
+    collection, so `canonicalize` must re-apply the exact fallback and group
+    the two equal "a" values.
+    """
+    df = pd.DataFrame({"a": ["x", "x", "y"], "b": ["p", "q", "r"]})
+
+    dupe = Dedupe(df)
+    dupe.apply(lk.exact()).drop_duplicates("b")  # no duplicates in "b"
+
+    dupe.canonicalize("a")
+
+    assert list(dupe.collect()["canonical_id"]) == [0, 0, 2]
+
+
 def test_canonicals_rejects_n_below_two(dataframe):
     dupe = Dedupe(dataframe)
-    with pytest.raises(InvalidArgumentValueError, match="n must be >= 2"):
+    with pytest.raises(InvalidArgumentValueError, match=r"`n` must be an integer in the range \[2, inf\), got 1"):
         dupe.canonicals(n=1)
+
+
+@pytest.mark.parametrize("n", ["2", 2.5, True, None])
+def test_canonicals_rejects_non_integer_n(n, dataframe):
+    """U17: `n` is type-checked before the bound."""
+    dupe = Dedupe(dataframe)
+    with pytest.raises(InvalidArgumentTypeError, match="`n` must be an integer, got"):
+        dupe.canonicals(n=n)
+
+
+def test_canonicalize_rejects_empty_id():
+    """U19: an empty `id` previously fell through to autoincrement."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentValueError, match="`id` must be a non-empty string, got ''"):
+        dupe.canonicalize("a", id="")
+
+
+def test_canonicalize_rejects_non_str_id():
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentTypeError, match="`id` must be of type 'str', got 'int'"):
+        dupe.canonicalize("a", id=1)
+
+
+def test_canonicalize_rejects_non_bool_drop_duplicates():
+    """U19: `drop_duplicates=0` was accepted silently and dropped nothing."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentTypeError, match="`drop_duplicates` must be of type 'bool', got 'int'"):
+        dupe.canonicalize("a", drop_duplicates=0)
+
+
+def test_synthesize_before_canonicalize_raises():
+    """U18: `synthesize` requires a prior `canonicalize`; the state error
+    comes before any frame work."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(RuntimeError, match=r"Run `\.canonicalize\(\)` first"):
+        dupe.synthesize()
 
 
 def test_canonicals_before_canonicalize_raises(dataframe):
@@ -63,6 +122,15 @@ def test_canonicals_before_canonicalize_raises(dataframe):
 
 
 # dispatch
+
+
+def test_spark_session_with_non_spark_frame_warns():
+    """U38: `spark_session` não nulo com frame não-spark gera aviso."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        Dedupe(pd.DataFrame({"a": [1, 2]}), spark_session=object())
+
+    assert any("spark_session" in str(w.message) for w in caught)
 
 
 def test_unsupported_dataframe_type_raises():
@@ -101,7 +169,7 @@ def test_validate_columns_args_not_used(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="columns cannot be None, a column label of tuple of column labels"):
-        lk = Dedupe(Mock(spec=pd.DataFrame))
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
         lk.apply(deduplication_mock)
         lk.canonicalize()  # <-- shouldn't be empty
 
@@ -111,7 +179,7 @@ def test_validate_columns_args_not_none(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="columns must be None when using the dict API"):
-        lk = Dedupe(Mock(spec=pd.DataFrame))
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
         lk.apply({"address": deduplication_mock})  # <-- label here
         lk.canonicalize("address")  # <-- so should not be used here
 
@@ -121,9 +189,101 @@ def test_validate_columns_args_repeated(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
     with pytest.raises(ValueError, match="columns labels cannot be repeated"):
-        lk = Dedupe(Mock(spec=pd.DataFrame))
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
         lk.apply(deduplication_mock)
         lk.canonicalize(("email", "email"))  # <-- shouldn't be repeated
+
+
+# U12: the type check precedes the mode rule, whatever the mode.
+
+
+@patch("liken.liken.wrap")
+def test_validate_columns_args_type_error_precedes_mode(mock_wrap, deduplication_mock):
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(TypeError, match="`columns` must be of type 'str' or 'tuple', got 'int'"):
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
+        lk.apply(deduplication_mock)
+        lk.canonicalize(123)
+
+
+@patch("liken.liken.wrap")
+def test_validate_columns_args_type_error_precedes_mode_in_dict(mock_wrap, deduplication_mock):
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(TypeError, match="`columns` must be of type 'str' or 'tuple', got 'list'"):
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
+        lk.apply({"address": deduplication_mock})
+        lk.canonicalize(["address"])
+
+
+@patch("liken.liken.wrap")
+def test_validate_columns_args_non_str_tuple_member_type_error(mock_wrap, deduplication_mock):
+    """D4: labels must be str; a non-str label is a type error, not accepted."""
+    mock_wrap.return_value = Mock()
+
+    with pytest.raises(TypeError, match="`columns` members must be of type 'str', got 'int'"):
+        lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
+        lk.apply(deduplication_mock)
+        lk.canonicalize((0,))
+
+
+# Boundary checks (U13, U46, U51):
+
+
+def test_enact_rejects_nonexistent_column_label():
+    """U13: `columns` labels are existence-checked at the frame boundary."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
+        dupe.drop_duplicates("nope")
+
+
+def test_enact_rejects_nonexistent_tuple_member():
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
+        dupe.drop_duplicates(("a", "nope"))
+
+
+def test_canonicalize_rejects_nonexistent_id():
+    """U13: `id` names an existing column."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
+        dupe.canonicalize("a", id="nope")
+
+
+def test_apply_rejects_nonexistent_dict_tuple_member():
+    """U13: dict tuple-key members are existence-checked at apply."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
+        dupe.apply({("a", "nope"): lk.exact()})
+
+
+def test_enact_rejects_zero_column_frame():
+    """U51: a zero-column frame is rejected at the enact boundary."""
+    dupe = Dedupe(pd.DataFrame())
+
+    with pytest.raises(ValueError, match="dataframe has no columns"):
+        dupe.drop_duplicates()
+
+
+def test_enact_accepts_zero_row_frame():
+    """U51: a zero-row frame stays accepted."""
+    dupe = Dedupe(pd.DataFrame({"a": [], "b": []}))
+
+    dupe.drop_duplicates("a")  # must not raise
+
+
+def test_enact_rejects_duplicate_frame_labels():
+    """U46: duplicate labels in the user frame are rejected at the enact
+    boundary, naming the labels."""
+    dupe = Dedupe(pd.DataFrame([[1, 2], [3, 4]], columns=["a", "a"]))
+
+    with pytest.raises(ValueError, match="dataframe has duplicate column labels: \\['a'\\]"):
+        dupe.drop_duplicates("a")
 
 
 # CollectionsManager
@@ -154,6 +314,7 @@ def test_canonicalize_calls(
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
+    mock_sm.validate_mode.side_effect = lambda columns: columns
 
     dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
@@ -188,6 +349,7 @@ def test_drop_duplicate_calls(
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
+    mock_sm.validate_mode.side_effect = lambda columns: columns
 
     dupe = Dedupe(dataframe)
     dupe._executor = mock_executor

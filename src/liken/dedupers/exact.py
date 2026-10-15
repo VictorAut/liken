@@ -10,6 +10,8 @@ from typing_extensions import override
 from liken.core.deduper import BaseDeduper
 from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentTypeError
+from liken.validations import require_type
 
 
 @final
@@ -25,8 +27,14 @@ class Exact(BaseDeduper):
 
     @override
     def validate(self, columns):
-        del columns  # Unused
-        pass
+        """Validate a single column label or a tuple of column labels."""
+        require_type("columns", columns, (str, tuple))
+        if isinstance(columns, tuple):
+            for label in columns:
+                if not isinstance(label, str):
+                    raise InvalidArgumentTypeError(
+                        f"`columns` members must be of type 'str', got '{type(label).__name__}'"
+                    )
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table):

@@ -12,6 +12,7 @@ from liken.core.registries import backends_registry
 @backends_registry.register("polars")
 class PolarsBackend(Backend):
     name = "polars"
+    supports_explore = True
 
     def is_match(self, df):
 
