@@ -10,9 +10,15 @@ from typing import TypeAlias
 from typing import cast
 from typing import final
 
+from liken.constants import INVALID_NO_DEDUPER_CHAINED_MSG
+from liken.constants import WARN_COL_RECHAINED_MSG
+from liken.constants import WARN_COL_REUSED_MSG
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentValueError
+from liken.exceptions import InvalidDeduperError
+from liken.exceptions import warn
 from liken.preprocessors import Preprocessor
 from liken.validations import require_type
 
@@ -37,15 +43,22 @@ PipelineCollection: TypeAlias = list[PipelineStep]
 
 InputPreprocessor: TypeAlias = Preprocessor | list[Preprocessor] | tuple[Preprocessor, ...]
 
+
+class _Inherit:
+    """Sentinel type for an omitted `preprocessors` argument."""
+
+
+_INHERIT_PREPROCESSORS: _Inherit = _Inherit()
+
 # PUBLIC ON API:
 
 
-def pipeline(preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()) -> Pipeline:
+def pipeline(preprocessors: InputPreprocessor = ()) -> Pipeline:
     """Convenience function for `Pipeline` collection."""
     return Pipeline(preprocessors)
 
 
-def col(columns: Columns, /, *, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()) -> Col:
+def col(columns: Columns, /, *, preprocessors: InputPreprocessor = ()) -> Col:
     """Convenience function for calling `Col` with a deduper."""
     return Col(columns, preprocessors=preprocessors)
 
@@ -332,9 +345,10 @@ class Col:
         """
         return self.__getattr__("num_range")(*args, **kwargs)
 
-    def __init__(self, columns: Columns, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
+    def __init__(self, columns: Columns, preprocessors: InputPreprocessor = ()):
         self._columns: Columns = columns
         self._unit: PipelineUnit
+        self._used_in_step: bool = False
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
 
     def __getattr__(self, attr: str) -> Callable[..., Col]:
@@ -348,10 +362,21 @@ class Col:
         if attr.startswith("__"):
             raise AttributeError(attr)
 
+        # An unset `_unit` is a chaining error, not a registry lookup.
+        if attr == "_unit":
+            raise InvalidDeduperError(INVALID_NO_DEDUPER_CHAINED_MSG)
+
         func = dedupers_registry.get(f"{attr}")
 
         def wrapper(*args: Any, **kwargs: Any) -> Col:
             deduper = func(*args, **kwargs)
+            # U28: the deduper's column validation is eager — the columns are
+            # known here, at construction.
+            deduper.validate(self._columns)
+            if "_unit" in self.__dict__:
+                # U24: chaining a second deduper keeps last-wins, but it must
+                # not happen silently.
+                warn(WARN_COL_RECHAINED_MSG)
             self._unit = PipelineUnit(self._columns, deduper, self._preprocessors)
             return self
 
@@ -377,22 +402,25 @@ class Col:
 
     @property
     def unit(self) -> PipelineUnit:
-        return self._unit
+        unit = self.__dict__.get("_unit")
+        if unit is None:
+            raise InvalidDeduperError(INVALID_NO_DEDUPER_CHAINED_MSG)
+        return unit
 
     def __str__(self) -> str:
-        """string representation
-
-        Parses a single Col or combinations of Col operated with `&`
-        """
+        """string representation of a single chained Col"""
         on: str = "lk.col"
 
         rep = ""
-        columns, deduper, _ = self._unit
+        columns, deduper, preprocessors = self._unit
         deduper_str: str = cast("str", str(deduper))
         if deduper_str.startswith("~"):
             deduper_str = deduper_str[1:]
             on = "~" + on
-        rep += f"{on}('{columns}').{deduper_str}"
+        col_str = f"{on}('{columns}')"
+        if preprocessors:
+            col_str = f"{on}('{columns}', preprocessors={[str(p) for p in preprocessors]})"
+        rep += f"{col_str}.{deduper_str}"
         return rep
 
 
@@ -414,7 +442,7 @@ class Pipeline:
         TypeError: if passed preprocessor not a member of `liken.preprocessors`
     """
 
-    def __init__(self, preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = ()):
+    def __init__(self, preprocessors: InputPreprocessor = ()):
         self._preprocessors: list[Preprocessor] = resolve_preprocessors(preprocessors)
         self._cols: list[list[Col]] = []
         self._steps: PipelineCollection = []
@@ -424,7 +452,7 @@ class Pipeline:
         cols: Col | list[Col],
         /,
         *,
-        preprocessors: InputPreprocessor | tuple[Preprocessor, ...] = (),
+        preprocessors: InputPreprocessor | None | _Inherit = _INHERIT_PREPROCESSORS,
     ) -> Self:
         """Define a deduplication pipeline step
 
@@ -437,6 +465,8 @@ class Pipeline:
             cols: `Col` deduper, or list of the same.
             preprocessors: a preprocessor, or list of preprocessors to apply the
                 whole step (i.e. to all dedupers if more than one deduper).
+                Omitted, the step inherits the pipeline's preprocessors. An
+                empty list or `None` means the step uses no preprocessors.
 
         Returns:
             Self
@@ -487,14 +517,25 @@ class Pipeline:
                     .step(lk.col("address").tfidf())  # this one still preprocessed with `lower`
                 )
         """
-        preprocessors_list: list[Preprocessor] = resolve_preprocessors(preprocessors)
-        if not preprocessors_list:
-            preprocessors_list = self._preprocessors
+        if isinstance(preprocessors, _Inherit):
+            preprocessors_list: list[Preprocessor] = self._preprocessors
+        else:
+            preprocessors_list = resolve_preprocessors(preprocessors)
 
         if isinstance(cols, list):
+            if not cols:
+                raise InvalidArgumentValueError("`cols` must be a non-empty list, got an empty list")
+            for member in cols:
+                require_type("cols", member, Col)
             cols_list = cols
         else:
             cols_list: list[Col] = [require_type("cols", cols, Col)]
+
+        # U24: reusing one Col across steps warns.
+        for col_unit in cols_list:
+            if col_unit._used_in_step:
+                warn(WARN_COL_REUSED_MSG)
+            col_unit._used_in_step = True
 
         self._cols.append(cols_list)
 
@@ -541,8 +582,10 @@ class Pipeline:
 
 
 def resolve_preprocessors(
-    preprocessors: InputPreprocessor | tuple[Preprocessor, ...],
+    preprocessors: InputPreprocessor | None,
 ) -> list[Preprocessor]:
+    if preprocessors is None:
+        return []
     if isinstance(preprocessors, (list, tuple)):
         return [require_type("preprocessor", p, Preprocessor) for p in preprocessors]
     # i.e. a single preprocessor

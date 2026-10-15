@@ -26,6 +26,11 @@ class InvalidDeduperError(InvalidArgumentError, TypeError):
         super().__init__(msg)
 
 
-def warn(msg: str) -> None:
-    """Emit a `UserWarning` with the given message."""
-    return warnings.warn(msg, category=UserWarning, stacklevel=2)
+def warn(msg: str, *, stacklevel: int = 3) -> None:
+    """Emit a `UserWarning` with the given message.
+
+    The default stack level attributes the warning to the user's call when
+    `warn` sits one liken frame below it. Callers further down the stack
+    pass a higher level.
+    """
+    return warnings.warn(msg, category=UserWarning, stacklevel=stacklevel)

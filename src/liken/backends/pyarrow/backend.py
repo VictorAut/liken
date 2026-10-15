@@ -12,6 +12,7 @@ from liken.core.registries import backends_registry
 @backends_registry.register("pyarrow")
 class PyarrowBackend(Backend):
     name = "pyarrow"
+    supports_explore = True
 
     def is_match(self, df):
 

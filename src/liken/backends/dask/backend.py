@@ -10,6 +10,7 @@ from liken.core.registries import backends_registry
 @backends_registry.register("dask")
 class DaskBackend(Backend):
     name = "dask"
+    supports_explore = False
 
     def is_match(self, df):
         try:

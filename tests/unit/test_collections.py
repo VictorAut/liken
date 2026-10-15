@@ -10,6 +10,8 @@ from liken.collections.pipelines import col
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken.core.deduper import BaseDeduper
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentTypeError
+from liken.exceptions import InvalidArgumentValueError
 from liken.preprocessors import Lower
 from liken.preprocessors import lower
 
@@ -39,9 +41,11 @@ def s3():
     return DummyDeduper()
 
 
-dedupers_registry.register("s1", func=lambda: s1)
-dedupers_registry.register("s2", func=lambda: s2)
-dedupers_registry.register("s3", func=lambda: s3)
+# The registry factories construct fresh instances; the `s1`/`s2`/`s3`
+# fixtures provide distinct instances for identity assertions.
+dedupers_registry.register("s1", func=DummyDeduper)
+dedupers_registry.register("s2", func=DummyDeduper)
+dedupers_registry.register("s3", func=DummyDeduper)
 
 #####################
 # DeduplicationDict tests
@@ -79,8 +83,18 @@ def test_dedupers_config_rejects_invalid_value_type():
 
 def test_dedupers_config_rejects_invalid_member_in_value(s1, s2, s3):
     config = DeduplicationDict()
-    with pytest.raises(InvalidDeduperError, match="Invalid type for dict value member"):
+    with pytest.raises(
+        InvalidDeduperError,
+        match=r"Invalid type for dict value member: at index 1 for key 'col': expected 'BaseDeduper', got 'str'",
+    ):
         config["col"] = [s1, "bad", s2, s3]
+
+
+def test_dict_api_rejects_preprocessor_with_explicit_message():
+    """U44/D3: a dict API permanece sem preprocessors e a mensagem os nomeia."""
+    sm = CollectionsManager()
+    with pytest.raises(InvalidDeduperError, match="preprocessors are not accepted in the dict API"):
+        sm.apply({"a": lower()})
 
 
 ################
@@ -188,6 +202,46 @@ def test_collections_manager_apply_rejects_invalid_type():
         sm.apply(123)
 
 
+def test_collections_manager_apply_rejects_empty_dict():
+    sm = CollectionsManager()
+    with pytest.raises(
+        InvalidDeduperError,
+        match="expected a non-empty dict of column labels to dedupers, got an empty dict",
+    ):
+        sm.apply({})
+
+
+def test_collections_manager_apply_rejects_empty_sequence_value(s1):
+    sm = CollectionsManager()
+    with pytest.raises(
+        InvalidDeduperError,
+        match="key 'a' maps to an empty sequence; expected at least one deduper",
+    ):
+        sm.apply({"a": []})
+
+
+def test_collections_manager_apply_rejects_zero_step_pipeline():
+    sm = CollectionsManager()
+    with pytest.raises(InvalidDeduperError, match="at least one step"):
+        sm.apply(lk.pipeline())
+
+
+def test_collections_manager_apply_rejects_reserved_default_key(s1):
+    sm = CollectionsManager()
+    with pytest.raises(InvalidDeduperError, match="reserved"):
+        sm.apply({SEQUENTIAL_API_DEFAULT_KEY: [s1]})
+
+
+def test_collections_manager_apply_rejection_does_not_set_has_applies():
+    """Um apply rejeitado não marca `has_applies`: o fallback do exact
+    continua a disparar no próximo enact."""
+    sm = CollectionsManager()
+    with pytest.raises(InvalidDeduperError):
+        sm.apply({})
+
+    assert sm.has_applies is False
+
+
 def test_collections_manager_apply_rejects_sequence_after_dict(s1, s2, s3):
     sm = CollectionsManager()
     sm.apply({"a": (s1,), "b": (s1, s2)})  # legal
@@ -215,10 +269,80 @@ def test_collections_manager_apply_dict_after_pipeline(s1):
     sm = CollectionsManager()
     sm.apply(Pipeline().step(col("a").s1()))
 
-    sm.apply({"email": (s1,)})
+    with pytest.warns(UserWarning, match="Replacing previously added 'Pipeline' deduper with a dict deduper"):
+        sm.apply({"email": (s1,)})
 
     result = sm.get()
     assert isinstance(result, DeduplicationDict)
+
+
+##################
+# Replace policy #
+##################
+
+
+def test_collections_manager_apply_warns_dict_after_dict(s1, s2):
+    """D1: dict-after-dict warns and replaces; it must not raise."""
+    sm = CollectionsManager()
+    sm.apply({"a": (s1,)})
+
+    with pytest.warns(UserWarning, match="Replacing previously added dict deduper with a new dict deduper"):
+        sm.apply({"b": (s2,)})
+
+    result = sm.get()
+    assert isinstance(result, DeduplicationDict)
+    assert "b" in result
+    assert "a" not in result
+
+
+def test_collections_manager_apply_warns_pipeline_after_sequence(s1):
+    sm = CollectionsManager()
+    sm.apply(s1)
+
+    with pytest.warns(UserWarning, match="Replacing previously added sequence deduper with a 'Pipeline' deduper"):
+        sm.apply(Pipeline().step(col("a").s1()))
+
+
+def test_collections_manager_apply_warns_pipeline_after_dict(s1):
+    sm = CollectionsManager()
+    sm.apply({"a": (s1,)})
+
+    with pytest.warns(UserWarning, match="Replacing previously added dict deduper with a 'Pipeline' deduper"):
+        sm.apply(Pipeline().step(col("a").s1()))
+
+
+def test_collections_manager_apply_warns_dict_after_pipeline(s1):
+    sm = CollectionsManager()
+    sm.apply(Pipeline().step(col("a").s1()))
+
+    with pytest.warns(UserWarning, match="Replacing previously added 'Pipeline' deduper with a dict deduper"):
+        sm.apply({"a": (s1,)})
+
+    assert isinstance(sm.get(), DeduplicationDict)
+
+
+def test_collections_manager_apply_rejects_sequence_after_pipeline(s1):
+    """U32: the rejection names the actual current mode, here 'Pipeline'."""
+    sm = CollectionsManager()
+    sm.apply(Pipeline().step(col("a").s1()))
+
+    with pytest.raises(
+        InvalidDeduperError,
+        match="Cannot apply a 'BaseDeduper' after a 'Pipeline' deduper has been set",
+    ):
+        sm.apply(s1)
+
+
+def test_collections_manager_apply_rejects_sequence_after_dict_names_dict(s1):
+    """U32: the rejection names the actual current mode, here the dict."""
+    sm = CollectionsManager()
+    sm.apply({"a": (s1,)})
+
+    with pytest.raises(
+        InvalidDeduperError,
+        match="Cannot apply a 'BaseDeduper' after a deduper mapping \\(dict\\) has been set",
+    ):
+        sm.apply(s1)
 
 
 #######
@@ -230,6 +354,49 @@ def test_collections_manager_get_returns_config():
     sm = CollectionsManager()
     result = sm.get()
     assert isinstance(result, DeduplicationDict)
+
+
+################
+# mode checks  #
+################
+
+
+def test_collections_manager_validate_mode_sequential_requires_columns(s1):
+    """U12/U54: sequential mode — including the exact fallback — requires
+    `columns`; the mode rule lives on the collections manager."""
+    sm = CollectionsManager()
+    sm.apply(s1)
+
+    with pytest.raises(InvalidArgumentValueError, match="columns cannot be None"):
+        sm.validate_mode(None)
+    with pytest.raises(InvalidArgumentValueError, match="columns cannot be None"):
+        sm.validate_mode(())
+
+
+def test_collections_manager_validate_mode_sequential_accepts_columns(s1):
+    sm = CollectionsManager()
+    sm.apply(s1)
+
+    assert sm.validate_mode("a") == "a"
+    assert sm.validate_mode(("a", "b")) == ("a", "b")
+
+
+def test_collections_manager_validate_mode_dict_requires_none(s1):
+    sm = CollectionsManager()
+    sm.apply({"a": (s1,)})
+
+    with pytest.raises(InvalidArgumentValueError, match="columns must be None when using the dict API"):
+        sm.validate_mode("a")
+    assert sm.validate_mode(None) is None
+
+
+def test_collections_manager_validate_mode_pipeline_requires_none(s1):
+    sm = CollectionsManager()
+    sm.apply(Pipeline().step(col("a").s1()))
+
+    with pytest.raises(InvalidArgumentValueError, match="columns must be None when using the dict API"):
+        sm.validate_mode("a")
+    assert sm.validate_mode(None) is None
 
 
 ##############
@@ -297,6 +464,17 @@ def test_collections_manager_reset_clears_collection(s1):
     assert sm.pretty_get() is None
 
 
+def test_collections_manager_reset_resets_has_applies(s1):
+    """U03: after a reset the exact fallback must be able to fire again."""
+    sm = CollectionsManager()
+    sm.apply(s1)
+    assert sm.has_applies
+
+    sm.reset()
+
+    assert not sm.has_applies
+
+
 ###########################
 # InvalidDeduperError #
 ###########################
@@ -320,6 +498,71 @@ def test_invert_rejects_non_predicate_deduper():
 def test_step_rejects_non_col():
     with pytest.raises(TypeError, match="`cols` must be of type 'Col'"):
         lk.pipeline().step("address")
+
+
+#######################
+# step argument checks #
+#######################
+
+
+def test_step_rejects_empty_list():
+    """U09: an empty step list broke execution with an UnboundLocalError."""
+    with pytest.raises(InvalidArgumentValueError, match="`cols` must be a non-empty list"):
+        lk.pipeline().step([])
+
+
+def test_step_rejects_non_col_list_member():
+    """U26: every list member is validated, matching the single-arg case."""
+    with pytest.raises(InvalidArgumentTypeError, match="`cols` must be of type 'Col', got 'str'"):
+        lk.pipeline().step(["a", "b"])
+
+
+def test_step_preprocessors_omitted_inherits_pipeline():
+    """U23: an omitted `step` preprocessors arg inherits the pipeline's."""
+    p = lk.pipeline(preprocessors=[lower()]).step(lk.col("a").fuzzy())
+
+    assert len(p.steps[0][0].preprocessors) == 1
+
+
+def test_step_preprocessors_empty_list_means_none():
+    """U23: `[]` means no preprocessors for the step — no inheritance."""
+    p = lk.pipeline(preprocessors=[lower()]).step(lk.col("a").fuzzy(), preprocessors=[])
+
+    assert p.steps[0][0].preprocessors == []
+
+
+def test_step_preprocessors_none_means_none():
+    p = lk.pipeline(preprocessors=[lower()]).step(lk.col("a").fuzzy(), preprocessors=None)
+
+    assert p.steps[0][0].preprocessors == []
+
+
+##############
+# Col guards #
+##############
+
+
+def test_col_rechaining_warns():
+    """U24: chaining a second deduper on one Col warns; last-wins is kept."""
+    with pytest.warns(UserWarning, match="replaces the previously chained deduper"):
+        lk.col("a").exact().fuzzy()
+
+
+def test_col_reuse_across_steps_warns():
+    c = lk.col("a").exact()
+    p = lk.pipeline()
+    p.step(c)
+
+    with pytest.warns(UserWarning, match="more than one step"):
+        p.step(c)
+
+
+def test_col_unit_before_chaining_raises():
+    """U25: an unset `_unit` raises a liken error, not the registry's."""
+    with pytest.raises(InvalidDeduperError, match="no deduper chained yet"):
+        _ = lk.col("a").unit
+    with pytest.raises(InvalidDeduperError, match="no deduper chained yet"):
+        _ = lk.col("a")._unit
 
 
 def test_single_preprocessor_is_resolved_to_list():

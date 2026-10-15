@@ -34,8 +34,8 @@ class StrLen(
 
     def __init__(self, min_len: int = 0, max_len: int | None = None):
 
-        min_len = require_int("min_len", min_len)
-        max_len = require_int("max_len", max_len, allow_none=True)
+        min_len = require_int("min_len", min_len, low=0)
+        max_len = require_int("max_len", max_len, low=0, allow_none=True)
 
         if max_len is not None and min_len > max_len:
             raise InvalidArgumentValueError("`min_len` must be less than or equal to `max_len`")

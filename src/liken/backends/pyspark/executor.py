@@ -108,16 +108,25 @@ class PysparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        df = (
-            factory._from_rows(rows)
-            .apply(dedupers)  # type: ignore[arg-type]
-            .canonicalize(
-                columns,
-                keep=keep,
-                drop_duplicates=drop_duplicates,
-                id=id,
-            )
-            .collect()
-        )
+        dupe = factory._from_rows(rows)
+
+        # Internal handoff: the sequential API stores dedupers under the
+        # reserved `_default_` key, which a public dict apply must not use
+        # (U07). Re-apply them individually to keep the sequential semantics.
+        from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
+        from liken.collections.dict import DeduplicationDict as DictImpl
+
+        if isinstance(dedupers, DictImpl) and set(dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}:
+            for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
+                dupe.apply(deduper)
+        else:
+            dupe.apply(dedupers)  # type: ignore[arg-type]
+
+        df = dupe.canonicalize(
+            columns,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            id=id,
+        ).collect()
 
         return iter(df)  # type: ignore[arg-type]

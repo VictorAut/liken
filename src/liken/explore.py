@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
 DEFAULT_EXPLORE_THRESHOLDS: Final[list[float]] = [0.5, 0.75, 0.9, 0.95, 0.99]
 
-_SUPPORTED_BACKENDS: Final[frozenset[str]] = frozenset({"pandas", "polars", "modin", "pyarrow"})
 
 _EXACT_LABEL: Final[str] = "exact"
 _METRIC_LABEL: Final[str] = "metric"
@@ -45,10 +44,8 @@ def run_explore(
 
     backend: Backend = get_backend(df)
 
-    if backend.name not in _SUPPORTED_BACKENDS:
-        raise InvalidArgumentValueError(
-            f"explore is only supported for the pandas, polars, modin and pyarrow backends, got '{backend.name}'"
-        )
+    if not backend.supports_explore:
+        raise InvalidArgumentValueError(f"explore is not supported for the '{backend.name}' backend")
 
     df_columns: list[str] = _column_labels(df, backend.name)
 
@@ -95,11 +92,20 @@ def run_explore(
 def _column_labels(df: UserDataFrame, backend_name: str) -> list[str]:
     """Column labels of `df`.
 
-    `pyarrow.Table.columns` returns the column arrays, not the labels.
+    `pyarrow.Table.columns` returns the column arrays, not the labels; a Ray
+    dataset exposes `columns` as a method rather than a property; and a
+    pyspark partition frame is a private `list[Row]` handoff, whose labels
+    come from the first Row.
     """
     if backend_name == "pyarrow":
         return list(cast("pa.Table", df).column_names)
-    return list(cast("Any", df).columns)
+    if backend_name == "pyspark" and isinstance(df, list):
+        # Internal `_from_rows` handoff: Rows carry their labels.
+        return list(cast("Any", df[0]).asDict().keys())
+    columns = cast("Any", df).columns
+    if callable(columns):
+        columns = columns()
+    return list(columns)
 
 
 def _sample(df: UserDataFrame, backend_name: str, frac: float) -> UserDataFrame:
