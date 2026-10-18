@@ -99,8 +99,12 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
+        # Bind the label before the closure: capturing `self` would pickle the
+        # whole wrapper (with its Dataset) into the batch function.
+        canonical_id = self._canonical_id
+
         def fn(df):
-            return df.drop_duplicates(subset=[self._canonical_id], keep=keep)
+            return df.drop_duplicates(subset=[canonical_id], keep=keep)
 
         self._df = self._df.map_batches(fn)
         return self
@@ -108,8 +112,9 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
     # SYNTHETIC RECORD:
 
     def synthesize_record(self):
+        canonical_id = self._canonical_id
 
         def fn(df: pd.DataFrame):
-            return df.groupby(self._canonical_id, as_index=False).first()
+            return df.groupby(canonical_id, as_index=False).first()
 
         return self._df.map_batches(fn, batch_format="pandas")

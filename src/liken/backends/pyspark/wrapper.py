@@ -235,6 +235,7 @@ class PysparkRows(DF["list[Row]"]):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
+        canonical_id = self._canonical_id
 
         seen: set[Hashable] = set()
         result: list[Row] = []
@@ -242,7 +243,7 @@ class PysparkRows(DF["list[Row]"]):
         iterable = self._df if keep == "first" else reversed(self._df)
 
         for row in iterable:
-            key = row[self._canonical_id]
+            key = row[canonical_id]
             if key not in seen:
                 seen.add(key)
                 result.append(row)

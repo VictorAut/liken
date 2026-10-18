@@ -76,7 +76,9 @@ class RayExecutor(Executor):
             return dupe.collect()  # type: ignore[return-value]
 
         # IMPORTANT: "pandas" batch
-        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))  # type: ignore[arg-type]
+        # canonical_id is passed to keep the schema-only re-wrap from adding a
+        # second canonical column under the default label.
+        df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"), canonical_id=canonical_id)  # type: ignore[arg-type]
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)

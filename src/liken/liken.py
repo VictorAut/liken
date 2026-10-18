@@ -250,7 +250,10 @@ class Dedupe:
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
 
-        wdf: DF = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        # The canonical id is only ever autoincremental for dropping: a frame
+        # that already carries the stored label consumes it as-is; a
+        # custom-labelled frame dedups and drops on its own label.
+        wdf: DF = wrap(self._df, None, self._canonical_id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -265,7 +268,7 @@ class Dedupe:
             drop_duplicates=True,
             drop_canonical_id=True,
             source_id=None,
-            canonical_id=CANONICAL_ID,
+            canonical_id=self._canonical_id,
         ).unwrap()
 
         self._collection.reset()

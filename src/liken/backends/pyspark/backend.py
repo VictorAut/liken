@@ -45,6 +45,6 @@ class PysparkBackend(Backend):
         from liken.backends.pyspark.wrapper import PysparkRows
 
         if isinstance(df, list):
-            return PysparkRows(df)
+            return PysparkRows(df, canonical_id)
 
         return PysparkDF(df, source_id, canonical_id)

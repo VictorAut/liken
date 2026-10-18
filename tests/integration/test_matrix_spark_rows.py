@@ -104,7 +104,14 @@ def test_from_rows_canonicalizes():
         Row(id=3, address="paris", canonical_id=1),
     ]
 
-    result = Dedupe._from_rows(rows).apply(lk.exact()).canonicalize("address", drop_duplicates=True).collect()
+    # The worker path bypasses the public collision check: partitions arrive
+    # already carrying the canonical column, so it re-canonicalizes via the
+    # internal entry point.
+    dupe = Dedupe._from_rows(rows)
+    dupe.apply(lk.exact())
+    dupe._canonicalize(columns="address", keep="first", drop_duplicates=True, source_id=None, canonical_id=CANONICAL_ID)
+
+    result = dupe.collect()
 
     ids = [row["id"] for row in result]
     assert ids == [1, 3]
