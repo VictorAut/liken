@@ -65,6 +65,6 @@ def test_matrix_pd_nulls(data, deduper, expected_ids, helpers, request):
 
     df = pd.DataFrame(columns=["id", "address"], data=data)
 
-    df_deduped = lk.dedupe(df).apply(deduper).canonicalize("address", id="id").collect()
+    df_deduped = lk.dedupe(df).apply(deduper).canonicalize("address", source_id="id").collect()
 
     assert helpers.get_column_as_list(df_deduped, CANONICAL_ID) == expected_ids

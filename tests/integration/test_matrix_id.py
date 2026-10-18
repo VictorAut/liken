@@ -167,6 +167,11 @@ def test_matrix_id(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        df = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize(SINGLE_COL, id=id).collect()
+        df = (
+            lk.dedupe(df, spark_session=spark_session)
+            .apply(lk.exact())
+            .canonicalize(SINGLE_COL, source_id=id)
+            .collect()
+        )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

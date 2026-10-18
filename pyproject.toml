@@ -119,7 +119,6 @@ line-length = 120
 extend-select = ["I", "UP", "B", "SIM", "C4", "RET", "RUF", "TC", "ERA", "PGH"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/liken/**" = ["A002"]
 "src/liken/__init__.py" = ["RUF022"]
 "src/liken/backends/{dask,modin,ray,pyspark}/**" = ["PLC0415"]
 
