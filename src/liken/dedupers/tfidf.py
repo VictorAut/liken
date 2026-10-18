@@ -16,7 +16,10 @@ from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
+from liken.exceptions import InvalidArgumentTypeError
+from liken.exceptions import InvalidArgumentValueError
 from liken.types import SimilarPairIndices
+from liken.validations import require_int
 
 
 @final
@@ -40,6 +43,8 @@ class TfIdf(
         topn: int = 2,
         **kwargs: Any,
     ):
+        ngram = self._validate_ngram(ngram)
+        topn = require_int("topn", topn, low=1)
         super().__init__(
             threshold=threshold,
             ngram=ngram,
@@ -50,6 +55,26 @@ class TfIdf(
         self._threshold = threshold
         self._topn = topn
         self._kwargs = kwargs
+
+    @staticmethod
+    def _validate_ngram(ngram: int | tuple[int, int]) -> int | tuple[int, int]:
+        """
+        Validate `ngram` as an integer >= 1, or a 2-tuple (low, high) with
+        1 <= low <= high.
+        """
+        if not isinstance(ngram, int) or isinstance(ngram, bool):
+            if not isinstance(ngram, tuple) or len(ngram) != 2:
+                raise InvalidArgumentTypeError(
+                    f"`ngram` must be an integer or a 2-tuple of integers, got '{type(ngram).__name__}'"
+                )
+            low, high = (require_int(f"ngram[{i}]", n, low=1) for i, n in enumerate(ngram))
+            if low > high:
+                raise InvalidArgumentValueError(
+                    f"`ngram` must be a 2-tuple of increasing integers (low, high), got {ngram!r}"
+                )
+        else:
+            ngram = require_int("ngram", ngram, low=1)
+        return ngram
 
     def _vectorize(self) -> TfidfVectorizer:
         ngram_range = (self._ngram, self._ngram) if isinstance(self._ngram, int) else self._ngram

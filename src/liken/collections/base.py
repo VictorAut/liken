@@ -3,19 +3,36 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import TYPE_CHECKING
 from typing import final
 
 from liken.collections.dict import DeduplicationDict
 from liken.collections.pipelines import Col
 from liken.collections.pipelines import Pipeline
+from liken.constants import INVALID_APPLY_AFTER_PIPELINE_MSG
+from liken.constants import INVALID_COLUMNS_NOT_NONE_MSG
+from liken.constants import INVALID_COLUMNS_REQUIRED_MSG
+from liken.constants import INVALID_EMPTY_DICT_MSG
+from liken.constants import INVALID_EMPTY_DICT_VALUE_MSG
+from liken.constants import INVALID_EMPTY_PIPELINE_MSG
 from liken.constants import INVALID_FALLBACK_MSG
+from liken.constants import INVALID_RESERVED_DICT_KEY_MSG
 from liken.constants import INVALID_SEQUENCE_AFTER_DICT_MSG
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
+from liken.constants import WARN_DICT_REPLACES_DICT_MSG
+from liken.constants import WARN_DICT_REPLACES_PIPELINE_MSG
 from liken.constants import WARN_DICT_REPLACES_SEQUENCE_MSG
+from liken.constants import WARN_PIPELINE_REPLACES_DICT_MSG
+from liken.constants import WARN_PIPELINE_REPLACES_SEQUENCE_MSG
 from liken.constants import WARN_RULES_REPLACES_RULES_MSG
 from liken.core.deduper import BaseDeduper
+from liken.exceptions import InvalidArgumentValueError
 from liken.exceptions import InvalidDeduperError
 from liken.exceptions import warn
+
+
+if TYPE_CHECKING:
+    from liken.types import Columns
 
 
 # COLLECTIONS MANAGER:
@@ -62,15 +79,12 @@ class CollectionsManager:
         dict (or DeduplicationDict — even though this is not public) then it is the
         "Dict" API. Else "Pipeline" API is in use.
 
-        Note also that as Pipeline contains Col and combinations of Col operated
-        with & results in self mutation, need deep copy to allow for
+        Note also that a deep copy of the Pipeline is stored to allow for
         serialization to Spark workers."""
 
-        # track that at least one apply made
-        # if not, used by `Dedupe` to include an exact deduper by default
-        self.has_applies = True
-
         if isinstance(deduper, BaseDeduper):
+            if isinstance(self._dedupers, Pipeline):
+                raise InvalidDeduperError(INVALID_APPLY_AFTER_PIPELINE_MSG)
             if not self.is_sequential_applied:
                 raise InvalidDeduperError(INVALID_SEQUENCE_AFTER_DICT_MSG)
             # The check above guarantees a `DeduplicationDict` here, but mypy
@@ -78,28 +92,78 @@ class CollectionsManager:
             # tuple member of the value union is only stored by the Dict API
             # path (`union-attr`).
             self._dedupers[SEQUENTIAL_API_DEFAULT_KEY].append(deduper)  # type: ignore[index, union-attr]
+            # track that at least one apply succeeded; if not, used by
+            # `Dedupe` to include an exact deduper by default. Set only after
+            # validation, so a rejected apply cannot poison the flag into
+            # skipping the exact fallback.
+            self.has_applies = True
             return
 
         if isinstance(deduper, dict | DeduplicationDict):
-            if isinstance(self._dedupers, DeduplicationDict) and self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
-                warn(WARN_DICT_REPLACES_SEQUENCE_MSG)
+            if not deduper:
+                raise InvalidDeduperError(INVALID_EMPTY_DICT_MSG)
+            for key, value in deduper.items():
+                if key == SEQUENTIAL_API_DEFAULT_KEY:
+                    raise InvalidDeduperError(INVALID_RESERVED_DICT_KEY_MSG.format(key))
+                if isinstance(value, list | tuple) and not value:
+                    raise InvalidDeduperError(INVALID_EMPTY_DICT_VALUE_MSG.format(key))
+            # replace policy: every non-accumulating transition warns.
+            if isinstance(self._dedupers, DeduplicationDict):
+                if self.is_sequential_applied:
+                    if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index, union-attr]
+                        warn(WARN_DICT_REPLACES_SEQUENCE_MSG, stacklevel=4)
+                else:
+                    warn(WARN_DICT_REPLACES_DICT_MSG, stacklevel=4)
+            else:
+                warn(WARN_DICT_REPLACES_PIPELINE_MSG, stacklevel=4)
             self._dedupers = DeduplicationDict(deduper)
+            self.has_applies = True
             return
 
         if isinstance(deduper, Col):
             deduper = Pipeline().step(deduper)
 
         if isinstance(deduper, Pipeline):
+            if not deduper.steps:
+                raise InvalidDeduperError(INVALID_EMPTY_PIPELINE_MSG)
+            # replace policy: every non-accumulating transition warns.
             if isinstance(self._dedupers, Pipeline):
-                warn(WARN_RULES_REPLACES_RULES_MSG)
+                warn(WARN_RULES_REPLACES_RULES_MSG, stacklevel=4)
+            elif self.is_sequential_applied:
+                if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index, union-attr]
+                    warn(WARN_PIPELINE_REPLACES_SEQUENCE_MSG, stacklevel=4)
+            else:
+                warn(WARN_PIPELINE_REPLACES_DICT_MSG, stacklevel=4)
             # required for spark serialization
             self._dedupers = deepcopy(deduper)
+            self.has_applies = True
             return
 
         raise InvalidDeduperError(INVALID_FALLBACK_MSG.format(type(deduper).__name__))
 
     def get(self) -> DeduplicationDict | Pipeline:
         return self._dedupers
+
+    def validate_api_mode(self, columns: Columns | None) -> Columns | None:
+        """Validate the `columns` argument against the api mode in use.
+
+        Sequential mode — including the exact fallback — requires `columns`.
+        Dict and pipeline modes require `columns` to be `None`, as the keys
+        of the dict or the pipeline's columns define the deduplication.
+
+        The type and structure of `columns` are validated first, by
+        `liken.validations.validate_columns_arg`.
+
+        Raises:
+            InvalidArgumentValueError: for a combination not allowed by the
+                api mode in use.
+        """
+        if self.is_sequential_applied:
+            if columns is None or columns == ():
+                raise InvalidArgumentValueError(INVALID_COLUMNS_REQUIRED_MSG)
+        elif columns is not None:
+            raise InvalidArgumentValueError(INVALID_COLUMNS_NOT_NONE_MSG)
+        return columns
 
     def pretty_get(self) -> None | str:
         """string representation of dedupers.
@@ -128,5 +192,9 @@ class CollectionsManager:
         return str(dedupers)
 
     def reset(self):
-        """Reset collection to empty defaultdict"""
+        """Reset collection to empty defaultdict
+
+        Also resets `has_applies`, so a subsequent enact applies the exact
+        fallback again."""
         self._dedupers = DeduplicationDict({SEQUENTIAL_API_DEFAULT_KEY: []})
+        self.has_applies = False

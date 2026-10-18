@@ -157,7 +157,7 @@ STR_PARAMS = [
     ("str_len", lk.str_len(), ["str_len(", "min_len=0", "max_len=None"]),
     ("cosine", lk.cosine(), ["cosine(", "threshold=0.95"]),
     ("jaccard", lk.jaccard(threshold=0.5), ["jaccard(", "threshold=0.5"]),
-    ("isin", lk.isin("london"), ["isin(", "values='london'"]),
+    ("isin", lk.isin(["london"]), ["isin(", "values=('london',)"]),
     ("isna", lk.isna(), ["isna()"]),
     ("~isna", ~lk.isna(), ["~isna()"]),
     (
@@ -413,8 +413,8 @@ def test_fuzzy_nulls_pair_with_nulls_only(mock_df):
 
 @pytest.mark.parametrize(
     "threshold, expected_pairs",
-    [(0.0, [(0, 2), (1, 3)]), (0.55, [(1, 3)])],
-    ids=["threshold-zero", "just-above-the-value-pair"],
+    [(math.nextafter(0.0, 1.0), [(0, 2), (1, 3)]), (0.55, [(1, 3)])],
+    ids=["near-zero-threshold", "just-above-the-value-pair"],
 )
 def test_fuzzy_null_never_pairs_with_value(threshold, expected_pairs):
     """At any threshold a null pairs only with another null."""
@@ -497,10 +497,15 @@ def test_vectorized_matches_same_pairs_as_python_fallback(values):
     assert list(vectorized._gen_similarity_pairs(array)) == list(fallback._gen_similarity_pairs(array))
 
 
-def test_fuzzy_unknown_scorer_raises_key_error():
-    """An unregistered scorer name surfaces a KeyError, not a silent fallback."""
-    with pytest.raises(KeyError):
-        Fuzzy(threshold=0.95, scorer="no_such_scorer").get_scorer()
+def test_fuzzy_unknown_scorer_raises_at_construction():
+    """an unknown scorer is rejected at construction"""
+    with pytest.raises(InvalidArgumentValueError, match="`scorer` must be one of"):
+        Fuzzy(threshold=0.95, scorer="no_such_scorer")
+
+
+def test_fuzzy_rejects_non_str_scorer():
+    with pytest.raises(InvalidArgumentTypeError, match="`scorer` must be of type 'str', got 'int'"):
+        lk.fuzzy(scorer=1)
 
 
 ##################
@@ -630,6 +635,188 @@ def test_lsh_all_null_input_yields_star_pairs():
     array = pa.array([None, None, None])
 
     assert list(lk.lsh()._gen_similarity_pairs(array)) == [(0, 1), (0, 2)]
+
+
+####################################
+# str factory construction checks  #
+####################################
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [lk.str_contains, lk.str_startswith, lk.str_endswith],
+    ids=["str_contains", "str_startswith", "str_endswith"],
+)
+def test_str_factories_reject_empty_pattern(factory):
+    """An empty pattern matches every value and silently collapses the column."""
+    with pytest.raises(InvalidArgumentValueError, match="`pattern` must be a non-empty string, got ''"):
+        factory(pattern="")
+
+
+@pytest.mark.parametrize(
+    "factory, pattern",
+    [
+        (lk.str_contains, 123),
+        (lk.str_startswith, ["cal"]),
+        (lk.str_endswith, None),
+    ],
+    ids=["str_contains", "str_startswith", "str_endswith"],
+)
+def test_str_factories_reject_non_str_pattern(factory, pattern):
+    with pytest.raises(InvalidArgumentTypeError, match="`pattern` must be of type 'str', got"):
+        factory(pattern=pattern)
+
+
+@pytest.mark.parametrize("kwargs", [{"min_len": -1}, {"max_len": -1}])
+def test_str_len_rejects_negative_bounds(kwargs):
+    """A negative length bound is refused at construction; it behaves as 0."""
+    with pytest.raises(InvalidArgumentValueError, match="must be an integer in the range \\[0, inf\\), got -1"):
+        lk.str_len(**kwargs)
+
+
+################################
+# eager column validation     #
+###############################
+
+
+def test_col_chaining_validates_columns_eagerly():
+    """a chained deduper's column validation runs at construction."""
+    with pytest.raises(InvalidArgumentTypeError):
+        lk.col(("a", "b")).str_contains(pattern="x")
+
+
+def test_col_chaining_eagerly_rejects_non_str_tuple_member():
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str'"):
+        lk.col(("a", 1)).exact()
+
+
+def test_compound_column_validation_rejects_non_str_member():
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str'"):
+        Jaccard().validate(("a", 1))
+
+
+def test_exact_validation_accepts_str_and_tuple_of_str():
+    """U29: exact validates 'str or tuple-of-str' instead of opting out."""
+    lk.exact().validate("a")
+    lk.exact().validate(("a", "b"))
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` must be of type 'str' or 'tuple', got 'int'"):
+        lk.exact().validate(123)
+
+
+###############################
+# isin construction validation #
+###############################
+
+
+@pytest.mark.parametrize(
+    "values",
+    ["london", 42, {"london": 1}, object()],
+    ids=["str", "int", "dict", "object"],
+)
+def test_isin_rejects_non_collection_values(values):
+    """`values` must be a list, tuple, set or frozenset; a str is an iterable
+    and was silently treated as a character collection."""
+    with pytest.raises(
+        InvalidArgumentTypeError,
+        match="`values` must be of type 'list' or 'tuple' or 'set' or 'frozenset', got",
+    ):
+        lk.isin(values=values)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [["london"], ("london",), {"london"}, frozenset({"london"})],
+    ids=["list", "tuple", "set", "frozenset"],
+)
+def test_isin_materialises_values_to_tuple(values):
+    """Values are materialised at construction, so a lazy iterable cannot be
+    consumed by the first match."""
+    deduper = lk.isin(values=values)
+
+    assert deduper._values == ("london",)
+
+
+###############################
+# lsh construction validation #
+###############################
+
+
+@pytest.mark.parametrize("ngram", [0, -1])
+def test_lsh_rejects_non_positive_ngram(ngram):
+    """`ngram` below 1 silently collapses the column at execution; refused at construction."""
+    with pytest.raises(InvalidArgumentValueError, match="`ngram` must be an integer in the range \\[1, inf\\), got"):
+        lk.lsh(ngram=ngram)
+
+
+@pytest.mark.parametrize("ngram", ["3", 3.0, True, None])
+def test_lsh_rejects_non_integer_ngram(ngram):
+    with pytest.raises(InvalidArgumentTypeError, match="`ngram` must be an integer, got"):
+        lk.lsh(ngram=ngram)
+
+
+@pytest.mark.parametrize("num_perm", [0, -5])
+def test_lsh_rejects_non_positive_num_perm(num_perm):
+    with pytest.raises(InvalidArgumentValueError, match="`num_perm` must be an integer in the range \\[1, inf\\), got"):
+        lk.lsh(num_perm=num_perm)
+
+
+@pytest.mark.parametrize("num_perm", [128.0, "128", True, None])
+def test_lsh_rejects_non_integer_num_perm(num_perm):
+    with pytest.raises(InvalidArgumentTypeError, match="`num_perm` must be an integer, got"):
+        lk.lsh(num_perm=num_perm)
+
+
+def test_lsh_accepts_valid_ngram_and_num_perm():
+    lk.lsh(ngram=3, num_perm=128)
+
+
+###################################
+# tfidf construction validation  #
+##################################
+
+
+@pytest.mark.parametrize("topn", [0, -1])
+def test_tfidf_rejects_non_positive_topn(topn):
+    """`topn` below 1 is refused at construction: an unvalidated topn reaches
+    the native library and can abort the process."""
+    with pytest.raises(InvalidArgumentValueError, match="`topn` must be an integer in the range \\[1, inf\\), got"):
+        lk.tfidf(topn=topn)
+
+
+@pytest.mark.parametrize("topn", [2.0, "2", True, None])
+def test_tfidf_rejects_non_integer_topn(topn):
+    with pytest.raises(InvalidArgumentTypeError, match="`topn` must be an integer, got"):
+        lk.tfidf(topn=topn)
+
+
+@pytest.mark.parametrize("ngram", [0, -1])
+def test_tfidf_rejects_non_positive_ngram(ngram):
+    with pytest.raises(InvalidArgumentValueError, match="`ngram` must be an integer in the range \\[1, inf\\), got"):
+        lk.tfidf(ngram=ngram)
+
+
+@pytest.mark.parametrize("ngram", ["3", 3.0, True, None])
+def test_tfidf_rejects_non_integer_ngram(ngram):
+    with pytest.raises(InvalidArgumentTypeError, match="`ngram` must be an integer or a 2-tuple of integers, got"):
+        lk.tfidf(ngram=ngram)
+
+
+@pytest.mark.parametrize("ngram", [(2, 1), (0, 2), (1, 0), (2, 2.0), (2, "3")])
+def test_tfidf_rejects_invalid_ngram_tuple(ngram):
+    """A 2-tuple ngram range must be integers with 1 <= low <= high."""
+    with pytest.raises((InvalidArgumentTypeError, InvalidArgumentValueError)):
+        lk.tfidf(ngram=ngram)
+
+
+@pytest.mark.parametrize("ngram", [(2,), (1, 2, 3), []])
+def test_tfidf_rejects_wrong_shape_ngram_tuple(ngram):
+    with pytest.raises(InvalidArgumentTypeError, match="`ngram` must be an integer or a 2-tuple of integers, got"):
+        lk.tfidf(ngram=ngram)
+
+
+def test_tfidf_accepts_valid_ngram_and_topn():
+    lk.tfidf(ngram=3, topn=2)
+    lk.tfidf(ngram=(1, 2), topn=1)
 
 
 ##############
@@ -1013,7 +1200,7 @@ def test_tfidf_matches_a_pair_exactly_at_the_threshold():
     """
     values = ["a b", "a c", "a b c"]
 
-    probe = lk.tfidf(ngram=1, topn=5, threshold=0.0)
+    probe = lk.tfidf(ngram=1, topn=5, threshold=math.nextafter(0.0, 1.0))
     sparse = probe._get_sparse_matrix(values).tocoo()
     row, col, value = max(
         ((int(r), int(c), float(v)) for r, c, v in zip(sparse.row, sparse.col, sparse.data, strict=False) if r < c),

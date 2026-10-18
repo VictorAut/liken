@@ -2,6 +2,8 @@ import pyarrow as pa
 import pytest
 
 import liken as lk
+from liken.exceptions import InvalidArgumentTypeError
+from liken.exceptions import InvalidArgumentValueError
 
 
 BAD_PREPROCESSORS = ["not_a_preprocessor", 123, object()]
@@ -180,9 +182,73 @@ def test_regex_replace_propagates_nulls():
     assert pp.process().to_pylist() == ["a b", None]
 
 
-def test_regex_replace_invalid_pattern_raises():
-    pp = lk.preprocessors.regex_replace("[", "")
-    pp.from_array(pa.array(["a"]))
+################
+# validations  #
+################
 
-    with pytest.raises(pa.ArrowInvalid, match="Invalid regular expression"):
-        pp.process()
+
+def test_regex_replace_invalid_pattern_raises_at_construction():
+    with pytest.raises(InvalidArgumentValueError, match="`pattern` must be a valid regular expression"):
+        lk.preprocessors.regex_replace("[", "")
+
+
+def test_normalize_unicode_rejects_unknown_form():
+    with pytest.raises(InvalidArgumentValueError, match="`form` must be one of"):
+        lk.preprocessors.normalize_unicode(form="NOTAFORM")
+
+
+def test_regex_replace_rejects_invalid_pattern():
+    with pytest.raises(InvalidArgumentValueError, match="`pattern` must be a valid regular expression"):
+        lk.preprocessors.regex_replace("[[", "x")
+
+
+def test_regex_replace_rejects_non_str_replacement():
+    with pytest.raises(InvalidArgumentTypeError, match="`replacement` must be of type 'str', got 'int'"):
+        lk.preprocessors.regex_replace("a", 1)
+
+
+def test_remove_stopwords_rejects_empty_words():
+    with pytest.raises(InvalidArgumentValueError, match="`words` must be a non-empty list"):
+        lk.preprocessors.remove_stopwords(words=[])
+
+
+def test_remove_stopwords_rejects_non_str_words():
+    with pytest.raises(InvalidArgumentTypeError, match=r"`words\[0\]` must be of type 'str', got 'int'"):
+        lk.preprocessors.remove_stopwords(words=[1])
+
+
+def test_remove_stopwords_process_does_not_mutate_words():
+    """`process` must not overwrite the stored words."""
+    preprocessor = lk.preprocessors.remove_stopwords(words=["the"])
+    preprocessor.from_array(pa.array(["the cat"]))
+    preprocessor.process()
+
+    assert preprocessor._words == ("the",)
+
+
+def test_ascii_fold_takes_no_form_argument():
+    from liken.preprocessors import AsciiFold
+
+    with pytest.raises(TypeError):
+        AsciiFold(form="NFC")
+
+
+################
+# repr and str #
+################
+
+
+def test_preprocessor_repr_records_constructor_args():
+    assert repr(lk.preprocessors.lower()) == "Lower()"
+    assert repr(lk.preprocessors.normalize_unicode()) == "NormalizeUnicode(form='NFKD')"
+    assert repr(lk.preprocessors.regex_replace("a", "b")) == "RegexReplace('a', 'b')"
+    assert (
+        repr(lk.preprocessors.remove_stopwords(words=["the"])) == "RemoveStopwords(words=('the',), language='english')"
+    )
+
+
+def test_col_str_includes_step_preprocessors():
+    """a Col's string representation includes its preprocessors."""
+    c = lk.col("a", preprocessors=[lk.preprocessors.lower()]).exact()
+
+    assert "preprocessors=['Lower()']" in str(c)

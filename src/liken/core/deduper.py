@@ -23,6 +23,7 @@ from typing_extensions import override
 
 from liken.constants import CANONICAL_ID
 from liken.core.missing import is_missing
+from liken.exceptions import InvalidArgumentTypeError
 from liken.validations import require_real_number
 from liken.validations import require_type
 
@@ -65,14 +66,28 @@ class Base(Protocol):
     def validate(self, columns: Columns) -> None: ...
 
     @staticmethod
-    def preprocess(array: pa.Array | pa.Table, preprocessors: Collection[Preprocessor]) -> pa.Array | pa.Table: ...
+    def preprocess(
+        array: pa.Array | pa.Table,
+        preprocessors: Collection[Preprocessor],
+        columns: Columns,
+    ) -> pa.Array | pa.Table: ...
 
 
 # BASE DEDUPER:
 
 
+class _PreprocessorError(Exception):
+    """Wraps a preprocessor's run-time failure with preprocessor-and-column
+    context. The original exception is chained as `__cause__`."""
+
+
 class BaseDeduper(Base):
     """Base Deduplication class"""
+
+    def validate(self, columns: Columns) -> None:
+        """Subclasses with a column mixin override this."""
+        del columns
+        pass
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -88,13 +103,45 @@ class BaseDeduper(Base):
         raise NotImplementedError
 
     @staticmethod
-    def preprocess(array: pa.Array | pa.Table, preprocessors: Collection[Preprocessor]) -> pa.Array | pa.Table:
-        """apply a sequence of preprocessors"""
+    def preprocess(
+        array: pa.Array | pa.Table,
+        preprocessors: Collection[Preprocessor],
+        columns: Columns,
+    ) -> pa.Array | pa.Table:
+        """apply a sequence of preprocessors
+
+        A compound column arrives as a `pa.Table`, which preprocessors do not
+        support.
+
+        Each preprocessor returns a `pa.Array` of the input length.
+        """
         if isinstance(array, pa.Table):
+            if preprocessors:
+                name = type(next(iter(preprocessors))).__name__
+                raise TypeError(f"preprocessor '{name}' cannot be applied to the compound column {columns!r}")
             return array
+        input_length = len(array)
         for processor in preprocessors:
             processor.from_array(array)
-            array = processor.process()
+            try:
+                array = processor.process()
+            except Exception as err:
+                # Some exception classes do not accept a single string argument
+                # (e.g. `UnicodeDecodeError`), and some ignore `args` in their
+                # `__str__`. A wrapper keeps the message pattern and chains the
+                # original as `__cause__`.
+                prefix = f"preprocessor '{type(processor).__name__}' on column '{columns}': {err}"
+                raise _PreprocessorError(prefix) from err
+            if not isinstance(array, pa.Array):
+                raise TypeError(
+                    f"preprocessor '{type(processor).__name__}' on column '{columns}'"
+                    f" must return a pyarrow Array, got '{type(array).__name__}'"
+                )
+            if len(array) != input_length:
+                raise ValueError(
+                    f"preprocessor '{type(processor).__name__}' on column '{columns}'"
+                    f" must return an array of the input length {input_length}, got {len(array)}"
+                )
         return array
 
     def build_union_find(
@@ -107,7 +154,7 @@ class BaseDeduper(Base):
 
         array: pa.Array | pa.Table = self.wdf.get_array(columns)
 
-        processed: pa.Array | pa.Table = self.preprocess(array, preprocessors)
+        processed: pa.Array | pa.Table = self.preprocess(array, preprocessors, columns)
 
         if predicate:
             # subsets the array on predicate indice list
@@ -186,6 +233,9 @@ class CompoundColumnMixin:
 
     def validate(self, columns: Columns) -> None:
         require_type("columns", columns, tuple)
+        for label in columns:
+            if not isinstance(label, str):
+                raise InvalidArgumentTypeError(f"`columns` members must be of type 'str', got '{type(label).__name__}'")
 
 
 # PREDICATE DEDUPERS:
@@ -299,6 +349,8 @@ class ThresholdDeduper(BaseDeduper):
     """
 
     def __init__(self, threshold: float = 0.95, **kwargs):
-        threshold = require_real_number("threshold", threshold, low=0, high=1, low_inclusive=True, high_inclusive=False)
+        threshold = require_real_number(
+            "threshold", threshold, low=0, high=1, low_inclusive=False, high_inclusive=False
+        )
         super().__init__(threshold=threshold, **kwargs)
         self._threshold = threshold

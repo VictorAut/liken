@@ -13,8 +13,10 @@ from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 from liken.validations import require_choice
 from liken.validations import require_int
+from liken.validations import require_non_empty_str
 from liken.validations import require_real_number
 from liken.validations import require_type
+from liken.validations import validate_columns_arg
 from liken.validations import validate_explore_column_exists
 from liken.validations import validate_explore_columns_arg
 from liken.validations import validate_keep_arg
@@ -151,6 +153,37 @@ def test_require_int_allow_none():
         require_int("max_len", None, allow_none=False)
 
 
+# require_non_empty_str
+
+
+def test_require_non_empty_str_returns_value_on_match():
+    assert require_non_empty_str("id", "row_id") == "row_id"
+
+
+@pytest.mark.parametrize("value", [1, None, ("a",), object()])
+def test_require_non_empty_str_rejects_non_str(value):
+    with pytest.raises(InvalidArgumentTypeError, match="`id` must be of type 'str', got"):
+        require_non_empty_str("id", value)
+
+
+def test_require_non_empty_str_rejects_empty_string():
+    with pytest.raises(InvalidArgumentValueError, match="`id` must be a non-empty string, got ''"):
+        require_non_empty_str("id", "")
+
+
+def test_require_non_empty_str_allow_none():
+    assert require_non_empty_str("id", None, allow_none=True) is None
+    with pytest.raises(InvalidArgumentTypeError):
+        require_non_empty_str("id", None, allow_none=False)
+
+
+def test_require_non_empty_str_rejects_via_builtin_and_base():
+    with pytest.raises(TypeError):
+        require_non_empty_str("id", 1)
+    with pytest.raises(ValueError):
+        require_non_empty_str("id", "")
+
+
 # require_choice
 
 
@@ -171,6 +204,47 @@ def test_require_choice_rejects_via_builtin_and_base():
         require_choice("keep", "middle", ("first", "last"))
     with pytest.raises(InvalidArgumentError):
         require_choice("keep", "middle", ("first", "last"))
+
+
+# validate_columns_arg
+
+
+@pytest.mark.parametrize(
+    "columns",
+    ["address", ("address", "email"), None],
+)
+def test_validate_columns_arg_accepts_valid(columns):
+    assert validate_columns_arg(columns) == columns
+
+
+@pytest.mark.parametrize("columns", [123, 0, ["address"], {"address"}, {"address": 1}])
+def test_validate_columns_arg_rejects_wrong_type(columns):
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` must be of type 'str' or 'tuple', got"):
+        validate_columns_arg(columns)
+
+
+def test_validate_columns_arg_rejects_list_with_use_a_tuple_message():
+    """lists are the common mistake; message says what to use."""
+    with pytest.raises(
+        InvalidArgumentTypeError,
+        match="`columns` must be of type 'str' or 'tuple', got 'list'; use a tuple of column labels",
+    ):
+        validate_columns_arg(["address"])
+
+
+@pytest.mark.parametrize("columns", [(0,), ("a", 1), ("a", None)])
+def test_validate_columns_arg_rejects_non_str_tuple_members(columns):
+    """labels must be str; a non-str label is a type error."""
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str', got"):
+        validate_columns_arg(columns)
+
+
+def test_validate_columns_arg_rejects_repeated_labels():
+    with pytest.raises(
+        InvalidArgumentValueError,
+        match=r"columns labels cannot be repeated\. Repeated labels: 'a'",
+    ):
+        validate_columns_arg(("a", "a"))
 
 
 # validate_thresholds_arg
@@ -263,16 +337,18 @@ def test_validate_explore_column_exists_rejects_missing_column():
 # ThresholdDeduper bounds
 
 
-@pytest.mark.parametrize("threshold", [0, 0.5, 0.99])
+@pytest.mark.parametrize("threshold", [0.5, 0.99])
 def test_threshold_deduper_accepts_threshold_below_one(threshold):
     assert isinstance(ThresholdDeduper(threshold=threshold), BaseDeduper)
 
 
-@pytest.mark.parametrize("threshold", [-0.1, 1.0, 1.5])
+@pytest.mark.parametrize("threshold", [-0.1, 0, 1.0, 1.5])
 def test_threshold_deduper_rejects_threshold_outside_bounds(threshold):
+    """similarity threshold range is the open (0, 1) — 0 silently
+    collapses whole columns and 1 can never match."""
     with pytest.raises(
         InvalidArgumentValueError,
-        match="`threshold` must be a real number in the range \\[0, 1\\), got",
+        match="`threshold` must be a real number in the range \\(0, 1\\), got",
     ):
         ThresholdDeduper(threshold=threshold)
 

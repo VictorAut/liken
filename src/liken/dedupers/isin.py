@@ -1,6 +1,5 @@
 """isin predicate deduper"""
 
-from collections.abc import Iterable
 from typing import ClassVar
 from typing import final
 
@@ -10,6 +9,7 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.registries import dedupers_registry
+from liken.validations import require_type
 
 
 @final
@@ -19,12 +19,14 @@ class IsIn(
 ):
     """
     Deduplicates all instances of strings that are a member of a defined
-    iterable
+    collection
     """
 
     _NAME: ClassVar[str] = "isin"
 
-    def __init__(self, values: Iterable):
+    def __init__(self, values: list | tuple | set | frozenset):
+        require_type("values", values, (list, tuple, set, frozenset))
+        values = tuple(values)
         super().__init__(values=values)
         self._values = values
 
@@ -37,11 +39,20 @@ class IsIn(
 
 
 @dedupers_registry.register("isin")
-def isin(values: Iterable) -> BaseDeduper:
+def isin(values: list | tuple | set | frozenset) -> BaseDeduper:
     """Discrete deduper for membership testing.
 
     Usage is on a single column of a dataframe. Available as the inversion, i.e.
     "not in" using inversion operator: `~isin()`.
+
+    Args:
+        values: the members to match, as a list, tuple, set or frozenset. The
+            collection is materialised at construction, so a set with a
+            single member matches all its occurrences.
+
+    Raises:
+        InvalidArgumentTypeError: if `values` is not a list, tuple, set or
+            frozenset.
 
     Returns:
         Instance of `BaseDeduper`.
@@ -52,7 +63,7 @@ def isin(values: Iterable) -> BaseDeduper:
             import liken as lk
 
             pipeline = lk.pipeline().step(
-                lk.col("address").isin(values="london")
+                lk.col("address").isin(values=["london"])
             )
 
             df = (

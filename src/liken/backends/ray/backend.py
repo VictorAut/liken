@@ -10,6 +10,7 @@ from liken.core.registries import backends_registry
 @backends_registry.register("ray")
 class RayBackend(Backend):
     name = "ray"
+    supports_explore = False
 
     def is_match(self, df):
         try:

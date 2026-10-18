@@ -11,6 +11,7 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.registries import dedupers_registry
+from liken.validations import require_non_empty_str
 
 
 @final
@@ -27,6 +28,7 @@ class StrContains(
     _NAME: ClassVar[str] = "str_contains"
 
     def __init__(self, pattern: str, case: bool = True, regex: bool = False):
+        pattern = require_non_empty_str("pattern", pattern)
         super().__init__(pattern=pattern, case=case, regex=regex)
         self._pattern = pattern
         self._case = case

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 class Backend(Protocol):
     name: str
+    supports_explore: bool
 
     def is_match(self, df: object) -> bool: ...
     def create_df(

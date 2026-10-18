@@ -2,6 +2,49 @@
 title: Release History
 ---
 
+## v0.12.3 (2026-10-18)
+
+**Fixes**
+
+- Previously accepted but invalid arguments now raise errors:
+    - Empty containers are rejected across all APIs e.g. `apply({})`.
+    - `str` is no longer accepted as `isin` deduper values (only a list, tuple, set or
+        frozenset).
+    - `columns` is type-checked first: only `str` or a tuple of `str` is
+        accepted; lists, sets and dicts are rejected with a "use a tuple"
+        message, and non-str labels are now type errors.
+    - Deduper knobs are validated e.g. `tfidf(topn)` ≥ 1, `lsh(ngram)` ≥ 1,
+        and `str_len` `min_len`/`max_len` ≥ 0, amongst others.
+        patterns in the three str factories (empty patterns rejected).
+    - `fuzzy`deduper `scorer` param is validated against the supported scorers at
+        construction.
+    - `canonicals(n)` requires an integer ≥ 2; `canonicalize(id)` requires a
+        non-empty string; `canonicalize(drop_duplicates=...)` requires a
+        bool.
+    - The similarity `threshold` range is now the open interval `(0, 1)`.
+    - `synthesize` raises a `RuntimeError` when called before `canonicalize`.
+    - A preprocessor set on a compound column now raises at execution
+        instead of being silently skipped.
+    - Preprocessor return values are checked at execution: a preprocessor
+        must return a pyarrow Array of the input length, otherwise the error
+        names the preprocessor and column.
+- Applying a deduper with the reserved `"_default_"` dict key is rejected.
+- Missing column labels (`columns`, `id`, dict tuple-key members) raise a
+  clear error
+- Uniform replace policy for non-accumulating `apply` transitions: every
+  transition between the Sequential, Dict and Pipeline APIs now warns and
+  replaces.
+- Chaining a second deduper on one `Col` warns (last-wins kept).
+- A `spark_session` passed with a non-spark dataframe warns.
+- Preprocessors record their constructor arguments in `repr`, and `Col`'s
+  string representation includes its preprocessors.
+- Pipeline steps, `step(preprocessors=...)`, gain explicit semantics: omitted inherits the
+  pipeline's preprocessors; `[]` or `None` means no preprocessors for the
+  step.
+- Validation errors carry liken-meaning exception classes
+  collections, preprocessors and the public API.
+- Message for a missing Spark session is unified across all raise sites.
+
 ## v0.12.2 (2026-10-13)
 
 **Misc**

@@ -1,5 +1,6 @@
 from typing import final
 
+from liken.constants import SPARK_SESSION_REQUIRED_MSG
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 from liken.exceptions import InvalidArgumentValueError
@@ -9,12 +10,13 @@ from liken.exceptions import InvalidArgumentValueError
 @backends_registry.register("pyspark")
 class PysparkBackend(Backend):
     name = "pyspark"
+    supports_explore = False
 
     def is_match(self, df):
         try:
             import pyspark.sql as spark
             from pyspark.sql import Row
-        except Exception:
+        except ImportError:
             return False
 
         if isinstance(df, spark.DataFrame):
@@ -27,7 +29,7 @@ class PysparkBackend(Backend):
 
     def create_df(self, data, schema, spark_session=None):
         if spark_session is None:
-            raise InvalidArgumentValueError("Spark session required")
+            raise InvalidArgumentValueError(SPARK_SESSION_REQUIRED_MSG)
         return spark_session.createDataFrame(data=data, schema=schema)
 
     def executor(self, spark_session=None):

@@ -3,6 +3,12 @@
 Most validations are for public arguments of the 'Dedupe' class.
 
 However, some validations exist for other private classes
+
+argument type, shape and value checks run eagerly at
+construction — including deduper knobs and preprocessor parameters, and the
+column-arity mixins via `Col` chaining. Frame-dependent checks (column
+existence, frame shape) run at the frame boundary. Checks that depend on the
+data values themselves run at execution only.
 """
 
 from __future__ import annotations
@@ -14,6 +20,7 @@ from typing import Literal
 from typing import TypeVar
 from typing import cast
 
+from liken.constants import SPARK_SESSION_REQUIRED_MSG
 from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 
@@ -163,6 +170,30 @@ def require_int(
     return number
 
 
+def require_non_empty_str(name: str, value: object, *, allow_none: bool = False) -> str:
+    """Require `value` to be a non-empty string.
+
+    Args:
+        name: argument name, used in the error message.
+        value: the argument to validate.
+        allow_none: return `None` unchanged instead of validating.
+
+    Returns:
+        The validated value.
+
+    Raises:
+        InvalidArgumentTypeError: if `value` is not a `str`.
+        InvalidArgumentValueError: if `value` is the empty string.
+    """
+    if allow_none and value is None:
+        return cast("str", value)
+    if not isinstance(value, str):
+        raise InvalidArgumentTypeError(f"`{name}` must be of type 'str', got '{type(value).__name__}'")
+    if not value:
+        raise InvalidArgumentValueError(f"`{name}` must be a non-empty string, got {value!r}")
+    return value
+
+
 def require_choice(name: str, value: str, choices: tuple[str, ...]) -> str:
     """Require `value` to be one of `choices`.
 
@@ -189,7 +220,7 @@ def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSes
         InvalidArgumentValueError: if no spark session is given.
     """
     if not spark_session:
-        raise InvalidArgumentValueError("spark_session arg must be provided for a spark dataframe")
+        raise InvalidArgumentValueError(SPARK_SESSION_REQUIRED_MSG)
     return spark_session
 
 
@@ -206,42 +237,31 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return cast("Literal['first', 'last']", require_choice("keep", keep, ("first", "last")))
 
 
-def validate_columns_arg(
-    columns: Columns | None,
-    is_sequential_applied: bool,
-) -> Columns | None:
-    """validates inputs to public api 'columns' arg.
+def validate_columns_arg(columns: Columns | None) -> Columns | None:
+    """Validates the type and structure of the public api 'columns' arg.
 
-    Allowed combinations are:
-
-    - Sequential API: .canonicalize with columns defined
-    - Dict API: .canonicalize with NO columns defined
-    - Pipeline API: .canonicalize with NO columns defined
-
-    Any other combination/repetition raises a value error
+    `columns` must be a column label or a tuple of column labels, with no
+    repeated labels.
 
     Raises:
-        InvalidArgumentValueError: for a combination not allowed by the API
-            mode in use, or for repeated column labels.
+        InvalidArgumentTypeError: if `columns` is not a `str` or a tuple of
+            `str`.
+        InvalidArgumentValueError: if `columns` labels are repeated.
     """
-    if is_sequential_applied:
-        if not columns:
-            raise InvalidArgumentValueError(
-                "columns cannot be None, a column label of tuple of column labels must be provided when using"
-                " sequential API."
-            )
-
-        if isinstance(columns, tuple):
-            for label, count in Counter(
-                columns,
-            ).items():
-                if count > 1:
-                    raise InvalidArgumentValueError(f"columns labels cannot be repeated. Repeated labels: '{label}'")
-
-    if not is_sequential_applied and columns:
-        raise InvalidArgumentValueError(
-            "columns must be None when using the dict API, as they have been defined as dictionary keys."
+    if columns is None:
+        return None
+    if isinstance(columns, list | set | frozenset | dict):
+        raise InvalidArgumentTypeError(
+            f"`columns` must be of type 'str' or 'tuple', got '{type(columns).__name__}'; use a tuple of column labels"
         )
+    require_type("columns", columns, (str, tuple))
+    if isinstance(columns, tuple):
+        for label in columns:
+            if not isinstance(label, str):
+                raise InvalidArgumentTypeError(f"`columns` members must be of type 'str', got '{type(label).__name__}'")
+        for label, count in Counter(columns).items():
+            if count > 1:
+                raise InvalidArgumentValueError(f"columns labels cannot be repeated. Repeated labels: '{label}'")
     return columns
 
 

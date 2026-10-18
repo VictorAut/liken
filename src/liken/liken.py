@@ -6,16 +6,22 @@ from typing import TYPE_CHECKING
 from typing import Self
 
 from liken.collections.base import CollectionsManager
+from liken.constants import WARN_SPARK_SESSION_IGNORED_MSG
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
 from liken.dedupers.exact import exact
-from liken.exceptions import InvalidArgumentValueError
+from liken.exceptions import warn
 from liken.explore import DEFAULT_EXPLORE_THRESHOLDS
+from liken.explore import _column_labels
 from liken.explore import run_explore
+from liken.validations import require_int
+from liken.validations import require_non_empty_str
 from liken.validations import require_real_number
+from liken.validations import require_type
 from liken.validations import validate_columns_arg
+from liken.validations import validate_explore_column_exists
 from liken.validations import validate_explore_columns_arg
 from liken.validations import validate_keep_arg
 from liken.validations import validate_spark_arg
@@ -56,7 +62,7 @@ class Dedupe:
 
         import liken as lk
 
-        lk.dedupe(df).apply(exact()).drop_duplicates()
+        lk.dedupe(df).drop_duplicates("address")
     """
 
     _executor: Executor
@@ -76,6 +82,8 @@ class Dedupe:
 
         if backend.name == "pyspark":
             spark_session = validate_spark_arg(spark_session)
+        elif spark_session:
+            warn(WARN_SPARK_SESSION_IGNORED_MSG)
 
         self._executor: Executor = backend.executor(spark_session=spark_session)
 
@@ -89,6 +97,9 @@ class Dedupe:
         """bypass initialization and initialize explicitly with no validation.
 
         Use as internal constructor with spark `Rows`.
+
+        Bypasses both backend dispatch and spark session validation, which are
+        responsibilities of the public `__init__` path.
         """
         self = cls.__new__(cls)
         self._df = rows
@@ -135,6 +146,14 @@ class Dedupe:
                 )
 
         """
+        if isinstance(deduper, dict):
+            # dict tuple-key members are existence-checked at apply.
+            df_columns = _column_labels(self._df, get_backend(self._df).name)
+            for key in deduper:
+                if isinstance(key, tuple):
+                    for member in key:
+                        validate_explore_column_exists(member, df_columns)
+
         self._collection.apply(deduper)
         return self
 
@@ -217,7 +236,17 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
+        columns: Columns | None = validate_columns_arg(columns)
+
+        df_columns = _column_labels(self._df, get_backend(self._df).name)
+        self._validate_frame_shape(df_columns)
+
+        columns = self._collection.validate_api_mode(columns)
+        if columns:
+            labels = (columns,) if isinstance(columns, str) else columns
+            for label in labels:
+                validate_explore_column_exists(label, df_columns)
+
         wdf: DF = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
 
         # No .apply(), assumes exact deduplication
@@ -283,7 +312,21 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        columns: Columns | None = validate_columns_arg(columns, self._collection.is_sequential_applied)
+        id = require_non_empty_str("id", id, allow_none=True)
+        drop_duplicates = require_type("drop_duplicates", drop_duplicates, bool)
+        columns: Columns | None = validate_columns_arg(columns)
+
+        df_columns = _column_labels(self._df, get_backend(self._df).name)
+        self._validate_frame_shape(df_columns)
+
+        columns = self._collection.validate_api_mode(columns)
+        if columns:
+            labels = (columns,) if isinstance(columns, str) else columns
+            for label in labels:
+                validate_explore_column_exists(label, df_columns)
+        if id:
+            validate_explore_column_exists(id, df_columns)
+
         wdf: DF = wrap(self._df, id)
 
         # No .apply(), assumes exact deduplication
@@ -329,8 +372,7 @@ class Dedupe:
             RuntimeError: When called before `canonicalize`
         """
 
-        if n < 2:
-            raise InvalidArgumentValueError("n must be >= 2")
+        n = require_int("n", n, low=2)
 
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
@@ -367,9 +409,15 @@ class Dedupe:
             Additionally, this function only supports usage with PySpark `v4`
             and up.
 
+        Raises:
+            RuntimeError: when called before `.canonicalize`.
+
         Returns:
             A dataframe of synthesized records.
         """
+
+        if not self.has_been_canonicalized:
+            raise RuntimeError("No canonical_id found. Run `.canonicalize()` first.")
 
         wdf: DF = wrap(self._df, id=None)
 
@@ -406,6 +454,27 @@ class Dedupe:
             }
         """
         return self._collection.pretty_get()
+
+    @staticmethod
+    def _validate_frame_shape(df_columns: list[str]) -> None:
+        """Reject frames the enact boundary cannot process.
+
+        Data rules, so a `ValueError`.
+
+        Raises:
+            ValueError: if the dataframe has no columns, or has duplicate
+                column labels.
+        """
+        if not df_columns:
+            raise ValueError("dataframe has no columns")
+        seen: set[str] = set()
+        duplicated: list[str] = []
+        for label in df_columns:
+            if label in seen and label not in duplicated:
+                duplicated.append(label)
+            seen.add(label)
+        if duplicated:
+            raise ValueError(f"dataframe has duplicate column labels: {duplicated}")
 
 
 # API:

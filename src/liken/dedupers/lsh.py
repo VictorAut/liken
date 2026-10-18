@@ -14,6 +14,7 @@ from liken.core.deduper import ThresholdDeduper
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
+from liken.validations import require_int
 
 
 @final
@@ -33,6 +34,8 @@ class LSH(
         num_perm: int = 128,
         threshold: float = 0.95,
     ):
+        ngram = require_int("ngram", ngram, low=1)
+        num_perm = require_int("num_perm", num_perm, low=1)
         super().__init__(
             threshold=threshold,
             ngram=ngram,
@@ -111,7 +114,10 @@ def lsh(
             unlike the `tfidf` implementation, this is single integer ngram
             number. So, `ngram=1` is only unigrams. Increasing ngrams reduces
             overall deduplication. However, too small an `ngram` may result in false
-            positives.
+            positives. Note that an `ngram` larger than every value in the
+            column produces no tokens at all and collapses the whole column
+            into one group; this depends on the data, so it cannot be
+            rejected at construction.
         num_perm: the number of MinHash permutations used to approximate
             similarity. Increasing this generally produces better matches, at
             greater computational cost. Very low numbers of permutations (< 64)
