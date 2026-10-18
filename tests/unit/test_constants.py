@@ -1,45 +1,21 @@
-import pytest
+import inspect
 
+import liken.constants
 from liken.constants import CANONICAL_ID
-from liken.core.dispatcher import wrap
 
 
-Dataset = pytest.importorskip("ray.data").Dataset
+def test_canonical_id_is_the_default_label():
+    assert CANONICAL_ID == "canonical_id"
 
 
-@pytest.mark.parametrize(
-    "env_var_value",
-    [
-        "canonical_id",
-        None,
-        "random_id",
-    ],
-)
-def test_canonical_id_env_var(env_var_value, dataframe, monkeypatch):
-    df = dataframe
+def test_canonical_id_is_not_read_from_the_environment(monkeypatch):
+    """The label is a module constant, not an env override."""
+    monkeypatch.setenv("CANONICAL_ID", "random_id")
 
-    monkeypatch.delenv("CANONICAL_ID", raising=False)
-    if env_var_value is not None:
-        monkeypatch.setenv("CANONICAL_ID", env_var_value)
-
-    _assert(df, _not=True)
-
-    wdf = wrap(df)
-    df = wdf.unwrap()
-
-    _assert(df, _not=False)
-
-    monkeypatch.delenv("CANONICAL_ID", raising=False)
+    assert liken.constants.CANONICAL_ID == "canonical_id"
 
 
-def _assert(df, _not: bool):
-    if isinstance(df, Dataset):
-        if _not:
-            assert CANONICAL_ID not in df.columns()
-        else:
-            assert CANONICAL_ID in df.columns()
-    else:
-        if _not:
-            assert CANONICAL_ID not in df.columns
-        else:
-            assert CANONICAL_ID in df.columns
+def test_constants_module_does_not_read_the_environment():
+    source = inspect.getsource(liken.constants)
+
+    assert "os." not in source

@@ -27,6 +27,6 @@ class PolarsBackend(Backend):
         del kwargs  # Unused
         return PolarsExecutor()
 
-    def wrap(self, df, id=None):
+    def wrap(self, df, source_id=None):
 
-        return PolarsDF(df, id)
+        return PolarsDF(df, source_id)

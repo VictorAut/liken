@@ -22,20 +22,20 @@ if TYPE_CHECKING:
 class PolarsDF(DF[pl.DataFrame], CanonicalIdMixin):
     """Polars DataFrame wrapper"""
 
-    def __init__(self, df: pl.DataFrame, id: str | None = None):
-        self._df: pl.DataFrame = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: pl.DataFrame, source_id: str | None = None):
+        self._df: pl.DataFrame = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pl.DataFrame) -> pl.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: pl.DataFrame, id: str) -> pl.DataFrame:
-        return df.with_columns(df[id].alias(CANONICAL_ID))
+    def _df_overwrite_id(self, df: pl.DataFrame, source_id: str) -> pl.DataFrame:
+        return df.with_columns(df[source_id].alias(CANONICAL_ID))
 
-    def _df_copy_id(self, df: pl.DataFrame, id: str) -> pl.DataFrame:
-        return df.with_columns(df[id].alias(CANONICAL_ID))
+    def _df_copy_id(self, df: pl.DataFrame, source_id: str) -> pl.DataFrame:
+        return df.with_columns(df[source_id].alias(CANONICAL_ID))
 
     def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))

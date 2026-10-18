@@ -24,23 +24,23 @@ if TYPE_CHECKING:
 class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
     """Dask DataFrame wrapper"""
 
-    def __init__(self, df: dd.DataFrame, id: str | None = None, preserve_schema: bool = False):
+    def __init__(self, df: dd.DataFrame, source_id: str | None = None, preserve_schema: bool = False):
         if preserve_schema:
             self._df = df
         else:
-            self._df = self._add_canonical_id(df, id)
-        self._id = id
+            self._df = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: dd.DataFrame) -> dd.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: dd.DataFrame, id: str) -> dd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_overwrite_id(self, df: dd.DataFrame, source_id: str) -> dd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
-    def _df_copy_id(self, df: dd.DataFrame, id: str) -> dd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_copy_id(self, df: dd.DataFrame, source_id: str) -> dd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
     def _df_autoincrement_id(self, df: dd.DataFrame) -> dd.DataFrame:
 
@@ -62,10 +62,10 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
 
         return df.map_partitions(_assign, meta=meta)
 
-    def _new_meta(self, df: dd.DataFrame, id: str | None = None) -> pd.DataFrame:
+    def _new_meta(self, df: dd.DataFrame, source_id: str | None = None) -> pd.DataFrame:
         meta = df._meta.copy()
 
-        dtype = meta[id].dtype if id else "int64"
+        dtype = meta[source_id].dtype if source_id else "int64"
 
         meta[CANONICAL_ID] = pd.Series(dtype=dtype)
 

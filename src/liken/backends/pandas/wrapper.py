@@ -22,20 +22,20 @@ if TYPE_CHECKING:
 class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
     """Pandas DataFrame wrapper"""
 
-    def __init__(self, df: pd.DataFrame, id: str | None = None):
-        self._df: pd.DataFrame = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: pd.DataFrame, source_id: str | None = None):
+        self._df: pd.DataFrame = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pd.DataFrame) -> pd.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: pd.DataFrame, id: str) -> pd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_overwrite_id(self, df: pd.DataFrame, source_id: str) -> pd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
-    def _df_copy_id(self, df: pd.DataFrame, id: str) -> pd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_copy_id(self, df: pd.DataFrame, source_id: str) -> pd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
     def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})

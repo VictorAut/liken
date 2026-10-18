@@ -80,8 +80,8 @@ class AddsCanonical(Protocol[D]):
     """Mixin protocol"""
 
     def _df_as_is(self, df: D) -> D: ...
-    def _df_overwrite_id(self, df: D, id: str) -> D: ...
-    def _df_copy_id(self, df: D, id: str) -> D: ...
+    def _df_overwrite_id(self, df: D, source_id: str) -> D: ...
+    def _df_copy_id(self, df: D, source_id: str) -> D: ...
     def _df_autoincrement_id(self, df: D) -> D: ...
     def _column_labels_list(self, df: D) -> list[str]: ...
 
@@ -94,26 +94,26 @@ class CanonicalIdMixin(AddsCanonical):
 
     However, the canonical ID field can also be:
         - already present in the dataframe as "canonical_id"
-        - copied from another "id" field
+        - copied from another "source_id" field
 
     In those other instances the resultant canonical id field can therefore
     also be a string field.
     """
 
-    def _add_canonical_id(self, df, id: str | None):
+    def _add_canonical_id(self, df, source_id: str | None):
 
         has_canonical: bool = CANONICAL_ID in self._column_labels_list(df)
-        id_is_canonical: bool = id == CANONICAL_ID
+        source_id_is_canonical: bool = source_id == CANONICAL_ID
 
         if has_canonical:
-            if id:
-                if id_is_canonical:
+            if source_id:
+                if source_id_is_canonical:
                     return self._df_as_is(df)
-                # overwrite with id
-                return self._df_overwrite_id(df, id)
+                # overwrite with source_id
+                return self._df_overwrite_id(df, source_id)
             return self._df_as_is(df)
-        if id:
-            # write new with id
-            return self._df_copy_id(df, id)
+        if source_id:
+            # write new with source_id
+            return self._df_copy_id(df, source_id)
         # write new auto-incrementing
         return self._df_autoincrement_id(df)

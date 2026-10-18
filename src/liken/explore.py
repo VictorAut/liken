@@ -61,7 +61,7 @@ def run_explore(
 
     # Sampling returns a new frame and wrapping copies, so the user's
     # dataframe is never mutated.
-    wdf: DF = wrap(_sample(df, backend.name, frac), id=None)
+    wdf: DF = wrap(_sample(df, backend.name, frac), source_id=None)
 
     rows: list[tuple[str | float, ...]] = []
 

@@ -53,7 +53,7 @@ class Executor(Protocol[D]):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None,
+        source_id: str | None,
     ) -> D: ...
 
 
@@ -68,7 +68,7 @@ class LocalExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> DF:
         """Process a local dataframe according to the deduplication collection
 
@@ -84,7 +84,7 @@ class LocalExecutor(Executor):
         also.)
         """
 
-        del id  # Unused: here for interface symmetry with PysparkExecutor
+        del source_id  # Unused: here for interface symmetry with PysparkExecutor
 
         call_deduper = partial(
             self._call_deduper,

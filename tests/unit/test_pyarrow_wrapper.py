@@ -53,7 +53,7 @@ def test_create_df_empty_data():
 
 
 def _wrap(df: pa.Table, id: str | None = None):
-    return PyarrowBackend().wrap(df, id=id)
+    return PyarrowBackend().wrap(df, source_id=id)
 
 
 def test_autoincrement_id():
@@ -293,13 +293,13 @@ def test_dedupe_canonicalize_collect_on_pyarrow_input():
         }
     )
 
-    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="id").collect()
+    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="id").collect()
 
     assert isinstance(result, pa.Table)
     assert result.column(CANONICAL_ID).to_pylist() == ["a", "a", "c"]
 
 
-def test_canonicalize_without_id_uses_uid():
+def test_canonicalize_without_source_id_uses_uid():
     df = pa.table(
         {
             "address": ["1 High St", "1 High St", "2 Low St"],
@@ -307,7 +307,7 @@ def test_canonicalize_without_id_uses_uid():
         }
     )
 
-    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="uid").collect()
+    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="uid").collect()
 
     assert result.column(CANONICAL_ID).to_pylist() == ["u1", "u1", "u3"]
 
@@ -320,7 +320,7 @@ def test_canonicals_and_synthesize_on_pyarrow_input():
         }
     )
 
-    d = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="uid")
+    d = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="uid")
 
     assert d.canonicals() == {"u1": 2}
     syn = d.synthesize()

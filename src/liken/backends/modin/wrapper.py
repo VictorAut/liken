@@ -23,20 +23,20 @@ if TYPE_CHECKING:
 class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
     """Modin DataFrame wrapper"""
 
-    def __init__(self, df: mpd.DataFrame, id: str | None = None):
-        self._df: mpd.DataFrame = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: mpd.DataFrame, source_id: str | None = None):
+        self._df: mpd.DataFrame = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: mpd.DataFrame) -> mpd.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_overwrite_id(self, df: mpd.DataFrame, source_id: str) -> mpd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
-    def _df_copy_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_copy_id(self, df: mpd.DataFrame, source_id: str) -> mpd.DataFrame:
+        return df.assign(**{CANONICAL_ID: df[source_id]})
 
     def _df_autoincrement_id(self, df: mpd.DataFrame) -> mpd.DataFrame:
         import modin.pandas as mpd

@@ -28,5 +28,5 @@ class PyarrowBackend(Backend):
         del kwargs  # Unused
         return PyarrowExecutor()
 
-    def wrap(self, df, id=None):
-        return ArrowDF(df, id)
+    def wrap(self, df, source_id=None):
+        return ArrowDF(df, source_id)

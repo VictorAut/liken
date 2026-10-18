@@ -26,5 +26,5 @@ class PandasBackend(Backend):
         del kwargs  # Unused
         return PandasExecutor()
 
-    def wrap(self, df, id=None):
-        return PandasDF(df, id)
+    def wrap(self, df, source_id=None):
+        return PandasDF(df, source_id)

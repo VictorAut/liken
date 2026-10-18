@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import os
 from typing import Final
 
 
 # Default canonical_id label in the dataframe
-CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
+CANONICAL_ID: Final[str] = "canonical_id"
 
 # Sequential API use will load to this dictionary key by default:
 SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"

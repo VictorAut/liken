@@ -84,18 +84,18 @@ def test_canonicals_rejects_non_integer_n(n, dataframe):
 
 
 def test_canonicalize_rejects_empty_id():
-    """an empty `id` previously fell through to autoincrement."""
+    """an empty `source_id` previously fell through to autoincrement."""
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
-    with pytest.raises(InvalidArgumentValueError, match="`id` must be a non-empty string, got ''"):
-        dupe.canonicalize("a", id="")
+    with pytest.raises(InvalidArgumentValueError, match="`source_id` must be a non-empty string, got ''"):
+        dupe.canonicalize("a", source_id="")
 
 
 def test_canonicalize_rejects_non_str_id():
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
-    with pytest.raises(InvalidArgumentTypeError, match="`id` must be of type 'str', got 'int'"):
-        dupe.canonicalize("a", id=1)
+    with pytest.raises(InvalidArgumentTypeError, match="`source_id` must be of type 'str', got 'int'"):
+        dupe.canonicalize("a", source_id=1)
 
 
 def test_canonicalize_rejects_non_bool_drop_duplicates():
@@ -243,11 +243,11 @@ def test_enact_rejects_nonexistent_tuple_member():
 
 
 def test_canonicalize_rejects_nonexistent_id():
-    """`id` names an existing column."""
+    """`source_id` names an existing column."""
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.canonicalize("a", id="nope")
+        dupe.canonicalize("a", source_id="nope")
 
 
 def test_apply_rejects_nonexistent_dict_tuple_member():
@@ -326,7 +326,7 @@ def test_canonicalize_calls(
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
-        id=None,
+        source_id=None,
     )
     mock_sm.reset.assert_called_once()
 
@@ -361,7 +361,7 @@ def test_drop_duplicate_calls(
         keep="first",
         drop_duplicates=True,
         drop_canonical_id=True,
-        id=None,
+        source_id=None,
     )
     mock_sm.reset.assert_called_once()
 

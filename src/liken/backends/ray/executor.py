@@ -40,7 +40,7 @@ class RayExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> RayDF:
         """Maps dataframe partitions to be processed by Ray enforced to use
         pandas for each partition.
@@ -68,7 +68,7 @@ class RayExecutor(Executor):
                 columns,
                 keep=keep,
                 drop_duplicates=drop_duplicates,
-                id=id,
+                source_id=source_id,
             ).collect()  # type: ignore[return-value]
 
         # IMPORTANT: "pandas" batch

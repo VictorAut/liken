@@ -42,7 +42,7 @@ class PysparkExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> PysparkDF:
         """Maps dataframe partitions to be processed via the RDD API yielding
         low-level list[Rows], which are then post-processed back to a dataframe.
@@ -61,7 +61,7 @@ class PysparkExecutor(Executor):
                 factory=Dedupe,
                 partition=partition,
                 dedupers=dedupers,
-                id=id,
+                source_id=source_id,
                 columns=columns,
                 drop_duplicates=drop_duplicates,
                 keep=keep,
@@ -82,7 +82,7 @@ class PysparkExecutor(Executor):
         factory: type[Dedupe],
         partition: Iterator[Row],
         dedupers: DeduplicationDict | Pipeline,
-        id: str | None,
+        source_id: str | None,
         columns: Columns | None,
         drop_duplicates: bool,
         keep: Keep = "first",
@@ -96,7 +96,7 @@ class PysparkExecutor(Executor):
         Args:
             partition: a partition
             dedupers: the collection of dedupers
-            id: the unique identifier of the dataset a.k.a "business key"
+            source_id: the unique identifier of the dataset a.k.a "business key"
             columns: the attribute on which to deduplicate
 
         Returns:
@@ -126,7 +126,7 @@ class PysparkExecutor(Executor):
             columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
-            id=id,
+            source_id=source_id,
         ).collect()
 
         return iter(df)  # type: ignore[arg-type]

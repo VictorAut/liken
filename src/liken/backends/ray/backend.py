@@ -37,7 +37,7 @@ class RayBackend(Backend):
 
         return RayExecutor()
 
-    def wrap(self, df, id=None):
+    def wrap(self, df, source_id=None):
         from liken.backends.ray.wrapper import RayDF
 
-        return RayDF(df, id)
+        return RayDF(df, source_id)

@@ -35,7 +35,7 @@ class DaskExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> DaskDF:
         """Maps dataframe partitions to be processed by Dask, natively using
         pandas for each partition.
@@ -43,7 +43,7 @@ class DaskExecutor(Executor):
 
         from liken.backends.dask.wrapper import DaskDF
 
-        meta = df._new_meta(df._df, id)
+        meta = df._new_meta(df._df, source_id)
 
         if drop_canonical_id:
             meta = meta.drop(columns=[CANONICAL_ID])
@@ -58,10 +58,10 @@ class DaskExecutor(Executor):
                 keep=keep,
                 drop_duplicates=drop_duplicates,
                 drop_canonical_id=drop_canonical_id,
-                id=id,
+                source_id=source_id,
                 meta=meta,
             ),
-            id=id,
+            source_id=source_id,
             preserve_schema=True,
         )
 
@@ -73,7 +73,7 @@ class DaskExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> pd.DataFrame:
         from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
         from liken.collections.dict import DeduplicationDict as DictImpl
@@ -94,7 +94,7 @@ class DaskExecutor(Executor):
             columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
-            id=id,
+            source_id=source_id,
         ).collect()  # type: ignore[assignment]
 
         if drop_canonical_id:

@@ -24,25 +24,25 @@ if TYPE_CHECKING:
 class RayDF(DF["RayDataset"], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
-    def __init__(self, df: RayDataset, id: str | None = None):
+    def __init__(self, df: RayDataset, source_id: str | None = None):
         import ray
 
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
-        self._df: RayDataset = self._add_canonical_id(df, id)
-        self._id = id
+        self._df: RayDataset = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: RayDataset) -> RayDataset:
         return df
 
-    def _df_overwrite_id(self, df: RayDataset, id: str) -> RayDataset:
-        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+    def _df_overwrite_id(self, df: RayDataset, source_id: str) -> RayDataset:
+        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[source_id]}), batch_format="pandas")
 
-    def _df_copy_id(self, df: RayDataset, id: str) -> RayDataset:
-        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+    def _df_copy_id(self, df: RayDataset, source_id: str) -> RayDataset:
+        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[source_id]}), batch_format="pandas")
 
     def _df_autoincrement_id(self, df):
         """collects data to driver node!"""

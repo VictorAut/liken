@@ -38,7 +38,7 @@ class PysparkBackend(Backend):
 
         return PysparkExecutor(spark_session=spark_session)
 
-    def wrap(self, df, id=None):
+    def wrap(self, df, source_id=None):
 
         from liken.backends.pyspark.wrapper import PysparkDF
         from liken.backends.pyspark.wrapper import PysparkRows
@@ -46,4 +46,4 @@ class PysparkBackend(Backend):
         if isinstance(df, list):
             return PysparkRows(df)
 
-        return PysparkDF(df, id)
+        return PysparkDF(df, source_id)

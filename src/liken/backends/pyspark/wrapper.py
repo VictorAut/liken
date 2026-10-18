@@ -47,7 +47,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
     Args:
         df: the dataframe
-        id: the label of any other id columns used for creation of canonical_id
+        source_id: the label of any other id columns used for creation of canonical_id
         is_init: define whether to route the DataFrame to an RDD along with
             canonical ID creation, or not.
     """
@@ -57,7 +57,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
     def __init__(
         self,
         df: DataFrame,
-        id: str | None = None,
+        source_id: str | None = None,
         is_init: bool = True,
     ):
         # new spark plan for safety
@@ -65,11 +65,11 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
         self._df: SparkObject
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, id)  # type: ignore[no-redef]
+            self._df: RDD[Row] = self._add_canonical_id(df, source_id)  # type: ignore[no-redef]
         else:
             self._df: DataFrame = df  # type: ignore[no-redef]
 
-        self._id = id
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
@@ -77,23 +77,23 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         self._schema = df.schema
         return df.rdd
 
-    def _df_overwrite_id(self, df: DataFrame, id: str) -> RDD[Row]:
+    def _df_overwrite_id(self, df: DataFrame, source_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
         df_new: DataFrame = df.drop(CANONICAL_ID)
-        self._schema = self._new_schema(df_new, id)
+        self._schema = self._new_schema(df_new, source_id)
         return df_new.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[source_id]}) for row in partition]
         )
 
-    def _df_copy_id(self, df: DataFrame, id: str) -> RDD[Row]:
+    def _df_copy_id(self, df: DataFrame, source_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df, id)
+        self._schema = self._new_schema(df, source_id)
         return df.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[source_id]}) for row in partition]
         )
 
     def _df_autoincrement_id(self, df: DataFrame) -> RDD[Row]:
@@ -109,9 +109,9 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         return df.columns
 
     @staticmethod
-    def _new_schema(df: DataFrame, id: str | None = None) -> StructType:
+    def _new_schema(df: DataFrame, source_id: str | None = None) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
-        of the id field.
+        of the source_id field.
         """
         # lazy
         import pyspark.sql.types as T
@@ -128,8 +128,8 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         }
 
         fields = df.schema.fields
-        if id:
-            dtype = dict(df.dtypes)[id]
+        if source_id:
+            dtype = dict(df.dtypes)[source_id]
             id_type = pyspark_types[dtype]
         else:
             id_type = T.LongType()  # auto-incremental is numeric

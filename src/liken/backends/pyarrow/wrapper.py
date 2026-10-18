@@ -23,20 +23,20 @@ if TYPE_CHECKING:
 class ArrowDF(DF[pa.Table], CanonicalIdMixin):
     """PyArrow Table wrapper"""
 
-    def __init__(self, df: pa.Table, id: str | None = None):
-        self._df: pa.Table = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: pa.Table, source_id: str | None = None):
+        self._df: pa.Table = self._add_canonical_id(df, source_id)
+        self._source_id = source_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pa.Table) -> pa.Table:
         return df
 
-    def _df_overwrite_id(self, df: pa.Table, id: str) -> pa.Table:
-        return df.set_column(df.column_names.index(CANONICAL_ID), CANONICAL_ID, df.column(id))
+    def _df_overwrite_id(self, df: pa.Table, source_id: str) -> pa.Table:
+        return df.set_column(df.column_names.index(CANONICAL_ID), CANONICAL_ID, df.column(source_id))
 
-    def _df_copy_id(self, df: pa.Table, id: str) -> pa.Table:
-        return df.append_column(CANONICAL_ID, df.column(id))
+    def _df_copy_id(self, df: pa.Table, source_id: str) -> pa.Table:
+        return df.append_column(CANONICAL_ID, df.column(source_id))
 
     def _df_autoincrement_id(self, df: pa.Table) -> pa.Table:
         return df.append_column(CANONICAL_ID, pa.array(range(len(df)), type=pa.int64()))

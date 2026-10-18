@@ -261,7 +261,7 @@ class Dedupe:
             keep=keep,
             drop_duplicates=True,
             drop_canonical_id=True,
-            id=None,
+            source_id=None,
         ).unwrap()
 
         self._collection.reset()
@@ -274,7 +274,7 @@ class Dedupe:
         *,
         keep: Keep = "first",
         drop_duplicates: bool = False,
-        id: str | None = None,
+        source_id: str | None = None,
     ) -> Self:
         """Canonicalize by enacting the applied dedupers.
 
@@ -282,10 +282,10 @@ class Dedupe:
         canonicalization on any number of columns provided in `columns`.
 
         Warning:
-            Leaving `id` to it's default `None` value forces collection to
-            driver node when using `Ray` Datasets and `Dask` DataFrames, which
-            is not recommended. Use the dataset's unique identifier with the `id`
-            arg, instead.
+            Leaving `source_id` to it's default `None` value forces collection
+            to driver node when using `Ray` Datasets and `Dask` DataFrames,
+            which is not recommended. Use the dataset's unique identifier with
+            the `source_id` arg, instead.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
@@ -295,8 +295,8 @@ class Dedupe:
                 DataFrame.
             drop_duplicates: Optionally drop duplicates, whilst preserving a
                 canonical_id, contrary to `drop_duplicates`.
-            id: string label identifying a column in the dataframe that can be
-                used to optionally override the values of a default
+            source_id: string label identifying a column in the dataframe that
+                can be used to optionally override the values of a default
                 canonical_id.
 
         Returns:
@@ -312,7 +312,7 @@ class Dedupe:
                 columns defined, or vice-versa.
         """
         keep: Keep = validate_keep_arg(keep)
-        id = require_non_empty_str("id", id, allow_none=True)
+        source_id = require_non_empty_str("source_id", source_id, allow_none=True)
         drop_duplicates = require_type("drop_duplicates", drop_duplicates, bool)
         columns: Columns | None = validate_columns_arg(columns)
 
@@ -324,10 +324,10 @@ class Dedupe:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
-        if id:
-            validate_explore_column_exists(id, df_columns)
+        if source_id:
+            validate_explore_column_exists(source_id, df_columns)
 
-        wdf: DF = wrap(self._df, id)
+        wdf: DF = wrap(self._df, source_id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -341,7 +341,7 @@ class Dedupe:
             keep=keep,
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
-            id=id,
+            source_id=source_id,
         ).unwrap()
 
         self._collection.reset()
@@ -377,7 +377,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, None)
 
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
@@ -419,7 +419,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, None)
 
         return wdf.synthesize_record()
 
