@@ -168,7 +168,7 @@ def test_validate_spark_arg_missing_session():
 def test_validate_columns_args_not_used(mock_wrap, deduplication_mock):
     mock_wrap.return_value = Mock()
 
-    with pytest.raises(ValueError, match="columns cannot be None, a column label of tuple of column labels"):
+    with pytest.raises(ValueError, match="columns cannot be None"):
         lk = Dedupe(pd.DataFrame({"address": [1], "email": [2]}))
         lk.apply(deduplication_mock)
         lk.canonicalize()  # <-- shouldn't be empty

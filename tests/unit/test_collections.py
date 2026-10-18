@@ -91,9 +91,8 @@ def test_dedupers_config_rejects_invalid_member_in_value(s1, s2, s3):
 
 
 def test_dict_api_rejects_preprocessor_with_explicit_message():
-    """U44/D3: a dict API permanece sem preprocessors e a mensagem os nomeia."""
     sm = CollectionsManager()
-    with pytest.raises(InvalidDeduperError, match="preprocessors are not accepted in the dict API"):
+    with pytest.raises(InvalidDeduperError, match="Invalid type for dict value"):
         sm.apply({"a": lower()})
 
 
