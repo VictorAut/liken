@@ -90,7 +90,10 @@ def test_existing_canonical_id_left_as_is():
     assert wdf.column(CANONICAL_ID).to_pylist() == ["x", "y"]
 
 
-def test_existing_canonical_id_overwritten_by_id_arg():
+def test_existing_canonical_id_overwritten_by_source_id_arg():
+    """Wrapper-level: only reachable via internal wrap() use (e.g. the
+    partitioned re-canonicalization path); the public canonicalize rejects
+    the collision before execution."""
     df = pa.table({CANONICAL_ID: ["x", "y"], "uid": [10, 20], "address": ["a", "b"]})
 
     wdf = _wrap(df, source_id="uid")
