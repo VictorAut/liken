@@ -2,37 +2,28 @@
 title: Release History
 ---
 
-## v0.13.0 (2026-10-13)
+## v0.12.3 (2026-10-18)
 
-**Breaking changes**
+**Fixes**
 
-- Argument validation is now eager and strict across the public API.
-  Previously accepted but invalid arguments now raise at construction or at
+- Previously accepted but invalid arguments now raise at construction or at
   the enact boundary:
-    - Empty containers are rejected: `apply({})`, an empty dict value
-        (`{"a": []}`), a zero-step `pipeline()`, an empty `step([])` list,
-        and `remove_stopwords(words=[])`.
-    - `str` is no longer accepted as `isin` values; a list, tuple, set or
-        frozenset is required (values are materialised at construction).
+    - Empty containers are rejected across all APIs e.g. `apply({})`.
+    - `str` is no longer accepted as `isin` deduper values (only a list, tuple, set or
+        frozenset).
     - `columns` is type-checked first: only `str` or a tuple of `str` is
         accepted; lists, sets and dicts are rejected with a "use a tuple"
-        message, and non-str labels (e.g. `(0,)`) are now type errors.
-    - Deduper knobs are validated: `tfidf(topn)` ≥ 1, `tfidf(ngram)` ≥ 1 or
-        a `(low, high)` 2-tuple with `1 ≤ low ≤ high`, `lsh(ngram)` ≥ 1,
-        `lsh(num_perm)` ≥ 1, `str_len` `min_len`/`max_len` ≥ 0, and `str`
+        message, and non-str labels are now type errors.
+    - Deduper knobs are validated e.g. `tfidf(topn)` ≥ 1, `lsh(ngram)` ≥ 1,
+        and `str_len` `min_len`/`max_len` ≥ 0, amongst others.
         patterns in the three str factories (empty patterns rejected).
-    - `fuzzy(scorer=...)` is validated against the supported scorers at
+    - `fuzzy`deduper `scorer` param is validated against the supported scorers at
         construction.
     - `canonicals(n)` requires an integer ≥ 2; `canonicalize(id)` requires a
         non-empty string; `canonicalize(drop_duplicates=...)` requires a
         bool.
     - The similarity `threshold` range is now the open interval `(0, 1)`.
-        This diverges from v0.12.2's `[0, 1)`: `threshold=0` collapsed whole
-        columns silently and is now rejected; `threshold=1` can never match
-        and is now rejected. `frac` keeps `(0, 1]`; explore `thresholds`
-        keep `(0, 1)`.
-    - `synthesize()` raises a `RuntimeError` when called before
-        `canonicalize()`.
+    - `synthesize` raises a `RuntimeError` when called before `canonicalize`.
     - A preprocessor set on a compound column now raises at execution
         instead of being silently skipped.
     - Preprocessor return values are checked at execution: a preprocessor
@@ -40,33 +31,20 @@ title: Release History
         names the preprocessor and column.
 - Applying a deduper with the reserved `"_default_"` dict key is rejected.
 - Missing column labels (`columns`, `id`, dict tuple-key members) raise a
-  clear error naming the label at the enact boundary; a frame with duplicate
-  column labels or no columns is rejected at the boundary.
-
-**Features**
-
+  clear error
 - Uniform replace policy for non-accumulating `apply` transitions: every
   transition between the Sequential, Dict and Pipeline APIs now warns and
-  replaces (dict-after-dict previously crashed with a `KeyError`).
-- Chaining a second deduper on one `Col` warns (last-wins kept); reusing one
-  `Col` across steps warns.
+  replaces.
+- Chaining a second deduper on one `Col` warns (last-wins kept).
 - A `spark_session` passed with a non-spark dataframe warns.
 - Preprocessors record their constructor arguments in `repr`, and `Col`'s
   string representation includes its preprocessors.
-- `step(preprocessors=...)` gains explicit semantics: omitted inherits the
+- Pipeline steps, `step(preprocessors=...)`, gain explicit semantics: omitted inherits the
   pipeline's preprocessors; `[]` or `None` means no preprocessors for the
   step.
-
-**Misc**
-
 - Validation errors carry liken-meaning exception classes
-  (`InvalidArgumentTypeError`/`InvalidArgumentValueError` in v0.12.2) with
-  argument-name-and-got-value messages across the deduper factories,
   collections, preprocessors and the public API.
-- The dict API's rejection message names that preprocessors are not accepted
-  there; the restriction is documented.
-- Warnings attribute to the user's call site.
-- The message for a missing Spark session is unified across both raise sites.
+- Message for a missing Spark session is unified across all raise sites.
 
 ## v0.12.2 (2026-10-13)
 
