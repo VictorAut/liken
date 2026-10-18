@@ -13,7 +13,9 @@ In this chapter we explore the configuring needed to canonicalize a dataset iter
 
 ## Canonical IDs
 
-A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally an Liken `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
+A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally a Liken `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `source_id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
+
+Note that `source_id` names the *source* column whose values become the canonical ids, while the `canonical_id` argument names the *output* column. If your source column is not already labelled `canonical_id`, pass a different `canonical_id` label — for example `canonicalize(source_id="uid", canonical_id="master_id")`. A `canonical_id` label that already exists in the frame is rejected with a `ValueError`.
 
 ## The Problem
 
@@ -21,7 +23,7 @@ Preparing an existing `canonical_id` column for an append is your job, not Liken
 
 1. Add a column, `canonical_id`, to the append dataset that continues the existing numbering: if the existing dataset holds `N` rows (ids `0` to `N-1`), the `n` appended rows get ids `N` to `N + n - 1`.
 2. Append ("stack") your datasets.
-3. Instantiate `Dedupe` and pass `id="canonical_id"` to the canonicalizer.
+3. Instantiate `Dedupe` and pass `source_id="canonical_id"` to the canonicalizer.
 
 !!! warning
     This process is going to be a lot easier with numeric ids. It's possible to use string identifiers but it makes the process of incrementing on append datasets much harder to manage and reason about
@@ -41,7 +43,7 @@ Say your canonicalized customers currently hold ids `0` and `1`, and an append b
 Existing records (ids 0–1) stacked with the append batch (ids 2–3).
 ///
 
-Canonicalize the stacked frame with `id="canonical_id"`:
+Canonicalize the stacked frame with `source_id="canonical_id"`:
 
 ```python
 import liken as lk
@@ -50,7 +52,7 @@ pipeline = lk.pipeline().step(
     lk.col("name", preprocessors=[lk.preprocessors.lower()]).fuzzy(threshold=0.7)
 )
 
-df = lk.dedupe(stacked).apply(pipeline).canonicalize(id="canonical_id", keep="first")
+df = lk.dedupe(stacked).apply(pipeline).canonicalize(source_id="canonical_id", keep="first")
 ```
 
  canonical_id  |     name
@@ -71,25 +73,27 @@ Because `keep="first"` picks the earliest record of the group, the new record jo
 ``` mermaid
 flowchart TD
 
-    df{{"`DataFrame already has a **canonical_id**?`"}}
-    id1{{"`**id** defined in canonicalize()?`"}}
-    id2{{"`DataFrame carries an **id** column to use?`"}}
-    idiscanonical{{"`**id** is the same as **canonical_id**?`"}}
+    df{{"`DataFrame already carries the output label?`"}}
+    src1{{"`**source_id** defined in canonicalize()?`"}}
+    src2{{"`DataFrame carries a source id column to use?`"}}
+    srceqlabel{{"`**source_id** is the same as the output label?`"}}
 
-    autoincrement("`Create a new autoincrementing **canonical_id**`")
-    copy("`Copy **id** to create **canonical_id**`")
-    overwrite("`Copy **id** to overwrite **canonical_id**`")
-    existing("`Use existing **canonical_id**`")
+    reject("`ValueError: choose another output label`")
+    existing("`Use existing column as the canonical ids`")
+    copycol("`Copy **source_id** into the output label`")
+    autoincrement("`Create a new autoincrementing canonical id`")
 
-    df-- yes -->id1
-    df-- no -->id2
+    df-- yes -->src1
+    df-- no -->src2
 
-    id1-- no -->existing
-    id1-- yes -->idiscanonical
+    src1-- no -->existing
+    src1-- yes -->srceqlabel
 
-    idiscanonical-- yes -->existing
-    idiscanonical-- no -->overwrite
+    srceqlabel-- yes -->reject
+    srceqlabel-- no -->existing
 
-    id2-- no -->autoincrement
-    id2-- yes -->copy
+    src2-- no -->autoincrement
+    src2-- yes -->copycol
 ```
+
+In other words: the output label must be free. To re-canonicalize a frame that already carries its canonical ids, use the existing column via `source_id` — but only on a frame whose output label slot is free, e.g. by passing a fresh output label such as `canonicalize(source_id="canonical_id", canonical_id="master_id")`.

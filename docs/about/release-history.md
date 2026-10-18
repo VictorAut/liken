@@ -2,6 +2,24 @@
 title: Release History
 ---
 
+## Unreleased
+
+**Breaking changes**
+
+- `canonicalize(id=...)` is renamed to `source_id=...`. Existing calls with
+  `id=` now raise a `TypeError` (unknown keyword). No deprecation shim.
+- `canonicalize` gains a `canonical_id` argument: the label of the output
+  canonical-id column, defaulting to `"canonical_id"`. A label that already
+  exists in the dataframe is rejected with a `ValueError` before execution —
+  the previous overwrite/keep-as-is behaviours on pre-existing canonical
+  columns are no longer reachable from `canonicalize`. To reuse a stored
+  canonical column, pass it as `source_id` (with a free output label).
+- The `CANONICAL_ID` environment variable has been removed. It had no runtime
+  effect (the constant was resolved once at import). The output label is now
+  controlled per call via `canonical_id=...`.
+- `canonicals()` and `synthesize()` honour the `canonical_id` label stored from
+  the last `canonicalize` call.
+
 ## v0.12.3 (2026-10-18)
 
 **Fixes**

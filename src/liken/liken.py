@@ -303,9 +303,22 @@ class Dedupe:
                 DataFrame.
             drop_duplicates: Optionally drop duplicates, whilst preserving a
                 canonical_id, contrary to `drop_duplicates`.
-            source_id: string label identifying a column in the dataframe that
-                can be used to optionally override the values of a default
-                canonical_id.
+            source_id: string label identifying a column in the dataframe whose
+                values become the canonical ids.
+            canonical_id: label of the output canonical-id column. Must not
+                already exist in the dataframe. `canonicals` and `synthesize`
+                read the column under this label.
+
+        Note:
+            How the canonical-id column is created:
+                - `source_id` set: its column is copied into `canonical_id`
+                  (source and output labels may differ).
+                - `source_id` is None and the output label is free: a new
+                  auto-incrementing `canonical_id` column is created.
+                - `source_id` equals `canonical_id` and that column does not
+                  exist: the usual "column not found" error is raised.
+                - the output label already exists in the frame: a `ValueError`
+                  is raised before any execution.
 
         Returns:
             Self. Access the dataframe with `.collect`, or numbers of repeated
