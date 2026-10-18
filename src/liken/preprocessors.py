@@ -16,46 +16,6 @@ from liken.validations import require_choice
 from liken.validations import require_type
 
 
-# The languages of nltk's `stopwords` corpus this preprocessor accepts. The
-# set mirrors the corpus fileids; see the `remove_stopwords` docstring.
-_SUPPORTED_STOPWORD_LANGUAGES: Final[frozenset[str]] = frozenset(
-    {
-        "albanian",
-        "arabic",
-        "azerbaijani",
-        "basque",
-        "belarusian",
-        "bengali",
-        "catalan",
-        "chinese",
-        "danish",
-        "dutch",
-        "english",
-        "finnish",
-        "french",
-        "german",
-        "greek",
-        "hebrew",
-        "hinglish",
-        "hungarian",
-        "indonesian",
-        "italian",
-        "kazakh",
-        "nepali",
-        "norwegian",
-        "portuguese",
-        "romanian",
-        "russian",
-        "slovene",
-        "spanish",
-        "swedish",
-        "tajik",
-        "tamil",
-        "turkish",
-        "uzbek",
-    }
-)
-
 _NORMALIZE_UNICODE_FORMS: Final[tuple[str, ...]] = ("NFC", "NFD", "NFKC", "NFKD")
 
 
@@ -172,7 +132,6 @@ class RemoveStopwords(Preprocessor):
 
     def __init__(self, words: list[str] | None = None, language: str = "english"):
         language = require_type("language", language, str)
-        language = require_choice("language", language, tuple(sorted(_SUPPORTED_STOPWORD_LANGUAGES)))
         if words is not None:
             require_type("words", words, list)
             if not words:
@@ -318,7 +277,13 @@ def remove_stopwords(
     Args:
         words: A list of words to ignore. If defined, `language` argument is
             ignored.
-        language: The language to use for the stop words dictionary"""
+        language: The language to use for the stop words dictionary and must be
+            one of: albanian, arabic, azerbaijani, basque, belarusian, bengali,
+            catalan, chinese, danish, dutch, english, finnish, french, german,
+            greek, hebrew, hinglish, hungarian, indonesian, italian, kazakh,
+            nepali, norwegian, portuguese, romanian, russian, slovene, spanish,
+            swedish, tajik, tamil, turkish, uzbek
+    """
     return RemoveStopwords(words=words, language=language)
 
 

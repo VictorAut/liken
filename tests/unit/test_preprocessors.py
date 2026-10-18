@@ -182,19 +182,17 @@ def test_regex_replace_propagates_nulls():
     assert pp.process().to_pylist() == ["a b", None]
 
 
+################
+# validations  #
+################
+
+
 def test_regex_replace_invalid_pattern_raises_at_construction():
-    """U27: o padrão inválido é rejeitado já na construção, não no process."""
     with pytest.raises(InvalidArgumentValueError, match="`pattern` must be a valid regular expression"):
         lk.preprocessors.regex_replace("[", "")
 
 
-######################
-# eager validation  #
-#####################
-
-
 def test_normalize_unicode_rejects_unknown_form():
-    """U27: an unknown normalization form is rejected at construction."""
     with pytest.raises(InvalidArgumentValueError, match="`form` must be one of"):
         lk.preprocessors.normalize_unicode(form="NOTAFORM")
 
@@ -209,13 +207,7 @@ def test_regex_replace_rejects_non_str_replacement():
         lk.preprocessors.regex_replace("a", 1)
 
 
-def test_remove_stopwords_rejects_unknown_language():
-    with pytest.raises(InvalidArgumentValueError, match="`language` must be one of"):
-        lk.preprocessors.remove_stopwords(language="klingon")
-
-
 def test_remove_stopwords_rejects_empty_words():
-    """U42: `[]` is rejected; `None` means the language defaults."""
     with pytest.raises(InvalidArgumentValueError, match="`words` must be a non-empty list"):
         lk.preprocessors.remove_stopwords(words=[])
 
@@ -226,7 +218,7 @@ def test_remove_stopwords_rejects_non_str_words():
 
 
 def test_remove_stopwords_process_does_not_mutate_words():
-    """U42: `process` must not overwrite the stored words."""
+    """`process` must not overwrite the stored words."""
     preprocessor = lk.preprocessors.remove_stopwords(words=["the"])
     preprocessor.from_array(pa.array(["the cat"]))
     preprocessor.process()
@@ -235,20 +227,18 @@ def test_remove_stopwords_process_does_not_mutate_words():
 
 
 def test_ascii_fold_takes_no_form_argument():
-    """U53: the dead `form` parameter is removed; the filter hardcodes NFKD."""
     from liken.preprocessors import AsciiFold
 
     with pytest.raises(TypeError):
         AsciiFold(form="NFC")
 
 
-####################
-# repr and str    #
-####################
+################
+# repr and str #
+################
 
 
 def test_preprocessor_repr_records_constructor_args():
-    """U45: preprocessors render their constructor arguments."""
     assert repr(lk.preprocessors.lower()) == "Lower()"
     assert repr(lk.preprocessors.normalize_unicode()) == "NormalizeUnicode(form='NFKD')"
     assert repr(lk.preprocessors.regex_replace("a", "b")) == "RegexReplace('a', 'b')"
@@ -258,7 +248,7 @@ def test_preprocessor_repr_records_constructor_args():
 
 
 def test_col_str_includes_step_preprocessors():
-    """U45: a Col's string representation includes its preprocessors."""
+    """a Col's string representation includes its preprocessors."""
     c = lk.col("a", preprocessors=[lk.preprocessors.lower()]).exact()
 
     assert "preprocessors=['Lower()']" in str(c)
