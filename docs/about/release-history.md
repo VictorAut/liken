@@ -6,7 +6,7 @@ title: Release History
 
 **Fixes**
 
-- Previously accepted but invalid arguments now raise:
+- Previously accepted but invalid arguments now raise errors:
     - Empty containers are rejected across all APIs e.g. `apply({})`.
     - `str` is no longer accepted as `isin` deduper values (only a list, tuple, set or
         frozenset).
