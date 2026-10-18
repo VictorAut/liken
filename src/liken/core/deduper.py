@@ -179,7 +179,7 @@ class BaseDeduper(Base):
         keep: Keep,
         canonical_id: str = CANONICAL_ID,
     ) -> DF:
-        canonicals = self.wdf.get_canonical(canonical_id)
+        canonicals = self.wdf.get_canonical()
 
         n = len(canonicals)
 

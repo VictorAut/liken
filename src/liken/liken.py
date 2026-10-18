@@ -108,6 +108,8 @@ class Dedupe:
         self._df = rows
         self._collection = CollectionsManager()
         self._executor = LocalExecutor()
+        self.has_been_canonicalized = False
+        self._canonical_id = CANONICAL_ID
         return self
 
     def apply(self, deduper: BaseDeduper | dict | Pipeline) -> Self:

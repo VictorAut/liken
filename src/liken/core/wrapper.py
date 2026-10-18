@@ -66,14 +66,9 @@ class DF(Generic[D]):
             return self._get_col(columns)
         return self._get_cols(columns)
 
-    def get_canonical(self, canonical_id: str | None = None) -> pa.Array:
-        """Convenience method
-
-        Args:
-            canonical_id: optional label overriding the wrapper's stored
-                canonical-id label.
-        """
-        return self.get_array(canonical_id if canonical_id is not None else self._canonical_id)
+    def get_canonical(self) -> pa.Array:
+        """Convenience method"""
+        return self.get_array(self._canonical_id)
 
     def synthesize_record(self) -> D:
         raise NotImplementedError

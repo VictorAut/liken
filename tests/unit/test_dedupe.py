@@ -414,7 +414,7 @@ def test_canonicalize_rejects_canonical_id_collision():
 
 
 def test_drop_duplicates_signature_unchanged():
-    """`drop_duplicates` exposes no new parameter (WI036 Task 8)."""
+    """`drop_duplicates` exposes no new parameter."""
     import inspect
 
     params = inspect.signature(Dedupe.drop_duplicates).parameters
