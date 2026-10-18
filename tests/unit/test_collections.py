@@ -233,8 +233,8 @@ def test_collections_manager_apply_rejects_reserved_default_key(s1):
 
 
 def test_collections_manager_apply_rejection_does_not_set_has_applies():
-    """Um apply rejeitado não marca `has_applies`: o fallback do exact
-    continua a disparar no próximo enact."""
+    """A rejected apply does not mark `has_applies`, so the exact fallback
+    continues to trigger on the next enact."""
     sm = CollectionsManager()
     with pytest.raises(InvalidDeduperError):
         sm.apply({})
@@ -282,7 +282,7 @@ def test_collections_manager_apply_dict_after_pipeline(s1):
 
 
 def test_collections_manager_apply_warns_dict_after_dict(s1, s2):
-    """D1: dict-after-dict warns and replaces; it must not raise."""
+    """dict-after-dict warns ONLY and replaces"""
     sm = CollectionsManager()
     sm.apply({"a": (s1,)})
 
@@ -322,7 +322,7 @@ def test_collections_manager_apply_warns_dict_after_pipeline(s1):
 
 
 def test_collections_manager_apply_rejects_sequence_after_pipeline(s1):
-    """U32: the rejection names the actual current mode, here 'Pipeline'."""
+    """the rejection names the actual current API mode, here 'Pipeline'."""
     sm = CollectionsManager()
     sm.apply(Pipeline().step(col("a").s1()))
 
@@ -334,7 +334,7 @@ def test_collections_manager_apply_rejects_sequence_after_pipeline(s1):
 
 
 def test_collections_manager_apply_rejects_sequence_after_dict_names_dict(s1):
-    """U32: the rejection names the actual current mode, here the dict."""
+    """the rejection names the actual current API mode, here the dict."""
     sm = CollectionsManager()
     sm.apply({"a": (s1,)})
 
@@ -362,7 +362,7 @@ def test_collections_manager_get_returns_config():
 
 
 def test_collections_manager_validate_api_mode_sequential_requires_columns(s1):
-    """U12/U54: sequential mode — including the exact fallback — requires
+    """sequential mode — including the exact fallback — requires
     `columns`; the mode rule lives on the collections manager."""
     sm = CollectionsManager()
     sm.apply(s1)
@@ -465,7 +465,7 @@ def test_collections_manager_reset_clears_collection(s1):
 
 
 def test_collections_manager_reset_resets_has_applies(s1):
-    """U03: after a reset the exact fallback must be able to fire again."""
+    """after a reset the exact fallback must be able to fire again."""
     sm = CollectionsManager()
     sm.apply(s1)
     assert sm.has_applies
@@ -506,26 +506,26 @@ def test_step_rejects_non_col():
 
 
 def test_step_rejects_empty_list():
-    """U09: an empty step list broke execution with an UnboundLocalError."""
+    """an empty pipeline step list broke execution with an UnboundLocalError."""
     with pytest.raises(InvalidArgumentValueError, match="`cols` must be a non-empty list"):
         lk.pipeline().step([])
 
 
 def test_step_rejects_non_col_list_member():
-    """U26: every list member is validated, matching the single-arg case."""
+    """every list member is validated, matching the single-arg case."""
     with pytest.raises(InvalidArgumentTypeError, match="`cols` must be of type 'Col', got 'str'"):
         lk.pipeline().step(["a", "b"])
 
 
 def test_step_preprocessors_omitted_inherits_pipeline():
-    """U23: an omitted `step` preprocessors arg inherits the pipeline's."""
+    """an omitted `step` preprocessors arg inherits the pipeline's."""
     p = lk.pipeline(preprocessors=[lower()]).step(lk.col("a").fuzzy())
 
     assert len(p.steps[0][0].preprocessors) == 1
 
 
 def test_step_preprocessors_empty_list_means_none():
-    """U23: `[]` means no preprocessors for the step — no inheritance."""
+    """`[]` means no preprocessors for the step — no inheritance."""
     p = lk.pipeline(preprocessors=[lower()]).step(lk.col("a").fuzzy(), preprocessors=[])
 
     assert p.steps[0][0].preprocessors == []
@@ -543,7 +543,7 @@ def test_step_preprocessors_none_means_none():
 
 
 def test_col_rechaining_warns():
-    """U24: chaining a second deduper on one Col warns; last-wins is kept."""
+    """chaining a second deduper on one Col warns; last-wins is kept."""
     with pytest.warns(UserWarning, match="replaces the previously chained deduper"):
         lk.col("a").exact().fuzzy()
 
@@ -558,7 +558,7 @@ def test_col_reuse_across_steps_warns():
 
 
 def test_col_unit_before_chaining_raises():
-    """U25: an unset `_unit` raises a liken error, not the registry's."""
+    """an unset `_unit` raises a liken error, not the registry's."""
     with pytest.raises(InvalidDeduperError, match="no deduper chained yet"):
         _ = lk.col("a").unit
     with pytest.raises(InvalidDeduperError, match="no deduper chained yet"):

@@ -10,6 +10,7 @@ from typing import TypeAlias
 from typing import cast
 from typing import final
 
+from liken.constants import INVALID_EMPTY_PIPELINE_STEP_MSG
 from liken.constants import INVALID_NO_DEDUPER_CHAINED_MSG
 from liken.constants import WARN_COL_RECHAINED_MSG
 from liken.constants import WARN_COL_REUSED_MSG
@@ -50,7 +51,8 @@ class _Inherit:
 
 _INHERIT_PREPROCESSORS: _Inherit = _Inherit()
 
-# PUBLIC ON API:
+
+# PUBLIC API:
 
 
 def pipeline(preprocessors: InputPreprocessor = ()) -> Pipeline:
@@ -370,12 +372,9 @@ class Col:
 
         def wrapper(*args: Any, **kwargs: Any) -> Col:
             deduper = func(*args, **kwargs)
-            # U28: the deduper's column validation is eager — the columns are
-            # known here, at construction.
             deduper.validate(self._columns)
             if "_unit" in self.__dict__:
-                # U24: chaining a second deduper keeps last-wins, but it must
-                # not happen silently.
+                # chaining a second deduper keeps last-wins
                 warn(WARN_COL_RECHAINED_MSG)
             self._unit = PipelineUnit(self._columns, deduper, self._preprocessors)
             return self
@@ -524,14 +523,14 @@ class Pipeline:
 
         if isinstance(cols, list):
             if not cols:
-                raise InvalidArgumentValueError("`cols` must be a non-empty list, got an empty list")
+                raise InvalidArgumentValueError(INVALID_EMPTY_PIPELINE_STEP_MSG)
             for member in cols:
                 require_type("cols", member, Col)
             cols_list = cols
         else:
             cols_list: list[Col] = [require_type("cols", cols, Col)]
 
-        # U24: reusing one Col across steps warns.
+        # reusing one Col across steps warns.
         for col_unit in cols_list:
             if col_unit._used_in_step:
                 warn(WARN_COL_REUSED_MSG)

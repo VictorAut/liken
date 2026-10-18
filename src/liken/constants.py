@@ -32,6 +32,7 @@ INVALID_FALLBACK_MSG: Final[str] = "Invalid deduper: Expected a 'BaseDeduper', a
 INVALID_EMPTY_DICT_MSG: Final[str] = "Invalid deduper dict: expected a non-empty dict of column labels to dedupers, got an empty dict"
 INVALID_EMPTY_DICT_VALUE_MSG: Final[str] = "Invalid deduper dict value: key '{}' maps to an empty sequence; expected at least one deduper"
 INVALID_EMPTY_PIPELINE_MSG: Final[str] = "Invalid pipeline: expected at least one step, got an empty pipeline"
+INVALID_EMPTY_PIPELINE_STEP_MSG: Final[str] = "`cols` must be a non-empty list, got an empty list"
 INVALID_RESERVED_DICT_KEY_MSG: Final[str] = "Invalid dict key: '{}' is reserved for the sequential API"
 INVALID_NO_DEDUPER_CHAINED_MSG: Final[str] = "Invalid 'Col': no deduper chained yet; chain a deduper method first"
 
