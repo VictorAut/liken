@@ -45,27 +45,6 @@ if TYPE_CHECKING:
     from liken.types import UserDataFrame
 
 
-def _validate_frame_shape(df_columns: list[str]) -> None:
-    """Reject frames the enact boundary cannot process.
-
-    Data rules, so a `ValueError`.
-
-    Raises:
-        ValueError: if the dataframe has no columns, or has duplicate
-            column labels.
-    """
-    if not df_columns:
-        raise ValueError("dataframe has no columns")
-    seen: set[str] = set()
-    duplicated: list[str] = []
-    for label in df_columns:
-        if label in seen and label not in duplicated:
-            duplicated.append(label)
-        seen.add(label)
-    if duplicated:
-        raise ValueError(f"dataframe has duplicate column labels: {duplicated}")
-
-
 class Dedupe:
     """Deduplicate a dataframe given a collection of dedupers.
 
@@ -78,20 +57,6 @@ class Dedupe:
 
     Raises:
         ValueError: Initialized with PySpark DataFrame but no Spark Session.
-
-    Lifecycle:
-        1. A `Dedupe` instance holds one internal frame. Enact methods
-            (`drop_duplicates`, `canonicalize`) replace it with their result;
-            `collect` returns that frame, not a copy.
-        2. `apply` composes per the replace policy: every non-accumulating
-            transition warns and replaces. `drop_duplicates` resets the
-            collection after execution; `canonicalize` does not.
-        3. The `exact` fallback fires whenever the collection has no applies
-            at enact time, every time.
-        4. `canonicalize` sets `has_been_canonicalized`; `synthesize` requires
-            it. The flag is public but read-only by convention.
-        5. `canonical_id` persists on the frame after `canonicalize`;
-            `drop_duplicates` strips it.
 
     Examples:
 
@@ -117,7 +82,7 @@ class Dedupe:
 
         if backend.name == "pyspark":
             spark_session = validate_spark_arg(spark_session)
-        elif spark_session is not None:
+        elif spark_session:
             warn(WARN_SPARK_SESSION_IGNORED_MSG)
 
         self._executor: Executor = backend.executor(spark_session=spark_session)
@@ -133,9 +98,8 @@ class Dedupe:
 
         Use as internal constructor with spark `Rows`.
 
-        Invariant: private constructor. By design, it bypasses both backend
-        dispatch and spark session validation, which are responsibilities of
-        the public `__init__` path.
+        Bypasses both backend dispatch and spark session validation, which are
+        responsibilities of the public `__init__` path.
         """
         self = cls.__new__(cls)
         self._df = rows
@@ -173,10 +137,6 @@ class Dedupe:
 
                 lk.dedupe(df).apply({"address": (exact(), tfidf())})
 
-            Note: the Dict API does not accept preprocessors. Use the Pipeline
-            API with `col(columns, preprocessors=...)` when preprocessing is
-            needed.
-
             Pipeline API:
 
                 lk.dedupe(df).apply(
@@ -187,7 +147,7 @@ class Dedupe:
 
         """
         if isinstance(deduper, dict):
-            # U13: dict tuple-key members are existence-checked at apply.
+            # dict tuple-key members are existence-checked at apply.
             df_columns = _column_labels(self._df, get_backend(self._df).name)
             for key in deduper:
                 if isinstance(key, tuple):
@@ -279,10 +239,10 @@ class Dedupe:
         columns: Columns | None = validate_columns_arg(columns)
 
         df_columns = _column_labels(self._df, get_backend(self._df).name)
-        _validate_frame_shape(df_columns)
+        self._validate_frame_shape(df_columns)
 
         columns = self._collection.validate_api_mode(columns)
-        if columns is not None:
+        if columns:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
@@ -357,14 +317,14 @@ class Dedupe:
         columns: Columns | None = validate_columns_arg(columns)
 
         df_columns = _column_labels(self._df, get_backend(self._df).name)
-        _validate_frame_shape(df_columns)
+        self._validate_frame_shape(df_columns)
 
         columns = self._collection.validate_api_mode(columns)
-        if columns is not None:
+        if columns:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
-        if id is not None:
+        if id:
             validate_explore_column_exists(id, df_columns)
 
         wdf: DF = wrap(self._df, id)
@@ -494,6 +454,27 @@ class Dedupe:
             }
         """
         return self._collection.pretty_get()
+
+    @staticmethod
+    def _validate_frame_shape(df_columns: list[str]) -> None:
+        """Reject frames the enact boundary cannot process.
+
+        Data rules, so a `ValueError`.
+
+        Raises:
+            ValueError: if the dataframe has no columns, or has duplicate
+                column labels.
+        """
+        if not df_columns:
+            raise ValueError("dataframe has no columns")
+        seen: set[str] = set()
+        duplicated: list[str] = []
+        for label in df_columns:
+            if label in seen and label not in duplicated:
+                duplicated.append(label)
+            seen.add(label)
+        if duplicated:
+            raise ValueError(f"dataframe has duplicate column labels: {duplicated}")
 
 
 # API:
