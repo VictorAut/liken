@@ -58,7 +58,10 @@ class TfIdf(
 
     @staticmethod
     def _validate_ngram(ngram: int | tuple[int, int]) -> int | tuple[int, int]:
-        """Validate `ngram` as an integer >= 1, or a 2-tuple (low, high) with 1 <= low <= high."""
+        """
+        Validate `ngram` as an integer >= 1, or a 2-tuple (low, high) with
+        1 <= low <= high.
+        """
         if not isinstance(ngram, int) or isinstance(ngram, bool):
             if not isinstance(ngram, tuple) or len(ngram) != 2:
                 raise InvalidArgumentTypeError(

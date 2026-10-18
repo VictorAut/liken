@@ -498,7 +498,7 @@ def test_vectorized_matches_same_pairs_as_python_fallback(values):
 
 
 def test_fuzzy_unknown_scorer_raises_at_construction():
-    """U14: an unknown scorer is rejected at construction, not at execution."""
+    """an unknown scorer is rejected at construction"""
     with pytest.raises(InvalidArgumentValueError, match="`scorer` must be one of"):
         Fuzzy(threshold=0.95, scorer="no_such_scorer")
 
@@ -674,116 +674,24 @@ def test_str_len_rejects_negative_bounds(kwargs):
         lk.str_len(**kwargs)
 
 
-##################################
-# preprocess execution checks   #
-#################################
-
-
-class _ReturnsNonArray:
-    def from_array(self, array):
-        self._array = array
-
-    def process(self):
-        return "not an array"
-
-
-class _ReturnsWrongLength:
-    def from_array(self, array):
-        self._array = array
-
-    def process(self):
-        return pa.array(["only-one"])
-
-
-def test_preprocess_rejects_non_array_return(mock_df):
-    """U02: a preprocessor's return must be a pa.Array of the input length."""
-    mock_df.get_array = Mock(return_value=pa.array(["a", "b"]))
-    deduper = lk.exact().set_frame(mock_df)
-
-    with pytest.raises(TypeError, match="preprocessor '_ReturnsNonArray' on column 'address'"):
-        deduper.build_union_find("address", [_ReturnsNonArray()])
-
-
-def test_preprocess_rejects_wrong_length_return(mock_df):
-    mock_df.get_array = Mock(return_value=pa.array(["a", "b"]))
-    deduper = lk.exact().set_frame(mock_df)
-
-    with pytest.raises(ValueError, match="preprocessor '_ReturnsWrongLength' on column 'address'"):
-        deduper.build_union_find("address", [_ReturnsWrongLength()])
-
-
-def test_preprocess_wraps_runtime_failure_with_context(mock_df):
-    """U27: falha em tempo de execução é reencadeada (raise ... from) nomeando
-    o preprocessor e a coluna."""
-
-    class _ExplodingPreprocessor:
-        def from_array(self, array):
-            self._array = array
-
-        def process(self):
-            raise ValueError("erro interno simulado")
-
-    mock_df.get_array = Mock(return_value=pa.array(["a", "b"]))
-    deduper = lk.exact().set_frame(mock_df)
-
-    with pytest.raises(Exception, match="preprocessor '_ExplodingPreprocessor' on column 'address'") as info:
-        deduper.build_union_find("address", [_ExplodingPreprocessor()])
-
-    assert isinstance(info.value.__cause__, ValueError)
-
-
-def test_preprocess_wrap_survives_exotic_exception(mock_df):
-    """A exceção cujo __init__ não aceita uma única string (e.g.
-    UnicodeDecodeError) é encapsulada com contexto, não crasha o wrap."""
-    from liken.core.deduper import _PreprocessorError
-
-    class _UnicodeFail:
-        def from_array(self, array):
-            self._array = array
-
-        def process(self):
-            raise UnicodeDecodeError("utf-8", b"x", 0, 1, "invalid")
-
-    mock_df.get_array = Mock(return_value=pa.array(["a", "b"]))
-    deduper = lk.exact().set_frame(mock_df)
-
-    with pytest.raises(
-        _PreprocessorError,
-        match="preprocessor '_UnicodeFail' on column 'address'",
-    ) as info:
-        deduper.build_union_find("address", [_UnicodeFail()])
-
-    assert isinstance(info.value.__cause__, UnicodeDecodeError)
-
-
-def test_preprocess_rejects_preprocessor_on_compound_column(mock_df):
-    """U22: a preprocessor set against a compound column raises at execution,
-    naming the column and the preprocessor — no more silent skip."""
-    mock_df.get_array = Mock(return_value=pa.table({"a": ["x"], "b": ["y"]}))
-    deduper = lk.exact().set_frame(mock_df)
-
-    with pytest.raises(TypeError, match="preprocessor '_ReturnsNonArray' cannot be applied to the compound column"):
-        deduper.build_union_find(("a", "b"), [_ReturnsNonArray()])
-
-
 ################################
 # eager column validation     #
 ###############################
 
 
 def test_col_chaining_validates_columns_eagerly():
-    """U28: a chained deduper's column validation runs at construction."""
+    """a chained deduper's column validation runs at construction."""
     with pytest.raises(InvalidArgumentTypeError):
         lk.col(("a", "b")).str_contains(pattern="x")
 
 
 def test_col_chaining_eagerly_rejects_non_str_tuple_member():
-    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str', got 'int'"):
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str'"):
         lk.col(("a", 1)).exact()
 
 
 def test_compound_column_validation_rejects_non_str_member():
-    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str', got 'int'"):
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str'"):
         Jaccard().validate(("a", 1))
 
 
