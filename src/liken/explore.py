@@ -11,6 +11,7 @@ from typing import cast
 
 import pyarrow as pa
 
+from liken.constants import CANONICAL_ID
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.dedupers.exact import exact
@@ -61,7 +62,7 @@ def run_explore(
 
     # Sampling returns a new frame and wrapping copies, so the user's
     # dataframe is never mutated.
-    wdf: DF = wrap(_sample(df, backend.name, frac), source_id=None)
+    wdf: DF = wrap(_sample(df, backend.name, frac), source_id=None, canonical_id=CANONICAL_ID)
 
     rows: list[tuple[str | float, ...]] = []
 

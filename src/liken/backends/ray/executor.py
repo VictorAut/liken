@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
+from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
@@ -41,6 +42,7 @@ class RayExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> RayDF:
         """Maps dataframe partitions to be processed by Ray enforced to use
         pandas for each partition.
@@ -64,16 +66,18 @@ class RayExecutor(Executor):
             else:
                 dupe.apply(dedupers)  # type: ignore[arg-type]
 
-            return dupe.canonicalize(
-                columns,
+            dupe._canonicalize(
+                columns=columns,
                 keep=keep,
                 drop_duplicates=drop_duplicates,
                 source_id=source_id,
-            ).collect()  # type: ignore[return-value]
+                canonical_id=canonical_id,
+            )
+            return dupe.collect()  # type: ignore[return-value]
 
         # IMPORTANT: "pandas" batch
         df = RayDF(df._df.map_batches(_process_batch, batch_format="pandas"))  # type: ignore[arg-type]
 
         if drop_canonical_id:
-            return df.drop_col("canonical_id")
+            return df.drop_col(canonical_id)
         return df

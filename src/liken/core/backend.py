@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
 
+from liken.constants import CANONICAL_ID
+
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
@@ -25,4 +27,4 @@ class Backend(Protocol):
         spark_session: SparkSession | None = None,
     ) -> UserDataFrame: ...
     def executor(self, **kwargs: Any) -> Executor: ...
-    def wrap(self, df: UserDataFrame, source_id: str | None = None) -> DF: ...
+    def wrap(self, df: UserDataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID) -> DF: ...

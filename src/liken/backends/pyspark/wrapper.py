@@ -58,6 +58,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         self,
         df: DataFrame,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
         is_init: bool = True,
     ):
         # new spark plan for safety
@@ -65,11 +66,12 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
         self._df: SparkObject
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, source_id)  # type: ignore[no-redef]
+            self._df: RDD[Row] = self._add_canonical_id(df, source_id, canonical_id)  # type: ignore[no-redef]
         else:
             self._df: DataFrame = df  # type: ignore[no-redef]
 
         self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
@@ -77,39 +79,39 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         self._schema = df.schema
         return df.rdd
 
-    def _df_overwrite_id(self, df: DataFrame, source_id: str) -> RDD[Row]:
+    def _df_overwrite_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        df_new: DataFrame = df.drop(CANONICAL_ID)
-        self._schema = self._new_schema(df_new, source_id)
+        df_new: DataFrame = df.drop(canonical_id)
+        self._schema = self._new_schema(df_new, source_id, canonical_id)
         return df_new.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[source_id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
 
-    def _df_copy_id(self, df: DataFrame, source_id: str) -> RDD[Row]:
+    def _df_copy_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df, source_id)
+        self._schema = self._new_schema(df, source_id, canonical_id)
         return df.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[source_id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
 
-    def _df_autoincrement_id(self, df: DataFrame) -> RDD[Row]:
+    def _df_autoincrement_id(self, df: DataFrame, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df)
+        self._schema = self._new_schema(df, canonical_id=canonical_id)
         return df.rdd.zipWithIndex().mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: idx}) for row, idx in partition]
         )
 
     def _column_labels_list(self, df: DataFrame) -> list[str]:
         return df.columns
 
     @staticmethod
-    def _new_schema(df: DataFrame, source_id: str | None = None) -> StructType:
+    def _new_schema(df: DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
         of the source_id field.
         """
@@ -133,7 +135,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
             id_type = pyspark_types[dtype]
         else:
             id_type = T.LongType()  # auto-incremental is numeric
-        fields += [T.StructField(CANONICAL_ID, id_type, True)]
+        fields += [T.StructField(canonical_id, id_type, True)]
         return T.StructType(fields)
 
     @override
@@ -189,13 +191,14 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         df: DataFrame = self._df.toDF()
         exprs = []
 
+        canonical_id = self._canonical_id
         for col in df.columns:
-            if col == CANONICAL_ID:
+            if col == canonical_id:
                 continue
 
             exprs.append(functions.first(functions.col(col), ignorenulls=True).alias(col))
 
-        return df.groupBy(CANONICAL_ID).agg(*exprs).orderBy(CANONICAL_ID)
+        return df.groupBy(canonical_id).agg(*exprs).orderBy(canonical_id)
 
 
 @final
@@ -208,8 +211,9 @@ class PysparkRows(DF["list[Row]"]):
     will be instantiated in the worker node.
     """
 
-    def __init__(self, df: list[Row]):
+    def __init__(self, df: list[Row], canonical_id: str = CANONICAL_ID):
         self._df: list[Row] = df
+        self._canonical_id = canonical_id
 
     # ARROW INTERFACES:
 
@@ -238,7 +242,7 @@ class PysparkRows(DF["list[Row]"]):
         iterable = self._df if keep == "first" else reversed(self._df)
 
         for row in iterable:
-            key = row[CANONICAL_ID]
+            key = row[self._canonical_id]
             if key not in seen:
                 seen.add(key)
                 result.append(row)

@@ -54,6 +54,7 @@ class Executor(Protocol[D]):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None,
+        canonical_id: str = CANONICAL_ID,
     ) -> D: ...
 
 
@@ -69,6 +70,7 @@ class LocalExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> DF:
         """Process a local dataframe according to the deduplication collection
 
@@ -90,6 +92,7 @@ class LocalExecutor(Executor):
             self._call_deduper,
             drop_duplicates=drop_duplicates,
             keep=keep,
+            canonical_id=canonical_id,
         )
 
         if isinstance(dedupers, DeduplicationDict):
@@ -141,7 +144,7 @@ class LocalExecutor(Executor):
                 df = call_deduper(deduper, components)
 
         if drop_canonical_id:
-            return df.drop_col(CANONICAL_ID)
+            return df.drop_col(canonical_id)
         return df
 
     @staticmethod
@@ -181,9 +184,11 @@ class LocalExecutor(Executor):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
+        canonical_id: str,
     ) -> DF:
         return deduper.canonicalizer(
             components=components,
             drop_duplicates=drop_duplicates,
             keep=keep,
+            canonical_id=canonical_id,
         )

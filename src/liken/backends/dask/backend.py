@@ -2,6 +2,7 @@ from typing import final
 
 import pandas as pd
 
+from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -33,7 +34,7 @@ class DaskBackend(Backend):
 
         return DaskExecutor()
 
-    def wrap(self, df, source_id=None):
+    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
         from liken.backends.dask.wrapper import DaskDF
 
-        return DaskDF(df, source_id)
+        return DaskDF(df, source_id, canonical_id)

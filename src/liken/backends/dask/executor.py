@@ -36,6 +36,7 @@ class DaskExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> DaskDF:
         """Maps dataframe partitions to be processed by Dask, natively using
         pandas for each partition.
@@ -43,10 +44,10 @@ class DaskExecutor(Executor):
 
         from liken.backends.dask.wrapper import DaskDF
 
-        meta = df._new_meta(df._df, source_id)
+        meta = df._new_meta(df._df, source_id, canonical_id)
 
         if drop_canonical_id:
-            meta = meta.drop(columns=[CANONICAL_ID])
+            meta = meta.drop(columns=[canonical_id])
 
         process_partition = self._process_partition
 
@@ -59,9 +60,11 @@ class DaskExecutor(Executor):
                 drop_duplicates=drop_duplicates,
                 drop_canonical_id=drop_canonical_id,
                 source_id=source_id,
+                canonical_id=canonical_id,
                 meta=meta,
             ),
             source_id=source_id,
+            canonical_id=canonical_id,
             preserve_schema=True,
         )
 
@@ -74,6 +77,7 @@ class DaskExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> pd.DataFrame:
         from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
         from liken.collections.dict import DeduplicationDict as DictImpl
@@ -90,13 +94,15 @@ class DaskExecutor(Executor):
         else:
             dupe.apply(dedupers)  # type: ignore[arg-type]
 
-        df = dupe.canonicalize(
-            columns,
+        dupe._canonicalize(
+            columns=columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
             source_id=source_id,
-        ).collect()  # type: ignore[assignment]
+            canonical_id=canonical_id,
+        )
+        df = dupe.collect()  # type: ignore[assignment]
 
         if drop_canonical_id:
-            return df.drop(columns=[CANONICAL_ID])
+            return df.drop(columns=[canonical_id])
         return df

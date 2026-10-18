@@ -22,23 +22,24 @@ if TYPE_CHECKING:
 class PolarsDF(DF[pl.DataFrame], CanonicalIdMixin):
     """Polars DataFrame wrapper"""
 
-    def __init__(self, df: pl.DataFrame, source_id: str | None = None):
-        self._df: pl.DataFrame = self._add_canonical_id(df, source_id)
+    def __init__(self, df: pl.DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID):
+        self._df: pl.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
         self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pl.DataFrame) -> pl.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: pl.DataFrame, source_id: str) -> pl.DataFrame:
-        return df.with_columns(df[source_id].alias(CANONICAL_ID))
+    def _df_overwrite_id(self, df: pl.DataFrame, source_id: str, canonical_id: str) -> pl.DataFrame:
+        return df.with_columns(df[source_id].alias(canonical_id))
 
-    def _df_copy_id(self, df: pl.DataFrame, source_id: str) -> pl.DataFrame:
-        return df.with_columns(df[source_id].alias(CANONICAL_ID))
+    def _df_copy_id(self, df: pl.DataFrame, source_id: str, canonical_id: str) -> pl.DataFrame:
+        return df.with_columns(df[source_id].alias(canonical_id))
 
-    def _df_autoincrement_id(self, df: pl.DataFrame) -> pl.DataFrame:
-        return df.with_columns(pl.arange(0, len(df)).alias(CANONICAL_ID))
+    def _df_autoincrement_id(self, df: pl.DataFrame, canonical_id: str) -> pl.DataFrame:
+        return df.with_columns(pl.arange(0, len(df)).alias(canonical_id))
 
     def _column_labels_list(self, df: pl.DataFrame) -> list[str]:
         return df.columns
@@ -63,18 +64,19 @@ class PolarsDF(DF[pl.DataFrame], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
-        self._df = self._df.unique(keep=keep, subset=CANONICAL_ID, maintain_order=True)
+        self._df = self._df.unique(keep=keep, subset=self._canonical_id, maintain_order=True)
         return self
 
     # SYNTHETIC RECORD:
 
     def synthesize_record(self) -> pl.DataFrame:
         exprs = []
+        canonical_id = self._canonical_id
 
         for col in self._df.columns:
-            if col == CANONICAL_ID:
+            if col == canonical_id:
                 continue
 
             exprs.append(pl.col(col).drop_nulls().first().alias(col))
 
-        return self._df.group_by(CANONICAL_ID).agg(exprs).sort(CANONICAL_ID)
+        return self._df.group_by(canonical_id).agg(exprs).sort(canonical_id)

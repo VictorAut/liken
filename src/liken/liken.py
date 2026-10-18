@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from typing import Self
 
 from liken.collections.base import CollectionsManager
+from liken.constants import CANONICAL_ID
+from liken.constants import INVALID_CANONICAL_ID_COLLISION_MSG
 from liken.constants import WARN_SPARK_SESSION_IGNORED_MSG
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
@@ -88,6 +90,7 @@ class Dedupe:
         self._executor: Executor = backend.executor(spark_session=spark_session)
 
         self.has_been_canonicalized: bool = False
+        self._canonical_id: str = CANONICAL_ID
 
     @classmethod
     def _from_rows(
@@ -262,6 +265,7 @@ class Dedupe:
             drop_duplicates=True,
             drop_canonical_id=True,
             source_id=None,
+            canonical_id=CANONICAL_ID,
         ).unwrap()
 
         self._collection.reset()
@@ -275,6 +279,7 @@ class Dedupe:
         keep: Keep = "first",
         drop_duplicates: bool = False,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> Self:
         """Canonicalize by enacting the applied dedupers.
 
@@ -310,9 +315,12 @@ class Dedupe:
                 dedupers.
             ValueError: Incorrect use of a single column deduper given multiple
                 columns defined, or vice-versa.
+            ValueError: `canonical_id` names an existing column of the
+                dataframe.
         """
         keep: Keep = validate_keep_arg(keep)
         source_id = require_non_empty_str("source_id", source_id, allow_none=True)
+        canonical_id = require_non_empty_str("canonical_id", canonical_id)
         drop_duplicates = require_type("drop_duplicates", drop_duplicates, bool)
         columns: Columns | None = validate_columns_arg(columns)
 
@@ -326,8 +334,35 @@ class Dedupe:
                 validate_explore_column_exists(label, df_columns)
         if source_id:
             validate_explore_column_exists(source_id, df_columns)
+        if canonical_id in df_columns:
+            raise ValueError(INVALID_CANONICAL_ID_COLLISION_MSG.format(canonical_id))
 
-        wdf: DF = wrap(self._df, source_id)
+        self._canonicalize(
+            columns=columns,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            source_id=source_id,
+            canonical_id=canonical_id,
+        )
+
+        return self
+
+    def _canonicalize(
+        self,
+        *,
+        columns: Columns | None,
+        keep: Keep,
+        drop_duplicates: bool,
+        source_id: str | None,
+        canonical_id: str,
+    ) -> None:
+        """Enact dedupers without entry validation.
+
+        Internal path for partition processors: a partition arrives already
+        carrying the canonical-id column, which the public `canonicalize`
+        collision check would reject.
+        """
+        wdf: DF = wrap(self._df, source_id, canonical_id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -342,13 +377,13 @@ class Dedupe:
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
             source_id=source_id,
+            canonical_id=canonical_id,
         ).unwrap()
 
         self._collection.reset()
 
         self.has_been_canonicalized = True
-
-        return self
+        self._canonical_id = canonical_id
 
     def canonicals(self, n: int = 2) -> dict[Hashable, int]:
         """Returns a dictionary of canonical ids that have `n` or more records.
@@ -377,7 +412,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, None)
+        wdf: DF = wrap(self._df, None, self._canonical_id)
 
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
@@ -419,7 +454,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, None)
+        wdf: DF = wrap(self._df, None, self._canonical_id)
 
         return wdf.synthesize_record()
 

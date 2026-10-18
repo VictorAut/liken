@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import liken as lk
+from liken.constants import CANONICAL_ID
 from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 from liken.liken import Dedupe
@@ -327,6 +328,7 @@ def test_canonicalize_calls(
         drop_duplicates=False,
         drop_canonical_id=False,
         source_id=None,
+        canonical_id=CANONICAL_ID,
     )
     mock_sm.reset.assert_called_once()
 
@@ -362,6 +364,7 @@ def test_drop_duplicate_calls(
         drop_duplicates=True,
         drop_canonical_id=True,
         source_id=None,
+        canonical_id=CANONICAL_ID,
     )
     mock_sm.reset.assert_called_once()
 
@@ -400,3 +403,11 @@ def test_explain_two_sequential_dedupers_returns_both_names_comma_separated(data
     assert "exact" in lowered
     assert "fuzzy" in lowered
     assert "," in out
+
+
+def test_canonicalize_rejects_canonical_id_collision():
+    """`canonical_id` naming an existing column is rejected before execution."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(ValueError, match="the dataframe already has a column with this label"):
+        dupe.canonicalize("a", canonical_id="b")

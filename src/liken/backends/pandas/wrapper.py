@@ -22,23 +22,24 @@ if TYPE_CHECKING:
 class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
     """Pandas DataFrame wrapper"""
 
-    def __init__(self, df: pd.DataFrame, source_id: str | None = None):
-        self._df: pd.DataFrame = self._add_canonical_id(df, source_id)
+    def __init__(self, df: pd.DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID):
+        self._df: pd.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
         self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pd.DataFrame) -> pd.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: pd.DataFrame, source_id: str) -> pd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[source_id]})
+    def _df_overwrite_id(self, df: pd.DataFrame, source_id: str, canonical_id: str) -> pd.DataFrame:
+        return df.assign(**{canonical_id: df[source_id]})
 
-    def _df_copy_id(self, df: pd.DataFrame, source_id: str) -> pd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[source_id]})
+    def _df_copy_id(self, df: pd.DataFrame, source_id: str, canonical_id: str) -> pd.DataFrame:
+        return df.assign(**{canonical_id: df[source_id]})
 
-    def _df_autoincrement_id(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df.assign(**{CANONICAL_ID: pd.RangeIndex(start=0, stop=len(df))})
+    def _df_autoincrement_id(self, df: pd.DataFrame, canonical_id: str) -> pd.DataFrame:
+        return df.assign(**{canonical_id: pd.RangeIndex(start=0, stop=len(df))})
 
     def _column_labels_list(self, df: pd.DataFrame) -> list[str]:
         return list(df.columns)
@@ -62,7 +63,7 @@ class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
-        self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
+        self._df = self._df.drop_duplicates(keep=keep, subset=self._canonical_id)
         return self
 
     # SYNTHETIC RECORD:
@@ -72,4 +73,4 @@ class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
             non_null = series.dropna()
             return non_null.iloc[0] if not non_null.empty else pd.NA
 
-        return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
+        return self._df.groupby(self._canonical_id, as_index=False).agg(_first_non_null)

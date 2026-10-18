@@ -52,8 +52,11 @@ def test_create_df_empty_data():
 # CANONICAL ID:
 
 
-def _wrap(df: pa.Table, id: str | None = None):
-    return PyarrowBackend().wrap(df, source_id=id)
+def _wrap(df: pa.Table, source_id: str | None = None, canonical_id: str | None = None):
+    kwargs = {"source_id": source_id}
+    if canonical_id is not None:
+        kwargs["canonical_id"] = canonical_id
+    return PyarrowBackend().wrap(df, **kwargs)
 
 
 def test_autoincrement_id():
@@ -66,7 +69,7 @@ def test_autoincrement_id():
 def test_copy_id_from_id_column():
     df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == ["a001", "a002"]
 
@@ -74,7 +77,7 @@ def test_copy_id_from_id_column():
 def test_copy_id_int():
     df = pa.table({"uid": [7, 8], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == [7, 8]
 
@@ -82,7 +85,7 @@ def test_copy_id_int():
 def test_existing_canonical_id_left_as_is():
     df = pa.table({CANONICAL_ID: ["x", "y"], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id=None)
+    wdf = _wrap(df, source_id=None)
 
     assert wdf.column(CANONICAL_ID).to_pylist() == ["x", "y"]
 
@@ -90,7 +93,7 @@ def test_existing_canonical_id_left_as_is():
 def test_existing_canonical_id_overwritten_by_id_arg():
     df = pa.table({CANONICAL_ID: ["x", "y"], "uid": [10, 20], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == [10, 20]
 
@@ -334,3 +337,32 @@ def test_fake_10_returns_pyarrow_table():
     df = fake_10("pyarrow")
 
     assert isinstance(df, pa.Table)
+
+
+# CUSTOM LABEL:
+
+
+def test_custom_canonical_id_label_autoincrement():
+    """A custom label replaces the constant everywhere downstream."""
+    df = pa.table({"address": ["a", "b", "c"]})
+
+    wdf = _wrap(df, canonical_id="master_id")
+
+    assert wdf.column("master_id").to_pylist() == [0, 1, 2]
+    assert "canonical_id" not in wdf.column_names
+
+
+def test_custom_canonical_id_label_copy():
+    df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
+
+    wdf = _wrap(df, source_id="uid", canonical_id="master_id")
+
+    assert wdf.column("master_id").to_pylist() == ["a001", "a002"]
+
+
+def test_get_canonical_reads_the_custom_label():
+    df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
+
+    wdf = _wrap(df, source_id="uid", canonical_id="master_id")
+
+    assert wdf.get_canonical().to_pylist() == ["a001", "a002"]

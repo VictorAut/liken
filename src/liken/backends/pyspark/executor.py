@@ -43,6 +43,7 @@ class PysparkExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> PysparkDF:
         """Maps dataframe partitions to be processed via the RDD API yielding
         low-level list[Rows], which are then post-processed back to a dataframe.
@@ -62,6 +63,7 @@ class PysparkExecutor(Executor):
                 partition=partition,
                 dedupers=dedupers,
                 source_id=source_id,
+                canonical_id=canonical_id,
                 columns=columns,
                 drop_duplicates=drop_duplicates,
                 keep=keep,
@@ -73,7 +75,7 @@ class PysparkExecutor(Executor):
         df = PysparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
 
         if drop_canonical_id:
-            return df.drop_col(CANONICAL_ID)
+            return df.drop_col(canonical_id)
         return df
 
     @staticmethod
@@ -83,6 +85,7 @@ class PysparkExecutor(Executor):
         partition: Iterator[Row],
         dedupers: DeduplicationDict | Pipeline,
         source_id: str | None,
+        canonical_id: str,
         columns: Columns | None,
         drop_duplicates: bool,
         keep: Keep = "first",
@@ -122,11 +125,13 @@ class PysparkExecutor(Executor):
         else:
             dupe.apply(dedupers)  # type: ignore[arg-type]
 
-        df = dupe.canonicalize(
-            columns,
+        dupe._canonicalize(
+            columns=columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
             source_id=source_id,
-        ).collect()
+            canonical_id=canonical_id,
+        )
+        df = dupe.collect()
 
         return iter(df)  # type: ignore[arg-type]

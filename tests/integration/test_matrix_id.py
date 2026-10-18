@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import warnings
+import re
 
 import pytest
 
 import liken as lk
 from liken.constants import CANONICAL_ID
+from liken.constants import INVALID_CANONICAL_ID_COLLISION_MSG
 
 
 # CONSTANTS:
@@ -51,8 +52,19 @@ PARAMS = [
         ],
         ["a001", "a002", "a001"],
     ),
-    # "OVERWRITE"
-    # overwrite a pre-existing `canonical_id` field, or not
+]
+IDS = [
+    "new-auto-incremental-canonical_id",
+    "copy-numeric-id",
+    "copy-string-id",
+]
+
+# "COLLISION"
+# a frame that already carries a `canonical_id` column is rejected at entry;
+# the overwrite and as-is behaviours this matrix used to express are no longer
+# reachable from `canonicalize`.
+COLLISION_PARAMS = [
+    # as-is: no source_id, frame already carries the column
     (
         None,
         ["uid", "address", "canonical_id"],
@@ -61,9 +73,8 @@ PARAMS = [
             [2, "Westside Avenue", 12],
             [3, "123ab, OL5", 10],
         ],
-        [10, 12, 10],
     ),
-    # next example is good example of iterative deduping based on appended rows
+    # partially deduped canonical ids on the frame
     (
         None,
         ["uid", "address", "canonical_id"],
@@ -72,9 +83,8 @@ PARAMS = [
             [2, "Westside Avenue", 12],
             [3, "123ab, OL5", 13],
         ],
-        [10, 12, 10],
     ),
-    # same results are obtained if id is passed as `canonical_id`
+    # source_id equal to the colliding label
     (
         "canonical_id",
         ["uid", "address", "canonical_id"],
@@ -83,19 +93,8 @@ PARAMS = [
             [2, "Westside Avenue", 12],
             [3, "123ab, OL5", 10],
         ],
-        [10, 12, 10],
     ),
-    (
-        "canonical_id",
-        ["uid", "address", "canonical_id"],
-        [
-            [1, "123ab, OL5", 10],
-            [2, "Westside Avenue", 12],
-            [3, "123ab, OL5", 13],
-        ],
-        [10, 12, 10],
-    ),
-    # finally, can actually overwrite the canonical_id
+    # overwrite attempts: source_id names a different column
     (
         "uid",
         ["uid", "address", "canonical_id"],
@@ -104,7 +103,6 @@ PARAMS = [
             [2, "Westside Avenue", 12],
             [3, "123ab, OL5", 10],
         ],
-        [1, 2, 1],
     ),
     (
         "uid",
@@ -114,7 +112,6 @@ PARAMS = [
             ["e00006", "Westside Avenue", 12],
             ["e00009", "123ab, OL5", 10],
         ],
-        ["e00005", "e00006", "e00005"],
     ),
     (
         "uid",
@@ -124,7 +121,6 @@ PARAMS = [
             [12, "Westside Avenue", "e00006"],
             [13, "123ab, OL5", "e00009"],
         ],
-        [10, 12, 10],
     ),
     (
         "uid",
@@ -134,17 +130,12 @@ PARAMS = [
             ["e00006", "Westside Avenue", "12"],
             ["e00009", "123ab, OL5", "10"],
         ],
-        ["e00005", "e00006", "e00005"],
     ),
 ]
-IDS = [
-    "new-auto-incremental-canonical_id",
-    "copy-numeric-id",
-    "copy-string-id",
+COLLISION_IDS = [
     "canonical_id-already-exists-not-dededupe",
     "canonical_id-already-exists-partially-dededupe",
-    "canonical_id-already-exists-not-dededupe-verbose",
-    "canonical_id-already-exists-partially-dededupe-verbose",
+    "source_id-equals-colliding-label",
     "overwrite-numeric-to-numeric",
     "overwrite-string-to-numeric",
     "overwrite-numeric-to-string",
@@ -152,10 +143,9 @@ IDS = [
 ]
 
 
-# TODO!
-@pytest.mark.parametrize("id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
+@pytest.mark.parametrize("source_id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
 def test_matrix_id(
-    id,
+    source_id,
     schema,
     data,
     expected_canonical_id,
@@ -165,13 +155,26 @@ def test_matrix_id(
 
     df = helpers.create_df(data, schema)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        df = (
-            lk.dedupe(df, spark_session=spark_session)
-            .apply(lk.exact())
-            .canonicalize(SINGLE_COL, source_id=id)
-            .collect()
-        )
+    df = (
+        lk.dedupe(df, spark_session=spark_session)
+        .apply(lk.exact())
+        .canonicalize(SINGLE_COL, source_id=source_id)
+        .collect()
+    )
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
+
+
+@pytest.mark.parametrize("source_id, schema, data", COLLISION_PARAMS, ids=COLLISION_IDS)
+def test_matrix_id_rejects_existing_canonical_id_column(
+    source_id,
+    schema,
+    data,
+    spark_session,
+    helpers,
+):
+
+    df = helpers.create_df(data, schema)
+
+    with pytest.raises(ValueError, match=re.escape(INVALID_CANONICAL_ID_COLLISION_MSG.format("canonical_id"))):
+        lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize(SINGLE_COL, source_id=source_id)

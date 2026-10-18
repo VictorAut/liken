@@ -4,6 +4,7 @@ import polars as pl
 
 from liken.backends.polars.executor import PolarsExecutor
 from liken.backends.polars.wrapper import PolarsDF
+from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -27,6 +28,6 @@ class PolarsBackend(Backend):
         del kwargs  # Unused
         return PolarsExecutor()
 
-    def wrap(self, df, source_id=None):
+    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
 
-        return PolarsDF(df, source_id)
+        return PolarsDF(df, source_id, canonical_id)

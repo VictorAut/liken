@@ -61,6 +61,7 @@ class Base(Protocol):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
+        canonical_id: str = CANONICAL_ID,
     ) -> DF: ...
     def str_representation(self, name: str) -> str: ...
     def validate(self, columns: Columns) -> None: ...
@@ -176,8 +177,9 @@ class BaseDeduper(Base):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
+        canonical_id: str = CANONICAL_ID,
     ) -> DF:
-        canonicals = self.wdf.get_canonical()
+        canonicals = self.wdf.get_canonical(canonical_id)
 
         n = len(canonicals)
 
@@ -194,7 +196,7 @@ class BaseDeduper(Base):
         # for predicated components, default to ith index for non deduplicated rows
         new_canonicals: list = [canonicals[rep_index.get(i, i)].as_py() for i in range(n)]
 
-        self.wdf.put_col(CANONICAL_ID, new_canonicals)
+        self.wdf.put_col(canonical_id, new_canonicals)
 
         if not drop_duplicates:
             return self.wdf

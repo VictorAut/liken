@@ -2,6 +2,7 @@ from typing import final
 
 import pandas as pd
 
+from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -37,7 +38,7 @@ class RayBackend(Backend):
 
         return RayExecutor()
 
-    def wrap(self, df, source_id=None):
+    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
         from liken.backends.ray.wrapper import RayDF
 
-        return RayDF(df, source_id)
+        return RayDF(df, source_id, canonical_id)
