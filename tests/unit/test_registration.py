@@ -46,23 +46,9 @@ def test_is_match_false_when_backend_import_fails(backend_name, monkeypatch):
     assert backend_cls().is_match(pd.DataFrame()) is False
 
 
-################################
-# custom.register validation  #
-################################
-
-
-def test_custom_register_rejects_non_callable():
-    """U30: register(42) deve falhar com erro nomeado, não AttributeError."""
-    import liken as lk
-    from liken.exceptions import InvalidArgumentTypeError
-
-    with pytest.raises(InvalidArgumentTypeError, match="`f` must be callable, got 'int'"):
-        lk.custom.register(42)
-
-
 def test_pyspark_is_match_surfaces_non_import_errors(monkeypatch):
-    """U49: o guard de `is_match` do pyspark cobre apenas o import da
-    dependência opcional; outros erros devem subir até o dispatcher."""
+    """The `is_match` guard of pyspark barely covers optional dependency;
+    other errors must surface before the dispatcher."""
     from liken.backends.pyspark.backend import PysparkBackend
 
     real_import = builtins.__import__
@@ -76,3 +62,16 @@ def test_pyspark_is_match_surfaces_non_import_errors(monkeypatch):
 
     with pytest.raises(TypeError, match="broken backend library"):
         PysparkBackend().is_match(pd.DataFrame())
+
+
+################################
+# custom.register validation  #
+################################
+
+
+def test_custom_register_rejects_non_callable():
+    import liken as lk
+    from liken.exceptions import InvalidArgumentTypeError
+
+    with pytest.raises(InvalidArgumentTypeError, match="`f` must be callable, got 'int'"):
+        lk.custom.register(42)
