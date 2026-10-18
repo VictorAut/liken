@@ -361,42 +361,42 @@ def test_collections_manager_get_returns_config():
 ################
 
 
-def test_collections_manager_validate_mode_sequential_requires_columns(s1):
+def test_collections_manager_validate_api_mode_sequential_requires_columns(s1):
     """U12/U54: sequential mode — including the exact fallback — requires
     `columns`; the mode rule lives on the collections manager."""
     sm = CollectionsManager()
     sm.apply(s1)
 
     with pytest.raises(InvalidArgumentValueError, match="columns cannot be None"):
-        sm.validate_mode(None)
+        sm.validate_api_mode(None)
     with pytest.raises(InvalidArgumentValueError, match="columns cannot be None"):
-        sm.validate_mode(())
+        sm.validate_api_mode(())
 
 
-def test_collections_manager_validate_mode_sequential_accepts_columns(s1):
+def test_collections_manager_validate_api_mode_sequential_accepts_columns(s1):
     sm = CollectionsManager()
     sm.apply(s1)
 
-    assert sm.validate_mode("a") == "a"
-    assert sm.validate_mode(("a", "b")) == ("a", "b")
+    assert sm.validate_api_mode("a") == "a"
+    assert sm.validate_api_mode(("a", "b")) == ("a", "b")
 
 
-def test_collections_manager_validate_mode_dict_requires_none(s1):
+def test_collections_manager_validate_api_mode_dict_requires_none(s1):
     sm = CollectionsManager()
     sm.apply({"a": (s1,)})
 
     with pytest.raises(InvalidArgumentValueError, match="columns must be None when using the dict API"):
-        sm.validate_mode("a")
-    assert sm.validate_mode(None) is None
+        sm.validate_api_mode("a")
+    assert sm.validate_api_mode(None) is None
 
 
-def test_collections_manager_validate_mode_pipeline_requires_none(s1):
+def test_collections_manager_validate_api_mode_pipeline_requires_none(s1):
     sm = CollectionsManager()
     sm.apply(Pipeline().step(col("a").s1()))
 
     with pytest.raises(InvalidArgumentValueError, match="columns must be None when using the dict API"):
-        sm.validate_mode("a")
-    assert sm.validate_mode(None) is None
+        sm.validate_api_mode("a")
+    assert sm.validate_api_mode(None) is None
 
 
 ##############

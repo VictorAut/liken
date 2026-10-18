@@ -21,7 +21,8 @@ SPARK_SESSION_REQUIRED_MSG: Final[str] = "spark_session arg must be provided for
 WARN_SPARK_SESSION_IGNORED_MSG: Final[str] = "spark_session provided for a non-spark dataframe; the argument was ignored"
 
 # collection errors
-
+INVALID_COLUMNS_REQUIRED_MSG: Final[str] = "columns cannot be None; a column label or tuple of column labels must be provided when using the sequential API"
+INVALID_COLUMNS_NOT_NONE_MSG: Final[str] = "columns must be None when using the dict API, as they have been defined as dictionary keys"
 INVALID_DICT_KEY_MSG: Final[str] = "Invalid type for dict key type: expected str or tuple, got '{}'"
 INVALID_DICT_VALUE_MSG: Final[str] = "Invalid type for dict value: expected a deduper (list, tuple or 'BaseDeduper'), got '{}'"
 INVALID_DICT_MEMBER_MSG: Final[str] = "Invalid type for dict value member: at index {} for key '{}': expected 'BaseDeduper', got '{}'"

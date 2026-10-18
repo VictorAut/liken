@@ -281,7 +281,7 @@ class Dedupe:
         df_columns = _column_labels(self._df, get_backend(self._df).name)
         _validate_frame_shape(df_columns)
 
-        columns = self._collection.validate_mode(columns)
+        columns = self._collection.validate_api_mode(columns)
         if columns is not None:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
@@ -359,7 +359,7 @@ class Dedupe:
         df_columns = _column_labels(self._df, get_backend(self._df).name)
         _validate_frame_shape(df_columns)
 
-        columns = self._collection.validate_mode(columns)
+        columns = self._collection.validate_api_mode(columns)
         if columns is not None:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:

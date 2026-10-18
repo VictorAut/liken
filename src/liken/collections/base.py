@@ -10,6 +10,8 @@ from liken.collections.dict import DeduplicationDict
 from liken.collections.pipelines import Col
 from liken.collections.pipelines import Pipeline
 from liken.constants import INVALID_APPLY_AFTER_PIPELINE_MSG
+from liken.constants import INVALID_COLUMNS_NOT_NONE_MSG
+from liken.constants import INVALID_COLUMNS_REQUIRED_MSG
 from liken.constants import INVALID_EMPTY_DICT_MSG
 from liken.constants import INVALID_EMPTY_DICT_VALUE_MSG
 from liken.constants import INVALID_EMPTY_PIPELINE_MSG
@@ -105,7 +107,7 @@ class CollectionsManager:
                     raise InvalidDeduperError(INVALID_RESERVED_DICT_KEY_MSG.format(key))
                 if isinstance(value, list | tuple) and not value:
                     raise InvalidDeduperError(INVALID_EMPTY_DICT_VALUE_MSG.format(key))
-            # D1 replace policy: every non-accumulating transition warns.
+            # replace policy: every non-accumulating transition warns.
             if isinstance(self._dedupers, DeduplicationDict):
                 if self.is_sequential_applied:
                     if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index, union-attr]
@@ -124,7 +126,7 @@ class CollectionsManager:
         if isinstance(deduper, Pipeline):
             if not deduper.steps:
                 raise InvalidDeduperError(INVALID_EMPTY_PIPELINE_MSG)
-            # D1 replace policy: every non-accumulating transition warns.
+            # replace policy: every non-accumulating transition warns.
             if isinstance(self._dedupers, Pipeline):
                 warn(WARN_RULES_REPLACES_RULES_MSG, stacklevel=4)
             elif self.is_sequential_applied:
@@ -142,7 +144,7 @@ class CollectionsManager:
     def get(self) -> DeduplicationDict | Pipeline:
         return self._dedupers
 
-    def validate_mode(self, columns: Columns | None) -> Columns | None:
+    def validate_api_mode(self, columns: Columns | None) -> Columns | None:
         """Validate the `columns` argument against the api mode in use.
 
         Sequential mode — including the exact fallback — requires `columns`.
@@ -158,14 +160,9 @@ class CollectionsManager:
         """
         if self.is_sequential_applied:
             if columns is None or columns == ():
-                raise InvalidArgumentValueError(
-                    "columns cannot be None, a column label of tuple of column labels must be provided when using"
-                    " sequential API."
-                )
+                raise InvalidArgumentValueError(INVALID_COLUMNS_REQUIRED_MSG)
         elif columns is not None:
-            raise InvalidArgumentValueError(
-                "columns must be None when using the dict API, as they have been defined as dictionary keys."
-            )
+            raise InvalidArgumentValueError(INVALID_COLUMNS_NOT_NONE_MSG)
         return columns
 
     def pretty_get(self) -> None | str:

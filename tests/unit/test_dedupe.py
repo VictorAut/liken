@@ -314,7 +314,7 @@ def test_canonicalize_calls(
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
-    mock_sm.validate_mode.side_effect = lambda columns: columns
+    mock_sm.validate_api_mode.side_effect = lambda columns: columns
 
     dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
@@ -349,7 +349,7 @@ def test_drop_duplicate_calls(
     mock_executor = mock_local.return_value
     mock_sm = mock_sm.return_value
     mock_sm.get.return_value = {"address": deduplication_mock}
-    mock_sm.validate_mode.side_effect = lambda columns: columns
+    mock_sm.validate_api_mode.side_effect = lambda columns: columns
 
     dupe = Dedupe(dataframe)
     dupe._executor = mock_executor
