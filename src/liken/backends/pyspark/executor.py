@@ -111,8 +111,8 @@ class PysparkExecutor(Executor):
         dupe = factory._from_rows(rows)
 
         # Internal handoff: the sequential API stores dedupers under the
-        # reserved `_default_` key, which a public dict apply must not use
-        # (U07). Re-apply them individually to keep the sequential semantics.
+        # reserved `_default_` key, which a public dict apply must not use.
+        # Re-apply them individually to keep the sequential semantics.
         from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
         from liken.collections.dict import DeduplicationDict as DictImpl
 

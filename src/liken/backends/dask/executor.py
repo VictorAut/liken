@@ -82,8 +82,8 @@ class DaskExecutor(Executor):
         dupe = Dedupe(df)  # type: ignore[assignment]
 
         # Internal handoff: the sequential API stores dedupers under the
-        # reserved `_default_` key, which a public dict apply must not use
-        # (U07). Re-apply them individually to keep the sequential semantics.
+        # reserved `_default_` key, which a public dict apply must not use.
+        # Re-apply them individually to keep the sequential semantics.
         if isinstance(dedupers, DictImpl) and set(dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}:
             for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
                 dupe.apply(deduper)
