@@ -6,8 +6,7 @@ title: Release History
 
 **Fixes**
 
-- Previously accepted but invalid arguments now raise at construction or at
-  the enact boundary:
+- Previously accepted but invalid arguments now raise:
     - Empty containers are rejected across all APIs e.g. `apply({})`.
     - `str` is no longer accepted as `isin` deduper values (only a list, tuple, set or
         frozenset).
