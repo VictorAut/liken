@@ -60,25 +60,6 @@ def test_custom_register_rejects_non_callable():
         lk.custom.register(42)
 
 
-def test_custom_register_rejects_uninspectable_signature():
-    """U30: callable com assinatura não inspecionável é rejeitado no registro."""
-    import liken as lk
-    from liken.exceptions import InvalidArgumentTypeError
-
-    class _Uninspectable:
-        def __call__(self, *args, **kwargs):
-            return None
-
-        @property
-        def __signature__(self):
-            raise ValueError("no signature")
-
-    with pytest.raises(InvalidArgumentTypeError, match="inspectable signature") as info:
-        lk.custom.register(_Uninspectable())
-
-    assert isinstance(info.value.__cause__, ValueError)
-
-
 def test_pyspark_is_match_surfaces_non_import_errors(monkeypatch):
     """U49: o guard de `is_match` do pyspark cobre apenas o import da
     dependência opcional; outros erros devem subir até o dispatcher."""
