@@ -85,10 +85,9 @@ class BaseDeduper(Base):
     """Base Deduplication class"""
 
     def validate(self, columns: Columns) -> None:
-        """No-op: a base deduper accepts any columns.
-
-        Subclasses with a column mixin override this.
-        """
+        """Subclasses with a column mixin override this."""
+        del columns
+        pass
 
     def __init__(self, *args, **kwargs):
         self._init_args = args
@@ -112,9 +111,9 @@ class BaseDeduper(Base):
         """apply a sequence of preprocessors
 
         A compound column arrives as a `pa.Table`, which preprocessors do not
-        support: applying one is an error (U22), not a silent skip.
+        support.
 
-        Each preprocessor must return a `pa.Array` of the input length (U02).
+        Each preprocessor returns a `pa.Array` of the input length.
         """
         if isinstance(array, pa.Table):
             if preprocessors:
@@ -127,10 +126,10 @@ class BaseDeduper(Base):
             try:
                 array = processor.process()
             except Exception as err:
-                # Wrapped, not re-instantiated: some exception classes do not
-                # accept a single string argument (e.g. `UnicodeDecodeError`),
-                # and some ignore `args` in their `__str__`. A wrapper keeps
-                # the message pattern and chains the original as `__cause__`.
+                # Some exception classes do not accept a single string argument
+                # (e.g. `UnicodeDecodeError`), and some ignore `args` in their
+                # `__str__`. A wrapper keeps the message pattern and chains the
+                # original as `__cause__`.
                 prefix = f"preprocessor '{type(processor).__name__}' on column '{columns}': {err}"
                 raise _PreprocessorError(prefix) from err
             if not isinstance(array, pa.Array):
