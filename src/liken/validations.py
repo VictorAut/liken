@@ -4,7 +4,7 @@ Most validations are for public arguments of the 'Dedupe' class.
 
 However, some validations exist for other private classes
 
-Timing rule (U28): argument type, shape and value checks run eagerly at
+argument type, shape and value checks run eagerly at
 construction — including deduper knobs and preprocessor parameters, and the
 column-arity mixins via `Col` chaining. Frame-dependent checks (column
 existence, frame shape) run at the frame boundary. Checks that depend on the
@@ -241,9 +241,7 @@ def validate_columns_arg(columns: Columns | None) -> Columns | None:
     """Validates the type and structure of the public api 'columns' arg.
 
     `columns` must be a column label or a tuple of column labels, with no
-    repeated labels. The api-mode rule (sequential mode requires `columns`,
-    dict and pipeline modes forbid it) lives on the collections manager,
-    which owns the mode state; it runs after this check.
+    repeated labels.
 
     Raises:
         InvalidArgumentTypeError: if `columns` is not a `str` or a tuple of

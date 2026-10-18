@@ -219,14 +219,12 @@ def test_validate_columns_arg_accepts_valid(columns):
 
 @pytest.mark.parametrize("columns", [123, 0, ["address"], {"address"}, {"address": 1}])
 def test_validate_columns_arg_rejects_wrong_type(columns):
-    """U11/U12/U33: the type check comes first — a wrong type gets a type
-    error, never mode advice."""
     with pytest.raises(InvalidArgumentTypeError, match="`columns` must be of type 'str' or 'tuple', got"):
         validate_columns_arg(columns)
 
 
 def test_validate_columns_arg_rejects_list_with_use_a_tuple_message():
-    """U11: lists are the common mistake; the message says what to use."""
+    """lists are the common mistake; message says what to use."""
     with pytest.raises(
         InvalidArgumentTypeError,
         match="`columns` must be of type 'str' or 'tuple', got 'list'; use a tuple of column labels",
@@ -236,7 +234,7 @@ def test_validate_columns_arg_rejects_list_with_use_a_tuple_message():
 
 @pytest.mark.parametrize("columns", [(0,), ("a", 1), ("a", None)])
 def test_validate_columns_arg_rejects_non_str_tuple_members(columns):
-    """D4/U47: labels must be str; a non-str label is a type error."""
+    """labels must be str; a non-str label is a type error."""
     with pytest.raises(InvalidArgumentTypeError, match="`columns` members must be of type 'str', got"):
         validate_columns_arg(columns)
 
@@ -346,7 +344,7 @@ def test_threshold_deduper_accepts_threshold_below_one(threshold):
 
 @pytest.mark.parametrize("threshold", [-0.1, 0, 1.0, 1.5])
 def test_threshold_deduper_rejects_threshold_outside_bounds(threshold):
-    """D2: the similarity threshold range is the open (0, 1) — 0 silently
+    """similarity threshold range is the open (0, 1) — 0 silently
     collapses whole columns and 1 can never match."""
     with pytest.raises(
         InvalidArgumentValueError,
