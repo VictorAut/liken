@@ -118,7 +118,6 @@ class Dedupe:
         if backend.name == "pyspark":
             spark_session = validate_spark_arg(spark_session)
         elif spark_session is not None:
-            # U38: session provided for a non-spark frame is ignored silently.
             warn(WARN_SPARK_SESSION_IGNORED_MSG)
 
         self._executor: Executor = backend.executor(spark_session=spark_session)
