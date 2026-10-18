@@ -411,3 +411,11 @@ def test_canonicalize_rejects_canonical_id_collision():
 
     with pytest.raises(ValueError, match="the dataframe already has a column with this label"):
         dupe.canonicalize("a", canonical_id="b")
+
+
+def test_drop_duplicates_signature_unchanged():
+    """`drop_duplicates` exposes no new parameter (WI036 Task 8)."""
+    import inspect
+
+    params = inspect.signature(Dedupe.drop_duplicates).parameters
+    assert list(params) == ["self", "columns", "keep"]
