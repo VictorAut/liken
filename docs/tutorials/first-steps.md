@@ -112,7 +112,7 @@ A DataFrame must be passed to the top-level `dedupe` function.
 
     df = spark.read.parquet("...")
 
-    # the session is inferred from the dataframe
+    # the spark session is inferred from the dataframe
     df = (
         lk.dedupe(df)
         # ...

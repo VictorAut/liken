@@ -67,7 +67,7 @@ class PysparkExecutor(Executor):
 
         schema = df._schema
 
-        df = PysparkDF(df.sparkSession.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False)
+        df = PysparkDF(df.spark_session.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)

@@ -58,9 +58,7 @@ class Dedupe:
 
     Raises:
         InvalidArgumentValueError: Initialized with an unsupported dataframe
-            type, or a list of spark `Row` (the pyspark backend takes a
-            `pyspark.sql.DataFrame`).
-
+            type.
     Examples:
 
         import liken as lk
@@ -81,7 +79,6 @@ class Dedupe:
 
         backend: Backend = get_backend(self._df)
 
-        # Rejected here, not in is_match: the internal _from_rows partition
         # handoff still dispatches through is_match and must keep working.
         if backend.name == "pyspark" and isinstance(self._df, list):
             raise InvalidArgumentValueError(SPARK_ROWS_NOT_ACCEPTED_MSG)
@@ -100,9 +97,7 @@ class Dedupe:
 
         Use as internal constructor with spark `Rows`.
 
-        Bypasses backend dispatch and the public `__init__` validation
-        (including the `list[Row]` rejection), which are public-entry
-        responsibilities.
+        Bypasses backend dispatch and the public `__init__` validation.
         """
         self = cls.__new__(cls)
         self._df = rows

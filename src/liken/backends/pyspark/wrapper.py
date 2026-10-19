@@ -130,7 +130,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         return T.StructType(fields)
 
     @property
-    def sparkSession(self) -> SparkSession:
+    def spark_session(self) -> SparkSession:
         """The session that created the wrapped frame, read at wrap time.
 
         The wrapper's payload may be an RDD, which carries no session, so the
