@@ -43,15 +43,15 @@ pandas, polars and pyarrow ship with Liken itself. The other backends are option
 
 Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all seven.
 
-PySpark requires a `SparkSession`. Pass it explicitly, or Liken raises `ValueError: spark_session arg must be provided for a spark dataframe`:
+For PySpark, the `SparkSession` is inferred from the DataFrame itself: a `pyspark.sql.DataFrame` always knows the session that created it, so the session is never passed to `lk.dedupe`.
 
 ```python
 import liken as lk
 
-df = lk.dedupe(spark_df, spark_session=spark).apply(lk.fuzzy()).drop_duplicates("address")
+df = lk.dedupe(spark_df).apply(lk.fuzzy()).drop_duplicates("address")
 ```
 
-For every other backend the `spark_session` argument is ignored.
+Only the `fake_*` data helpers take a `spark_session` argument: they build new frames, so there is no existing frame to infer the session from.
 
 ## Local vs Distributed
 
