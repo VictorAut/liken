@@ -2,39 +2,21 @@
 title: Release History
 ---
 
-## Unreleased
+## v0.13.0 (2026-10-19)
 
 **Breaking changes**
 
-- `canonicalize(id=...)` is renamed to `source_id=...`. Existing calls with
-  `id=` now raise a `TypeError` (unknown keyword). No deprecation shim.
+- `canonicalize` param `id` is renamed to `source_id`.
 - `canonicalize` gains a `canonical_id` argument: the label of the output
-  canonical-id column, defaulting to `"canonical_id"`. A label that already
-  exists in the dataframe is rejected with a `ValueError` before execution —
-  the previous overwrite/keep-as-is behaviours on pre-existing canonical
-  columns are no longer reachable from `canonicalize`. To reuse a stored
-  canonical column, pass it as `source_id` (with a free output label).
-- The `CANONICAL_ID` environment variable has been removed. It had no runtime
-  effect (the constant was resolved once at import). The output label is now
-  controlled per call via `canonical_id=...`.
+  canonical-id column, defaulting to `"canonical_id"`. To reuse a stored
+  canonical column, pass it as `source_id`.
 - `canonicals()` and `synthesize()` honour the `canonical_id` label stored from
   the last `canonicalize` call.
-- `drop_duplicates` never consumes or removes any frame column. Previously a
-  data column named like the canonical-id label was treated as the canonical
-  column and dropped from the output; it is now left in place as data. A frame
-  already carrying liken's reserved internal label
-  (`__liken_canonical_private_id__`) is rejected with a `ValueError`.
-- `canonicalize` rejects liken's reserved internal label
-  (`__liken_canonical_private_id__`): passing it as `canonical_id=`, or a
-  dataframe already carrying a column with that label, raises a `ValueError`
-  before execution.
+- `drop_duplicates` never consumes or removes any frame column.
 - `explore` no longer mints a default-labelled canonical column on the
-  analysed frame. It uses liken's reserved internal label instead, so a data
-  column named `canonical_id` is profiled as data. A dataframe already
-  carrying the internal label is rejected with a `ValueError` before
-  execution.
-- The internal label-collision error message is reworded (it no longer
-  refers to dropping duplicates).
+  analysed frame. It uses liken's reserved internal label instead.
+- The internal label-collision error message is reworded.
+
 
 ## v0.12.3 (2026-10-18)
 
