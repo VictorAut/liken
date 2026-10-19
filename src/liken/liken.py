@@ -11,13 +11,13 @@ from liken.constants import CANONICAL_ID_RESERVED_MSG
 from liken.constants import INTERNAL_CANONICAL_ID
 from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
 from liken.constants import INVALID_CANONICAL_ID_COLLISION_MSG
-from liken.constants import WARN_SPARK_SESSION_IGNORED_MSG
+from liken.constants import SPARK_ROWS_NOT_ACCEPTED_MSG
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.core.executor import Executor
 from liken.core.executor import LocalExecutor
 from liken.dedupers.exact import exact
-from liken.exceptions import warn
+from liken.exceptions import InvalidArgumentValueError
 from liken.explore import DEFAULT_EXPLORE_THRESHOLDS
 from liken.explore import _column_labels
 from liken.explore import run_explore
@@ -29,7 +29,6 @@ from liken.validations import validate_columns_arg
 from liken.validations import validate_explore_column_exists
 from liken.validations import validate_explore_columns_arg
 from liken.validations import validate_keep_arg
-from liken.validations import validate_spark_arg
 from liken.validations import validate_thresholds_arg
 
 
@@ -37,7 +36,6 @@ if TYPE_CHECKING:
     from collections.abc import Hashable
 
     from pyspark.sql import Row
-    from pyspark.sql import SparkSession
 
     from liken.collections.dict import DeduplicationDict
     from liken.collections.pipelines import Pipeline
@@ -57,11 +55,11 @@ class Dedupe:
 
     Args:
         df: The dataframe to deduplicate.
-        spark_session: optional spark session if initializing with PySpark
-            backend.
 
     Raises:
-        ValueError: Initialized with PySpark DataFrame but no Spark Session.
+        InvalidArgumentValueError: Initialized with an unsupported dataframe
+            type, or a list of spark `Row` (the pyspark backend takes a
+            `pyspark.sql.DataFrame`).
 
     Examples:
 
@@ -76,8 +74,6 @@ class Dedupe:
         self,
         df: UserDataFrame,
         /,
-        *,
-        spark_session: SparkSession | None = None,
     ):
         self._df: InternalDataFrame = df
 
@@ -85,12 +81,10 @@ class Dedupe:
 
         backend: Backend = get_backend(self._df)
 
-        if backend.name == "pyspark":
-            spark_session = validate_spark_arg(spark_session)
-        elif spark_session:
-            warn(WARN_SPARK_SESSION_IGNORED_MSG)
+        if backend.name == "pyspark" and isinstance(self._df, list):
+            raise InvalidArgumentValueError(SPARK_ROWS_NOT_ACCEPTED_MSG)
 
-        self._executor: Executor = backend.executor(spark_session=spark_session)
+        self._executor: Executor = backend.executor()
 
         self.has_been_canonicalized: bool = False
         self._canonical_id: str = CANONICAL_ID
@@ -544,6 +538,6 @@ class Dedupe:
 # API:
 
 
-def dedupe(df: UserDataFrame, /, *, spark_session: SparkSession | None = None) -> Dedupe:
+def dedupe(df: UserDataFrame, /) -> Dedupe:
     """Convenience function for `Dedupe` entrypoint."""
-    return Dedupe(df, spark_session=spark_session)
+    return Dedupe(df)

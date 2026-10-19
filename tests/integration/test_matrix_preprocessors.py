@@ -100,12 +100,11 @@ def test_matrix_preprocessors(
     data,
     expected_canonical_id,
     pipeline_builder,
-    spark_session,
     helpers,
 ):
     pipeline = pipeline_builder(preprocessors)
 
     df = helpers.create_df(data, SCHEMA)
-    df = lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
+    df = lk.dedupe(df).apply(pipeline).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id

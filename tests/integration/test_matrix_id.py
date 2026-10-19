@@ -167,14 +167,13 @@ def test_matrix_id(
     data,
     expected_canonical_id,
     output_label,
-    spark_session,
     helpers,
 ):
 
     df = helpers.create_df(data, schema)
 
     df = (
-        lk.dedupe(df, spark_session=spark_session)
+        lk.dedupe(df)
         .apply(lk.exact())
         .canonicalize(SINGLE_COL, source_id=source_id, canonical_id=output_label)
         .collect()
@@ -188,11 +187,10 @@ def test_matrix_id_rejects_existing_canonical_id_column(
     source_id,
     schema,
     data,
-    spark_session,
     helpers,
 ):
 
     df = helpers.create_df(data, schema)
 
     with pytest.raises(ValueError, match=re.escape(INVALID_CANONICAL_ID_COLLISION_MSG.format("canonical_id"))):
-        lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize(SINGLE_COL, source_id=source_id)
+        lk.dedupe(df).apply(lk.exact()).canonicalize(SINGLE_COL, source_id=source_id)

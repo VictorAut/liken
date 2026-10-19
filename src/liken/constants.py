@@ -39,8 +39,12 @@ SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
 
 # spark session
 
-SPARK_SESSION_REQUIRED_MSG: Final[str] = "spark_session arg must be provided for a spark dataframe"
-WARN_SPARK_SESSION_IGNORED_MSG: Final[str] = "spark_session provided for a non-spark dataframe; the argument was ignored"
+SPARK_ROWS_NOT_ACCEPTED_MSG: Final[str] = (
+    "a list of pyspark.sql.Row is not accepted; the pyspark backend takes a pyspark.sql.DataFrame"
+)
+SPARK_SESSION_REQUIRED_FOR_CREATE_DF_MSG: Final[str] = (
+    "spark_session arg must be provided to create a pyspark dataframe"
+)
 
 # collection errors
 INVALID_COLUMNS_REQUIRED_MSG: Final[str] = "columns cannot be None; a column label or tuple of column labels must be provided when using the sequential API"

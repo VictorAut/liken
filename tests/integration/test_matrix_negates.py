@@ -41,12 +41,11 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("deduper, expected_canonical_id", PARAMS)
-def test_matrix_negates(deduper, expected_canonical_id, dataframe, helpers, spark_session):
+def test_matrix_negates(deduper, expected_canonical_id, dataframe, helpers):
 
     df = (
         lk.dedupe(
             dataframe,
-            spark_session=spark_session,
         )
         .apply(lk.pipeline().step(deduper))
         .canonicalize()

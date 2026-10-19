@@ -219,14 +219,14 @@ CASES = [
     [case[1:] for case in CASES],
     ids=[case[0] for case in CASES],
 )
-def test_matrix_nulls(schema, data, step, expected_canonical_id, helpers, spark_session, request):
+def test_matrix_nulls(schema, data, step, expected_canonical_id, helpers, request):
 
     if request.config.getoption("--backend") == "pyspark" and request.node.callspec.id.startswith("all-null"):
         pytest.skip("spark cannot infer column types from an all-null dataset")
 
     df = helpers.create_df(data, schema)
 
-    df = lk.dedupe(df, spark_session=spark_session).apply(lk.pipeline().step(step)).canonicalize().collect()
+    df = lk.dedupe(df).apply(lk.pipeline().step(step)).canonicalize().collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
 
@@ -242,16 +242,11 @@ def test_matrix_nulls(schema, data, step, expected_canonical_id, helpers, spark_
     ],
     ids=["string-column", "float-column"],
 )
-def test_custom_deduper_receives_raw_values(schema, data, helpers, spark_session):
+def test_custom_deduper_receives_raw_values(schema, data, helpers):
     """A registered custom deduper sees raw values, nulls included."""
     df = helpers.create_df(data, schema)
 
-    out = (
-        lk.dedupe(df, spark_session=spark_session)
-        .apply(lk.pipeline().step(lk.col(schema[0]).require_raw_values()))
-        .canonicalize()
-        .collect()
-    )
+    out = lk.dedupe(df).apply(lk.pipeline().step(lk.col(schema[0]).require_raw_values())).canonicalize().collect()
 
     # reading the column forces the compute, so the callable's assertions
     # also run on the lazy backends (dask, pyspark)

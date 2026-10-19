@@ -22,8 +22,7 @@ class PandasBackend(Backend):
         del kwargs  # Unused
         return pd.DataFrame(columns=schema, data=data)
 
-    def executor(self, **kwargs):
-        del kwargs  # Unused
+    def executor(self):
         return PandasExecutor()
 
     def wrap(self, df, source_id=None, *, canonical_id: str):

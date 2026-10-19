@@ -1,4 +1,3 @@
-import warnings
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -13,7 +12,6 @@ from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 from liken.liken import Dedupe
 from liken.validations import validate_keep_arg
-from liken.validations import validate_spark_arg
 
 
 @patch("liken.liken.CollectionsManager")
@@ -127,12 +125,30 @@ def test_canonicals_before_canonicalize_raises(dataframe):
 # dispatch
 
 
-def test_spark_session_with_non_spark_frame_warns():
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
+def test_spark_session_kwarg_rejected_on_non_spark_frame():
+    with pytest.raises(TypeError, match="spark_session"):
         Dedupe(pd.DataFrame({"a": [1, 2]}), spark_session=object())
 
-    assert any("spark_session" in str(w.message) for w in caught)
+
+def test_spark_session_kwarg_rejected_on_spark_frame():
+    pytest.importorskip("pyspark")
+    from pyspark.sql import SparkSession
+
+    spark = SparkSession.builder.master("local[1]").config("spark.driver.memory", "512m").getOrCreate()
+    try:
+        df = spark.createDataFrame([(1,)], schema=["a"])
+        with pytest.raises(TypeError, match="spark_session"):
+            Dedupe(df, spark_session=spark)
+    finally:
+        spark.stop()
+
+
+def test_list_of_rows_rejected_at_entrypoint():
+    pytest.importorskip("pyspark")
+    from pyspark.sql import Row
+
+    with pytest.raises(InvalidArgumentValueError, match=r"pyspark\.sql\.DataFrame"):
+        Dedupe([Row(id=1), Row(id=2)])
 
 
 def test_unsupported_dataframe_type_raises():
@@ -151,16 +167,6 @@ def test_validate_keep_arg_valid(keep):
 def test_validate_keep_arg_invalid():
     with pytest.raises(ValueError, match=r"`keep` must be one of \('first', 'last'\), got 'middle'"):
         validate_keep_arg("middle")
-
-
-def test_validate_spark_arg_valid(mock_spark_session):
-    session = validate_spark_arg(mock_spark_session)
-    assert session == mock_spark_session
-
-
-def test_validate_spark_arg_missing_session():
-    with pytest.raises(ValueError, match="spark_session arg must be provided for a spark dataframe"):
-        validate_spark_arg(None)
 
 
 # Misuse of public API:

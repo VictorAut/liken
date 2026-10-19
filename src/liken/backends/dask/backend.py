@@ -26,8 +26,7 @@ class DaskBackend(Backend):
         df = pd.DataFrame(columns=schema, data=data)
         return dd.from_pandas(df)
 
-    def executor(self, **kwargs):
-        del kwargs  # Unused
+    def executor(self):
 
         from liken.backends.dask.executor import DaskExecutor
 
