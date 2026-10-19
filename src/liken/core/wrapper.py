@@ -8,8 +8,6 @@ from typing import Generic
 from typing import Protocol
 from typing import TypeVar
 
-from liken.constants import CANONICAL_ID
-
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -32,9 +30,12 @@ class DF(Generic[D]):
     Defines inheritable methods as well as some of the interface.
     """
 
+    # Label of the canonical-id column. Assigned by every subclass
+    # constructor from its own parameter; the base class only declares it.
+    _canonical_id: str
+
     def __init__(self, df: D):
         self._df: D = df
-        self._canonical_id: str = CANONICAL_ID
 
     def unwrap(self) -> D:
         return self._df
@@ -101,7 +102,7 @@ class CanonicalIdMixin(AddsCanonical):
     also be a string field.
     """
 
-    def _add_canonical_id(self, df, source_id: str | None, canonical_id: str = CANONICAL_ID):
+    def _add_canonical_id(self, df, source_id: str | None, canonical_id: str):
 
         has_canonical: bool = canonical_id in self._column_labels_list(df)
         source_id_is_canonical: bool = source_id == canonical_id

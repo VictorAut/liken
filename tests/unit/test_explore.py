@@ -134,3 +134,37 @@ def test_explore_empty_frame_reports_zero_rates():
 
     assert list(result.index) == DEFAULT_METRICS
     assert all(rate == 0 for rate in result["address"].tolist())
+
+
+# internal label
+
+
+def test_explore_rejects_internal_label_collision():
+    """A frame pre-carrying the reserved internal label is rejected before
+    any wrap (Amendment 2)."""
+    from liken.constants import INTERNAL_CANONICAL_ID
+    from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
+
+    df = pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2, 3], "address": ["london", "london", "paris"]})
+
+    with pytest.raises(ValueError, match=INTERNAL_CANONICAL_ID_COLLISION_MSG):
+        lk.dedupe(df).explore(["address"])
+
+
+def test_explore_profiles_data_column_named_canonical_id():
+    """A data column labelled like the canonical id is profiled as data:
+    explore mints its canonical column under the internal label instead
+    (Amendment 2)."""
+    from liken.constants import CANONICAL_ID
+    from liken.constants import INTERNAL_CANONICAL_ID
+
+    df = pd.DataFrame({CANONICAL_ID: ["u1", "u2", "u3"], "address": ["london", "london", "paris"]})
+
+    result = lk.dedupe(df).explore(["address", CANONICAL_ID])
+
+    # the user's column was read as data: exact on three distinct ids has
+    # no duplicates
+    assert result.loc["exact", CANONICAL_ID] == 0
+    # the internal label never leaks into the frame or the report
+    assert INTERNAL_CANONICAL_ID not in df.columns
+    assert INTERNAL_CANONICAL_ID not in result.columns

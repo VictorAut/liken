@@ -54,8 +54,9 @@ def test_create_df_empty_data():
 
 def _wrap(df: pa.Table, source_id: str | None = None, canonical_id: str | None = None):
     kwargs = {"source_id": source_id}
-    if canonical_id is not None:
-        kwargs["canonical_id"] = canonical_id
+    # The label is required below the entry layer: tests omitting it pin the
+    # default-label behaviour, so the helper supplies it explicitly.
+    kwargs["canonical_id"] = canonical_id if canonical_id is not None else CANONICAL_ID
     return PyarrowBackend().wrap(df, **kwargs)
 
 

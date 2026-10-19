@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 from liken.core.wrapper import DF
@@ -26,6 +25,6 @@ def get_backend(df: Any) -> Backend:
 # DISPATCHER:
 
 
-def wrap(df: Any, source_id: str | None = None, canonical_id: str = CANONICAL_ID) -> DF:
+def wrap(df: Any, source_id: str | None = None, *, canonical_id: str) -> DF:
     backend = get_backend(df)
     return backend.wrap(df, source_id=source_id, canonical_id=canonical_id)

@@ -1,6 +1,5 @@
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.constants import SPARK_SESSION_REQUIRED_MSG
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
@@ -39,7 +38,7 @@ class PysparkBackend(Backend):
 
         return PysparkExecutor(spark_session=spark_session)
 
-    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
+    def wrap(self, df, source_id=None, *, canonical_id: str):
 
         from liken.backends.pyspark.wrapper import PysparkDF
         from liken.backends.pyspark.wrapper import PysparkRows
@@ -47,4 +46,4 @@ class PysparkBackend(Backend):
         if isinstance(df, list):
             return PysparkRows(df, canonical_id)
 
-        return PysparkDF(df, source_id, canonical_id)
+        return PysparkDF(df, source_id, canonical_id=canonical_id)

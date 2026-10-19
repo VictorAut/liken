@@ -10,7 +10,6 @@ from typing import final
 import pyarrow as pa
 from typing_extensions import override
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -58,7 +57,8 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         self,
         df: DataFrame,
         source_id: str | None = None,
-        canonical_id: str = CANONICAL_ID,
+        *,
+        canonical_id: str,
         is_init: bool = True,
     ):
         # new spark plan for safety
@@ -84,7 +84,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         from pyspark.sql import Row
 
         df_new: DataFrame = df.drop(canonical_id)
-        self._schema = self._new_schema(df_new, source_id, canonical_id)
+        self._schema = self._new_schema(df_new, source_id, canonical_id=canonical_id)
         return df_new.rdd.mapPartitions(
             lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
@@ -93,7 +93,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df, source_id, canonical_id)
+        self._schema = self._new_schema(df, source_id, canonical_id=canonical_id)
         return df.rdd.mapPartitions(
             lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
@@ -111,7 +111,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         return df.columns
 
     @staticmethod
-    def _new_schema(df: DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID) -> StructType:
+    def _new_schema(df: DataFrame, source_id: str | None = None, *, canonical_id: str) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
         of the source_id field.
         """
@@ -211,7 +211,7 @@ class PysparkRows(DF["list[Row]"]):
     will be instantiated in the worker node.
     """
 
-    def __init__(self, df: list[Row], canonical_id: str = CANONICAL_ID):
+    def __init__(self, df: list[Row], canonical_id: str):
         self._df: list[Row] = df
         self._canonical_id = canonical_id
 

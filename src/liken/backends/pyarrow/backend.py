@@ -4,7 +4,6 @@ import pyarrow as pa
 
 from liken.backends.pyarrow.executor import PyarrowExecutor
 from liken.backends.pyarrow.wrapper import ArrowDF
-from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -29,5 +28,5 @@ class PyarrowBackend(Backend):
         del kwargs  # Unused
         return PyarrowExecutor()
 
-    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
-        return ArrowDF(df, source_id, canonical_id)
+    def wrap(self, df, source_id=None, *, canonical_id: str):
+        return ArrowDF(df, source_id, canonical_id=canonical_id)

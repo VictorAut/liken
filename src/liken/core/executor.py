@@ -14,7 +14,6 @@ from typing import TypeVar
 
 from liken.collections.base import Pipeline
 from liken.collections.dict import DeduplicationDict
-from liken.constants import CANONICAL_ID
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
@@ -54,7 +53,7 @@ class Executor(Protocol[D]):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> D: ...
 
 
@@ -70,7 +69,7 @@ class LocalExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> DF:
         """Process a local dataframe according to the deduplication collection
 

@@ -19,6 +19,22 @@ title: Release History
   controlled per call via `canonical_id=...`.
 - `canonicals()` and `synthesize()` honour the `canonical_id` label stored from
   the last `canonicalize` call.
+- `drop_duplicates` never consumes or removes any frame column. Previously a
+  data column named like the canonical-id label was treated as the canonical
+  column and dropped from the output; it is now left in place as data. A frame
+  already carrying liken's reserved internal label
+  (`__liken_canonical_private_id__`) is rejected with a `ValueError`.
+- `canonicalize` rejects liken's reserved internal label
+  (`__liken_canonical_private_id__`): passing it as `canonical_id=`, or a
+  dataframe already carrying a column with that label, raises a `ValueError`
+  before execution.
+- `explore` no longer mints a default-labelled canonical column on the
+  analysed frame. It uses liken's reserved internal label instead, so a data
+  column named `canonical_id` is profiled as data. A dataframe already
+  carrying the internal label is rejected with a `ValueError` before
+  execution.
+- The internal label-collision error message is reworded (it no longer
+  refers to dropping duplicates).
 
 ## v0.12.3 (2026-10-18)
 

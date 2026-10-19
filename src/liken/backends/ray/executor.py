@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
@@ -42,7 +41,7 @@ class RayExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> RayDF:
         """Maps dataframe partitions to be processed by Ray enforced to use
         pandas for each partition.

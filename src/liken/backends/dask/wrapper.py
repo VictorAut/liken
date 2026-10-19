@@ -9,7 +9,6 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -28,7 +27,8 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
         self,
         df: dd.DataFrame,
         source_id: str | None = None,
-        canonical_id: str = CANONICAL_ID,
+        *,
+        canonical_id: str,
         preserve_schema: bool = False,
     ):
         if preserve_schema:
@@ -69,9 +69,7 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
 
         return df.map_partitions(_assign, meta=meta)
 
-    def _new_meta(
-        self, df: dd.DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID
-    ) -> pd.DataFrame:
+    def _new_meta(self, df: dd.DataFrame, source_id: str | None = None, *, canonical_id: str) -> pd.DataFrame:
         meta = df._meta.copy()
 
         dtype = meta[source_id].dtype if source_id else "int64"

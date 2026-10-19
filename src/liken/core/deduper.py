@@ -21,7 +21,6 @@ import pyarrow.compute as pc
 from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
-from liken.constants import CANONICAL_ID
 from liken.core.missing import is_missing
 from liken.exceptions import InvalidArgumentTypeError
 from liken.validations import require_real_number
@@ -61,7 +60,7 @@ class Base(Protocol):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> DF: ...
     def str_representation(self, name: str) -> str: ...
     def validate(self, columns: Columns) -> None: ...
@@ -177,7 +176,7 @@ class BaseDeduper(Base):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> DF:
         canonicals = self.wdf.get_canonical()
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
@@ -43,7 +42,7 @@ class PysparkExecutor(Executor):
         drop_duplicates: bool,
         drop_canonical_id: bool,
         source_id: str | None = None,
-        canonical_id: str = CANONICAL_ID,
+        canonical_id: str,
     ) -> PysparkDF:
         """Maps dataframe partitions to be processed via the RDD API yielding
         low-level list[Rows], which are then post-processed back to a dataframe.
@@ -72,7 +71,9 @@ class PysparkExecutor(Executor):
 
         schema = df._schema
 
-        df = PysparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = PysparkDF(
+            self._spark_session.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False
+        )
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)

@@ -47,7 +47,7 @@ def test_add_canonical_id_mixin(id, cols, method):
 
     df = Mock()
 
-    dummy._add_canonical_id(df, id)
+    dummy._add_canonical_id(df, id, canonical_id=CANONICAL_ID)
 
     expected = getattr(dummy, method)
     expected.assert_called_once()

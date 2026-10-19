@@ -9,7 +9,6 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 class PandasDF(DF[pd.DataFrame], CanonicalIdMixin):
     """Pandas DataFrame wrapper"""
 
-    def __init__(self, df: pd.DataFrame, source_id: str | None = None, canonical_id: str = CANONICAL_ID):
+    def __init__(self, df: pd.DataFrame, source_id: str | None = None, *, canonical_id: str):
         self._df: pd.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
         self._source_id = source_id
         self._canonical_id = canonical_id

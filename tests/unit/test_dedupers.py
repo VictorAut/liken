@@ -8,6 +8,7 @@ import pytest
 from rapidfuzz import fuzz
 
 import liken as lk
+from liken.constants import CANONICAL_ID
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.dedupers.edit_distance import EditDistance
@@ -80,7 +81,9 @@ def test_canonicalize_puts_canonical_id(mock_df):
         2: [2],
     }
 
-    result = deduper.canonicalizer(components=components, drop_duplicates=False, keep="first")
+    result = deduper.canonicalizer(
+        components=components, drop_duplicates=False, keep="first", canonical_id=CANONICAL_ID
+    )
 
     mock_df.put_col.assert_called_once()
     assert result is mock_df

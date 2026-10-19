@@ -9,7 +9,6 @@ from typing import final
 
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.missing import is_missing
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
 class ArrowDF(DF[pa.Table], CanonicalIdMixin):
     """PyArrow Table wrapper"""
 
-    def __init__(self, df: pa.Table, source_id: str | None = None, canonical_id: str = CANONICAL_ID):
+    def __init__(self, df: pa.Table, source_id: str | None = None, *, canonical_id: str):
         self._df: pa.Table = self._add_canonical_id(df, source_id, canonical_id)
         self._source_id = source_id
         self._canonical_id = canonical_id

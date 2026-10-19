@@ -1,6 +1,5 @@
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -31,7 +30,7 @@ class ModinBackend(Backend):
 
         return ModinExecutor()
 
-    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
+    def wrap(self, df, source_id=None, *, canonical_id: str):
         from liken.backends.modin.wrapper import ModinDF
 
-        return ModinDF(df, source_id, canonical_id)
+        return ModinDF(df, source_id, canonical_id=canonical_id)

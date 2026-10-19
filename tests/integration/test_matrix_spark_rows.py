@@ -47,14 +47,14 @@ def test_backend_dispatches_list_of_rows():
 def test_wrap_returns_spark_rows_wrapper():
     from liken.backends.pyspark.wrapper import PysparkRows
 
-    assert isinstance(get_backend(make_rows()).wrap(make_rows()), PysparkRows)
+    assert isinstance(get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID), PysparkRows)
 
 
 # WRAPPER METHODS:
 
 
 def test_get_col():
-    wdf = get_backend(make_rows()).wrap(make_rows())
+    wdf = get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID)
 
     arr = wdf._get_col("address")
 
@@ -62,7 +62,7 @@ def test_get_col():
 
 
 def test_get_cols():
-    wdf = get_backend(make_rows()).wrap(make_rows())
+    wdf = get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID)
 
     table = wdf._get_cols(("id", "address"))
 
@@ -71,7 +71,7 @@ def test_get_cols():
 
 
 def test_put_col():
-    wdf = get_backend(make_rows()).wrap(make_rows())
+    wdf = get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID)
 
     wdf.put_col(CANONICAL_ID, [0, 0, 1])
 
@@ -81,11 +81,11 @@ def test_put_col():
 def test_drop_duplicates():
     # note: drop_duplicates mutates in place and returns self, so the two
     # keeps need separate wrappers
-    wdf_first = get_backend(make_rows()).wrap(make_rows())
+    wdf_first = get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID)
     wdf_first.put_col(CANONICAL_ID, [0, 0, 1])
     assert wdf_first.drop_duplicates(keep="first")._get_col("id").to_pylist() == [1, 3]
 
-    wdf_last = get_backend(make_rows()).wrap(make_rows())
+    wdf_last = get_backend(make_rows()).wrap(make_rows(), canonical_id=CANONICAL_ID)
     wdf_last.put_col(CANONICAL_ID, [0, 0, 1])
     assert wdf_last.drop_duplicates(keep="last")._get_col("id").to_pylist() == [2, 3]
 

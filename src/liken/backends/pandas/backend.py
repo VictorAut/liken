@@ -4,7 +4,6 @@ import pandas as pd
 
 from liken.backends.pandas.executor import PandasExecutor
 from liken.backends.pandas.wrapper import PandasDF
-from liken.constants import CANONICAL_ID
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 
@@ -27,5 +26,5 @@ class PandasBackend(Backend):
         del kwargs  # Unused
         return PandasExecutor()
 
-    def wrap(self, df, source_id=None, canonical_id=CANONICAL_ID):
-        return PandasDF(df, source_id, canonical_id)
+    def wrap(self, df, source_id=None, *, canonical_id: str):
+        return PandasDF(df, source_id, canonical_id=canonical_id)

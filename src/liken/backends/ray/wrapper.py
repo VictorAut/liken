@@ -9,7 +9,6 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
 class RayDF(DF["RayDataset"], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
-    def __init__(self, df: RayDataset, source_id: str | None = None, canonical_id: str = CANONICAL_ID):
+    def __init__(self, df: RayDataset, source_id: str | None = None, *, canonical_id: str):
         import ray
 
         if not ray.is_initialized():
