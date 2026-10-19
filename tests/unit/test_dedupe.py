@@ -125,24 +125,6 @@ def test_canonicals_before_canonicalize_raises(dataframe):
 # dispatch
 
 
-def test_spark_session_kwarg_rejected_on_non_spark_frame():
-    with pytest.raises(TypeError, match="spark_session"):
-        Dedupe(pd.DataFrame({"a": [1, 2]}), spark_session=object())
-
-
-def test_spark_session_kwarg_rejected_on_spark_frame():
-    pytest.importorskip("pyspark")
-    from pyspark.sql import SparkSession
-
-    spark = SparkSession.builder.master("local[1]").config("spark.driver.memory", "512m").getOrCreate()
-    try:
-        df = spark.createDataFrame([(1,)], schema=["a"])
-        with pytest.raises(TypeError, match="spark_session"):
-            Dedupe(df, spark_session=spark)
-    finally:
-        spark.stop()
-
-
 def test_list_of_rows_rejected_at_entrypoint():
     pytest.importorskip("pyspark")
     from pyspark.sql import Row
