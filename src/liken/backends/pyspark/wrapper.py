@@ -70,7 +70,6 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         else:
             self._df: DataFrame = df  # type: ignore[no-redef]
 
-        self._source_id = source_id
         self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
@@ -78,16 +77,6 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
     def _df_as_is(self, df: DataFrame) -> RDD[Row]:
         self._schema = df.schema
         return df.rdd
-
-    def _df_overwrite_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
-
-        from pyspark.sql import Row
-
-        df_new: DataFrame = df.drop(canonical_id)
-        self._schema = self._new_schema(df_new, source_id, canonical_id=canonical_id)
-        return df_new.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
-        )
 
     def _df_copy_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
 

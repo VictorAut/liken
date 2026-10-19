@@ -23,16 +23,12 @@ class PolarsDF(DF[pl.DataFrame], CanonicalIdMixin):
 
     def __init__(self, df: pl.DataFrame, source_id: str | None = None, *, canonical_id: str):
         self._df: pl.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
-        self._source_id = source_id
         self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pl.DataFrame) -> pl.DataFrame:
         return df
-
-    def _df_overwrite_id(self, df: pl.DataFrame, source_id: str, canonical_id: str) -> pl.DataFrame:
-        return df.with_columns(df[source_id].alias(canonical_id))
 
     def _df_copy_id(self, df: pl.DataFrame, source_id: str, canonical_id: str) -> pl.DataFrame:
         return df.with_columns(df[source_id].alias(canonical_id))

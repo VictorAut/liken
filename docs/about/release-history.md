@@ -2,6 +2,15 @@
 title: Release History
 ---
 
+## v0.13.1 (2026-10-19)
+
+**Misc**
+
+- Removed dead code fixes: an unreachable canonical-id overwrite path (and its
+  per-backend handlers), an unread wrapper attribute, and a
+  no-op exception `__init__` override.
+
+
 ## v0.13.0 (2026-10-19)
 
 **Breaking changes**

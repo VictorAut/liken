@@ -43,7 +43,7 @@ def test_backend_protocol_members_are_annotated():
 
 
 def test_adds_canonical_methods_are_annotated():
-    for member in ("_df_as_is", "_df_overwrite_id", "_df_copy_id", "_df_autoincrement_id", "_column_labels_list"):
+    for member in ("_df_as_is", "_df_copy_id", "_df_autoincrement_id", "_column_labels_list"):
         assert _method_annotated(getattr(AddsCanonical, member)), member
 
 
