@@ -13,7 +13,6 @@ from liken.core.wrapper import CanonicalIdMixin
 
 class DummyFrame(CanonicalIdMixin):
     def _df_as_is(self, df): ...
-    def _df_overwrite_id(self, df, id): ...
     def _df_copy_id(self, df, id): ...
     def _df_autoincrement_id(self, df): ...
     def _column_labels_list(self, df): ...
@@ -21,16 +20,16 @@ class DummyFrame(CanonicalIdMixin):
 
 PARAMS = [
     (CANONICAL_ID, ["address", CANONICAL_ID], "_df_as_is"),
-    ("uid", ["address", CANONICAL_ID], "_df_overwrite_id"),
+    ("uid", ["address", CANONICAL_ID], "_df_as_is"),
     (None, ["address", CANONICAL_ID], "_df_as_is"),
     ("uid", ["address", "uid"], "_df_copy_id"),
     (None, ["address"], "_df_autoincrement_id"),
 ]
 IDS = [
-    "canonical id already exists; verbose definition",
-    "new canonical id as overwrite from other id",
-    "canonical id already exists; with warning",
-    "new canonical id as write from other id",
+    "canonical id already exists; source_id names it",
+    "canonical id already exists; source_id differs from it",
+    "canonical id already exists; no source_id",
+    "new canonical id as copy from other id",
     "new autoincremental canonical id",
 ]
 
@@ -40,7 +39,6 @@ def test_add_canonical_id_mixin(id, cols, method):
 
     dummy = DummyFrame()
     dummy._df_as_is = Mock()
-    dummy._df_overwrite_id = Mock()
     dummy._df_copy_id = Mock()
     dummy._df_autoincrement_id = Mock()
     dummy._column_labels_list = Mock(return_value=cols)

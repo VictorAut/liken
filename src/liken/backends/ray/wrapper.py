@@ -30,16 +30,12 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
             ray.init(ignore_reinit_error=True)
 
         self._df: RayDataset = self._add_canonical_id(df, source_id, canonical_id)
-        self._source_id = source_id
         self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: RayDataset) -> RayDataset:
         return df
-
-    def _df_overwrite_id(self, df: RayDataset, source_id: str, canonical_id: str) -> RayDataset:
-        return df.map_batches(lambda df: df.assign(**{canonical_id: df[source_id]}), batch_format="pandas")
 
     def _df_copy_id(self, df: RayDataset, source_id: str, canonical_id: str) -> RayDataset:
         return df.map_batches(lambda df: df.assign(**{canonical_id: df[source_id]}), batch_format="pandas")

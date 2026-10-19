@@ -24,16 +24,12 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
 
     def __init__(self, df: pa.Table, source_id: str | None = None, *, canonical_id: str):
         self._df: pa.Table = self._add_canonical_id(df, source_id, canonical_id)
-        self._source_id = source_id
         self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pa.Table) -> pa.Table:
         return df
-
-    def _df_overwrite_id(self, df: pa.Table, source_id: str, canonical_id: str) -> pa.Table:
-        return df.set_column(df.column_names.index(canonical_id), canonical_id, df.column(source_id))
 
     def _df_copy_id(self, df: pa.Table, source_id: str, canonical_id: str) -> pa.Table:
         return df.append_column(canonical_id, df.column(source_id))

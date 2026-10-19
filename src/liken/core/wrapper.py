@@ -82,7 +82,6 @@ class AddsCanonical(Protocol[D]):
     """Mixin protocol"""
 
     def _df_as_is(self, df: D) -> D: ...
-    def _df_overwrite_id(self, df: D, source_id: str, canonical_id: str) -> D: ...
     def _df_copy_id(self, df: D, source_id: str, canonical_id: str) -> D: ...
     def _df_autoincrement_id(self, df: D, canonical_id: str) -> D: ...
     def _column_labels_list(self, df: D) -> list[str]: ...
@@ -105,14 +104,8 @@ class CanonicalIdMixin(AddsCanonical):
     def _add_canonical_id(self, df, source_id: str | None, canonical_id: str):
 
         has_canonical: bool = canonical_id in self._column_labels_list(df)
-        source_id_is_canonical: bool = source_id == canonical_id
 
         if has_canonical:
-            if source_id:
-                if source_id_is_canonical:
-                    return self._df_as_is(df)
-                # overwrite with source_id
-                return self._df_overwrite_id(df, source_id, canonical_id)
             return self._df_as_is(df)
         if source_id:
             # write new with source_id

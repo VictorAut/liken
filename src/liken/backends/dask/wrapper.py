@@ -35,16 +35,12 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
             self._df = df
         else:
             self._df = self._add_canonical_id(df, source_id, canonical_id)
-        self._source_id = source_id
         self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: dd.DataFrame) -> dd.DataFrame:
         return df
-
-    def _df_overwrite_id(self, df: dd.DataFrame, source_id: str, canonical_id: str) -> dd.DataFrame:
-        return df.assign(**{canonical_id: df[source_id]})
 
     def _df_copy_id(self, df: dd.DataFrame, source_id: str, canonical_id: str) -> dd.DataFrame:
         return df.assign(**{canonical_id: df[source_id]})
