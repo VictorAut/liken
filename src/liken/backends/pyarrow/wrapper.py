@@ -9,7 +9,6 @@ from typing import final
 
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.missing import is_missing
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
@@ -23,23 +22,24 @@ if TYPE_CHECKING:
 class ArrowDF(DF[pa.Table], CanonicalIdMixin):
     """PyArrow Table wrapper"""
 
-    def __init__(self, df: pa.Table, id: str | None = None):
-        self._df: pa.Table = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: pa.Table, source_id: str | None = None, *, canonical_id: str):
+        self._df: pa.Table = self._add_canonical_id(df, source_id, canonical_id)
+        self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: pa.Table) -> pa.Table:
         return df
 
-    def _df_overwrite_id(self, df: pa.Table, id: str) -> pa.Table:
-        return df.set_column(df.column_names.index(CANONICAL_ID), CANONICAL_ID, df.column(id))
+    def _df_overwrite_id(self, df: pa.Table, source_id: str, canonical_id: str) -> pa.Table:
+        return df.set_column(df.column_names.index(canonical_id), canonical_id, df.column(source_id))
 
-    def _df_copy_id(self, df: pa.Table, id: str) -> pa.Table:
-        return df.append_column(CANONICAL_ID, df.column(id))
+    def _df_copy_id(self, df: pa.Table, source_id: str, canonical_id: str) -> pa.Table:
+        return df.append_column(canonical_id, df.column(source_id))
 
-    def _df_autoincrement_id(self, df: pa.Table) -> pa.Table:
-        return df.append_column(CANONICAL_ID, pa.array(range(len(df)), type=pa.int64()))
+    def _df_autoincrement_id(self, df: pa.Table, canonical_id: str) -> pa.Table:
+        return df.append_column(canonical_id, pa.array(range(len(df)), type=pa.int64()))
 
     def _column_labels_list(self, df: pa.Table) -> list[str]:
         return df.column_names
@@ -74,7 +74,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
-        canonical = self._df.column(CANONICAL_ID).to_pylist()
+        canonical = self._df.column(self._canonical_id).to_pylist()
 
         # keep "first": record only the first occurrence of each id.
         # keep "last": overwrite with each later occurrence.
@@ -95,7 +95,8 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
 
     def synthesize_record(self) -> pa.Table:
         df = self._df
-        canonical = df.column(CANONICAL_ID)
+        canonical_id = self._canonical_id
+        canonical = df.column(canonical_id)
         canonical_type = canonical.type
 
         groups: dict[Any, list[int]] = {}
@@ -106,7 +107,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
             groups.setdefault(value, []).append(index)
 
         keys = sorted(groups)
-        data_names = [name for name in df.column_names if name != CANONICAL_ID]
+        data_names = [name for name in df.column_names if name != canonical_id]
 
         columns: list[pa.Array] = [pa.array(keys, type=canonical_type)]
         for name in data_names:
@@ -114,7 +115,7 @@ class ArrowDF(DF[pa.Table], CanonicalIdMixin):
             merged: list[object] = [_first_non_null(values, groups[key]) for key in keys]
             columns.append(pa.array(merged, type=df.column(name).type))
 
-        return pa.Table.from_arrays(columns, names=[CANONICAL_ID, *data_names])
+        return pa.Table.from_arrays(columns, names=[canonical_id, *data_names])
 
 
 def _first_non_null(values: list[Any], indices: list[int]) -> Any:

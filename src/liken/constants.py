@@ -1,11 +1,34 @@
 from __future__ import annotations
 
-import os
 from typing import Final
 
 
+# fmt: off
+
+
+# CANONICAL IDS:
+
+
 # Default canonical_id label in the dataframe
-CANONICAL_ID: Final[str] = os.environ.get("CANONICAL_ID", "canonical_id")
+CANONICAL_ID: Final[str] = "canonical_id"
+
+# canonical_id collision
+INVALID_CANONICAL_ID_COLLISION_MSG: Final[str] = "canonical_id value '{}' is invalid: the dataframe already has a column with this label"
+
+# Private, internal, canonical label used by the drop_duplicates and
+# explore paths. Both mint a fresh canonical column under this label,
+# then remove or ignore it
+INTERNAL_CANONICAL_ID: Final[str] = "__liken_canonical_private_id__"
+
+# internal canonical label collision
+INTERNAL_CANONICAL_ID_COLLISION_MSG: Final[str] = f"column label '{INTERNAL_CANONICAL_ID}' is reserved for liken internal use: choose a different label"
+
+# canonical_id set to the internal label
+CANONICAL_ID_RESERVED_MSG: Final[str] = f"canonical_id value '{INTERNAL_CANONICAL_ID}' is reserved for liken internal use: choose a different label"
+
+
+# SEQUENTIAL API DICT KEY:
+
 
 # Sequential API use will load to this dictionary key by default:
 SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
@@ -13,7 +36,6 @@ SEQUENTIAL_API_DEFAULT_KEY: Final[str] = "_default_"
 
 # ERROR MESSAGES
 
-# fmt: off
 
 # spark session
 

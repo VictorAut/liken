@@ -52,8 +52,12 @@ def test_create_df_empty_data():
 # CANONICAL ID:
 
 
-def _wrap(df: pa.Table, id: str | None = None):
-    return PyarrowBackend().wrap(df, id=id)
+def _wrap(df: pa.Table, source_id: str | None = None, canonical_id: str | None = None):
+    kwargs = {"source_id": source_id}
+    # The label is required below the entry layer: tests omitting it pin the
+    # default-label behaviour, so the helper supplies it explicitly.
+    kwargs["canonical_id"] = canonical_id if canonical_id is not None else CANONICAL_ID
+    return PyarrowBackend().wrap(df, **kwargs)
 
 
 def test_autoincrement_id():
@@ -66,7 +70,7 @@ def test_autoincrement_id():
 def test_copy_id_from_id_column():
     df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == ["a001", "a002"]
 
@@ -74,7 +78,7 @@ def test_copy_id_from_id_column():
 def test_copy_id_int():
     df = pa.table({"uid": [7, 8], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == [7, 8]
 
@@ -82,15 +86,18 @@ def test_copy_id_int():
 def test_existing_canonical_id_left_as_is():
     df = pa.table({CANONICAL_ID: ["x", "y"], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id=None)
+    wdf = _wrap(df, source_id=None)
 
     assert wdf.column(CANONICAL_ID).to_pylist() == ["x", "y"]
 
 
-def test_existing_canonical_id_overwritten_by_id_arg():
+def test_existing_canonical_id_overwritten_by_source_id_arg():
+    """Wrapper-level: only reachable via internal wrap() use (e.g. the
+    partitioned re-canonicalization path); the public canonicalize rejects
+    the collision before execution."""
     df = pa.table({CANONICAL_ID: ["x", "y"], "uid": [10, 20], "address": ["a", "b"]})
 
-    wdf = _wrap(df, id="uid")
+    wdf = _wrap(df, source_id="uid")
 
     assert wdf.column(CANONICAL_ID).to_pylist() == [10, 20]
 
@@ -293,13 +300,13 @@ def test_dedupe_canonicalize_collect_on_pyarrow_input():
         }
     )
 
-    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="id").collect()
+    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="id").collect()
 
     assert isinstance(result, pa.Table)
     assert result.column(CANONICAL_ID).to_pylist() == ["a", "a", "c"]
 
 
-def test_canonicalize_without_id_uses_uid():
+def test_canonicalize_without_source_id_uses_uid():
     df = pa.table(
         {
             "address": ["1 High St", "1 High St", "2 Low St"],
@@ -307,7 +314,7 @@ def test_canonicalize_without_id_uses_uid():
         }
     )
 
-    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="uid").collect()
+    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="uid").collect()
 
     assert result.column(CANONICAL_ID).to_pylist() == ["u1", "u1", "u3"]
 
@@ -320,7 +327,7 @@ def test_canonicals_and_synthesize_on_pyarrow_input():
         }
     )
 
-    d = lk.dedupe(df).apply(lk.exact()).canonicalize("address", id="uid")
+    d = lk.dedupe(df).apply(lk.exact()).canonicalize("address", source_id="uid")
 
     assert d.canonicals() == {"u1": 2}
     syn = d.synthesize()
@@ -334,3 +341,32 @@ def test_fake_10_returns_pyarrow_table():
     df = fake_10("pyarrow")
 
     assert isinstance(df, pa.Table)
+
+
+# CUSTOM LABEL:
+
+
+def test_custom_canonical_id_label_autoincrement():
+    """A custom label replaces the constant everywhere downstream."""
+    df = pa.table({"address": ["a", "b", "c"]})
+
+    wdf = _wrap(df, canonical_id="master_id")
+
+    assert wdf.column("master_id").to_pylist() == [0, 1, 2]
+    assert "canonical_id" not in wdf.column_names
+
+
+def test_custom_canonical_id_label_copy():
+    df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
+
+    wdf = _wrap(df, source_id="uid", canonical_id="master_id")
+
+    assert wdf.column("master_id").to_pylist() == ["a001", "a002"]
+
+
+def test_get_canonical_reads_the_custom_label():
+    df = pa.table({"uid": ["a001", "a002"], "address": ["a", "b"]})
+
+    wdf = _wrap(df, source_id="uid", canonical_id="master_id")
+
+    assert wdf.get_canonical().to_pylist() == ["a001", "a002"]

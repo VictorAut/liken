@@ -11,6 +11,8 @@ from typing import cast
 
 import pyarrow as pa
 
+from liken.constants import INTERNAL_CANONICAL_ID
+from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
 from liken.dedupers.exact import exact
@@ -49,6 +51,9 @@ def run_explore(
 
     df_columns: list[str] = _column_labels(df, backend.name)
 
+    if INTERNAL_CANONICAL_ID in df_columns:
+        raise ValueError(INTERNAL_CANONICAL_ID_COLLISION_MSG)
+
     if isinstance(columns, dict):
         col_names: list[str] = list(columns.keys())
         base_dedupers: dict[str, BaseDeduper] = dict(columns)
@@ -60,8 +65,10 @@ def run_explore(
         validate_explore_column_exists(col, df_columns)
 
     # Sampling returns a new frame and wrapping copies, so the user's
-    # dataframe is never mutated.
-    wdf: DF = wrap(_sample(df, backend.name, frac), id=None)
+    # dataframe is never mutated. The internal label keeps the exploratory
+    # path from minting, adopting or exposing a user-visible canonical
+    # column.
+    wdf: DF = wrap(_sample(df, backend.name, frac), source_id=None, canonical_id=INTERNAL_CANONICAL_ID)
 
     rows: list[tuple[str | float, ...]] = []
 

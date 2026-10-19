@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
@@ -42,7 +41,8 @@ class PysparkExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
+        canonical_id: str,
     ) -> PysparkDF:
         """Maps dataframe partitions to be processed via the RDD API yielding
         low-level list[Rows], which are then post-processed back to a dataframe.
@@ -61,7 +61,8 @@ class PysparkExecutor(Executor):
                 factory=Dedupe,
                 partition=partition,
                 dedupers=dedupers,
-                id=id,
+                source_id=source_id,
+                canonical_id=canonical_id,
                 columns=columns,
                 drop_duplicates=drop_duplicates,
                 keep=keep,
@@ -70,10 +71,12 @@ class PysparkExecutor(Executor):
 
         schema = df._schema
 
-        df = PysparkDF(self._spark_session.createDataFrame(rdd, schema=schema), is_init=False)
+        df = PysparkDF(
+            self._spark_session.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False
+        )
 
         if drop_canonical_id:
-            return df.drop_col(CANONICAL_ID)
+            return df.drop_col(canonical_id)
         return df
 
     @staticmethod
@@ -82,7 +85,8 @@ class PysparkExecutor(Executor):
         factory: type[Dedupe],
         partition: Iterator[Row],
         dedupers: DeduplicationDict | Pipeline,
-        id: str | None,
+        source_id: str | None,
+        canonical_id: str,
         columns: Columns | None,
         drop_duplicates: bool,
         keep: Keep = "first",
@@ -96,7 +100,7 @@ class PysparkExecutor(Executor):
         Args:
             partition: a partition
             dedupers: the collection of dedupers
-            id: the unique identifier of the dataset a.k.a "business key"
+            source_id: the unique identifier of the dataset a.k.a "business key"
             columns: the attribute on which to deduplicate
 
         Returns:
@@ -122,11 +126,13 @@ class PysparkExecutor(Executor):
         else:
             dupe.apply(dedupers)  # type: ignore[arg-type]
 
-        df = dupe.canonicalize(
-            columns,
+        dupe._canonicalize(
+            columns=columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
-            id=id,
-        ).collect()
+            source_id=source_id,
+            canonical_id=canonical_id,
+        )
+        df = dupe.collect()
 
         return iter(df)  # type: ignore[arg-type]

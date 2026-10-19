@@ -2,6 +2,22 @@
 title: Release History
 ---
 
+## v0.13.0 (2026-10-19)
+
+**Breaking changes**
+
+- `canonicalize` param `id` is renamed to `source_id`.
+- `canonicalize` gains a `canonical_id` argument: the label of the output
+  canonical-id column, defaulting to `"canonical_id"`. To reuse a stored
+  canonical column, pass it as `source_id`.
+- `canonicals()` and `synthesize()` honour the `canonical_id` label stored from
+  the last `canonicalize` call.
+- `drop_duplicates` never consumes or removes any frame column.
+- `explore` no longer mints a default-labelled canonical column on the
+  analysed frame. It uses liken's reserved internal label instead.
+- The internal label-collision error message is reworded.
+
+
 ## v0.12.3 (2026-10-18)
 
 **Fixes**

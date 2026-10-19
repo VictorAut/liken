@@ -25,6 +25,6 @@ def get_backend(df: Any) -> Backend:
 # DISPATCHER:
 
 
-def wrap(df: Any, id: str | None = None) -> DF:
+def wrap(df: Any, source_id: str | None = None, *, canonical_id: str) -> DF:
     backend = get_backend(df)
-    return backend.wrap(df, id=id)
+    return backend.wrap(df, source_id=source_id, canonical_id=canonical_id)

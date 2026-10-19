@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import final
 
-from liken.constants import CANONICAL_ID
 from liken.core.executor import Executor
 
 
@@ -35,7 +34,8 @@ class DaskExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
+        canonical_id: str,
     ) -> DaskDF:
         """Maps dataframe partitions to be processed by Dask, natively using
         pandas for each partition.
@@ -43,10 +43,10 @@ class DaskExecutor(Executor):
 
         from liken.backends.dask.wrapper import DaskDF
 
-        meta = df._new_meta(df._df, id)
+        meta = df._new_meta(df._df, source_id, canonical_id=canonical_id)
 
         if drop_canonical_id:
-            meta = meta.drop(columns=[CANONICAL_ID])
+            meta = meta.drop(columns=[canonical_id])
 
         process_partition = self._process_partition
 
@@ -58,10 +58,12 @@ class DaskExecutor(Executor):
                 keep=keep,
                 drop_duplicates=drop_duplicates,
                 drop_canonical_id=drop_canonical_id,
-                id=id,
+                source_id=source_id,
+                canonical_id=canonical_id,
                 meta=meta,
             ),
-            id=id,
+            source_id=source_id,
+            canonical_id=canonical_id,
             preserve_schema=True,
         )
 
@@ -73,7 +75,8 @@ class DaskExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None,
+        canonical_id: str,
     ) -> pd.DataFrame:
         from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
         from liken.collections.dict import DeduplicationDict as DictImpl
@@ -90,13 +93,15 @@ class DaskExecutor(Executor):
         else:
             dupe.apply(dedupers)  # type: ignore[arg-type]
 
-        df = dupe.canonicalize(
-            columns,
+        dupe._canonicalize(
+            columns=columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
-            id=id,
-        ).collect()  # type: ignore[assignment]
+            source_id=source_id,
+            canonical_id=canonical_id,
+        )
+        df = dupe.collect()  # type: ignore[assignment]
 
         if drop_canonical_id:
-            return df.drop(columns=[CANONICAL_ID])
+            return df.drop(columns=[canonical_id])
         return df

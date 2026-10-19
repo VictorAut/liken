@@ -81,11 +81,11 @@ The partitioned execution has a consequence you must plan around: **records are 
 
 Three methods pull data to the driver, so they trigger a collect on the distributed backends:
 
-- `canonicalize(id=None)` — computing the auto-increment ids requires the whole frame's row positions.
+- `canonicalize()` with no `source_id` — computing the auto-increment ids requires the whole frame's row positions.
 - `canonicals()` — counts groups by materialising the canonical ids. On PySpark this needs Spark 4 or above, as documented on the method.
 - `synthesize()` — builds the synthetic records from collected groups.
 
-Passing an existing id column (`canonicalize(id="uid")`) avoids the auto-increment collect on dask and ray.
+Passing an existing id column (`canonicalize(source_id="uid")`) avoids the auto-increment collect on dask and ray.
 
 ## Restrictions
 

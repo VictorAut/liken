@@ -44,7 +44,7 @@ def test_matrix_spark(
 
     df = df.repartition(num_partitions, "blocking_key")
 
-    df = lk.dedupe(df, spark_session=spark_session).apply(DEDUPERS).canonicalize(id="id").collect()
+    df = lk.dedupe(df, spark_session=spark_session).apply(DEDUPERS).canonicalize(source_id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
@@ -71,7 +71,7 @@ def test_matrix_ray(
 
     df = df.repartition(num_partitions, keys="blocking_key")
 
-    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(id="id").collect()
+    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(source_id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 
@@ -121,7 +121,7 @@ def test_matrix_dask(
                 "email": (lk.exact(),),
             }
         )
-        .canonicalize(id="id")
+        .canonicalize(source_id="id")
         .collect()
     )
 

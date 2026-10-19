@@ -9,7 +9,6 @@ from typing import final
 import pandas as pd
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -24,27 +23,28 @@ if TYPE_CHECKING:
 class RayDF(DF["RayDataset"], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
-    def __init__(self, df: RayDataset, id: str | None = None):
+    def __init__(self, df: RayDataset, source_id: str | None = None, *, canonical_id: str):
         import ray
 
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
-        self._df: RayDataset = self._add_canonical_id(df, id)
-        self._id = id
+        self._df: RayDataset = self._add_canonical_id(df, source_id, canonical_id)
+        self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: RayDataset) -> RayDataset:
         return df
 
-    def _df_overwrite_id(self, df: RayDataset, id: str) -> RayDataset:
-        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+    def _df_overwrite_id(self, df: RayDataset, source_id: str, canonical_id: str) -> RayDataset:
+        return df.map_batches(lambda df: df.assign(**{canonical_id: df[source_id]}), batch_format="pandas")
 
-    def _df_copy_id(self, df: RayDataset, id: str) -> RayDataset:
-        return df.map_batches(lambda df: df.assign(**{CANONICAL_ID: df[id]}), batch_format="pandas")
+    def _df_copy_id(self, df: RayDataset, source_id: str, canonical_id: str) -> RayDataset:
+        return df.map_batches(lambda df: df.assign(**{canonical_id: df[source_id]}), batch_format="pandas")
 
-    def _df_autoincrement_id(self, df):
+    def _df_autoincrement_id(self, df, canonical_id: str):
         """collects data to driver node!"""
         import ray
 
@@ -65,10 +65,10 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
             for i, batch in enumerate(df.iter_batches(batch_format="pandas")):
                 offset = offsets[i]
                 batch = batch.reset_index(drop=True)
-                batch[CANONICAL_ID] = range(offset, offset + len(batch))
+                batch[canonical_id] = range(offset, offset + len(batch))
                 yield batch
 
-        return ray.data.from_pandas_refs([ray.put(batch) for batch in _add_id_generator()])
+        return ray.data.from_pandas_refs([ray.put(batch) for batch in _add_id_generator()])  # type: ignore[misc]  # ray stubs: ObjectRef variance
 
     def _column_labels_list(self, df: RayDataset) -> list[str]:
         return df.columns()
@@ -98,8 +98,12 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
+        # Bind the label before the closure: capturing `self` would pickle the
+        # whole wrapper (with its Dataset) into the batch function.
+        canonical_id = self._canonical_id
+
         def fn(df):
-            return df.drop_duplicates(subset=[CANONICAL_ID], keep=keep)
+            return df.drop_duplicates(subset=[canonical_id], keep=keep)
 
         self._df = self._df.map_batches(fn)
         return self
@@ -107,8 +111,9 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
     # SYNTHETIC RECORD:
 
     def synthesize_record(self):
+        canonical_id = self._canonical_id
 
         def fn(df: pd.DataFrame):
-            return df.groupby(CANONICAL_ID, as_index=False).first()
+            return df.groupby(canonical_id, as_index=False).first()
 
         return self._df.map_batches(fn, batch_format="pandas")

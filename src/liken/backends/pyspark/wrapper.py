@@ -10,7 +10,6 @@ from typing import final
 import pyarrow as pa
 from typing_extensions import override
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -47,7 +46,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
     Args:
         df: the dataframe
-        id: the label of any other id columns used for creation of canonical_id
+        source_id: the label of any other id columns used for creation of canonical_id
         is_init: define whether to route the DataFrame to an RDD along with
             canonical ID creation, or not.
     """
@@ -57,7 +56,9 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
     def __init__(
         self,
         df: DataFrame,
-        id: str | None = None,
+        source_id: str | None = None,
+        *,
+        canonical_id: str,
         is_init: bool = True,
     ):
         # new spark plan for safety
@@ -65,11 +66,12 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
 
         self._df: SparkObject
         if is_init:
-            self._df: RDD[Row] = self._add_canonical_id(df, id)  # type: ignore[no-redef]
+            self._df: RDD[Row] = self._add_canonical_id(df, source_id, canonical_id)  # type: ignore[no-redef]
         else:
             self._df: DataFrame = df  # type: ignore[no-redef]
 
-        self._id = id
+        self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
@@ -77,41 +79,41 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         self._schema = df.schema
         return df.rdd
 
-    def _df_overwrite_id(self, df: DataFrame, id: str) -> RDD[Row]:
+    def _df_overwrite_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        df_new: DataFrame = df.drop(CANONICAL_ID)
-        self._schema = self._new_schema(df_new, id)
+        df_new: DataFrame = df.drop(canonical_id)
+        self._schema = self._new_schema(df_new, source_id, canonical_id=canonical_id)
         return df_new.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
 
-    def _df_copy_id(self, df: DataFrame, id: str) -> RDD[Row]:
+    def _df_copy_id(self, df: DataFrame, source_id: str, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df, id)
+        self._schema = self._new_schema(df, source_id, canonical_id=canonical_id)
         return df.rdd.mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: row[id]}) for row in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: row[source_id]}) for row in partition]
         )
 
-    def _df_autoincrement_id(self, df: DataFrame) -> RDD[Row]:
+    def _df_autoincrement_id(self, df: DataFrame, canonical_id: str) -> RDD[Row]:
 
         from pyspark.sql import Row
 
-        self._schema = self._new_schema(df)
+        self._schema = self._new_schema(df, canonical_id=canonical_id)
         return df.rdd.zipWithIndex().mapPartitions(
-            lambda partition: [Row(**{**row.asDict(), CANONICAL_ID: idx}) for row, idx in partition]
+            lambda partition: [Row(**{**row.asDict(), canonical_id: idx}) for row, idx in partition]
         )
 
     def _column_labels_list(self, df: DataFrame) -> list[str]:
         return df.columns
 
     @staticmethod
-    def _new_schema(df: DataFrame, id: str | None = None) -> StructType:
+    def _new_schema(df: DataFrame, source_id: str | None = None, *, canonical_id: str) -> StructType:
         """Recreate the schema of the dataframe dynamically based on the type
-        of the id field.
+        of the source_id field.
         """
         # lazy
         import pyspark.sql.types as T
@@ -128,12 +130,12 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         }
 
         fields = df.schema.fields
-        if id:
-            dtype = dict(df.dtypes)[id]
+        if source_id:
+            dtype = dict(df.dtypes)[source_id]
             id_type = pyspark_types[dtype]
         else:
             id_type = T.LongType()  # auto-incremental is numeric
-        fields += [T.StructField(CANONICAL_ID, id_type, True)]
+        fields += [T.StructField(canonical_id, id_type, True)]
         return T.StructType(fields)
 
     @override
@@ -189,13 +191,14 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         df: DataFrame = self._df.toDF()
         exprs = []
 
+        canonical_id = self._canonical_id
         for col in df.columns:
-            if col == CANONICAL_ID:
+            if col == canonical_id:
                 continue
 
             exprs.append(functions.first(functions.col(col), ignorenulls=True).alias(col))
 
-        return df.groupBy(CANONICAL_ID).agg(*exprs).orderBy(CANONICAL_ID)
+        return df.groupBy(canonical_id).agg(*exprs).orderBy(canonical_id)
 
 
 @final
@@ -208,8 +211,9 @@ class PysparkRows(DF["list[Row]"]):
     will be instantiated in the worker node.
     """
 
-    def __init__(self, df: list[Row]):
+    def __init__(self, df: list[Row], canonical_id: str):
         self._df: list[Row] = df
+        self._canonical_id = canonical_id
 
     # ARROW INTERFACES:
 
@@ -231,6 +235,7 @@ class PysparkRows(DF["list[Row]"]):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
+        canonical_id = self._canonical_id
 
         seen: set[Hashable] = set()
         result: list[Row] = []
@@ -238,7 +243,7 @@ class PysparkRows(DF["list[Row]"]):
         iterable = self._df if keep == "first" else reversed(self._df)
 
         for row in iterable:
-            key = row[CANONICAL_ID]
+            key = row[canonical_id]
             if key not in seen:
                 seen.add(key)
                 result.append(row)

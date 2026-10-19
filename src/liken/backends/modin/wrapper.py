@@ -8,7 +8,6 @@ from typing import final
 
 import pyarrow as pa
 
-from liken.constants import CANONICAL_ID
 from liken.core.wrapper import DF
 from liken.core.wrapper import CanonicalIdMixin
 
@@ -23,25 +22,26 @@ if TYPE_CHECKING:
 class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
     """Modin DataFrame wrapper"""
 
-    def __init__(self, df: mpd.DataFrame, id: str | None = None):
-        self._df: mpd.DataFrame = self._add_canonical_id(df, id)
-        self._id = id
+    def __init__(self, df: mpd.DataFrame, source_id: str | None = None, *, canonical_id: str):
+        self._df: mpd.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
+        self._source_id = source_id
+        self._canonical_id = canonical_id
 
     # CANONICAL ID HELPERS:
 
     def _df_as_is(self, df: mpd.DataFrame) -> mpd.DataFrame:
         return df
 
-    def _df_overwrite_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_overwrite_id(self, df: mpd.DataFrame, source_id: str, canonical_id: str) -> mpd.DataFrame:
+        return df.assign(**{canonical_id: df[source_id]})
 
-    def _df_copy_id(self, df: mpd.DataFrame, id: str) -> mpd.DataFrame:
-        return df.assign(**{CANONICAL_ID: df[id]})
+    def _df_copy_id(self, df: mpd.DataFrame, source_id: str, canonical_id: str) -> mpd.DataFrame:
+        return df.assign(**{canonical_id: df[source_id]})
 
-    def _df_autoincrement_id(self, df: mpd.DataFrame) -> mpd.DataFrame:
+    def _df_autoincrement_id(self, df: mpd.DataFrame, canonical_id: str) -> mpd.DataFrame:
         import modin.pandas as mpd
 
-        return df.assign(**{CANONICAL_ID: mpd.RangeIndex(start=0, stop=len(df))})
+        return df.assign(**{canonical_id: mpd.RangeIndex(start=0, stop=len(df))})
 
     def _column_labels_list(self, df: mpd.DataFrame) -> list[str]:
         return df.columns
@@ -67,7 +67,7 @@ class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
         return self
 
     def drop_duplicates(self, keep: Keep) -> Self:
-        self._df = self._df.drop_duplicates(keep=keep, subset=CANONICAL_ID)
+        self._df = self._df.drop_duplicates(keep=keep, subset=self._canonical_id)
         return self
 
     # SYNTHETIC RECORD:
@@ -77,4 +77,4 @@ class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
             non_null = series.dropna()
             return non_null.iloc[0] if not non_null.empty else None
 
-        return self._df.groupby(CANONICAL_ID, as_index=False).agg(_first_non_null)
+        return self._df.groupby(self._canonical_id, as_index=False).agg(_first_non_null)

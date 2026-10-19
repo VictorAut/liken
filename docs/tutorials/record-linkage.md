@@ -75,7 +75,7 @@ df = (
     .canonicalize(
         "email",
         keep="first",
-        id="uid", # `id` arg included
+        source_id="uid", # `source_id` arg included
     )
     .collect()
 )
@@ -139,7 +139,7 @@ result = (
     .canonicalize(
         "email",
         keep="first",
-        id="uid",
+        source_id="uid",
     )
 )
 
@@ -162,7 +162,7 @@ result = (
     .canonicalize(
         "email",
         keep="first",
-        id="uid", # `id` arg included
+        source_id="uid", # `source_id` arg included
     )
 )
 
@@ -190,7 +190,7 @@ First non-null means the first record's null does not win — the first *non-nul
 ```python
 import liken as lk
 
-result = lk.dedupe(null_df).apply(lk.exact()).canonicalize("email", id="uid")
+result = lk.dedupe(null_df).apply(lk.exact()).canonicalize("email", source_id="uid")
 result.synthesize()
 ```
 

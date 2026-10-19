@@ -6,6 +6,11 @@ from typing import TYPE_CHECKING
 from typing import Self
 
 from liken.collections.base import CollectionsManager
+from liken.constants import CANONICAL_ID
+from liken.constants import CANONICAL_ID_RESERVED_MSG
+from liken.constants import INTERNAL_CANONICAL_ID
+from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
+from liken.constants import INVALID_CANONICAL_ID_COLLISION_MSG
 from liken.constants import WARN_SPARK_SESSION_IGNORED_MSG
 from liken.core.dispatcher import get_backend
 from liken.core.dispatcher import wrap
@@ -48,7 +53,7 @@ if TYPE_CHECKING:
 class Dedupe:
     """Deduplicate a dataframe given a collection of dedupers.
 
-    Apply a deduper as a method call
+    Apply a deduper as a method call.
 
     Args:
         df: The dataframe to deduplicate.
@@ -88,6 +93,7 @@ class Dedupe:
         self._executor: Executor = backend.executor(spark_session=spark_session)
 
         self.has_been_canonicalized: bool = False
+        self._canonical_id: str = CANONICAL_ID
 
     @classmethod
     def _from_rows(
@@ -105,6 +111,8 @@ class Dedupe:
         self._df = rows
         self._collection = CollectionsManager()
         self._executor = LocalExecutor()
+        self.has_been_canonicalized = False
+        self._canonical_id = CANONICAL_ID
         return self
 
     def apply(self, deduper: BaseDeduper | dict | Pipeline) -> Self:
@@ -201,6 +209,7 @@ class Dedupe:
             ValueError: Unsupported backend, invalid `frac`, invalid
                 `thresholds`, invalid `columns`, or a column not in the
                 dataframe.
+            ValueError: The frame carries a reserved `liken`-internal label
         """
         frac = require_real_number("frac", frac, low=0, high=1, low_inclusive=False, high_inclusive=True)
         thresholds = validate_thresholds_arg(thresholds if thresholds is not None else DEFAULT_EXPLORE_THRESHOLDS)
@@ -234,6 +243,7 @@ class Dedupe:
                 dedupers.
             ValueError: Incorrect use a single column deduper given multiple
                 columns defined, or vice-versa.
+            ValueError: The frame carries a reserved `liken`-internal label
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns)
@@ -241,13 +251,17 @@ class Dedupe:
         df_columns = _column_labels(self._df, get_backend(self._df).name)
         self._validate_frame_shape(df_columns)
 
+        if INTERNAL_CANONICAL_ID in df_columns:
+            raise ValueError(INTERNAL_CANONICAL_ID_COLLISION_MSG)
+
         columns = self._collection.validate_api_mode(columns)
         if columns:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
 
-        wdf: DF = wrap(self._df, None)  # canonical id only ever autoincremental for dropping
+        # The drop path never touches a user-visible canonical label
+        wdf: DF = wrap(self._df, None, canonical_id=INTERNAL_CANONICAL_ID)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -261,7 +275,8 @@ class Dedupe:
             keep=keep,
             drop_duplicates=True,
             drop_canonical_id=True,
-            id=None,
+            source_id=None,
+            canonical_id=INTERNAL_CANONICAL_ID,
         ).unwrap()
 
         self._collection.reset()
@@ -274,18 +289,29 @@ class Dedupe:
         *,
         keep: Keep = "first",
         drop_duplicates: bool = False,
-        id: str | None = None,
+        source_id: str | None = None,
+        canonical_id: str = CANONICAL_ID,
     ) -> Self:
         """Canonicalize by enacting the applied dedupers.
 
         If no dedupers are explicitly provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
 
+        Note how the canonical-id column is created:
+            - `source_id` is None and the output label is free: a new
+                auto-incrementing `canonical_id` column is created.
+            - `source_id` is passed: its column is copied into `canonical_id`
+                (source and output labels may differ).
+            - `source_id` equals `canonical_id` and that column does not
+                exist: a "column not found" error is raised.
+            - the output label already exists in the frame: a `ValueError`
+                is raised before any execution.
+
         Warning:
-            Leaving `id` to it's default `None` value forces collection to
-            driver node when using `Ray` Datasets and `Dask` DataFrames, which
-            is not recommended. Use the dataset's unique identifier with the `id`
-            arg, instead.
+            Leaving `source_id` to it's default `None` value forces collection
+            to driver node when using `Ray` Datasets and `Dask` DataFrames,
+            which is not recommended. Use the dataset's unique identifier with
+            the `source_id` arg, instead.
 
         Args:
             columns (str | tuple[str, ...] | None): The attribute(s) of the
@@ -295,9 +321,11 @@ class Dedupe:
                 DataFrame.
             drop_duplicates: Optionally drop duplicates, whilst preserving a
                 canonical_id, contrary to `drop_duplicates`.
-            id: string label identifying a column in the dataframe that can be
-                used to optionally override the values of a default
-                canonical_id.
+            source_id: string label identifying a column in the dataframe whose
+                values become the canonical ids.
+            canonical_id: label of the output canonical-id column. Must not
+                already exist in the dataframe. `canonicals` and `synthesize`
+                read the column under this label.
 
         Returns:
             Self. Access the dataframe with `.collect`, or numbers of repeated
@@ -310,9 +338,14 @@ class Dedupe:
                 dedupers.
             ValueError: Incorrect use of a single column deduper given multiple
                 columns defined, or vice-versa.
+            ValueError: `canonical_id` names an existing column of the
+                dataframe.
+            ValueError: `canonical_id` is a `liken`-reserved internal label, or
+                the dataframe already carries a column with that label.
         """
         keep: Keep = validate_keep_arg(keep)
-        id = require_non_empty_str("id", id, allow_none=True)
+        source_id = require_non_empty_str("source_id", source_id, allow_none=True)
+        canonical_id = require_non_empty_str("canonical_id", canonical_id)
         drop_duplicates = require_type("drop_duplicates", drop_duplicates, bool)
         columns: Columns | None = validate_columns_arg(columns)
 
@@ -324,10 +357,41 @@ class Dedupe:
             labels = (columns,) if isinstance(columns, str) else columns
             for label in labels:
                 validate_explore_column_exists(label, df_columns)
-        if id:
-            validate_explore_column_exists(id, df_columns)
+        if source_id:
+            validate_explore_column_exists(source_id, df_columns)
+        if canonical_id == INTERNAL_CANONICAL_ID:
+            raise ValueError(CANONICAL_ID_RESERVED_MSG)
+        if INTERNAL_CANONICAL_ID in df_columns:
+            raise ValueError(INTERNAL_CANONICAL_ID_COLLISION_MSG)
+        if canonical_id in df_columns:
+            raise ValueError(INVALID_CANONICAL_ID_COLLISION_MSG.format(canonical_id))
 
-        wdf: DF = wrap(self._df, id)
+        self._canonicalize(
+            columns=columns,
+            keep=keep,
+            drop_duplicates=drop_duplicates,
+            source_id=source_id,
+            canonical_id=canonical_id,
+        )
+
+        return self
+
+    def _canonicalize(
+        self,
+        *,
+        columns: Columns | None,
+        keep: Keep,
+        drop_duplicates: bool,
+        source_id: str | None,
+        canonical_id: str,
+    ) -> None:
+        """Enact dedupers without entry validation.
+
+        Internal path for partition processors: a partition arrives already
+        carrying the canonical-id column, which the public `canonicalize`
+        collision check would reject.
+        """
+        wdf: DF = wrap(self._df, source_id, canonical_id=canonical_id)
 
         # No .apply(), assumes exact deduplication
         if not self._collection.has_applies:
@@ -341,14 +405,14 @@ class Dedupe:
             keep=keep,
             drop_duplicates=drop_duplicates,
             drop_canonical_id=False,
-            id=id,
+            source_id=source_id,
+            canonical_id=canonical_id,
         ).unwrap()
 
         self._collection.reset()
 
         self.has_been_canonicalized = True
-
-        return self
+        self._canonical_id = canonical_id
 
     def canonicals(self, n: int = 2) -> dict[Hashable, int]:
         """Returns a dictionary of canonical ids that have `n` or more records.
@@ -377,7 +441,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id counts found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, None, canonical_id=self._canonical_id)
 
         canonical_array: list[str | int] = wdf.get_canonical().to_pylist()
 
@@ -419,7 +483,7 @@ class Dedupe:
         if not self.has_been_canonicalized:
             raise RuntimeError("No canonical_id found. Run `.canonicalize()` first.")
 
-        wdf: DF = wrap(self._df, id=None)
+        wdf: DF = wrap(self._df, None, canonical_id=self._canonical_id)
 
         return wdf.synthesize_record()
 

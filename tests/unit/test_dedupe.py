@@ -6,6 +6,9 @@ import pandas as pd
 import pytest
 
 import liken as lk
+from liken.constants import CANONICAL_ID
+from liken.constants import INTERNAL_CANONICAL_ID
+from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
 from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 from liken.liken import Dedupe
@@ -84,18 +87,18 @@ def test_canonicals_rejects_non_integer_n(n, dataframe):
 
 
 def test_canonicalize_rejects_empty_id():
-    """an empty `id` previously fell through to autoincrement."""
+    """an empty `source_id` previously fell through to autoincrement."""
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
-    with pytest.raises(InvalidArgumentValueError, match="`id` must be a non-empty string, got ''"):
-        dupe.canonicalize("a", id="")
+    with pytest.raises(InvalidArgumentValueError, match="`source_id` must be a non-empty string, got ''"):
+        dupe.canonicalize("a", source_id="")
 
 
 def test_canonicalize_rejects_non_str_id():
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
-    with pytest.raises(InvalidArgumentTypeError, match="`id` must be of type 'str', got 'int'"):
-        dupe.canonicalize("a", id=1)
+    with pytest.raises(InvalidArgumentTypeError, match="`source_id` must be of type 'str', got 'int'"):
+        dupe.canonicalize("a", source_id=1)
 
 
 def test_canonicalize_rejects_non_bool_drop_duplicates():
@@ -243,11 +246,11 @@ def test_enact_rejects_nonexistent_tuple_member():
 
 
 def test_canonicalize_rejects_nonexistent_id():
-    """`id` names an existing column."""
+    """`source_id` names an existing column."""
     dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.canonicalize("a", id="nope")
+        dupe.canonicalize("a", source_id="nope")
 
 
 def test_apply_rejects_nonexistent_dict_tuple_member():
@@ -326,7 +329,8 @@ def test_canonicalize_calls(
         keep="first",
         drop_duplicates=False,
         drop_canonical_id=False,
-        id=None,
+        source_id=None,
+        canonical_id=CANONICAL_ID,
     )
     mock_sm.reset.assert_called_once()
 
@@ -361,7 +365,8 @@ def test_drop_duplicate_calls(
         keep="first",
         drop_duplicates=True,
         drop_canonical_id=True,
-        id=None,
+        source_id=None,
+        canonical_id=INTERNAL_CANONICAL_ID,
     )
     mock_sm.reset.assert_called_once()
 
@@ -400,3 +405,88 @@ def test_explain_two_sequential_dedupers_returns_both_names_comma_separated(data
     assert "exact" in lowered
     assert "fuzzy" in lowered
     assert "," in out
+
+
+def test_canonicalize_rejects_canonical_id_collision():
+    """`canonical_id` naming an existing column is rejected before execution."""
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+
+    with pytest.raises(ValueError, match="the dataframe already has a column with this label"):
+        dupe.canonicalize("a", canonical_id="b")
+
+
+def test_drop_duplicates_signature_unchanged():
+    """`drop_duplicates` exposes no new parameter."""
+    import inspect
+
+    params = inspect.signature(Dedupe.drop_duplicates).parameters
+    assert list(params) == ["self", "columns", "keep"]
+
+
+def test_internal_canonical_id_is_the_internal_label():
+    assert INTERNAL_CANONICAL_ID == "__liken_canonical_private_id__"
+
+
+def test_internal_canonical_id_not_exported():
+    assert "INTERNAL_CANONICAL_ID" not in lk.__all__
+
+
+def test_drop_duplicates_keeps_data_column_named_canonical_id():
+    """A user data column named like the canonical label is never consumed.
+
+    The drop path uses the internal label, so the user's `canonical_id`
+    column survives as data.
+    """
+    df = pd.DataFrame({"canonical_id": [101, 102, 103], "email": ["a@x", "a@x", "b@x"]})
+
+    out = Dedupe(df).drop_duplicates("email")
+
+    assert list(out.columns) == ["canonical_id", "email"]
+    assert list(out["canonical_id"]) == [101, 103]
+    assert list(out["email"]) == ["a@x", "b@x"]
+
+
+def test_drop_duplicates_keeps_custom_labelled_canonical_column():
+    """Path convergence: the stored label is irrelevant to the drop path."""
+    df = pd.DataFrame({"master_id": [7, 7, 8], "email": ["a@x", "a@x", "b@x"]})
+
+    dupe = Dedupe(df)
+    dupe._canonical_id = "master_id"
+
+    out = dupe.drop_duplicates("email")
+
+    assert list(out.columns) == ["master_id", "email"]
+    assert list(out["master_id"]) == [7, 8]
+    assert list(out["email"]) == ["a@x", "b@x"]
+
+
+def test_drop_duplicates_rejects_internal_label_collision():
+    """A frame pre-carrying the internal label is rejected before execution."""
+    df = pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2], "email": ["a@x", "b@x"]})
+
+    dupe = Dedupe(df)
+
+    with pytest.raises(ValueError, match=INTERNAL_CANONICAL_ID_COLLISION_MSG):
+        dupe.drop_duplicates("email")
+
+
+def test_canonicalize_rejects_reserved_label_argument():
+    """`canonical_id=INTERNAL_CANONICAL_ID` is rejected before execution
+    (Amendment 2)."""
+    from liken.constants import CANONICAL_ID_RESERVED_MSG
+
+    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "email": ["x", "y"]}))
+
+    with pytest.raises(ValueError, match=CANONICAL_ID_RESERVED_MSG):
+        dupe.canonicalize("a", canonical_id=INTERNAL_CANONICAL_ID)
+
+
+def test_canonicalize_rejects_frame_carrying_internal_label():
+    """A frame pre-carrying the internal label is rejected before execution
+    (Amendment 2)."""
+    from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
+
+    dupe = Dedupe(pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2], "email": ["x", "y"]}))
+
+    with pytest.raises(ValueError, match=INTERNAL_CANONICAL_ID_COLLISION_MSG):
+        dupe.canonicalize("email")

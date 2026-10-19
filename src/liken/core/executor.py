@@ -14,7 +14,6 @@ from typing import TypeVar
 
 from liken.collections.base import Pipeline
 from liken.collections.dict import DeduplicationDict
-from liken.constants import CANONICAL_ID
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
@@ -53,7 +52,8 @@ class Executor(Protocol[D]):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None,
+        source_id: str | None,
+        canonical_id: str,
     ) -> D: ...
 
 
@@ -68,7 +68,8 @@ class LocalExecutor(Executor):
         keep: Keep,
         drop_duplicates: bool,
         drop_canonical_id: bool,
-        id: str | None = None,
+        source_id: str | None = None,
+        canonical_id: str,
     ) -> DF:
         """Process a local dataframe according to the deduplication collection
 
@@ -84,12 +85,13 @@ class LocalExecutor(Executor):
         also.)
         """
 
-        del id  # Unused: here for interface symmetry with PysparkExecutor
+        del source_id  # Unused: here for interface symmetry with PysparkExecutor
 
         call_deduper = partial(
             self._call_deduper,
             drop_duplicates=drop_duplicates,
             keep=keep,
+            canonical_id=canonical_id,
         )
 
         if isinstance(dedupers, DeduplicationDict):
@@ -141,7 +143,7 @@ class LocalExecutor(Executor):
                 df = call_deduper(deduper, components)
 
         if drop_canonical_id:
-            return df.drop_col(CANONICAL_ID)
+            return df.drop_col(canonical_id)
         return df
 
     @staticmethod
@@ -181,9 +183,11 @@ class LocalExecutor(Executor):
         components: SingleComponents | MultiComponents,
         drop_duplicates: bool,
         keep: Keep,
+        canonical_id: str,
     ) -> DF:
         return deduper.canonicalizer(
             components=components,
             drop_duplicates=drop_duplicates,
             keep=keep,
+            canonical_id=canonical_id,
         )
