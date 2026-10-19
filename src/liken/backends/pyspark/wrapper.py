@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from pyspark.rdd import RDD
     from pyspark.sql import DataFrame
     from pyspark.sql import Row
+    from pyspark.sql import SparkSession
     from pyspark.sql.types import StructType
 
     from liken.types import Keep
@@ -71,6 +72,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
             self._df: DataFrame = df  # type: ignore[no-redef]
 
         self._canonical_id = canonical_id
+        self._spark_session = df.sparkSession
 
     # CANONICAL ID HELPERS:
 
@@ -126,6 +128,16 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
             id_type = T.LongType()  # auto-incremental is numeric
         fields += [T.StructField(canonical_id, id_type, True)]
         return T.StructType(fields)
+
+    @property
+    def sparkSession(self) -> SparkSession:
+        """The session that created the wrapped frame, read at wrap time.
+
+        The wrapper's payload may be an RDD, which carries no session, so the
+        session is captured from the (post-select) DataFrame while one is
+        available.
+        """
+        return self._spark_session
 
     @override
     def unwrap(self) -> DataFrame:
