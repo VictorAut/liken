@@ -29,6 +29,7 @@ PARAMS = [
             [3, "123ab, OL5"],
         ],
         [0, 1, 0],
+        CANONICAL_ID,
     ),
     # "COPY"
     # copy the defined field from the data as the `canonical_id`
@@ -41,6 +42,7 @@ PARAMS = [
             [3, "123ab, OL5"],
         ],
         [1, 2, 1],
+        CANONICAL_ID,
     ),
     (
         "uid",
@@ -51,12 +53,27 @@ PARAMS = [
             ["a003", "123ab, OL5"],
         ],
         ["a001", "a002", "a001"],
+        CANONICAL_ID,
+    ),
+    # "CUSTOM LABEL"
+    # a non-default output label threads through every backend
+    (
+        None,
+        ["uid", "address"],
+        [
+            [1, "123ab, OL5"],
+            [2, "Westside Avenue"],
+            [3, "123ab, OL5"],
+        ],
+        [0, 1, 0],
+        "master_id",
     ),
 ]
 IDS = [
     "new-auto-incremental-canonical_id",
     "copy-numeric-id",
     "copy-string-id",
+    "custom-output-label",
 ]
 
 # "COLLISION"
@@ -143,12 +160,13 @@ COLLISION_IDS = [
 ]
 
 
-@pytest.mark.parametrize("source_id, schema, data, expected_canonical_id", PARAMS, ids=IDS)
+@pytest.mark.parametrize("source_id, schema, data, expected_canonical_id, output_label", PARAMS, ids=IDS)
 def test_matrix_id(
     source_id,
     schema,
     data,
     expected_canonical_id,
+    output_label,
     spark_session,
     helpers,
 ):
@@ -158,11 +176,11 @@ def test_matrix_id(
     df = (
         lk.dedupe(df, spark_session=spark_session)
         .apply(lk.exact())
-        .canonicalize(SINGLE_COL, source_id=source_id)
+        .canonicalize(SINGLE_COL, source_id=source_id, canonical_id=output_label)
         .collect()
     )
 
-    assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_canonical_id
+    assert helpers.get_column_as_list(df, output_label) == expected_canonical_id
 
 
 @pytest.mark.parametrize("source_id, schema, data", COLLISION_PARAMS, ids=COLLISION_IDS)
