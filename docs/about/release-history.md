@@ -10,6 +10,8 @@ title: Release History
   PySpark `SparkSession` is now inferred from the DataFrame itself, so it no
   longer needs to be passed anywhere on the entrypoint; passing the argument
   raises `TypeError`.
+- The `Backend` protocol's `executor()` method takes no arguments.
+  Third-party `Backend` implementations must drop any accepted arguments.
 - A list of `pyspark.sql.Row` is no longer accepted at the entrypoint; the
   PySpark backend takes a `pyspark.sql.DataFrame`.
 - The warning emitted when `spark_session` was passed for a non-spark frame

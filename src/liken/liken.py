@@ -81,6 +81,8 @@ class Dedupe:
 
         backend: Backend = get_backend(self._df)
 
+        # Rejected here, not in is_match: the internal _from_rows partition
+        # handoff still dispatches through is_match and must keep working.
         if backend.name == "pyspark" and isinstance(self._df, list):
             raise InvalidArgumentValueError(SPARK_ROWS_NOT_ACCEPTED_MSG)
 
@@ -98,8 +100,9 @@ class Dedupe:
 
         Use as internal constructor with spark `Rows`.
 
-        Bypasses both backend dispatch and spark session validation, which are
-        responsibilities of the public `__init__` path.
+        Bypasses backend dispatch and the public `__init__` validation
+        (including the `list[Row]` rejection), which are public-entry
+        responsibilities.
         """
         self = cls.__new__(cls)
         self._df = rows
