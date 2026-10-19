@@ -24,8 +24,7 @@ class PyarrowBackend(Backend):
             return pa.table({name: pa.array([], type=pa.null()) for name in schema})
         return pa.Table.from_pylist([dict(zip(schema, row, strict=True)) for row in data])
 
-    def executor(self, **kwargs):
-        del kwargs  # Unused
+    def executor(self):
         return PyarrowExecutor()
 
     def wrap(self, df, source_id=None, *, canonical_id: str):

@@ -29,11 +29,11 @@ PARAMS = [
 
 
 @pytest.mark.parametrize("schema, data", PARAMS)
-def test_matrix_synthesize(schema, data, spark_session, helpers):
+def test_matrix_synthesize(schema, data, helpers):
 
     df = helpers.create_df(data, schema)
 
-    result = lk.dedupe(df, spark_session=spark_session).apply(lk.exact()).canonicalize("address")
+    result = lk.dedupe(df).apply(lk.exact()).canonicalize("address")
 
     df = result.collect()
     synthesized = result.synthesize()

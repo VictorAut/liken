@@ -23,8 +23,7 @@ class ModinBackend(Backend):
 
         return mpd.DataFrame(columns=schema, data=data)
 
-    def executor(self, **kwargs):
-        del kwargs  # Unused
+    def executor(self):
 
         from liken.backends.modin.executor import ModinExecutor
 

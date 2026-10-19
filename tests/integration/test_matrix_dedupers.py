@@ -32,20 +32,18 @@ NUMERICAL_COMPOUND_COL = (
 # HELPERS:
 
 
-def simple_api(df, spark_session, columns, deduper, deduper_kwarg):
-    return lk.dedupe(df, spark_session=spark_session).apply(deduper(**deduper_kwarg)).canonicalize(columns).collect()
+def simple_api(df, columns, deduper, deduper_kwarg):
+    return lk.dedupe(df).apply(deduper(**deduper_kwarg)).canonicalize(columns).collect()
 
 
-def dict_api(df, spark_session, columns, deduper, deduper_kwarg):
+def dict_api(df, columns, deduper, deduper_kwarg):
 
-    return (
-        lk.dedupe(df, spark_session=spark_session).apply({columns: [deduper(**deduper_kwarg)]}).canonicalize().collect()
-    )
+    return lk.dedupe(df).apply({columns: [deduper(**deduper_kwarg)]}).canonicalize().collect()
 
 
-def pipeline_api(df, spark_session, columns, deduper, deduper_kwarg):
+def pipeline_api(df, columns, deduper, deduper_kwarg):
     pipeline = lk.pipeline().step(getattr(lk.col(columns), deduper.__name__)(**deduper_kwarg))
-    return lk.dedupe(df, spark_session=spark_session).apply(pipeline).canonicalize().collect()
+    return lk.dedupe(df).apply(pipeline).canonicalize().collect()
 
 
 API_BUILDERS = [
@@ -218,12 +216,10 @@ def test_matrix_dedupers(
     api_builder,
     dataframe,
     helpers,
-    spark_session,
 ):
 
     df = api_builder(
         df=dataframe,
-        spark_session=spark_session,
         columns=columns,
         deduper=deduper,
         deduper_kwarg=dedup_kwarg,

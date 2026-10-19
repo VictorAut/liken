@@ -20,14 +20,11 @@ from typing import Literal
 from typing import TypeVar
 from typing import cast
 
-from liken.constants import SPARK_SESSION_REQUIRED_MSG
 from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
 
 
 if TYPE_CHECKING:
-    from pyspark.sql import SparkSession
-
     from liken.core.deduper import BaseDeduper
     from liken.types import Columns
 
@@ -211,17 +208,6 @@ def require_choice(name: str, value: str, choices: tuple[str, ...]) -> str:
     if value not in choices:
         raise InvalidArgumentValueError(f"`{name}` must be one of {choices!r}, got {value!r}")
     return value
-
-
-def validate_spark_arg(spark_session: SparkSession | None = None, /) -> SparkSession:
-    """Validates Spark arg in the 'Dedupe' class
-
-    Raises:
-        InvalidArgumentValueError: if no spark session is given.
-    """
-    if not spark_session:
-        raise InvalidArgumentValueError(SPARK_SESSION_REQUIRED_MSG)
-    return spark_session
 
 
 def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"]:

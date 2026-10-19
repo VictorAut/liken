@@ -1,6 +1,6 @@
 from typing import final
 
-from liken.constants import SPARK_SESSION_REQUIRED_MSG
+from liken.constants import SPARK_SESSION_REQUIRED_FOR_CREATE_DF_MSG
 from liken.core.backend import Backend
 from liken.core.registries import backends_registry
 from liken.exceptions import InvalidArgumentValueError
@@ -28,15 +28,16 @@ class PysparkBackend(Backend):
         return False
 
     def create_df(self, data, schema, spark_session=None):
+        # frame factory: no frame exists yet to infer a session from
         if spark_session is None:
-            raise InvalidArgumentValueError(SPARK_SESSION_REQUIRED_MSG)
+            raise InvalidArgumentValueError(SPARK_SESSION_REQUIRED_FOR_CREATE_DF_MSG)
         return spark_session.createDataFrame(data=data, schema=schema)
 
-    def executor(self, spark_session=None):
+    def executor(self):
 
         from liken.backends.pyspark.executor import PysparkExecutor
 
-        return PysparkExecutor(spark_session=spark_session)
+        return PysparkExecutor()
 
     def wrap(self, df, source_id=None, *, canonical_id: str):
 

@@ -30,7 +30,6 @@ def test_matrix_spark(
     num_partitions,
     expected_ids,
     dataframe,
-    spark_session,
     blocking_key,
     helpers,
     request,
@@ -44,7 +43,7 @@ def test_matrix_spark(
 
     df = df.repartition(num_partitions, "blocking_key")
 
-    df = lk.dedupe(df, spark_session=spark_session).apply(DEDUPERS).canonicalize(source_id="id").collect()
+    df = lk.dedupe(df).apply(DEDUPERS).canonicalize(source_id="id").collect()
 
     assert helpers.get_column_as_list(df, CANONICAL_ID) == expected_ids
 

@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from pyspark.sql import Row
-    from pyspark.sql import SparkSession
 
     from liken.backends.pyspark.wrapper import PysparkDF
     from liken.collections.base import Pipeline
@@ -28,9 +27,6 @@ if TYPE_CHECKING:
 
 @final
 class PysparkExecutor(Executor):
-    def __init__(self, spark_session: SparkSession):
-        self._spark_session = spark_session
-
     def execute(
         self,
         df: PysparkDF,
@@ -71,9 +67,7 @@ class PysparkExecutor(Executor):
 
         schema = df._schema
 
-        df = PysparkDF(
-            self._spark_session.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False
-        )
+        df = PysparkDF(df.spark_session.createDataFrame(rdd, schema=schema), canonical_id=canonical_id, is_init=False)
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)

@@ -2,6 +2,14 @@
 title: Release History
 ---
 
+## v0.14.0 (2026-10-19)
+
+**Breaking changes**
+
+- `dedupe()` no longer takes a `spark_session` argument.
+- The warning emitted when `spark_session` was passed for a non-spark frame
+  no longer exists.
+
 ## v0.13.1 (2026-10-19)
 
 **Misc**
