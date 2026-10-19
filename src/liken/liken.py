@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 class Dedupe:
     """Deduplicate a dataframe given a collection of dedupers.
 
-    Apply a deduper as a method call
+    Apply a deduper as a method call.
 
     Args:
         df: The dataframe to deduplicate.
@@ -209,8 +209,7 @@ class Dedupe:
             ValueError: Unsupported backend, invalid `frac`, invalid
                 `thresholds`, invalid `columns`, or a column not in the
                 dataframe.
-            ValueError: The dataframe already carries liken's reserved internal
-                label (`__liken_canonical_private_id__`).
+            ValueError: The frame carries a reserved `liken`-internal label
         """
         frac = require_real_number("frac", frac, low=0, high=1, low_inclusive=False, high_inclusive=True)
         thresholds = validate_thresholds_arg(thresholds if thresholds is not None else DEFAULT_EXPLORE_THRESHOLDS)
@@ -244,8 +243,7 @@ class Dedupe:
                 dedupers.
             ValueError: Incorrect use a single column deduper given multiple
                 columns defined, or vice-versa.
-            ValueError: The frame already carries the reserved internal label
-                (`__liken_canonical_private_id__`).
+            ValueError: The frame carries a reserved `liken`-internal label
         """
         keep: Keep = validate_keep_arg(keep)
         columns: Columns | None = validate_columns_arg(columns)
@@ -299,6 +297,16 @@ class Dedupe:
         If no dedupers are explicitly provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
 
+        Note how the canonical-id column is created:
+            - `source_id` is None and the output label is free: a new
+                auto-incrementing `canonical_id` column is created.
+            - `source_id` is passed: its column is copied into `canonical_id`
+                (source and output labels may differ).
+            - `source_id` equals `canonical_id` and that column does not
+                exist: a "column not found" error is raised.
+            - the output label already exists in the frame: a `ValueError`
+                is raised before any execution.
+
         Warning:
             Leaving `source_id` to it's default `None` value forces collection
             to driver node when using `Ray` Datasets and `Dask` DataFrames,
@@ -319,21 +327,6 @@ class Dedupe:
                 already exist in the dataframe. `canonicals` and `synthesize`
                 read the column under this label.
 
-        Note:
-            How the canonical-id column is created:
-                - `source_id` set: its column is copied into `canonical_id`
-                  (source and output labels may differ).
-                - `source_id` is None and the output label is free: a new
-                  auto-incrementing `canonical_id` column is created.
-                - `source_id` equals `canonical_id` and that column does not
-                  exist: the usual "column not found" error is raised.
-                - the output label already exists in the frame: a `ValueError`
-                  is raised before any execution.
-                - the label `__liken_canonical_private_id__` is reserved for
-                  liken internal use: passing it as `canonical_id`, or a frame
-                  already carrying it, raises a `ValueError` before any
-                  execution.
-
         Returns:
             Self. Access the dataframe with `.collect`, or numbers of repeated
                 canonicals ids with `.canonicals`, or synthetic records with
@@ -347,7 +340,7 @@ class Dedupe:
                 columns defined, or vice-versa.
             ValueError: `canonical_id` names an existing column of the
                 dataframe.
-            ValueError: `canonical_id` is liken's reserved internal label, or
+            ValueError: `canonical_id` is a `liken`-reserved internal label, or
                 the dataframe already carries a column with that label.
         """
         keep: Keep = validate_keep_arg(keep)

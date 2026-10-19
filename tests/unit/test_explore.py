@@ -141,7 +141,7 @@ def test_explore_empty_frame_reports_zero_rates():
 
 def test_explore_rejects_internal_label_collision():
     """A frame pre-carrying the reserved internal label is rejected before
-    any wrap (Amendment 2)."""
+    any wrap."""
     from liken.constants import INTERNAL_CANONICAL_ID
     from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
 
@@ -153,8 +153,7 @@ def test_explore_rejects_internal_label_collision():
 
 def test_explore_profiles_data_column_named_canonical_id():
     """A data column labelled like the canonical id is profiled as data:
-    explore mints its canonical column under the internal label instead
-    (Amendment 2)."""
+    explore mints its canonical column under the internal label instead."""
     from liken.constants import CANONICAL_ID
     from liken.constants import INTERNAL_CANONICAL_ID
 
