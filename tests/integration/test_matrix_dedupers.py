@@ -185,7 +185,7 @@ PARAMS = [
     #
     # ISIN:
     # rows 1 and 8 share the address "123ab, OL5 9PL, UK"
-    (lk.isin, SINGLE_COL, {"values": ["123ab, OL5 9PL, UK"]}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.isin, SINGLE_COL, {"values": ["123ab, OL5 9PL, UK"]}, [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
     # two distinct addresses matched, merging rows 3 and 4
     (
         lk.isin,
