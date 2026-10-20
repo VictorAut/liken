@@ -2,6 +2,13 @@
 title: Release History
 ---
 
+## v0.14.1 (2026-10-20)
+
+**Misc**
+
+- Fixed the `Col` deduper method reference links.
+
+
 ## v0.14.0 (2026-10-19)
 
 **Breaking changes**
