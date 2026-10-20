@@ -137,27 +137,13 @@ class Col:
     # must be manually maintained
     # add a new dummy method here upon adding a new deduper.
 
-    def edit_distance(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.edit_distance` function.
-
-        Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.edit_distance`](../reference/liken.md#liken.edit_distance) reference for
-        complete documentation.
-
-        Example:
-            Define as part of a pipeline:
-
-                pipeline = lk.pipeline().step(lk.col("col").edit_distance())
-
-        """
-        return self.__getattr__("edit_distance")(*args, **kwargs)
-
     def exact(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.exact` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.exact`](../reference/liken.md#liken.exact) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.exact`][liken.exact] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -171,8 +157,9 @@ class Col:
         """Method wrapper of `lk.fuzzy` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.fuzzy`](../reference/liken.md#liken.fuzzy) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.fuzzy`][liken.fuzzy] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -182,27 +169,13 @@ class Col:
         """
         return self.__getattr__("fuzzy")(*args, **kwargs)
 
-    def tfidf(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.tfidf` function.
-
-        Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.tfidf`](../reference/liken.md#liken.tfidf) reference for
-        complete documentation.
-
-        Example:
-            Define as part of a pipeline:
-
-                pipeline = lk.pipeline().step(lk.col("col").tfidf())
-
-        """
-        return self.__getattr__("tfidf")(*args, **kwargs)
-
     def lsh(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.lsh` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.lsh`](../reference/liken.md#liken.lsh) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.lsh`][liken.lsh] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -212,27 +185,45 @@ class Col:
         """
         return self.__getattr__("lsh")(*args, **kwargs)
 
-    def jaccard(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.jaccard` function.
+    def tfidf(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.tfidf` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.jaccard`](../reference/liken.md#liken.jaccard) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.tfidf`][liken.tfidf] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(lk.col("col").jaccard())
+                pipeline = lk.pipeline().step(lk.col("col").tfidf())
 
         """
-        return self.__getattr__("jaccard")(*args, **kwargs)
+        return self.__getattr__("tfidf")(*args, **kwargs)
+
+    def edit_distance(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.edit_distance` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.edit_distance`][liken.edit_distance] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").edit_distance())
+
+        """
+        return self.__getattr__("edit_distance")(*args, **kwargs)
 
     def cosine(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.cosine` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.cosine`](../reference/liken.md#liken.cosine) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.cosine`][liken.cosine] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -242,12 +233,29 @@ class Col:
         """
         return self.__getattr__("cosine")(*args, **kwargs)
 
+    def jaccard(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.jaccard` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.jaccard`][liken.jaccard] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").jaccard())
+
+        """
+        return self.__getattr__("jaccard")(*args, **kwargs)
+
     def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.isin`](../reference/liken.md#liken.isin) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.isin`][liken.isin] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -261,8 +269,9 @@ class Col:
         """Method wrapper of `lk.isna` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.isna`](../reference/liken.md#liken.isna) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.isna`][liken.isna] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -272,42 +281,29 @@ class Col:
         """
         return self.__getattr__("isna")(*args, **kwargs)
 
-    def str_startswith(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.str_startswith` function.
+    def num_range(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.num_range` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.str_startswith`](../reference/liken.md#liken.str_startswith) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.num_range`][liken.num_range] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(lk.col("col").str_startswith())
+                pipeline = lk.pipeline().step(lk.col("col").num_range())
 
         """
-        return self.__getattr__("str_startswith")(*args, **kwargs)
-
-    def str_endswith(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.str_endswith` function.
-
-        Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.str_endswith`](../reference/liken.md#liken.str_endswith) reference for
-        complete documentation.
-
-        Example:
-            Define as part of a pipeline:
-
-                pipeline = lk.pipeline().step(lk.col("col").str_endswith())
-
-        """
-        return self.__getattr__("str_endswith")(*args, **kwargs)
+        return self.__getattr__("num_range")(*args, **kwargs)
 
     def str_contains(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_contains` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.str_contains`](../reference/liken.md#liken.str_contains) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.str_contains`][liken.str_contains] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -317,12 +313,29 @@ class Col:
         """
         return self.__getattr__("str_contains")(*args, **kwargs)
 
+    def str_endswith(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.str_endswith` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.str_endswith`][liken.str_endswith] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").str_endswith())
+
+        """
+        return self.__getattr__("str_endswith")(*args, **kwargs)
+
     def str_len(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_len` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.str_len`](../reference/liken.md#liken.str_len) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.str_len`][liken.str_len] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
@@ -332,20 +345,21 @@ class Col:
         """
         return self.__getattr__("str_len")(*args, **kwargs)
 
-    def num_range(self, *args, **kwargs) -> Col:
-        """Method wrapper of `lk.num_range` function.
+    def str_startswith(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.str_startswith` function.
 
         Usage is identical to the function but chained to an instance of `Col`.
-        See [`lk.num_range`](../reference/liken.md#liken.num_range) reference for
-        complete documentation.
+
+        Info:
+            See [`lk.str_startswith`][liken.str_startswith] reference for complete documentation.
 
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(lk.col("col").num_range())
+                pipeline = lk.pipeline().step(lk.col("col").str_startswith())
 
         """
-        return self.__getattr__("num_range")(*args, **kwargs)
+        return self.__getattr__("str_startswith")(*args, **kwargs)
 
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor = ()):
         self._columns: Columns = columns
