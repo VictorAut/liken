@@ -562,6 +562,62 @@ def test_edit_distance_non_integer_max_distance_raises_type_error(value):
         lk.edit_distance(max_distance=value)
 
 
+def test_edit_distance_default_metric_is_levenshtein():
+    assert lk.edit_distance()._metric == "levenshtein"
+
+
+@pytest.mark.parametrize("metric", ["damerau_levenshtein", "jaro_winkler", "indel", "hamming"])
+def test_edit_distance_accepts_each_non_default_metric(metric):
+    assert lk.edit_distance(max_distance=0.5, metric=metric)._metric == metric
+
+
+def test_edit_distance_unknown_metric_raises_value_error():
+    with pytest.raises(InvalidArgumentValueError, match="`metric` must be one of"):
+        lk.edit_distance(metric="levenshteinn")
+
+
+def test_edit_distance_unknown_metric_error_names_all_options():
+    with pytest.raises(InvalidArgumentValueError) as exc_info:
+        lk.edit_distance(metric="nope")
+
+    message = str(exc_info.value)
+    for name in ("levenshtein", "damerau_levenshtein", "jaro_winkler", "indel", "hamming"):
+        assert name in message
+
+
+def test_edit_distance_non_str_metric_raises_type_error():
+    with pytest.raises(InvalidArgumentTypeError, match="`metric` must be of type 'str', got 'int'"):
+        lk.edit_distance(metric=1)
+
+
+def test_edit_distance_normalized_metric_rejects_default_max_distance():
+    """The default absolute bound 2 is out of range for the normalized contract."""
+    with pytest.raises(InvalidArgumentValueError, match="`max_distance` must be a real number in the range \\[0, 1\\]"):
+        lk.edit_distance(metric="jaro_winkler")
+
+
+def test_edit_distance_normalized_metric_accepts_float_in_range():
+    assert lk.edit_distance(max_distance=0.25, metric="indel")._max_distance == 0.25
+
+
+def test_edit_distance_normalized_metric_accepts_integer_zero_and_one():
+    """Ints 0 and 1 sit on the inclusive bounds and are real numbers."""
+    assert lk.edit_distance(max_distance=0, metric="hamming")._max_distance == 0
+    assert lk.edit_distance(max_distance=1, metric="hamming")._max_distance == 1
+
+
+@pytest.mark.parametrize("value", [1.5, -0.1, True, float("nan"), "0.5", np.float32(0.5)])
+def test_edit_distance_normalized_metric_rejects_bad_max_distance(value):
+    with pytest.raises((InvalidArgumentTypeError, InvalidArgumentValueError)):
+        lk.edit_distance(max_distance=value, metric="indel")
+
+
+def test_edit_distance_levenshtein_rejects_float_max_distance():
+    """The absolute edit-count contract keeps its integer-only typing."""
+    with pytest.raises(InvalidArgumentTypeError, match="`max_distance` must be an integer"):
+        lk.edit_distance(max_distance=0.5)
+
+
 def test_edit_distance_requires_single_string_column():
     with pytest.raises(InvalidArgumentTypeError):
         EditDistance().validate(("a", "b"))
