@@ -22,6 +22,7 @@ from liken.dedupers.str_endswith import str_endswith
 from liken.dedupers.str_len import str_len
 from liken.dedupers.str_startswith import str_startswith
 from liken.dedupers.tfidf import tfidf
+from liken.dedupers.within import within
 from liken.liken import Dedupe
 from liken.liken import dedupe
 
@@ -43,6 +44,7 @@ __all__ = [
     "str_endswith",
     "str_len",
     "str_startswith",
+    "within",
     "pipeline",
     "Pipeline",
     "col",
