@@ -297,6 +297,22 @@ class Col:
         """
         return self.__getattr__("num_range")(*args, **kwargs)
 
+    def within(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.within` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.within`][liken.within] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").within(tol=0.01))
+
+        """
+        return self.__getattr__("within")(*args, **kwargs)
+
     def str_contains(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_contains` function.
 

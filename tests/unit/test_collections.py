@@ -627,10 +627,12 @@ BUILTIN_DEDUPER_NAMES = [
     "edit_distance",
     "isin",
     "isna",
+    "num_range",
     "str_contains",
     "str_endswith",
     "str_len",
     "str_startswith",
+    "within",
 ]
 
 
