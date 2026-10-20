@@ -618,6 +618,182 @@ def test_edit_distance_levenshtein_rejects_float_max_distance():
         lk.edit_distance(max_distance=0.5)
 
 
+#####################
+# metric behaviour  #
+#####################
+
+
+REGRESSION_VALUES = [
+    "abcde",
+    "abcde",
+    "abcxy",
+    "abcxyz",
+    "a" * 20 + "b",
+    "a" * 20 + "b",
+    "c" * 20 + "b",
+    "n",
+    None,
+    None,
+    "na",
+    "",
+]
+REGRESSION_EXPECTED = [(0, 1), (0, 2), (1, 2), (2, 3), (4, 5), (7, 10), (7, 11), (8, 9), (10, 11)]
+
+
+def test_edit_distance_default_metric_regression_pinned():
+    """With the default metric the pair output is identical to the pre-change deduper.
+
+    Fixture captured by probe before the metric parameter was added.
+    """
+    pairs = sorted(EditDistance(max_distance=2)._gen_similarity_pairs(pa.array(REGRESSION_VALUES)))
+
+    assert pairs == REGRESSION_EXPECTED
+
+
+def test_edit_distance_damerau_levenshtein_matches_transposition():
+    """Damerau-Levenshtein counts a transposition as one edit: nd('abcd','abdc') = 0.25."""
+    deduper = EditDistance(max_distance=0.25, metric="damerau_levenshtein")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcd", "abdc"])))
+
+    assert pairs == [(0, 1)]
+
+    # the same shape under plain levenshtein is 2 edits: rejected at 1, matched at 2
+    assert list(lk.edit_distance(max_distance=1)._gen_similarity_pairs(pa.array(["abcd", "abdc"]))) == []
+    assert list(lk.edit_distance(max_distance=2)._gen_similarity_pairs(pa.array(["abcd", "abdc"]))) == [(0, 1)]
+
+
+def test_edit_distance_jaro_winkler_weights_shared_prefixes():
+    """A same-shape single-edit pair scores closer when it shares a prefix.
+
+    nd('abcdx','abcdy') = 0.08 with the shared prefix; nd('abcdx','xbcda')
+    = 0.267 without it. A bound between the two separates them.
+    """
+    deduper = EditDistance(max_distance=0.15, metric="jaro_winkler")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcdx", "abcdy", "xbcda"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_indel_matches_pure_insertion():
+    """Indel nd('abc','abcd') = 0.25; a substitution would cost double."""
+    deduper = EditDistance(max_distance=0.25, metric="indel")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abc", "abcd"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_hamming_matches_substitution_pair():
+    """Hamming nd('karolin','kerstin') = 3/7 ≈ 0.4286."""
+    deduper = EditDistance(max_distance=0.45, metric="hamming")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["karolin", "kerstin"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_hamming_pads_unequal_lengths():
+    """Hamming pads unequal-length values through cdist (pad=True default).
+
+    Verified against rapidfuzz 3.14.3: nd('abc','abcde') = 0.4. Documented
+    behaviour, pinned here as documentation-by-test.
+    """
+    deduper = EditDistance(max_distance=0.4, metric="hamming")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abc", "abcde"])))
+
+    assert pairs == [(0, 1)]
+
+
+@pytest.mark.parametrize("metric", ["damerau_levenshtein", "indel", "hamming"])
+def test_edit_distance_normalized_metric_inclusive_boundary(metric):
+    """A pair exactly at `max_distance` matches; one beyond the tolerance does not.
+
+    Exact-representable bounds (0.25 on len-4 strings) so the at-bound
+    expectation does not depend on the drift guard. A bound one step below
+    rejects: 0.25 exceeds it by more than the guard.
+    """
+    at_bound = EditDistance(max_distance=0.25, metric=metric)
+    below_bound = EditDistance(max_distance=0.24, metric=metric)
+
+    values = ["abcd", "abce"]  # one substitution over length 4: nd = 0.25
+
+    assert list(at_bound._gen_similarity_pairs(pa.array(values))) == [(0, 1)]
+    assert list(below_bound._gen_similarity_pairs(pa.array(values))) == []
+
+
+def test_edit_distance_jaro_winkler_rejects_pair_above_bound():
+    """A pair whose nd is clearly above the bound never matches."""
+    deduper = EditDistance(max_distance=0.25, metric="jaro_winkler")
+
+    # nd('abcdx','xbcda') = 0.2667, no shared prefix
+    assert list(deduper._gen_similarity_pairs(pa.array(["abcdx", "xbcda"]))) == []
+
+
+def test_edit_distance_jaro_winkler_matches_at_stubbed_exact_bound(monkeypatch):
+    """A computed distance exactly at `max_distance` matches (guard direction).
+
+    rapidfuzz's JW normalized distance can drift below the true value, so a
+    real boundary pair is admitted from below; the stub pins the at-bound
+    admission itself.
+    """
+    deduper = EditDistance(max_distance=0.11666666666666667, metric="jaro_winkler")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.11666666666666667]],
+    )
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abcd", "abce"]))) == [(0, 1)]
+
+
+@pytest.mark.parametrize("metric", ["levenshtein", "damerau_levenshtein", "jaro_winkler", "indel", "hamming"])
+def test_edit_distance_nulls_pair_with_nulls_only_for_every_metric(metric):
+    """Missing values pair only with each other, under every metric."""
+    max_distance = 2 if metric == "levenshtein" else 0.5
+    deduper = EditDistance(max_distance=max_distance, metric=metric)
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["n", None, None, "na"])))
+
+    assert pairs == [(0, 3), (1, 2)]
+
+
+@pytest.mark.parametrize(
+    "max_distance",
+    [i / 100 for i in range(1, 100)],
+    ids=[f"{i / 100:.2f}" for i in range(1, 100)],
+)
+def test_edit_distance_normalized_metric_matches_exactly_at_every_two_decimal_bound(max_distance, monkeypatch):
+    """A pair whose distance is exactly `max_distance` matches, for every two-decimal bound.
+
+    The stubbed scorer returns the exact quotient as a float. The drifted
+    `max_distance` (8 of the 99 two-decimal bounds round away from it, 5 of
+    them upward) must not reject a pair sitting exactly on the boundary.
+    """
+    exact_distance = float(Decimal(str(max_distance)))
+    deduper = EditDistance(max_distance=max_distance, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[exact_distance]],
+    )
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_normalized_metric_does_not_match_above_the_bound(monkeypatch):
+    """A distance more than the tolerance above the boundary never matches."""
+    deduper = EditDistance(max_distance=0.5, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.51]],
+    )
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["x", "y"]))) == []
+
+
 def test_edit_distance_requires_single_string_column():
     with pytest.raises(InvalidArgumentTypeError):
         EditDistance().validate(("a", "b"))
