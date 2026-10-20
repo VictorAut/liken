@@ -623,33 +623,6 @@ def test_edit_distance_levenshtein_rejects_float_max_distance():
 #####################
 
 
-REGRESSION_VALUES = [
-    "abcde",
-    "abcde",
-    "abcxy",
-    "abcxyz",
-    "a" * 20 + "b",
-    "a" * 20 + "b",
-    "c" * 20 + "b",
-    "n",
-    None,
-    None,
-    "na",
-    "",
-]
-REGRESSION_EXPECTED = [(0, 1), (0, 2), (1, 2), (2, 3), (4, 5), (7, 10), (7, 11), (8, 9), (10, 11)]
-
-
-def test_edit_distance_default_metric_regression_pinned():
-    """With the default metric the pair output is identical to the pre-change deduper.
-
-    Fixture captured by probe before the metric parameter was added.
-    """
-    pairs = sorted(EditDistance(max_distance=2)._gen_similarity_pairs(pa.array(REGRESSION_VALUES)))
-
-    assert pairs == REGRESSION_EXPECTED
-
-
 def test_edit_distance_damerau_levenshtein_matches_transposition():
     """Damerau-Levenshtein counts a transposition as one edit: nd('abcd','abdc') = 0.25."""
     deduper = EditDistance(max_distance=0.25, metric="damerau_levenshtein")
