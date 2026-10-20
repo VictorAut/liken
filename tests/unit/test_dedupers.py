@@ -511,6 +511,64 @@ def test_fuzzy_rejects_non_str_scorer():
         lk.fuzzy(scorer=1)
 
 
+def test_fuzzy_jaro_winkler_scorer_maps_onto_0_100_scale():
+    """The registry wrapper scales normalized_similarity to the 0-100 scale.
+
+    Raw `JaroWinkler.normalized_similarity` returns 0-1; the deduper
+    compares scores against `100 * threshold`, so the registry value must
+    return 100.0 for identical values and 0.0 for disjoint ones.
+    """
+    scorer = Fuzzy(threshold=0.95, scorer="jaro_winkler").get_scorer()
+
+    assert scorer("abc", "abc") == 100.0
+    assert scorer("abc", "xyz") == 0.0
+
+
+def test_fuzzy_jaro_winkler_matches_real_pair_at_scaled_threshold():
+    """A 0.905 pair matches at threshold 0.9 and not at 0.91.
+
+    The fixture pair scores 0.905041 with JaroWinkler. Compared
+    unconverted against `100 * threshold` a 0-1 score would match at
+    0.91 too, so the 0.91 case pins the scale conversion.
+    """
+    s1 = "Calle Ancho, 12, 05688, Rioja, Navarra, Espana"
+    s2 = "Calle Sueco, 56, 05688, Rioja, Navarra"
+
+    pairs = list(lk.fuzzy(threshold=0.9, scorer="jaro_winkler")._gen_similarity_pairs(pa.array([s1, s2])))
+
+    assert pairs == [(0, 1)]
+
+    pairs = list(lk.fuzzy(threshold=0.91, scorer="jaro_winkler")._gen_similarity_pairs(pa.array([s1, s2])))
+
+    assert pairs == []
+
+
+def test_fuzzy_jaro_winkler_identical_pair_matches_high_threshold_mismatched_does_not():
+    """Threshold is validated in the open interval (0, 1), so both probes stay in it."""
+    deduper = lk.fuzzy(threshold=0.99, scorer="jaro_winkler")
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abc", "abc"]))) == [(0, 1)]
+
+    deduper = lk.fuzzy(threshold=0.01, scorer="jaro_winkler")
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abc", "xyz"]))) == []
+
+
+def test_fuzzy_default_scorer_is_unchanged():
+    assert lk.fuzzy().get_scorer() is fuzz.ratio
+
+    # the existing six scorers still construct
+    for name in [
+        "simple_ratio",
+        "partial_ratio",
+        "token_sort_ratio",
+        "token_set_ratio",
+        "weighted_ratio",
+        "quick_ratio",
+    ]:
+        assert lk.fuzzy(scorer=name).get_scorer() is not None
+
+
 ##################
 # edit_distance #
 ##################
