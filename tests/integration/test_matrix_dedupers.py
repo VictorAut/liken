@@ -215,6 +215,22 @@ PARAMS = [
     (lk.num_range, "property_area_sq_ft", {"max": 600}, [0, 0, 2, 3, 4, 5, 0, 0, 0, 9]),
     # no value in range: no deduping
     (lk.num_range, "property_area_sq_ft", {"min": 5000, "max": 6000}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    #
+    # WITHIN:
+    # tol=0: numeric equality, all values distinct
+    (lk.within, "property_area_sq_ft", {"tol": 0}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    # 545-500 = 45 exactly: the inclusive bound merges {500, 509, 545}
+    (lk.within, "property_area_sq_ft", {"tol": 45}, [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    # transitive chain 452-500 (48), 500-545 (45), 545-623 (78) merges all
+    # five, though 452 and 623 are 171 apart
+    (lk.within, "property_area_sq_ft", {"tol": 100}, [0, 0, 0, 3, 4, 5, 0, 0, 8, 9]),
+    # wide tolerance collapses the whole column (skew shape)
+    (lk.within, "property_area_sq_ft", {"tol": 2000}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    # property_height carries nulls (rows 0 and 8): nulls group together,
+    # the 2.5s merge, and 2.7 joins at tol=0.2 — its float difference
+    # 0.20000000000000018 rides the 1e-9 boundary guard
+    (lk.within, "property_height", {"tol": 0.1}, [0, 0, 2, 3, 4, 2, 2, 2, 2, 2]),
+    (lk.within, "property_height", {"tol": 0.2}, [0, 0, 2, 3, 2, 2, 2, 2, 2, 2]),
 ]
 
 # fmt: on
