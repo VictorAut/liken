@@ -767,9 +767,9 @@ def test_edit_distance_nulls_pair_with_nulls_only_for_every_metric(metric):
 def test_edit_distance_normalized_metric_matches_exactly_at_every_two_decimal_bound(max_distance, monkeypatch):
     """A pair whose distance is exactly `max_distance` matches, for every two-decimal bound.
 
-    The stubbed scorer returns the exact quotient as a float. The drifted
-    `max_distance` (8 of the 99 two-decimal bounds round away from it, 5 of
-    them upward) must not reject a pair sitting exactly on the boundary.
+    The stubbed scorer returns the bound exactly, bit-identical to
+    `max_distance`, so the comparison is exact for all 99 bounds: the
+    at-bound pair must match with no drift in play.
     """
     exact_distance = float(Decimal(str(max_distance)))
     deduper = EditDistance(max_distance=max_distance, metric="indel")
@@ -781,6 +781,25 @@ def test_edit_distance_normalized_metric_matches_exactly_at_every_two_decimal_bo
     pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
 
     assert pairs == [(0, 1)]
+
+
+@pytest.mark.parametrize("drift", [5e-10, 2e-9], ids=["within_tolerance", "beyond_tolerance"])
+def test_edit_distance_normalized_metric_tolerance_guard(drift, monkeypatch):
+    """A distance within the tolerance above `max_distance` matches; beyond it does not.
+
+    Pins the guard's widening behaviour itself: `max_distance + 5e-10`
+    (inside `_BOUNDARY_TOLERANCE` = 1e-9) is admitted,
+    `max_distance + 2e-9` is rejected.
+    """
+    deduper = EditDistance(max_distance=0.5, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.5 + drift]],
+    )
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
+
+    assert pairs == ([(0, 1)] if drift == 5e-10 else [])
 
 
 def test_edit_distance_normalized_metric_does_not_match_above_the_bound(monkeypatch):
