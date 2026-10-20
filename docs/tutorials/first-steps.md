@@ -188,6 +188,7 @@ Liken comes with many deduplication methods built-in:
 | *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example).  |
 | *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching.                                                                            |
 | *Similarity* |*single-column*| [`edit_distance`](../reference/liken/#liken.edit_distance) | Values within a maximum edit (Levenshtein) distance.                                     |
+| *Similarity* |*single-column*| [`within`](../reference/liken/#liken.within)     | Values within an absolute numeric tolerance.                                                        |
 | *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf.                                                                      |
 | *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH).                                            |
 | *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                |
@@ -267,6 +268,7 @@ similarity dedupers, missing values group with each other:
 | `exact` | Group with each other|
 | `fuzzy` | Group with each other|
 | `edit_distance` | Group with each other|
+| `within` | Group with each other|
 | `tfidf` | Group with each other at any given `ngram`; the vectoriser receives non-missing values only. |
 | `lsh` | Same as `tfidf`. |
 | `isna` | Matches exactly the missing values; `~isna` matches exactly the non-missing values. |
