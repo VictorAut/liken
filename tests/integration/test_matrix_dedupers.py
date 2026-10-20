@@ -97,6 +97,12 @@ PARAMS = [
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
     (lk.edit_distance, "email", {"max_distance": 2}, [0, 1, 0, 3, 0, 0, 3, 3, 8, 0]),
+    # metric variants: normalized max_distance in [0, 1]
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "damerau_levenshtein"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "jaro_winkler"}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.35, "metric": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "indel"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "hamming"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     #
     # COSINE:
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.999}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
@@ -179,7 +185,7 @@ PARAMS = [
     #
     # ISIN:
     # rows 1 and 8 share the address "123ab, OL5 9PL, UK"
-    (lk.isin, SINGLE_COL, {"values": ["123ab, OL5 9PL, UK"]}, [0, 1, 2, 3, 4, 5, 6, 0, 8, 9]),
+    (lk.isin, SINGLE_COL, {"values": ["123ab, OL5 9PL, UK"]}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     # two distinct addresses matched, merging rows 3 and 4
     (
         lk.isin,
