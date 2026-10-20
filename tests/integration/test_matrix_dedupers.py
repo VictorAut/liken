@@ -93,7 +93,7 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.35}, [0, 0, 2, 2, 4, 2, 0, 0, 4, 0]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     # jaro_winkler: pairwise similarities on this fixture are
-    # 0-7 = 1.0, 2-3 = 0.905, 1-6 = 0.675, 1-9 = 0.599, 2-5 = 0.668,
+    # 0-7 = 1.0, 2-3 = 0.905, 3-5 = 0.639, 1-6 = 0.675, 2-5 = 0.668,
     # with all remaining pairs below 0.55
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "jaro_winkler"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.90, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),

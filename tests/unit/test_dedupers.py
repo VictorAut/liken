@@ -527,9 +527,11 @@ def test_fuzzy_jaro_winkler_scorer_maps_onto_0_100_scale():
 def test_fuzzy_jaro_winkler_matches_real_pair_at_scaled_threshold():
     """A 0.905 pair matches at threshold 0.9 and not at 0.91.
 
-    The fixture pair scores 0.905041 with JaroWinkler. Compared
-    unconverted against `100 * threshold` a 0-1 score would match at
-    0.91 too, so the 0.91 case pins the scale conversion.
+    The fixture pair scores 0.905041 with JaroWinkler. A raw 0-1 score
+    compared unconverted against `100 * threshold` (90, 91) would match
+    neither, so the threshold=0.9 case fails if the scale conversion is
+    dropped; the 0.91 case then separates a converted 90.5 from a
+    threshold of 91.
     """
     s1 = "Calle Ancho, 12, 05688, Rioja, Navarra, Espana"
     s2 = "Calle Sueco, 56, 05688, Rioja, Navarra"
