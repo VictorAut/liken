@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from typing import ClassVar
 from typing import Final
+from typing import TypeAlias
 from typing import final
 
 import pyarrow as pa
@@ -17,11 +18,15 @@ from liken.types import SimilarPairIndices
 from liken.validations import require_real_number
 
 
+Number: TypeAlias = float | int
+
 # Floating-point subtraction at the tolerance boundary can round above
 # `tol` (`1.02 - 1.01` is `0.010000000000000009`), so the bound is widened
 # by the guard below, mirroring `edit_distance`'s normalized metrics. The
 # guard applies only when `tol > 0`: at `tol=0` equal values subtract to
 # exactly `0.0`, so the match is exact equality with no rounding hazard.
+# The guard is an absolute constant: for tolerances below it (e.g.
+# `tol=1e-12`) the effective bound is the guard, not `tol`.
 _BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
 
@@ -45,10 +50,16 @@ class Within(
 
     _NAME: ClassVar[str] = "within"
 
-    def __init__(self, tol: float):
+    def __init__(self, tol: Number):
         tol = require_real_number("tol", tol, low=0, low_inclusive=True)
         if tol == float("inf"):
             raise InvalidArgumentValueError("`tol` must be a finite number, got inf")
+        # A huge integer passes `require_real_number` but overflows the
+        # window arithmetic at execution; reject it here, near the cause.
+        try:
+            float(tol)
+        except OverflowError as err:
+            raise InvalidArgumentValueError(f"`tol` must be a finite number, got {tol!r}") from err
         super().__init__(tol=tol)
         self._tol = tol
 
@@ -84,9 +95,8 @@ class Within(
         # `float("inf")` data values: two infinities subtract to NaN, and
         # a NaN comparison is always False, so the bound is written as
         # `not (diff <= bound)` — a NaN difference falls outside the
-        # window and infinities never match. `start` is capped at `pos`:
-        # in sorted order every value before an infinity is an infinity
-        # too, so an infinity pairs with nothing, itself included.
+        # window and infinities never match. `start` never exceeds `pos`:
+        # the value at `pos` would otherwise pair with itself.
         start = 0
         for pos in range(1, len(order)):
             left = order[pos]
@@ -120,6 +130,10 @@ def within(tol: float) -> BaseDeduper:
     tolerances relative to the spread of the data can therefore collapse
     many rows into one group.
 
+    A pair whose difference rounds to at most `tol + 1e-9` also matches:
+    the small guard repairs float rounding at the boundary (`1.02 - 1.01`
+    computes above `0.01`), and it dominates any `tol` below `1e-9`.
+
     Missing values, `None` or NaN, match only each other, never a value.
 
     Args:
@@ -133,7 +147,8 @@ def within(tol: float) -> BaseDeduper:
     Raises:
         InvalidArgumentTypeError: if `tol` is not a real number, or if the
             column is not numeric at execution.
-        InvalidArgumentValueError: if `tol` is negative, NaN or infinite.
+        InvalidArgumentValueError: if `tol` is negative, NaN or infinite
+            (including integer magnitudes too large for a float).
 
     Example:
         Applied to a single column:
@@ -162,6 +177,7 @@ def within(tol: float) -> BaseDeduper:
             | id   | price |         email        |
             +------+-------+----------------------+
             |  1   | 10.02 |  fizzpop@gmail.com   |
+            |  2   |  null |  foobar@gmail.com    |
             |  3   | 10.03 |  foobar@gmail.co.uk  |
             +------+-----------+------------------+
     """
