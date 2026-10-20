@@ -139,7 +139,7 @@ class EditDistance(
 
 @dedupers_registry.register("edit_distance")
 def edit_distance(
-    max_distance: int = _DEFAULT_MAX_DISTANCE,
+    max_distance: int | float = _DEFAULT_MAX_DISTANCE,
     metric: MetricName = "levenshtein",
 ) -> BaseDeduper:
     """Edit distance deduplication.
