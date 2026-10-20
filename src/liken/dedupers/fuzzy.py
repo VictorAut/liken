@@ -44,14 +44,17 @@ ScorerName: TypeAlias = Literal[
 _BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
 
-def _jaro_winkler(s1: str, s2: str, **kwargs) -> float:
+def _jaro_winkler(s1: str, s2: str, score_cutoff: float | None = None) -> float:
     """JaroWinkler normalized similarity on the 0-100 scale.
 
     `JaroWinkler.normalized_similarity` returns 0-1; the other scorers
     and the threshold comparison use 0-100, so it is scaled here at the
     registry boundary.
+
+    `score_cutoff` is accepted and ignored: `process.cdist` passes it as
+    `None` and a two-argument callable would raise `TypeError`.
     """
-    return 100 * JaroWinkler.normalized_similarity(s1, s2, **kwargs)
+    return 100 * JaroWinkler.normalized_similarity(s1, s2)
 
 
 _SCORERS: Final[dict[str, Callable]] = {
