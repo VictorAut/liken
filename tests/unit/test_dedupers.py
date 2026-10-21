@@ -1602,6 +1602,234 @@ def test_str_len_negated_fallback_never_matches_missing():
     assert deduper._matches("ab") is True
 
 
+################
+#  date_range  #
+################
+
+
+def test_date_range_requires_format():
+    """`format` has no default: the deduper never guesses a date format."""
+    with pytest.raises(TypeError):
+        lk.date_range()
+
+
+@pytest.mark.parametrize(
+    "format",
+    [None, 5, ["%Y-%m-%d"], True],
+    ids=["none", "int", "list", "bool"],
+)
+def test_date_range_rejects_non_str_format(format):
+    with pytest.raises(InvalidArgumentTypeError, match="`format` must be of type 'str', got"):
+        lk.date_range(format=format)
+
+
+def test_date_range_rejects_empty_format():
+    with pytest.raises(InvalidArgumentValueError, match="`format` must be a non-empty string"):
+        lk.date_range(format="")
+
+
+@pytest.mark.parametrize(
+    "window",
+    [-1, 1.0, "1", True, None],
+    ids=["negative", "float", "str", "bool", "none"],
+)
+def test_date_range_rejects_bad_window(window):
+    with pytest.raises((InvalidArgumentTypeError, InvalidArgumentValueError)):
+        lk.date_range(format="%Y-%m-%d", window=window)
+
+
+@pytest.mark.parametrize(
+    "window",
+    [0, 1, 30],
+    ids=["zero", "one", "thirty"],
+)
+def test_date_range_accepts_valid_window(window):
+    assert lk.date_range(format="%Y-%m-%d", window=window)._window == window
+
+
+def test_date_range_default_window_is_zero():
+    assert lk.date_range(format="%Y-%m-%d")._window == 0
+
+
+@pytest.mark.parametrize(
+    "values, window, expected",
+    [
+        # same date: star-shaped from the first index (predicate semantics)
+        (["2024-01-05", "2024-01-05", "2024-01-05"], 0, [(0, 1), (0, 2)]),
+        # one day apart at window=1
+        (["2024-01-05", "2024-01-06"], 1, [(0, 1)]),
+        # two days apart at window=1: rejected
+        (["2024-01-05", "2024-01-07"], 1, []),
+        # inclusive boundary: exactly window days apart matches; 1 day
+        # apart is inside window=2
+        (["2024-01-05", "2024-01-06", "2024-01-07"], 2, [(0, 1), (0, 2), (1, 2)]),
+        # window=0 is same-date equality: adjacent dates never pair
+        (["2024-01-05", "2024-01-06"], 0, []),
+        # duplicates at window=1 all pair
+        (["2024-03-01", "2024-03-01", "2024-03-02"], 1, [(0, 1), (0, 2), (1, 2)]),
+        # far apart at any window: nothing matches
+        (["2024-01-01", "2024-06-01"], 30, []),
+    ],
+)
+def test_date_range_matches_pairs_within_window(values, window, expected):
+    deduper = lk.date_range(format="%Y-%m-%d", window=window)
+    deduper.validate("date")
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(values)))
+
+    assert pairs == expected
+
+
+def test_date_range_boundary_crossing_bucket_merge():
+    """Jan 5 and Jan 7 at window=2 merge even though plain date-key
+    bucketing would separate them; this pins the window+1 cell scheme."""
+    deduper = lk.date_range(format="%Y-%m-%d", window=2)
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["2024-01-05", "2024-01-07"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_date_range_chain_at_window_one_emits_adjacent_pairs_only():
+    """Jan 5, 6, 7 at window=1: adjacent pairs match, Jan 5-Jan 7 does not."""
+    deduper = lk.date_range(format="%Y-%m-%d", window=1)
+    deduper.validate("date")
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["2024-01-05", "2024-01-06", "2024-01-07"])))
+
+    assert pairs == [(0, 1), (1, 2)]
+
+
+def test_date_range_pre_epoch_dates_match_within_window():
+    """Dates before 1970-01-01 pair correctly: the day ordinal is a signed
+    integer, so a floor-to-day cast keeps the arithmetic correct."""
+    deduper = lk.date_range(format="%Y-%m-%d", window=1)
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["1969-12-31", "1970-01-01"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_date_range_values_reversed_order_still_pairs():
+    deduper = lk.date_range(format="%Y-%m-%d", window=2)
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["2024-01-07", "2024-01-05"])))
+
+    assert sorted(pairs) == [(0, 1)]
+
+
+@pytest.mark.parametrize(
+    "values",
+    [["2024-01-05", None, None, "2024-01-06"]],
+    ids=["none-nulls"],
+)
+def test_date_range_nulls_pair_with_nulls_only(values):
+    """Nulls pair with nulls only, star-shaped; null never pairs with a date.
+
+    The dates sit one day apart and `window=30` would merge them, so the
+    only pair is the null-null pair."""
+    deduper = lk.date_range(format="%Y-%m-%d", window=30)
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(values)))
+
+    assert pairs == [(1, 2), (0, 3)]
+
+
+def test_date_range_parse_failure_names_column_and_format():
+    """A value that does not parse raises, naming the column and format."""
+    deduper = lk.date_range(format="%Y-%m-%d", window=0)
+    deduper.validate("birth_date")
+
+    with pytest.raises(InvalidArgumentValueError, match=r"birth_date.*%Y-%m-%d"):
+        list(deduper._gen_similarity_pairs(pa.array(["2024-01-05", "05/01/2024"])))
+
+
+def test_date_range_mixed_formats_fail_under_one_format():
+    """Mixed formats are the tar pit the spec forbids solving: the second
+    format fails under the first, loudly."""
+    deduper = lk.date_range(format="%d/%m/%Y", window=0)
+    deduper.validate("date")
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'date'"):
+        list(deduper._gen_similarity_pairs(pa.array(["05/01/2024", "2024-01-05"])))
+
+
+def test_date_range_rejects_non_string_arrays_at_execution():
+    with pytest.raises(InvalidArgumentTypeError, match="string"):
+        deduper = lk.date_range(format="%Y-%m-%d")
+        deduper.validate("n")
+        list(deduper._gen_similarity_pairs(pa.array([1, 2])))
+
+
+def test_date_range_boolean_array_rejected_at_execution():
+    with pytest.raises(InvalidArgumentTypeError, match="string"):
+        deduper = lk.date_range(format="%Y-%m-%d")
+        deduper.validate("flag")
+        list(deduper._gen_similarity_pairs(pa.array([True, False])))
+
+
+def test_date_range_empty_array_yields_no_pairs():
+    deduper = lk.date_range(format="%Y-%m-%d")
+    deduper.validate("date")
+
+    assert list(deduper._gen_similarity_pairs(pa.array([], type=pa.string()))) == []
+
+
+def test_date_range_parse_failure_on_all_values():
+    """Every value failing to parse raises, not silently no pairs."""
+    deduper = lk.date_range(format="%Y-%m-%d")
+    deduper.validate("date")
+
+    with pytest.raises(InvalidArgumentValueError, match="column 'date'"):
+        list(deduper._gen_similarity_pairs(pa.array(["nope", "also-nope"])))
+
+
+def test_date_range_negated_groups_unparseable_values():
+    """~date_range groups values that fail to parse (the coherent per-row
+    reading: _matches is 'value parses under format')."""
+    deduper = ~lk.date_range(format="%Y-%m-%d")
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["garbage", "also garbage", "2024-01-05"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_date_range_negated_never_matches_missing():
+    """A missing value matches nothing on either polarity."""
+    deduper = ~lk.date_range(format="%Y-%m-%d")
+    deduper.validate("date")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array([None, "2024-01-05"])))
+
+    assert pairs == []
+
+
+def test_date_range_requires_single_string_column():
+    with pytest.raises(InvalidArgumentTypeError):
+        lk.date_range(format="%Y-%m-%d").validate(("a", "b"))
+
+
+def test_date_range_pair_emission_is_deterministic():
+    deduper = lk.date_range(format="%Y-%m-%d", window=1)
+    deduper.validate("date")
+
+    values = ["2024-01-06", "2024-01-05", "2024-01-06"]
+
+    first = list(deduper._gen_similarity_pairs(pa.array(values)))
+    second = list(deduper._gen_similarity_pairs(pa.array(values)))
+
+    assert first == second
+
+
+def test_date_range_str_renders_format_and_window():
+    assert "date_range(format='%Y-%m-%d', window=1)" in str(lk.date_range(format="%Y-%m-%d", window=1))
+
+
 ##################################
 # threshold boundary semantics  #
 ##################################
