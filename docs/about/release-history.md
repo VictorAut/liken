@@ -12,6 +12,8 @@ title: Release History
 - The `fuzzy` deduper accepts `scorer="jaro_winkler"`.
 - New `within` deduper: matches two numbers whose absolute difference is
   at most `tol`.
+- New `date_range` deduper: parses values under an explicit `format` and
+  matches two dates whose difference is at most `window` days.
 
 
 ## v0.14.1 (2026-10-20)
