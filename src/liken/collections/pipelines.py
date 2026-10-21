@@ -313,6 +313,22 @@ class Col:
         """
         return self.__getattr__("within")(*args, **kwargs)
 
+    def date_range(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.date_range` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.date_range`][liken.date_range] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").date_range(format="%Y-%m-%d", window=1))
+
+        """
+        return self.__getattr__("date_range")(*args, **kwargs)
+
     def str_contains(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_contains` function.
 
