@@ -128,6 +128,12 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("lsh", ("address",), "lsh"),
     DeduperEntry("jaccard", ("city", "country", "job"), "jaccard"),
     DeduperEntry("cosine", ("probability", "house_number", "height"), "cosine"),
+    DeduperEntry(
+        "knn",
+        ("probability", "house_number", "height"),
+        "knn",
+        kwargs={"threshold": 0.95, "k": 5, "metric": "cosine"},
+    ),
     DeduperEntry("isna", ("address",), "isna"),
     DeduperEntry("isin", ("country",), "isin", args=(["Germany"],)),
     DeduperEntry("str_contains", ("address",), "str_contains", args=("street",)),
