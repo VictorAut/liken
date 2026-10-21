@@ -249,6 +249,22 @@ class Col:
         """
         return self.__getattr__("jaccard")(*args, **kwargs)
 
+    def token_overlap(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.token_overlap` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.token_overlap`][liken.token_overlap] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").token_overlap())
+
+        """
+        return self.__getattr__("token_overlap")(*args, **kwargs)
+
     def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 
