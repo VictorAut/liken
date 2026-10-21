@@ -227,6 +227,15 @@ CASES = [
         lk.col("date_joined").date_range(format="%Y-%m-%d"),
         [0, 1, 1, 3],
     ),
+    # sorted_tokens: nulls group together only; distinct token sets never
+    # merge with each other or with the nulls
+    (
+        "sorted-tokens-null-vs-values",
+        ["name"],
+        [("b a",), (None,), (None,), ("b c",)],
+        lk.col("name").sorted_tokens(),
+        [0, 1, 1, 3],
+    ),
 ]
 
 # fmt: on
