@@ -101,6 +101,15 @@ CASES = [
         lk.col("address").fuzzy(threshold=0.5),
         [0, 1, 0, 1],
     ),
+    # the same contract under topn: the null star pair survives outside
+    # the candidate-limited path
+    (
+        "fuzzy-topn-nulls-never-pair-with-values",
+        ["address"],
+        [("nathan",), (None,), ("nadia",), (None,)],
+        lk.col("address").fuzzy(threshold=0.5, topn=2),
+        [0, 1, 0, 1],
+    ),
     # nulls group with nulls at the default ngram=3, where they did not
     (
         "tfidf-nulls-group-at-default-ngram",

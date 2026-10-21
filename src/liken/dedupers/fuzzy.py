@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from collections.abc import Iterator
+from typing import Any
 from typing import ClassVar
 from typing import Final
 from typing import Literal
@@ -20,6 +21,7 @@ from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
 from liken.types import SimilarPairIndices
 from liken.validations import require_choice
+from liken.validations import require_int
 from liken.validations import require_type
 
 
@@ -52,7 +54,11 @@ def _jaro_winkler(s1: str, s2: str, score_cutoff: float | None = None) -> float:
     registry boundary.
 
     `score_cutoff` is accepted and ignored: `process.cdist` passes it as
-    `None` and a two-argument callable would raise `TypeError`.
+    `None` and a two-argument callable would raise `TypeError`. Under
+    `topn`, `process.extract` passes a real cutoff and compares the score
+    this wrapper returns against it; ignoring the cutoff inside the
+    wrapper stays correct, because the tolerant filter in `_topk_pairs`
+    is authoritative.
     """
     return 100 * JaroWinkler.normalized_similarity(s1, s2)
 
@@ -89,15 +95,18 @@ class Fuzzy(
         self,
         threshold: float = 0.95,
         scorer: ScorerName = "simple_ratio",
+        topn: int | None = None,
     ):
         require_type("scorer", scorer, str)
         require_choice("scorer", scorer, _SCORER_NAMES)
-        super().__init__(
-            threshold=threshold,
-            scorer=scorer,
-        )
+        topn = require_int("topn", topn, low=1, allow_none=True)
+        init_kwargs: dict[str, Any] = {"threshold": threshold, "scorer": scorer}
+        if topn is not None:
+            init_kwargs["topn"] = topn
+        super().__init__(**init_kwargs)
         self._threshold = threshold
         self._scorer = scorer
+        self._topn = topn
 
     def get_scorer(self):
         return self._SCORERS[self._scorer]
@@ -121,6 +130,10 @@ class Fuzzy(
         # the scorer receives non-missing values only
         scored = [values[i] for i in present]
 
+        if self._topn is not None:
+            yield from self._topk_pairs(present, scored, threshold, scorer)
+            return
+
         for pos, s1 in enumerate(scored):
             if pos + 1 >= len(scored):
                 break
@@ -135,6 +148,56 @@ class Fuzzy(
                 if score >= threshold - _BOUNDARY_TOLERANCE:
                     yield present[pos], present[pos + 1 + offset]
 
+    def _topk_pairs(
+        self,
+        present: list[int],
+        scored: list,
+        threshold: float,
+        scorer: Callable,
+    ) -> Iterator[SimilarPairIndices]:
+        """Candidate-limited pairs: each row keeps its k best partners.
+
+        A pair is emitted when either side holds the other in its k best
+        and the score reaches the threshold. Per-row `process.extract`
+        over the full present-value list computes each row's directed
+        top-k, so both directions are covered without a second pass.
+
+        The cutoff passed to `process.extract` is inclusive and already
+        applies the boundary tolerance, mirroring the all-pairs
+        comparison; the Python-side re-check keeps that contract
+        authoritative regardless of rapidfuzz version behaviour.
+        """
+        topn = self._topn
+        cutoff: float = threshold - _BOUNDARY_TOLERANCE
+
+        seen: set[tuple[int, int]] = set()
+
+        for pos, s1 in enumerate(scored):
+            results = process.extract(
+                s1,
+                scored,
+                scorer=scorer,
+                limit=topn + 1,
+                score_cutoff=cutoff,
+            )
+
+            # drop self by index, keep at most topn partners; ties sort by
+            # choice index, so self may sit beyond rank topn + 1 and the
+            # truncation then takes the first topn non-self entries
+            partners = 0
+            for _choice, score, index in results:
+                if partners == topn:
+                    break
+                if index == pos:
+                    continue
+                partners += 1
+                if score < cutoff:
+                    continue
+                pair = (min(present[pos], present[index]), max(present[pos], present[index]))
+                if pair not in seen:
+                    seen.add(pair)
+                    yield pair
+
     def __str__(self):
         return self.str_representation(self._NAME)
 
@@ -143,6 +206,7 @@ class Fuzzy(
 def fuzzy(
     threshold: float = 0.95,
     scorer: ScorerName = "simple_ratio",
+    topn: int | None = None,
 ) -> BaseDeduper:
     """Near string deduplication.
 
@@ -162,6 +226,20 @@ def fuzzy(
               towards shared prefixes. Scores on the same 0-100 scale as
               the other options. Suited to short strings such as names,
               postcodes and product codes.
+        topn: The number of best matches to consider per value. The
+            headline value of `topn` is memory: each value holds at most
+            `k` candidate scores instead of a score against every other
+            value. The default `None` compares every value against every
+            other. An integer `k` bounds the matches held per value to
+            `k`: a pair matches when either side holds the other in its
+            k best and the score reaches the threshold. Scorer work per
+            value is unchanged; only the matches kept are limited.
+            Matching is approximate: in a cluster of more than k near-identical
+            records some pairs are dropped, so the cluster may fail to
+            link transitively even though union-find merges whatever
+            pairs survive. Ties at rank k are broken by row order: the
+            same input order gives the same output, and reordering the
+            column can change the result.
 
     Returns:
         Instance of `BaseDeduper`.
@@ -196,4 +274,4 @@ def fuzzy(
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
     """
-    return Fuzzy(threshold=threshold, scorer=scorer)
+    return Fuzzy(threshold=threshold, scorer=scorer, topn=topn)
