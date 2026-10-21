@@ -236,6 +236,17 @@ CASES = [
         lk.col("date_joined").date_range(format="%Y-%m-%d"),
         [0, 1, 1, 3],
     ),
+    # knn: an all-null compound row fills to the zero vector and matches
+    # nothing — not even another all-null row (unlike the star-shaped
+    # null groups of the string dedupers). The two orthogonal value rows
+    # stay apart (cosine 0), and neither merges with the null row.
+    (
+        "knn-all-null-compound-row-matches-nothing",
+        ["h", "w"],
+        [(1.0, 2.0), (2.0, 1.0), (None, None), (2.0, 1.0)],
+        lk.col(("h", "w")).knn(threshold=0.9, k=2, metric="cosine"),
+        [0, 1, 2, 1],
+    ),
     # sorted_tokens: nulls group together only; distinct token sets never
     # merge with each other or with the nulls
     (

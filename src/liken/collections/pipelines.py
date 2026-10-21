@@ -265,6 +265,22 @@ class Col:
         """
         return self.__getattr__("token_overlap")(*args, **kwargs)
 
+    def knn(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.knn` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.knn`][liken.knn] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").knn(k=5))
+
+        """
+        return self.__getattr__("knn")(*args, **kwargs)
+
     def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 

@@ -194,6 +194,7 @@ Liken comes with many deduplication methods built-in:
 | *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                |
 | *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data.                                   |
 | *Similarity* |*compound-column*| [`token_overlap`](../reference/liken/#liken.token_overlap) | Multi column set containment: a record whose values are a subset of another's matches.        |
+| *Similarity* |*compound-column*| [`knn`](../reference/liken/#liken.knn) | Multi column k nearest neighbours on numerical data: each row matches its k best under a similarity threshold.        |
 | *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`.                                        |
 | *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members.                               |
 | *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern. |
@@ -283,5 +284,5 @@ similarity dedupers, missing values group with each other:
 Two practical consequences are worth noting:
 
 - Missing handling is backend-independent: the pandas-family backends convert NaN to null on the way into Arrow, while polars and pyarrow keep float NaN. Both are one missing class.
-- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` and `token_overlap` exclude `None` values when building each record's set, so an all-null record matches nothing there; `cosine` fills numeric NaNs with 0.
+- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` and `token_overlap` exclude `None` values when building each record's set, so an all-null record matches nothing there; `cosine` fills numeric NaNs with 0, and `knn` does the same before finding neighbours — an entirely missing row becomes a zero vector and matches nothing.
 - The empty string is a value, not a missing one. `str_len` never matches it, whatever the bounds; under `~str_len` it matches, like every non-matching value.

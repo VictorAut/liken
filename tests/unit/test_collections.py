@@ -628,6 +628,7 @@ BUILTIN_DEDUPER_NAMES = [
     "date_range",
     "isin",
     "isna",
+    "knn",
     "num_range",
     "sorted_tokens",
     "str_contains",
