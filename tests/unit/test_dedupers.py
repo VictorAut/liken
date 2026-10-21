@@ -1630,12 +1630,17 @@ def test_date_range_rejects_empty_format():
 
 @pytest.mark.parametrize(
     "window",
-    [-1, 1.0, "1", True, None],
-    ids=["negative", "float", "str", "bool", "none"],
+    [1.0, "1", True, None],
+    ids=["float", "str", "bool", "none"],
 )
-def test_date_range_rejects_bad_window(window):
-    with pytest.raises((InvalidArgumentTypeError, InvalidArgumentValueError)):
+def test_date_range_rejects_non_integer_window(window):
+    with pytest.raises(InvalidArgumentTypeError, match="`window` must be an integer"):
         lk.date_range(format="%Y-%m-%d", window=window)
+
+
+def test_date_range_rejects_negative_window():
+    with pytest.raises(InvalidArgumentValueError, match="`window` must be an integer in the range"):
+        lk.date_range(format="%Y-%m-%d", window=-1)
 
 
 @pytest.mark.parametrize(
@@ -1701,6 +1706,68 @@ def test_date_range_chain_at_window_one_emits_adjacent_pairs_only():
     assert pairs == [(0, 1), (1, 2)]
 
 
+def test_date_range_dense_two_dates_at_window_zero():
+    """Two dates 1 day apart at window=0 emit only the within-day stars.
+
+    The neighbour join previously cross-multiplied the two cells (24.7s at
+    n=30k for zero cross-cell pairs); the two-pointer scan visits each
+    side once. Same two dates one day apart at window=1 merge everything.
+    """
+    values = ["2024-01-05"] * 3 + ["2024-01-06"] * 3
+
+    zero = lk.date_range(format="%Y-%m-%d")
+    zero.validate("date")
+    assert sorted(zero._gen_similarity_pairs(pa.array(values))) == [(0, 1), (0, 2), (3, 4), (3, 5)]
+
+    one = lk.date_range(format="%Y-%m-%d", window=1)
+    one.validate("date")
+    pairs = sorted(one._gen_similarity_pairs(pa.array(values)))
+
+    # The within-day pairs are star-shaped (predicate convention); the
+    # cross-day join emits every matching pair. Grouping: all six merge.
+    assert pairs == [
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (0, 4),
+        (0, 5),
+        (1, 3),
+        (1, 4),
+        (1, 5),
+        (2, 3),
+        (2, 4),
+        (2, 5),
+        (3, 4),
+        (3, 5),
+    ]
+
+
+def test_date_range_dense_mixed_dates_cross_cell():
+    """Dense data over several days: the two-pointer neighbour join emits
+    every matching cross-cell pair; within-cell emission is star-shaped
+    from the cell's first index (predicate convention). The merged groups
+    equal the brute-force within-window groups; pair shape is
+    cell-alignment dependent."""
+    values = [f"2024-01-{day:02d}" for day in (5, 5, 6, 6, 7, 7, 9, 10)]
+
+    deduper = lk.date_range(format="%Y-%m-%d", window=1)
+    deduper.validate("date")
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(values)))
+
+    assert pairs == [
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (1, 2),
+        (1, 3),
+        (2, 3),
+        (2, 4),
+        (2, 5),
+        (6, 7),
+    ]
+
+
 def test_date_range_pre_epoch_dates_match_within_window():
     """Dates before 1970-01-01 pair correctly: the day ordinal is a signed
     integer, so a floor-to-day cast keeps the arithmetic correct."""
@@ -1759,17 +1826,30 @@ def test_date_range_mixed_formats_fail_under_one_format():
 
 
 def test_date_range_rejects_non_string_arrays_at_execution():
+    deduper = lk.date_range(format="%Y-%m-%d")
+    deduper.validate("n")
+
     with pytest.raises(InvalidArgumentTypeError, match="string"):
-        deduper = lk.date_range(format="%Y-%m-%d")
-        deduper.validate("n")
         list(deduper._gen_similarity_pairs(pa.array([1, 2])))
 
 
 def test_date_range_boolean_array_rejected_at_execution():
+    deduper = lk.date_range(format="%Y-%m-%d")
+    deduper.validate("flag")
+
     with pytest.raises(InvalidArgumentTypeError, match="string"):
-        deduper = lk.date_range(format="%Y-%m-%d")
-        deduper.validate("flag")
         list(deduper._gen_similarity_pairs(pa.array([True, False])))
+
+
+def test_date_range_negated_rejects_non_string_array():
+    """The negated path type-checks the column too: without the check a
+    non-string column fails to parse per value and `~date_range` silently
+    matches every row."""
+    deduper = ~lk.date_range(format="%Y-%m-%d")
+    deduper.validate("n")
+
+    with pytest.raises(InvalidArgumentTypeError, match="string"):
+        list(deduper._gen_similarity_pairs(pa.array([1, 2])))
 
 
 def test_date_range_empty_array_yields_no_pairs():

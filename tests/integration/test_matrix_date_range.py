@@ -11,6 +11,7 @@ import pytest
 
 import liken as lk
 from liken.constants import CANONICAL_ID
+from liken.exceptions import InvalidArgumentValueError
 
 
 # fmt: off
@@ -84,5 +85,5 @@ def test_matrix_date_range_parse_failure_raises(helpers):
 
     df = helpers.create_df([("2024-01-05",), ("05/01/2024",)], ["dob"])
 
-    with pytest.raises(Exception, match="05/01/2024"):
+    with pytest.raises(InvalidArgumentValueError, match="05/01/2024"):
         lk.dedupe(df).apply(lk.pipeline().step(lk.col("dob").date_range(format="%Y-%m-%d"))).canonicalize().collect()
