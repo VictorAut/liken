@@ -249,7 +249,9 @@ CASES = [
     ),
     # sorted_neighbourhood: nulls group together (star-shaped) and never
     # with a value, independent of the window; the two distinct values
-    # are far apart in sorted order and stay apart even at a wide window
+    # are the only present ones, so they are sorted-adjacent (the wide
+    # window is irrelevant here) and stay apart because their score
+    # sits far below the default threshold
     (
         "sorted-neighbourhood-null-vs-values",
         ["address"],

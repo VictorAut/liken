@@ -80,9 +80,9 @@ class SortedNeighbourhood(
         n = len(ordered)
 
         for pos in range(n):
-            window = ordered[pos + 1 : pos + self._window]
+            ahead = ordered[pos + 1 : pos + self._window]
 
-            if not window:
+            if not ahead:
                 break
 
             # the row's value against its forward window, grouped by the
@@ -91,8 +91,8 @@ class SortedNeighbourhood(
             # subset-of-fuzzy claim must hold for the asymmetric scorers
             # too (partial_ratio).
             s1 = values[ordered[pos]]
-            later = [i for i in window if i > ordered[pos]]
-            earlier = [i for i in window if i < ordered[pos]]
+            later = [i for i in ahead if i > ordered[pos]]
+            earlier = [i for i in ahead if i < ordered[pos]]
 
             if later:
                 scores: Any = process.cdist([s1], [values[i] for i in later], scorer=scorer)[0]
@@ -130,8 +130,9 @@ def sorted_neighbourhood(
     The column is sorted by value and each row is scored only against
     the following `window - 1` rows in sorted order; a pair matches
     when its score reaches the threshold. The scored pair set is a
-    strict subset of all-pairs `fuzzy` at the same threshold and
-    scorer — same acceptance semantics, restricted pair generation.
+    subset of all-pairs `fuzzy` at the same threshold and scorer —
+    equal when the window covers the whole column — same acceptance
+    semantics, restricted pair generation.
 
     Sorting is on the raw values (code-point order, no locale). Two
     values similar in the middle but different at the start, such as

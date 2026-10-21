@@ -3285,9 +3285,10 @@ def test_sorted_neighbourhood_tie_group_window_edge():
     permutation-invariant (WI017's concern) — unlike all-pairs fuzzy,
     which emits every identical pair.
     """
-    # Input order A: the three "aa" occupy sorted positions 0, 2, 4 —
-    # no two are consecutive, so no "aa"-"aa" pair is scored at
-    # window=2. Only the "aa"-"ab"/"ab"-"ac" edges fire.
+    # Input order A: sorted order is aa(0), aa(2), aa(4), ab(1), ac(3)
+    # — the scored pairs are (0,2), (2,4), (1,3), (1,4); two of them
+    # are "aa"-"aa". What window=2 never scores is the outer "aa"-"aa"
+    # pair (0, 4), which all-pairs fuzzy emits.
     array_a = pa.array(["aa", "ab", "aa", "ac", "aa"])
     pairs_a = sorted(lk.sorted_neighbourhood(threshold=0.5, window=2)._gen_similarity_pairs(array_a))
 
@@ -3308,7 +3309,7 @@ def test_sorted_neighbourhood_tie_group_window_edge():
     assert sn_full == fuzzy_pairs
 
 
-def test_sorted_neighbourhood_transitivity_through_union_find(mock_df):
+def test_sorted_neighbourhood_transitivity_through_union_find(mock_df, monkeypatch):
     """Merged pairs chain transitively through union-find.
 
     Values sorted: A < B < C, consecutive similarities above threshold,
@@ -3318,12 +3319,11 @@ def test_sorted_neighbourhood_transitivity_through_union_find(mock_df):
     scores = {("A", "B"): 80.0, ("A", "C"): 60.0, ("B", "C"): 75.0}
 
     deduper = lk.sorted_neighbourhood(threshold=0.7, window=2)
-    monkeypatch_target = deduper
-    from unittest.mock import patch
+    monkeypatch.setattr(deduper, "get_scorer", lambda: _stub_score_table(scores))
 
-    with patch.object(type(deduper), "get_scorer", lambda self: _stub_score_table(scores)):
-        mock_df.get_array = Mock(return_value=pa.array(["B", "A", "C"]))
-        uf, n = monkeypatch_target.set_frame(mock_df).build_union_find("address", [])
+    mock_df.get_array = Mock(return_value=pa.array(["B", "A", "C"]))
+
+    uf, n = deduper.set_frame(mock_df).build_union_find("address", [])
 
     assert n == 3
     assert uf[0] == uf[1] == uf[2]
