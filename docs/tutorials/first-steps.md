@@ -232,38 +232,38 @@ flowchart TD
     q --> para
 
     any --> isin
-    isin["`[`isin`](../reference/liken/#liken.isin) · [`isna`](../reference/liken/#liken.isna)`"]
+    isin["`isin · isna — O(n)`"]
 
     s --> sexact
-    sexact["`Exact copies — [exact](../reference/liken/#liken.exact), O(n)`"]
+    sexact["`Exact copies — exact, O(n)`"]
     s --> stok
-    stok["`Same words, any order — [sorted_tokens](../reference/liken/#liken.sorted_tokens), O(n)`"]
+    stok["`Same words, any order — sorted_tokens, O(n)`"]
     s --> srule
-    srule["`A rule on start, end, contents or length — [str_startswith](../reference/liken/#liken.str_startswith) · [str_endswith](../reference/liken/#liken.str_endswith) · [str_contains](../reference/liken/#liken.str_contains) · [str_len](../reference/liken/#liken.str_len)`"]
+    srule["`A rule on start, end, contents or length — str_startswith · str_endswith · str_contains · str_len, O(n)`"]
     s --> sfuzzy
-    sfuzzy["`Typos or small edits — [fuzzy](../reference/liken/#liken.fuzzy), O(n²), with topn=k still all-pairs scoring`"]
+    sfuzzy["`Typos or small edits — fuzzy, O(n²), with topn=k still all-pairs scoring`"]
     s --> ssn
-    ssn["`Typos inside a bounded window — [sorted_neighbourhood](../reference/liken/#liken.sorted_neighbourhood), O(n·window)`"]
+    ssn["`Typos inside a bounded window — sorted_neighbourhood, O(n·window)`"]
     s --> sed
-    sed["`Strict edit budget — [edit_distance](../reference/liken/#liken.edit_distance), O(n²)`"]
+    sed["`Strict edit budget — edit_distance, O(n²)`"]
     s --> stfidf
-    stfidf["`Large columns, token similarity — [tfidf](../reference/liken/#liken.tfidf) · [lsh](../reference/liken/#liken.lsh), indexed`"]
+    stfidf["`Large columns, token similarity — tfidf · lsh, indexed`"]
 
     num --> nrule
-    nrule["`Value or date in range — [num_range](../reference/liken/#liken.num_range) · [date_range](../reference/liken/#liken.date_range)`"]
+    nrule["`Value or date in range — num_range · date_range, O(n)`"]
     num --> nwithin
-    nwithin["`Within a tolerance — [within](../reference/liken/#liken.within), O(n log n)`"]
+    nwithin["`Within a tolerance — within, O(n log n)`"]
 
     comp --> cjac
-    cjac["`Categorical values, set-like — [jaccard](../reference/liken/#liken.jaccard) · [token_overlap](../reference/liken/#liken.token_overlap), O(n²)`"]
+    cjac["`Categorical values, set-like — jaccard · token_overlap, O(n²)`"]
     comp --> cvec
-    cvec["`Numeric vectors — [cosine](../reference/liken/#liken.cosine), O(n²) · [knn](../reference/liken/#liken.knn), O(n log n)`"]
+    cvec["`Numeric vectors — cosine, O(n²) · knn, O(n log n)`"]
 
     para --> pexit
-    pexit["`No built-in deduper fits yet — write a [custom deduper](./custom-dedupers.md)`"]
+    pexit["`No built-in deduper fits yet — write a custom deduper`"]
 ```
 
-Every rule-based deduper above — `isin`, `isna`, the `str_*` predicates, `num_range` and `date_range` — scans the column once, O(n). The taxonomy table under [Built-in Dedupers](#built-in-dedupers) describes each deduper in one line.
+Every rule-based deduper above — `isin`, `isna`, the `str_*` predicates, `num_range` and `date_range` — scans the column once, O(n). Reference pages: [`exact`](../reference/liken/#liken.exact), [`fuzzy`](../reference/liken/#liken.fuzzy), [`edit_distance`](../reference/liken/#liken.edit_distance), [`sorted_neighbourhood`](../reference/liken/#liken.sorted_neighbourhood), [`within`](../reference/liken/#liken.within), [`tfidf`](../reference/liken/#liken.tfidf), [`lsh`](../reference/liken/#liken.lsh), [`sorted_tokens`](../reference/liken/#liken.sorted_tokens), [`jaccard`](../reference/liken/#liken.jaccard), [`token_overlap`](../reference/liken/#liken.token_overlap), [`cosine`](../reference/liken/#liken.cosine), [`knn`](../reference/liken/#liken.knn), [`isin`](../reference/liken/#liken.isin), [`isna`](../reference/liken/#liken.isna), [`str_startswith`](../reference/liken/#liken.str_startswith), [`str_endswith`](../reference/liken/#liken.str_endswith), [`str_contains`](../reference/liken/#liken.str_contains), [`str_len`](../reference/liken/#liken.str_len), [`num_range`](../reference/liken/#liken.num_range), [`date_range`](../reference/liken/#liken.date_range). For wording a tree cannot route on, write a [custom deduper](./custom-dedupers.md). The taxonomy table under [Built-in Dedupers](#built-in-dedupers) describes each deduper in one line.
 
 ## Choosing a Threshold
 
