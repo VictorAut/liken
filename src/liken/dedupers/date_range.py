@@ -34,10 +34,9 @@ class DateRange(
     """
     Deduplicates records whose parsed dates are at most `window` days apart.
 
-    Every value parses under the explicit `format`; the deduper never
-    guesses. Matching is on day granularity: the time-of-day part of a
-    format that carries one is ignored, and timezones are out of scope.
-    Missing values match only each other, never a value.
+    Every value parses under the explicit `format`. Matching is on day
+    granularity: the time-of-day part of a format that carries one is ignored,
+    and timezones are excluded. Missing values match only each other.
 
     Inversion follows the per-row predicate contract: `_matches` is "the
     value parses under `format`", so `~date_range` groups values that fail
@@ -61,16 +60,10 @@ class DateRange(
     @override
     def validate(self, columns: Columns) -> None:
         super().validate(columns)
-        # `SingleColumnMixin.validate` has already required a plain `str`.
         self._validated_column = cast("str", columns)
 
     @override
     def _matches(self, value: object) -> bool:
-        # "The value parses under `format`": the row participates in date
-        # matching. A missing value never participates. Only the negated
-        # path consumes this — the positive path is pairwise (a date
-        # matches relative to its neighbours) and overrides
-        # `_gen_similarity_pairs`.
         if is_missing(value):
             return False
         try:
@@ -109,23 +102,25 @@ class DateRange(
         # Floor to whole days before the integer cast: a raw cast to int64
         # truncates toward the epoch and shifts pre-epoch timestamps by a
         # day. Time-of-day is then divided away; day granularity.
-        return pc.divide(pc.floor_temporal(parsed, unit="day").cast(pa.int64()), pa.scalar(_SECONDS_PER_DAY))
+        return pc.divide(
+            pc.floor_temporal(parsed, unit="day").cast(pa.int64()),
+            pa.scalar(_SECONDS_PER_DAY),
+        )
 
     def _require_string_array(self, array: pa.Array) -> None:
         """Raise unless `array` is a string array, or the all-empty `null`
         array (nothing to parse)."""
         # The all-empty array arrives typed `null`; with no values there is
         # nothing to parse, so the string check passes it through.
-        if array.type != pa.null() and not (pa.types.is_string(array.type) or pa.types.is_large_string(array.type)):
+        if (
+            array.type != pa.null()
+            #
+            and not (pa.types.is_string(array.type) or pa.types.is_large_string(array.type))
+        ):
             raise InvalidArgumentTypeError(f"`date_range` requires a string column, got Arrow type '{array.type}'")
 
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
-        # Positive matching is pairwise and overrides `_gen_similarity_pairs`,
-        # so on the positive path this never runs. The negated path calls it
-        # before falling back, which puts the column type check on
-        # `~date_range` too: without it, a non-string column fails to parse
-        # per value and the negation silently matches every row.
         self._require_string_array(array)
         return None
 
