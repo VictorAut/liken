@@ -210,6 +210,61 @@ Liken comes with many deduplication methods built-in:
 
 To *use* dedupers, you have to *apply* them, which is covered in the next tutorial.
 
+## Choosing a Deduper
+
+One route from your data problem to a built-in deduper. Start at the top and answer for the column you want to deduplicate. Cost classes describe how matching work grows with the number of rows, `n`.
+
+``` mermaid
+flowchart TD
+
+    q{{"`What are you deduplicating, and how do true duplicates differ?`"}}
+
+    any["`**Any column**: a rule on membership or nulls`"]
+    s["`**One string column**`"]
+    num["`**One numeric or date column**`"]
+    comp["`**Several columns together**`"]
+    para["`Different wording, same meaning (paraphrase)`"]
+
+    q --> any
+    q --> s
+    q --> num
+    q --> comp
+    q --> para
+
+    any --> isin
+    isin["`[`isin`](../reference/liken/#liken.isin) · [`isna`](../reference/liken/#liken.isna)`"]
+
+    s --> sexact
+    sexact["`Exact copies — [exact](../reference/liken/#liken.exact), O(n)`"]
+    s --> stok
+    stok["`Same words, any order — [sorted_tokens](../reference/liken/#liken.sorted_tokens), O(n)`"]
+    s --> srule
+    srule["`A rule on start, end, contents or length — [str_startswith](../reference/liken/#liken.str_startswith) · [str_endswith](../reference/liken/#liken.str_endswith) · [str_contains](../reference/liken/#liken.str_contains) · [str_len](../reference/liken/#liken.str_len)`"]
+    s --> sfuzzy
+    sfuzzy["`Typos or small edits — [fuzzy](../reference/liken/#liken.fuzzy), O(n²), with topn=k still all-pairs scoring`"]
+    s --> ssn
+    ssn["`Typos inside a bounded window — [sorted_neighbourhood](../reference/liken/#liken.sorted_neighbourhood), O(n·window)`"]
+    s --> sed
+    sed["`Strict edit budget — [edit_distance](../reference/liken/#liken.edit_distance), O(n²)`"]
+    s --> stfidf
+    stfidf["`Large columns, token similarity — [tfidf](../reference/liken/#liken.tfidf) · [lsh](../reference/liken/#liken.lsh), indexed`"]
+
+    num --> nrule
+    nrule["`Value or date in range — [num_range](../reference/liken/#liken.num_range) · [date_range](../reference/liken/#liken.date_range)`"]
+    num --> nwithin
+    nwithin["`Within a tolerance — [within](../reference/liken/#liken.within), O(n log n)`"]
+
+    comp --> cjac
+    cjac["`Categorical values, set-like — [jaccard](../reference/liken/#liken.jaccard) · [token_overlap](../reference/liken/#liken.token_overlap), O(n²)`"]
+    comp --> cvec
+    cvec["`Numeric vectors — [cosine](../reference/liken/#liken.cosine), O(n²) · [knn](../reference/liken/#liken.knn), O(n log n)`"]
+
+    para --> pexit
+    pexit["`No built-in deduper fits yet — write a [custom deduper](./custom-dedupers.md)`"]
+```
+
+Every rule-based deduper above — `isin`, `isna`, the `str_*` predicates, `num_range` and `date_range` — scans the column once, O(n). The taxonomy table under [Built-in Dedupers](#built-in-dedupers) describes each deduper in one line.
+
 ## Choosing a Threshold
 
 Similarity dedupers compare values pairwise and keep the pairs whose score meets their `threshold`. All thresholds are on a 0–1 scale, and matching is inclusive: a pair scoring exactly *at* the threshold matches. At the extreme, `threshold=0` matches every pair, including pairs with no similarity at all. Thresholds differ in what they measure:
