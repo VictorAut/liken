@@ -110,6 +110,25 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 1}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
     #
+    # SORTED NEIGHBOURHOOD:
+    # the windowed variant of all-pairs fuzzy: pair set is a strict
+    # subset at the same threshold and scorer. The null star pair
+    # (rows 4, 8) survives regardless of window. window=2 scores only
+    # consecutive sorted pairs, so the ladder shows truncation where a
+    # matching pair sits further than one sorted position: with
+    # weighted_ratio at 0.85 the all-pairs run merges rows 0, 6, 7 and
+    # 9 while window=2 leaves rows 1 and 6 out of the 0-group (the
+    # 0-6 pair spans several sorted positions). window=3 recovers the
+    # (2, 5) and (3, 5) Calle pairs at 0.55 that window=2 drops. At
+    # window=10 (>= n) the groups equal the all-pairs fuzzy rows.
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.95, "window": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.85, "window": 2, "scorer": "weighted_ratio"}, [0, 1, 2, 3, 4, 5, 1, 0, 4, 0]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.75, "window": 2}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 3}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 2, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.25, "window": 10}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
+    #
     # EDIT DISTANCE:
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),

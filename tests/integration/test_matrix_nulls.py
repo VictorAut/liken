@@ -247,6 +247,16 @@ CASES = [
         lk.col(("h", "w")).knn(threshold=0.9, k=2, metric="cosine"),
         [0, 1, 2, 1],
     ),
+    # sorted_neighbourhood: nulls group together (star-shaped) and never
+    # with a value, independent of the window; the two distinct values
+    # are far apart in sorted order and stay apart even at a wide window
+    (
+        "sorted-neighbourhood-null-vs-values",
+        ["address"],
+        [("zzz last",), (None,), (None,), ("aaa first",)],
+        lk.col("address").sorted_neighbourhood(window=10),
+        [0, 1, 1, 3],
+    ),
     # sorted_tokens: nulls group together only; distinct token sets never
     # merge with each other or with the nulls
     (
