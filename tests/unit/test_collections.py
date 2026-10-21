@@ -630,11 +630,12 @@ BUILTIN_DEDUPER_NAMES = [
     "isna",
     "num_range",
     "sorted_tokens",
-    "token_overlap",
     "str_contains",
     "str_endswith",
     "str_len",
     "str_startswith",
+    "tfidf",
+    "token_overlap",
     "within",
 ]
 

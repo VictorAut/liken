@@ -2236,6 +2236,18 @@ def test_token_overlap_containment_matches_where_jaccard_would_not():
     assert list(lk.jaccard(threshold=0.95)._gen_similarity_pairs(table)) == []
 
 
+def test_token_overlap_subset_in_the_later_row_also_matches():
+    """The denominator is min(|A|,|B|) regardless of which row holds the subset.
+
+    The headline case with the rows swapped: a regression using
+    len(sets[idx]) as the denominator would score this pair 2/4 and
+    reject it at 0.95.
+    """
+    table = pa.table({"x": ["a", "a"], "y": ["b", "b"], "z": ["c", None], "w": ["d", None]})
+
+    assert list(lk.token_overlap(threshold=0.95)._gen_similarity_pairs(table)) == [(0, 1)]
+
+
 def test_token_overlap_matches_a_pair_exactly_at_the_threshold():
     """A pair sharing 1 of 2 members of the smaller set has containment exactly 0.5."""
     table = pa.table({"x": ["a", "a"], "y": ["b", "c"], "z": [None, "d"], "w": [None, "e"]})
