@@ -201,6 +201,7 @@ Liken comes with many deduplication methods built-in:
 | *Predicate* |*single-column*| [`str_len`](../reference/liken/#liken.str_len) | Records where the string length is bounded by a minimum and maximum length. |
 | *Predicate* |*single-column*| [`num_range`](../reference/liken/#liken.num_range) | Records where the numeric value falls inside the inclusive interval. |
 | *Predicate* |*single-column*| [`date_range`](../reference/liken/#liken.date_range) | Records whose dates, parsed under an explicit format, are at most `window` days apart. |
+| *Predicate* |*single-column*| [`sorted_tokens`](../reference/liken/#liken.sorted_tokens) | Records whose whitespace-separated words are the same, in any order. |
 
 *Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
 
@@ -275,6 +276,7 @@ similarity dedupers, missing values group with each other:
 | `isna` | Matches exactly the missing values; `~isna` matches exactly the non-missing values. |
 | `num_range` | Never matches: a missing value is outside any interval, positive or negated (`~num_range`). |
 | `date_range` | Never matches: a missing value parses to nothing, positive or negated (`~date_range`). |
+| `sorted_tokens` | Never matches: a missing value has no words to sort, positive or negated (`~sorted_tokens`). |
 | Other predicates | A missing value never satisfies the predicate, on either polarity — except positive `isin`, where a missing value matches iff `None` is listed in `values`. |
 
 Two practical consequences are worth noting:
