@@ -151,9 +151,9 @@ def knn(threshold: float = 0.95, *, k: int, metric: MetricName = "euclidean") ->
         Missing numeric values are filled with 0.0 in that row's vector;
         the column is not dropped. A 0.0 entry contributes nothing to the
         row's norm or its distances. A row that is entirely missing
-        (all zeros after the fill) has zero norm: it is normalized to a
-        zero vector and matches nothing, not even another all-missing
-        row.
+        (all zeros after the fill) has zero norm: it matches nothing,
+        not even another all-missing row, and it does not take a slot in
+        another row's k best.
 
         Ties at rank k are resolved by cKDTree's own order. The same
         input order gives the same output, but the tie order is not row
