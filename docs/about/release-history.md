@@ -14,6 +14,8 @@ title: Release History
   at most `tol`.
 - New `date_range` deduper: parses values under an explicit `format` and
   matches two dates whose difference is at most `window` days.
+- New `sorted_tokens` deduper: matches values built from the same
+  whitespace-separated words in any order.
 
 
 ## v0.14.1 (2026-10-20)

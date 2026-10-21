@@ -18,6 +18,7 @@ from liken.dedupers.isna import isna
 from liken.dedupers.jaccard import jaccard
 from liken.dedupers.lsh import lsh
 from liken.dedupers.num_range import num_range
+from liken.dedupers.sorted_tokens import sorted_tokens
 from liken.dedupers.str_contains import str_contains
 from liken.dedupers.str_endswith import str_endswith
 from liken.dedupers.str_len import str_len
@@ -42,6 +43,7 @@ __all__ = [
     "isin",
     "isna",
     "num_range",
+    "sorted_tokens",
     "str_contains",
     "str_endswith",
     "str_len",

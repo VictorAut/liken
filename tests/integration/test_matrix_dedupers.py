@@ -245,6 +245,13 @@ PARAMS = [
     # window=2: Jan 5, Jan 7 and Jan 8 merge — the inclusive bound at
     # exactly 2 days crosses the plain date-key boundary
     (lk.date_range, "date_joined", {"format": "%Y-%m-%d", "window": 2}, [0, 0, 0, 0, 4, 5, 6, 6, 4, 5]),
+    #
+    # SORTED TOKENS:
+    # name column: rows 0, 1, 8 share the tokens {john, smith} in any
+    # order; rows 2, 3, 6 share {ann, lee, mary}; row 4 is "" and row 9 is
+    # whitespace-only — zero-token values match nothing on the positive
+    # path; row 5 is null.
+    (lk.sorted_tokens, "name", {}, [0, 0, 2, 2, 4, 5, 2, 7, 0, 9]),
 ]
 
 # fmt: on

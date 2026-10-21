@@ -393,6 +393,22 @@ class Col:
         """
         return self.__getattr__("str_startswith")(*args, **kwargs)
 
+    def sorted_tokens(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.sorted_tokens` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.sorted_tokens`][liken.sorted_tokens] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").sorted_tokens())
+
+        """
+        return self.__getattr__("sorted_tokens")(*args, **kwargs)
+
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor = ()):
         self._columns: Columns = columns
         self._unit: PipelineUnit

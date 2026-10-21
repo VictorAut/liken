@@ -61,6 +61,14 @@ PARAMS = [
     ([lk.col("property_height").isna(), lk.col("account").exact()], [0, 0, 2, 3, 4, 5, 6, 7, 8, 9]),
     # two threshold dedupers
     ([lk.col("birth_country").exact(), lk.col("marital_status").exact()], [0, 0, 2, 3, 4, 3, 6, 7, 6, 9]),
+    #
+    # sorted_tokens AND-composition: the predicates (sorted_tokens) select
+    # the candidate rows — members of the token buckets {0,1,8} and
+    # {2,3,6} — and the non-predicate deduper (exact on account) groups
+    # within that set: rows 0,1,6 all share "reddit" and merge across the
+    # two token buckets; the rest of the candidates are singletons on
+    # account.
+    ([lk.col("name").sorted_tokens(), lk.col("account").exact()], [0, 0, 2, 3, 4, 5, 0, 7, 8, 9]),
 ]
 
 # fmt: on
