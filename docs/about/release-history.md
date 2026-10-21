@@ -10,6 +10,8 @@ title: Release History
   `damerau_levenshtein`, `jaro_winkler`, `indel` or `hamming`, in
   addition to the, previous, default `levenshtein`.
 - The `fuzzy` deduper accepts `scorer="jaro_winkler"`.
+- The `fuzzy` deduper accepts a `topn` option for candidate-limited
+  approximate matching.
 - New `within` deduper: matches two numbers whose absolute difference is
   at most `tol`.
 - New `date_range` deduper: parses values under an explicit `format` and
