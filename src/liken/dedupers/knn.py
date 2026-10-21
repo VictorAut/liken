@@ -45,7 +45,6 @@ class Knn(
         metric = cast("MetricName", require_choice("metric", metric, _METRIC_NAMES))
         init_kwargs: dict[str, Any] = {"threshold": threshold, "k": k, "metric": metric}
         super().__init__(**init_kwargs)
-        self._threshold = threshold
         self._k = k
         self._metric = metric
 
@@ -57,14 +56,16 @@ class Knn(
         matrix = np.nan_to_num(matrix, nan=0.0)
 
         norms = np.linalg.norm(matrix, axis=1)
-        zero_norm = norms == 0
 
-        # A zero-norm row (all values missing or all 0.0) matches nothing:
-        # kept out of the tree entirely, so it neither emits nor consumes a
-        # slot in another row's k best. Under cosine a clamped zero vector
-        # would sit at similarity 0.5 from everything; under euclidean at
-        # 1/(1+d) from everything nearby.
-        present_rows = np.flatnonzero(~zero_norm)
+        # A zero-norm row (all values missing or all 0.0) or a non-finite
+        # row (carrying an infinity) matches nothing: kept out of the tree
+        # entirely, so it neither emits nor consumes a slot in another
+        # row's k best. Under cosine a clamped zero vector would sit at
+        # similarity 0.5 from everything, and an inf row normalizes to an
+        # exact zero vector (inf/inf), which lands at d=1, s=0.5 from
+        # every unit vector — mirroring cosine, where inf rows match
+        # nothing through the 0.0 fill.
+        present_rows = np.flatnonzero((norms > 0) & np.isfinite(norms))
         if present_rows.size < 2:
             return
         data = matrix[present_rows]
@@ -90,8 +91,8 @@ class Knn(
 
         for pos in range(m):
             i = int(present_rows[pos])
-            row_distances = cast("Any", distances[pos])
-            row_indices = cast("Any", indices[pos])
+            row_distances: Any = distances[pos]
+            row_indices: Any = indices[pos]
             partners = 0
             for distance, j in zip(row_distances, row_indices, strict=True):
                 if partners == self._k or j >= m:
@@ -123,10 +124,11 @@ def knn(threshold: float = 0.95, *, k: int, metric: MetricName = "euclidean") ->
 
     Each row queries its k nearest neighbours; a pair matches when either
     side holds the other in its k best AND the similarity clears the
-    threshold. Matching is approximate: a cluster of more than k
-    near-identical records may fail to link transitively, because
-    union-find still merges transitively but the dropped pairs can split
-    it. `k >= n - 1` compares every value against every other.
+    threshold. Matching is approximate: in a cluster of more than k
+    near-identical records some pairs are dropped, so the cluster may
+    fail to link transitively even though union-find merges whatever
+    pairs survive. `k >= n - 1` compares every value against every
+    other (subject to the exclusion of zero-norm rows below).
 
     Args:
         threshold: the minimum threshold at which similarity between two
@@ -138,7 +140,8 @@ def knn(threshold: float = 0.95, *, k: int, metric: MetricName = "euclidean") ->
             expected duplicate-cluster size.
         metric: the distance the neighbours are found under.
             - "euclidean" (default): similarity is `1 / (1 + d)`, where
-              `d` is the Euclidean distance.
+              `d` is the Euclidean distance. A threshold `t` is
+              equivalent to a maximum neighbour distance of `1/t - 1`.
             - "cosine": rows are pre-normalized to unit length and
               neighbours found under Euclidean distance; the similarity
               is `1 - d^2 / 2`, which equals the cosine similarity of
@@ -151,9 +154,9 @@ def knn(threshold: float = 0.95, *, k: int, metric: MetricName = "euclidean") ->
         Missing numeric values are filled with 0.0 in that row's vector;
         the column is not dropped. A 0.0 entry contributes nothing to the
         row's norm or its distances. A row that is entirely missing
-        (all zeros after the fill) has zero norm: it matches nothing,
-        not even another all-missing row, and it does not take a slot in
-        another row's k best.
+        (all zeros after the fill) — or that carries an infinity — has a
+        zero or non-finite norm: it matches nothing, not even another
+        such row, and it does not take a slot in another row's k best.
 
         Ties at rank k are resolved by cKDTree's own order. The same
         input order gives the same output, but the tie order is not row
