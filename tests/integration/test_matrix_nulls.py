@@ -209,6 +209,15 @@ CASES = [
         lk.col("address").isin(values=["x"]),
         [0, 1, 2],
     ),
+    # nulls pair with each other only; the values sit far enough apart
+    # that they too stay singletons
+    (
+        "within-null-vs-values",
+        ["number"],
+        [(1.0,), (float("nan"),), (None,), (5.0,)],
+        lk.col("number").within(tol=0.5),
+        [0, 1, 1, 3],
+    ),
 ]
 
 # fmt: on

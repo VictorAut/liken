@@ -2,6 +2,18 @@
 title: Release History
 ---
 
+## v0.15.0 (2026-10-20)
+
+**Features**
+
+- The `edit_distance` deduper accepts a `metric` option:
+  `damerau_levenshtein`, `jaro_winkler`, `indel` or `hamming`, in
+  addition to the, previous, default `levenshtein`.
+- The `fuzzy` deduper accepts `scorer="jaro_winkler"`.
+- New `within` deduper: matches two numbers whose absolute difference is
+  at most `tol`.
+
+
 ## v0.14.1 (2026-10-20)
 
 **Misc**

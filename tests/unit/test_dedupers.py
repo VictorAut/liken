@@ -1,4 +1,5 @@
 import math
+from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -511,6 +512,66 @@ def test_fuzzy_rejects_non_str_scorer():
         lk.fuzzy(scorer=1)
 
 
+def test_fuzzy_jaro_winkler_scorer_maps_onto_0_100_scale():
+    """The registry wrapper scales normalized_similarity to the 0-100 scale.
+
+    Raw `JaroWinkler.normalized_similarity` returns 0-1; the deduper
+    compares scores against `100 * threshold`, so the registry value must
+    return 100.0 for identical values and 0.0 for disjoint ones.
+    """
+    scorer = Fuzzy(threshold=0.95, scorer="jaro_winkler").get_scorer()
+
+    assert scorer("abc", "abc") == 100.0
+    assert scorer("abc", "xyz") == 0.0
+
+
+def test_fuzzy_jaro_winkler_matches_real_pair_at_scaled_threshold():
+    """A 0.905 pair matches at threshold 0.9 and not at 0.91.
+
+    The fixture pair scores 0.905041 with JaroWinkler. A raw 0-1 score
+    compared unconverted against `100 * threshold` (90, 91) would match
+    neither, so the threshold=0.9 case fails if the scale conversion is
+    dropped; the 0.91 case then separates a converted 90.5 from a
+    threshold of 91.
+    """
+    s1 = "Calle Ancho, 12, 05688, Rioja, Navarra, Espana"
+    s2 = "Calle Sueco, 56, 05688, Rioja, Navarra"
+
+    pairs = list(lk.fuzzy(threshold=0.9, scorer="jaro_winkler")._gen_similarity_pairs(pa.array([s1, s2])))
+
+    assert pairs == [(0, 1)]
+
+    pairs = list(lk.fuzzy(threshold=0.91, scorer="jaro_winkler")._gen_similarity_pairs(pa.array([s1, s2])))
+
+    assert pairs == []
+
+
+def test_fuzzy_jaro_winkler_identical_pair_matches_high_threshold_mismatched_does_not():
+    """Threshold is validated in the open interval (0, 1), so both probes stay in it."""
+    deduper = lk.fuzzy(threshold=0.99, scorer="jaro_winkler")
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abc", "abc"]))) == [(0, 1)]
+
+    deduper = lk.fuzzy(threshold=0.01, scorer="jaro_winkler")
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abc", "xyz"]))) == []
+
+
+def test_fuzzy_default_scorer_is_unchanged():
+    assert lk.fuzzy().get_scorer() is fuzz.ratio
+
+    # the existing six scorers still construct
+    for name in [
+        "simple_ratio",
+        "partial_ratio",
+        "token_sort_ratio",
+        "token_set_ratio",
+        "weighted_ratio",
+        "quick_ratio",
+    ]:
+        assert lk.fuzzy(scorer=name).get_scorer() is not None
+
+
 ##################
 # edit_distance #
 ##################
@@ -562,6 +623,230 @@ def test_edit_distance_non_integer_max_distance_raises_type_error(value):
         lk.edit_distance(max_distance=value)
 
 
+def test_edit_distance_default_metric_is_levenshtein():
+    assert lk.edit_distance()._metric == "levenshtein"
+
+
+@pytest.mark.parametrize("metric", ["damerau_levenshtein", "jaro_winkler", "indel", "hamming"])
+def test_edit_distance_accepts_each_non_default_metric(metric):
+    assert lk.edit_distance(max_distance=0.5, metric=metric)._metric == metric
+
+
+def test_edit_distance_unknown_metric_raises_value_error():
+    with pytest.raises(InvalidArgumentValueError, match="`metric` must be one of"):
+        lk.edit_distance(metric="levenshteinn")
+
+
+def test_edit_distance_unknown_metric_error_names_all_options():
+    with pytest.raises(InvalidArgumentValueError) as exc_info:
+        lk.edit_distance(metric="nope")
+
+    message = str(exc_info.value)
+    for name in ("levenshtein", "damerau_levenshtein", "jaro_winkler", "indel", "hamming"):
+        assert name in message
+
+
+def test_edit_distance_non_str_metric_raises_type_error():
+    with pytest.raises(InvalidArgumentTypeError, match="`metric` must be of type 'str', got 'int'"):
+        lk.edit_distance(metric=1)
+
+
+def test_edit_distance_normalized_metric_rejects_default_max_distance():
+    """The default absolute bound 2 is out of range for the normalized contract."""
+    with pytest.raises(InvalidArgumentValueError, match="`max_distance` must be a real number in the range \\[0, 1\\]"):
+        lk.edit_distance(metric="jaro_winkler")
+
+
+def test_edit_distance_normalized_metric_accepts_float_in_range():
+    assert lk.edit_distance(max_distance=0.25, metric="indel")._max_distance == 0.25
+
+
+def test_edit_distance_normalized_metric_accepts_integer_zero_and_one():
+    """Ints 0 and 1 sit on the inclusive bounds and are real numbers."""
+    assert lk.edit_distance(max_distance=0, metric="hamming")._max_distance == 0
+    assert lk.edit_distance(max_distance=1, metric="hamming")._max_distance == 1
+
+
+@pytest.mark.parametrize("value", [1.5, -0.1, True, float("nan"), "0.5", np.float32(0.5)])
+def test_edit_distance_normalized_metric_rejects_bad_max_distance(value):
+    with pytest.raises((InvalidArgumentTypeError, InvalidArgumentValueError)):
+        lk.edit_distance(max_distance=value, metric="indel")
+
+
+def test_edit_distance_levenshtein_rejects_float_max_distance():
+    """The absolute edit-count contract keeps its integer-only typing."""
+    with pytest.raises(InvalidArgumentTypeError, match="`max_distance` must be an integer"):
+        lk.edit_distance(max_distance=0.5)
+
+
+#####################
+# metric behaviour  #
+#####################
+
+
+def test_edit_distance_damerau_levenshtein_matches_transposition():
+    """Damerau-Levenshtein counts a transposition as one edit: nd('abcd','abdc') = 0.25."""
+    deduper = EditDistance(max_distance=0.25, metric="damerau_levenshtein")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcd", "abdc"])))
+
+    assert pairs == [(0, 1)]
+
+    # the same shape under plain levenshtein is 2 edits: rejected at 1, matched at 2
+    assert list(lk.edit_distance(max_distance=1)._gen_similarity_pairs(pa.array(["abcd", "abdc"]))) == []
+    assert list(lk.edit_distance(max_distance=2)._gen_similarity_pairs(pa.array(["abcd", "abdc"]))) == [(0, 1)]
+
+
+def test_edit_distance_jaro_winkler_weights_shared_prefixes():
+    """A same-shape single-edit pair scores closer when it shares a prefix.
+
+    nd('abcdx','abcdy') = 0.08 with the shared prefix; nd('abcdx','xbcda')
+    = 0.267 without it. A bound between the two separates them.
+    """
+    deduper = EditDistance(max_distance=0.15, metric="jaro_winkler")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abcdx", "abcdy", "xbcda"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_indel_matches_pure_insertion():
+    """Indel nd('abc','abcd') = 0.25; a substitution would cost double."""
+    deduper = EditDistance(max_distance=0.25, metric="indel")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abc", "abcd"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_hamming_matches_substitution_pair():
+    """Hamming nd('karolin','kerstin') = 3/7 ≈ 0.4286."""
+    deduper = EditDistance(max_distance=0.45, metric="hamming")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["karolin", "kerstin"])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_edit_distance_hamming_pads_unequal_lengths():
+    """Hamming pads unequal-length values through cdist (pad=True default).
+
+    Verified against rapidfuzz 3.14.3: nd('abc','abcde') = 0.4. Documented
+    behaviour, pinned here as documentation-by-test.
+    """
+    deduper = EditDistance(max_distance=0.4, metric="hamming")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["abc", "abcde"])))
+
+    assert pairs == [(0, 1)]
+
+
+@pytest.mark.parametrize("metric", ["damerau_levenshtein", "indel", "hamming"])
+def test_edit_distance_normalized_metric_inclusive_boundary(metric):
+    """A pair exactly at `max_distance` matches; one beyond the tolerance does not.
+
+    Exact-representable bounds (0.25 on len-4 strings) so the at-bound
+    expectation does not depend on the drift guard. A bound one step below
+    rejects: 0.25 exceeds it by more than the guard.
+    """
+    at_bound = EditDistance(max_distance=0.25, metric=metric)
+    below_bound = EditDistance(max_distance=0.24, metric=metric)
+
+    values = ["abcd", "abce"]  # one substitution over length 4: nd = 0.25
+
+    assert list(at_bound._gen_similarity_pairs(pa.array(values))) == [(0, 1)]
+    assert list(below_bound._gen_similarity_pairs(pa.array(values))) == []
+
+
+def test_edit_distance_jaro_winkler_rejects_pair_above_bound():
+    """A pair whose nd is clearly above the bound never matches."""
+    deduper = EditDistance(max_distance=0.25, metric="jaro_winkler")
+
+    # nd('abcdx','xbcda') = 0.2667, no shared prefix
+    assert list(deduper._gen_similarity_pairs(pa.array(["abcdx", "xbcda"]))) == []
+
+
+def test_edit_distance_jaro_winkler_matches_at_stubbed_exact_bound(monkeypatch):
+    """A computed distance exactly at `max_distance` matches (guard direction).
+
+    rapidfuzz's JW normalized distance can drift below the true value, so a
+    real boundary pair is admitted from below; the stub pins the at-bound
+    admission itself.
+    """
+    deduper = EditDistance(max_distance=0.11666666666666667, metric="jaro_winkler")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.11666666666666667]],
+    )
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["abcd", "abce"]))) == [(0, 1)]
+
+
+@pytest.mark.parametrize("metric", ["levenshtein", "damerau_levenshtein", "jaro_winkler", "indel", "hamming"])
+def test_edit_distance_nulls_pair_with_nulls_only_for_every_metric(metric):
+    """Missing values pair only with each other, under every metric."""
+    max_distance = 2 if metric == "levenshtein" else 0.5
+    deduper = EditDistance(max_distance=max_distance, metric=metric)
+
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["n", None, None, "na"])))
+
+    assert pairs == [(0, 3), (1, 2)]
+
+
+@pytest.mark.parametrize(
+    "max_distance",
+    [i / 100 for i in range(1, 100)],
+    ids=[f"{i / 100:.2f}" for i in range(1, 100)],
+)
+def test_edit_distance_normalized_metric_matches_exactly_at_every_two_decimal_bound(max_distance, monkeypatch):
+    """A pair whose distance is exactly `max_distance` matches, for every two-decimal bound.
+
+    The stubbed scorer returns the bound exactly, bit-identical to
+    `max_distance`, so the comparison is exact for all 99 bounds: the
+    at-bound pair must match with no drift in play.
+    """
+    exact_distance = float(Decimal(str(max_distance)))
+    deduper = EditDistance(max_distance=max_distance, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[exact_distance]],
+    )
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
+
+    assert pairs == [(0, 1)]
+
+
+@pytest.mark.parametrize("drift", [5e-10, 2e-9], ids=["within_tolerance", "beyond_tolerance"])
+def test_edit_distance_normalized_metric_tolerance_guard(drift, monkeypatch):
+    """A distance within the tolerance above `max_distance` matches; beyond it does not.
+
+    Pins the guard's widening behaviour itself: `max_distance + 5e-10`
+    (inside `_BOUNDARY_TOLERANCE` = 1e-9) is admitted,
+    `max_distance + 2e-9` is rejected.
+    """
+    deduper = EditDistance(max_distance=0.5, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.5 + drift]],
+    )
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
+
+    assert pairs == ([(0, 1)] if drift == 5e-10 else [])
+
+
+def test_edit_distance_normalized_metric_does_not_match_above_the_bound(monkeypatch):
+    """A distance more than the tolerance above the boundary never matches."""
+    deduper = EditDistance(max_distance=0.5, metric="indel")
+    monkeypatch.setattr(
+        "liken.dedupers.edit_distance.process.cdist",
+        lambda queries, choices, **kwargs: [[0.51]],
+    )
+
+    assert list(deduper._gen_similarity_pairs(pa.array(["x", "y"]))) == []
+
+
 def test_edit_distance_requires_single_string_column():
     with pytest.raises(InvalidArgumentTypeError):
         EditDistance().validate(("a", "b"))
@@ -592,6 +877,211 @@ def test_edit_distance_literal_na_is_an_ordinary_value():
     pairs = sorted(deduper._gen_similarity_pairs(pa.array(["na", None, "na", ""])))
 
     assert pairs == [(0, 2), (0, 3), (2, 3)]
+
+
+#############
+# within    #
+#############
+
+
+def test_within_requires_tol():
+    """`tol` has no default: a tolerance is data-scale-dependent."""
+    with pytest.raises(TypeError):
+        lk.within()
+
+
+@pytest.mark.parametrize(
+    "tol",
+    [None, "0.5", [1], True],
+    ids=["none", "str", "list", "bool"],
+)
+def test_within_rejects_non_number_tol(tol):
+    with pytest.raises(InvalidArgumentTypeError, match="`tol` must be a real number"):
+        lk.within(tol=tol)
+
+
+def test_within_rejects_huge_integer_tol():
+    """An int too large for a float is refused at construction, not at
+    execution with a raw OverflowError from the window arithmetic."""
+    with pytest.raises(InvalidArgumentValueError, match="`tol` must be a finite number"):
+        lk.within(tol=10**400)
+
+
+@pytest.mark.parametrize(
+    "tol",
+    [-1, -0.5, float("nan"), float("inf"), float("-inf")],
+    ids=["negative", "negative-float", "nan", "inf", "neg-inf"],
+)
+def test_within_rejects_bad_tol_value(tol):
+    with pytest.raises(InvalidArgumentValueError):
+        lk.within(tol=tol)
+
+
+@pytest.mark.parametrize(
+    "tol",
+    [0, 0.5, 100],
+    ids=["zero-int", "float", "int"],
+)
+def test_within_accepts_valid_tol(tol):
+    assert lk.within(tol=tol)._tol == tol
+
+
+@pytest.mark.parametrize(
+    "values, tol, expected",
+    [
+        # close pair within tolerance
+        ([10.0, 10.5, 20.0], 0.6, [(0, 1)]),
+        # three-way chain: 1.0-1.01 and 1.01-1.02 match, 1.0-1.02 does not
+        ([1.0, 1.01, 1.02], 0.01, [(0, 1), (1, 2)]),
+        # far apart: nothing matches
+        ([1.0, 5.0, 9.0], 1.0, []),
+        # unsorted input still pairs correctly
+        ([30.0, 10.1, 20.0, 10.0], 0.2, [(1, 3)]),
+        # duplicates match each other
+        ([7.0, 7.0, 7.0], 0.0, [(0, 1), (0, 2), (1, 2)]),
+    ],
+)
+def test_within_matches_pairs_within_tolerance(values, tol, expected):
+    pairs = sorted(lk.within(tol=tol)._gen_similarity_pairs(pa.array(values)))
+
+    assert pairs == expected
+
+
+@pytest.mark.parametrize(
+    "a, b, tol",
+    [
+        (1.0, 1.01, 0.01),
+        (100.0, 100.4, 0.4),
+    ],
+)
+def test_within_matches_inclusively_at_the_bound(a, b, tol):
+    pairs = list(lk.within(tol=tol)._gen_similarity_pairs(pa.array([a, b])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_within_rejects_pair_just_above_bound():
+    pairs = list(lk.within(tol=0.01)._gen_similarity_pairs(pa.array([1.0, 1.011])))
+
+    assert pairs == []
+
+
+def test_within_boundary_guard_admits_rounding_drift():
+    """`1.02 - 1.01` computes to 0.010000000000000009, above tol=0.01.
+
+    The guard widens the bound by 1e-9 so the spec's own example matches.
+    """
+    pairs = list(lk.within(tol=0.01)._gen_similarity_pairs(pa.array([1.01, 1.02])))
+
+    assert pairs == [(0, 1)]
+
+
+def test_within_zero_tol_is_exact_equality():
+    """`tol=0` reduces to numeric equality: only exactly equal values pair.
+
+    No boundary guard applies at tol=0: equal values subtract to exactly
+    0.0, so equality is exact, not guarded.
+    """
+    pairs = sorted(lk.within(tol=0)._gen_similarity_pairs(pa.array([1.0, 1.0, 1.5, 2])))
+
+    assert pairs == [(0, 1)]
+
+
+@pytest.mark.parametrize(
+    "values",
+    [[1.0, None, None, 5.0], [1.0, float("nan"), None, 5.0]],
+    ids=["none-nulls", "nan-and-null"],
+)
+def test_within_nulls_pair_with_nulls_only(values):
+    """Nulls pair with nulls only; the two values are too far apart to pair."""
+    pairs = sorted(lk.within(tol=0.5)._gen_similarity_pairs(pa.array(values)))
+
+    assert pairs == [(1, 2)]
+
+
+def test_within_literal_zero_is_a_value_not_missing():
+    """0.0 is a value: it pairs with 0.0, not with a null."""
+    pairs = sorted(lk.within(tol=0.1)._gen_similarity_pairs(pa.array([0.0, None, 0.05])))
+
+    assert pairs == [(0, 2)]
+
+
+def test_within_empty_and_single_value_arrays_yield_nothing():
+    deduper = lk.within(tol=1.0)
+
+    assert list(deduper._gen_similarity_pairs(pa.array([]))) == []
+    assert list(deduper._gen_similarity_pairs(pa.array([1.0]))) == []
+
+
+def test_within_infinite_values_never_match():
+    """Two infinities subtract to NaN, which matches nothing."""
+    pairs = list(lk.within(tol=1.0)._gen_similarity_pairs(pa.array([float("inf"), float("inf")])))
+
+    assert pairs == []
+
+
+def test_within_large_integers_survive_float_conversion():
+    """Integers beyond float53 precision collapse to the same float and pair.
+
+    Python ints keep full precision; converting to float before comparison
+    would merge 2**53 and 2**53 + 1. The pair decision runs on the raw
+    values.
+    """
+    big = 2**53
+    pairs = list(lk.within(tol=0)._gen_similarity_pairs(pa.array([big, big + 1], type=pa.int64())))
+
+    assert pairs == []
+
+
+def test_within_pair_emission_is_deterministic():
+    """Repeated runs over the same input emit identical pair lists.
+
+    Multi-pair input: emission order is window-scan order over the sorted
+    values, not globally sorted; only run-to-run stability is claimed.
+    """
+    deduper = lk.within(tol=0.5)
+
+    first = list(deduper._gen_similarity_pairs(pa.array([3.0, 1.2, 1.0, 1.1])))
+    second = list(deduper._gen_similarity_pairs(pa.array([3.0, 1.2, 1.0, 1.1])))
+
+    assert first == [(2, 3), (1, 2), (1, 3)]
+    assert first == second
+
+
+@pytest.mark.parametrize(
+    "array",
+    [
+        pa.array(["a", "b"]),
+        pa.array([True, False]),
+        pa.array([date(2024, 1, 1), date(2024, 1, 2)]),
+    ],
+    ids=["strings", "booleans", "dates"],
+)
+def test_within_rejects_non_numeric_arrays_at_execution(array):
+    with pytest.raises(InvalidArgumentTypeError, match="numeric"):
+        list(lk.within(tol=1.0)._gen_similarity_pairs(array))
+
+
+@pytest.mark.parametrize(
+    "array",
+    [
+        pa.array([1, 2, 3]),
+        pa.array([Decimal("1.5"), Decimal("2.5")]),
+        pa.array([1.0, 2.0]),
+    ],
+    ids=["integers", "decimals", "floats"],
+)
+def test_within_accepts_numeric_arrays(array):
+    assert isinstance(list(lk.within(tol=1.0)._gen_similarity_pairs(array)), list)
+
+
+def test_within_requires_single_string_column():
+    with pytest.raises(InvalidArgumentTypeError):
+        lk.within(tol=1.0).validate(("a", "b"))
+
+
+def test_within_str_renders_tol():
+    assert "within(tol=0.5)" in str(lk.within(tol=0.5))
 
 
 ################################

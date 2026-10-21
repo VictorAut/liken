@@ -11,6 +11,7 @@ from typing import final
 import pyarrow as pa
 from rapidfuzz import fuzz
 from rapidfuzz import process
+from rapidfuzz.distance import JaroWinkler
 
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
@@ -29,6 +30,7 @@ ScorerName: TypeAlias = Literal[
     "token_set_ratio",
     "weighted_ratio",
     "quick_ratio",
+    "jaro_winkler",
 ]
 
 
@@ -41,6 +43,20 @@ ScorerName: TypeAlias = Literal[
 # meaningful precision.
 _BOUNDARY_TOLERANCE: Final[float] = 1e-9
 
+
+def _jaro_winkler(s1: str, s2: str, score_cutoff: float | None = None) -> float:
+    """JaroWinkler normalized similarity on the 0-100 scale.
+
+    `JaroWinkler.normalized_similarity` returns 0-1; the other scorers
+    and the threshold comparison use 0-100, so it is scaled here at the
+    registry boundary.
+
+    `score_cutoff` is accepted and ignored: `process.cdist` passes it as
+    `None` and a two-argument callable would raise `TypeError`.
+    """
+    return 100 * JaroWinkler.normalized_similarity(s1, s2)
+
+
 _SCORERS: Final[dict[str, Callable]] = {
     "simple_ratio": fuzz.ratio,
     "partial_ratio": fuzz.partial_ratio,
@@ -48,6 +64,7 @@ _SCORERS: Final[dict[str, Callable]] = {
     "token_set_ratio": fuzz.token_set_ratio,
     "weighted_ratio": fuzz.WRatio,
     "quick_ratio": fuzz.QRatio,
+    "jaro_winkler": _jaro_winkler,
 }
 
 _SCORER_NAMES: Final[tuple[str, ...]] = tuple(_SCORERS)
@@ -141,6 +158,10 @@ def fuzzy(
             - "token_set_ratio"
             - "weighted_ratio"
             - "quick_ratio"
+            - "jaro_winkler": the Jaro-Winkler similarity, weighted
+              towards shared prefixes. Scores on the same 0-100 scale as
+              the other options. Suited to short strings such as names,
+              postcodes and product codes.
 
     Returns:
         Instance of `BaseDeduper`.
