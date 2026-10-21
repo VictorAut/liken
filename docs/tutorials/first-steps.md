@@ -193,6 +193,7 @@ Liken comes with many deduplication methods built-in:
 | *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH).                                            |
 | *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                |
 | *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data.                                   |
+| *Similarity* |*compound-column*| [`token_overlap`](../reference/liken/#liken.token_overlap) | Multi column set containment: a record whose values are a subset of another's matches.        |
 | *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`.                                        |
 | *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members.                               |
 | *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern. |
@@ -282,5 +283,5 @@ similarity dedupers, missing values group with each other:
 Two practical consequences are worth noting:
 
 - Missing handling is backend-independent: the pandas-family backends convert NaN to null on the way into Arrow, while polars and pyarrow keep float NaN. Both are one missing class.
-- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` excludes `None` values when building each record's set; `cosine` fills numeric NaNs with 0.
+- `exact` on compound columns collapses missing members: `(None, "x")` and `(NaN, "x")` share one key. `jaccard` and `token_overlap` exclude `None` values when building each record's set, so an all-null record matches nothing there; `cosine` fills numeric NaNs with 0.
 - The empty string is a value, not a missing one. `str_len` never matches it, whatever the bounds; under `~str_len` it matches, like every non-matching value.
