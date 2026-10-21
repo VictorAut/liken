@@ -1760,6 +1760,26 @@ def test_date_range_values_reversed_order_still_pairs():
     assert sorted(pairs) == [(0, 1)]
 
 
+def test_sorted_tokens_accepts_large_string_arrays():
+    deduper = lk.sorted_tokens()
+    deduper.validate("name")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array(["a b", "b a"], type=pa.large_string())))
+
+    assert pairs == [(0, 1)]
+
+
+def test_sorted_tokens_null_typed_array_yields_missing_pairs_only():
+    """A `null`-typed array (e.g. an all-empty column) carries no tokens:
+    only the missing-star pairs emit."""
+    deduper = lk.sorted_tokens()
+    deduper.validate("name")
+
+    pairs = list(deduper._gen_similarity_pairs(pa.array([None, None], type=pa.null())))
+
+    assert pairs == [(0, 1)]
+
+
 @pytest.mark.parametrize(
     "values",
     [["2024-01-05", None, None, "2024-01-06"]],
@@ -2044,7 +2064,7 @@ def test_sorted_tokens_empty_array_yields_no_pairs():
 
 
 def test_sorted_tokens_requires_single_string_column():
-    with pytest.raises(InvalidArgumentTypeError):
+    with pytest.raises(InvalidArgumentTypeError, match="`columns` must be of type 'str'"):
         lk.sorted_tokens().validate(("a", "b"))
 
 

@@ -629,11 +629,11 @@ BUILTIN_DEDUPER_NAMES = [
     "isin",
     "isna",
     "num_range",
+    "sorted_tokens",
     "str_contains",
     "str_endswith",
     "str_len",
     "str_startswith",
-    "sorted_tokens",
     "within",
 ]
 

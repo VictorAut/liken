@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from typing import ClassVar
+from typing import cast
 from typing import final
 
 import pyarrow as pa
@@ -46,13 +47,14 @@ class SortedTokens(
             return False
         # The negated path has passed `_vectorized_matches`, so the column
         # is string-typed and the value is a Python string.
-        return bool(str(value).split())
+        return bool(cast("str", value).split())
 
     def _require_string_array(self, array: pa.Array) -> None:
-        """Raise unless `array` is a string array, or the all-empty `null`
-        array (nothing to tokenise)."""
-        # The all-empty array arrives typed `null`; with no values there is
-        # nothing to tokenise, so the string check passes it through.
+        """Raise unless `array` is a string array, or a `null`-typed array
+        (e.g. the all-empty column: nothing to tokenise)."""
+        # A `null`-typed array has no strings to check, so the string
+        # check passes it through; a non-empty all-null array then yields
+        # only the missing-star pairs.
         if (
             array.type != pa.null()
             #
