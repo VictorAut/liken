@@ -129,10 +129,12 @@ PARAMS = [
     # KNN:
     # the cosine k=5 rows match the all-pairs cosine rows at the same
     # thresholds (k=5 exceeds every cluster on this fixture); the k=1
-    # rows show the top-k truncation — t=0.999 k=1 drops row 5 from the
-    # group 3/4 join the all-pairs row makes. Euclidean rows use raw
-    # distance thresholds: property-scale values (sq ft, rooms) make the
-    # 1/(1+d) similarities tiny on this fixture.
+    # rows show the top-k truncation: at t=0.999 the all-pairs set joins
+    # rows 4, 5 and 8 into the big 0-group (pairs (0,4),(1,4),(2,4),
+    # (4,9),(4,8),(5,8)), while k=1 keeps only (4,8),(5,8), so rows 4, 5
+    # and 8 split off. Euclidean rows use raw distance thresholds:
+    # property-scale values (sq ft, rooms) make the 1/(1+d) similarities
+    # tiny on this fixture.
     (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.999, "k": 5, "metric": "cosine"}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
     (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.99, "k": 5, "metric": "cosine"}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),
     (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.98, "k": 5, "metric": "cosine"}, [0, 0, 0, 0, 0, 0, 6, 6, 0, 0]),

@@ -276,7 +276,7 @@ class Col:
         Example:
             Define as part of a pipeline:
 
-                pipeline = lk.pipeline().step(lk.col("col").knn())
+                pipeline = lk.pipeline().step(lk.col("col").knn(k=5))
 
         """
         return self.__getattr__("knn")(*args, **kwargs)

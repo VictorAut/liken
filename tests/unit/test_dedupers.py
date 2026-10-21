@@ -974,8 +974,8 @@ def test_knn_k_membership_is_per_row():
     """Each row keeps its own k best partners.
 
     Points: A=1, B=2, C=2.5, D=3.5, k=1. A's best is B (d=1, s=0.5), B's
-    best is A or C (tied d=1), C's best is B (d=0.5, s ~ 0.667), D's best
-    is C (d=1, s=0.5). At threshold 0.45, A-B, B-C and C-D all clear:
+    best is C (d=0.5, s ~ 0.667), C's best is B, D's best is C (d=1,
+    s=0.5). At threshold 0.45, A-B, B-C and C-D all clear:
     chain emission. C-D survives through D's direction only — C's best
     is B, so a one-direction-per-pair scan from C would miss it. With
     k=2 the set is unchanged: A's second partner C sits at s=0.4, below
@@ -1121,6 +1121,25 @@ def test_knn_zero_norm_rows_match_nothing():
 
         assert pairs == []
         assert all(0 not in pair and 1 not in pair for pair in pairs)
+
+
+def test_knn_infinity_rows_match_nothing():
+    """A row carrying an infinity matches nothing, under both metrics.
+
+    The 0.0 fill leaves infinities in place. An inf row's norm is inf
+    (not 0, so a zero-norm mask misses it); under cosine it normalizes
+    to an exact zero vector, which sits at d=1, s=0.5 from every unit
+    vector and would silently match anything below a 0.5 threshold —
+    diverging from `lk.cosine`, whose 0.0 fill makes inf rows match
+    nothing. Non-finite rows are excluded from the tree like zero-norm
+    rows.
+    """
+    with_inf = pa.table({"x": [1.0, 1.0, float("inf")], "y": [0.0, 1.0, 1.0]})
+
+    for metric in ("euclidean", "cosine"):
+        pairs = list(lk.knn(threshold=0.4, k=2, metric=metric)._gen_similarity_pairs(with_inf))
+
+        assert pairs == [(0, 1)]  # the value pair; the inf row joins nothing
 
 
 def test_knn_nulls_filled_like_cosine():
