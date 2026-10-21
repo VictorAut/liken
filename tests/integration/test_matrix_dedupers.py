@@ -121,6 +121,10 @@ PARAMS = [
     (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"threshold": 0.65}, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9]),
     (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"threshold": 0.35}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
     #
+    # TOKEN_OVERLAP:
+    (lk.token_overlap, CATEGORICAL_COMPOUND_COL, {"threshold": 0.75}, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9]),
+    (lk.token_overlap, CATEGORICAL_COMPOUND_COL, {"threshold": 0.6}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
+    #
     # LSH:
     # progressive deduping: fix ngram; vary threshold
     (lk.lsh, SINGLE_COL, {"ngram": 1, "threshold": 0.95, "num_perm": 128}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
