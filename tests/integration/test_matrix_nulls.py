@@ -218,6 +218,15 @@ CASES = [
         lk.col("number").within(tol=0.5),
         [0, 1, 1, 3],
     ),
+    # date_range: nulls group together only; parsed dates on far-apart
+    # days never merge with each other or with the nulls
+    (
+        "date-range-null-vs-values",
+        ["date_joined"],
+        [("2024-01-05",), (None,), (None,), ("2024-06-01",)],
+        lk.col("date_joined").date_range(format="%Y-%m-%d"),
+        [0, 1, 1, 3],
+    ),
 ]
 
 # fmt: on

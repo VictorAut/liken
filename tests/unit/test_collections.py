@@ -625,6 +625,7 @@ BUILTIN_DEDUPER_NAMES = [
     "jaccard",
     "cosine",
     "edit_distance",
+    "date_range",
     "isin",
     "isna",
     "num_range",

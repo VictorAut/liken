@@ -9,6 +9,7 @@ from liken.collections.pipelines import Pipeline
 from liken.collections.pipelines import col
 from liken.collections.pipelines import pipeline
 from liken.dedupers.cosine import cosine
+from liken.dedupers.date_range import date_range
 from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
@@ -36,6 +37,7 @@ __all__ = [
     "tfidf",
     "edit_distance",
     "cosine",
+    "date_range",
     "jaccard",
     "isin",
     "isna",
