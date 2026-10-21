@@ -281,6 +281,22 @@ class Col:
         """
         return self.__getattr__("knn")(*args, **kwargs)
 
+    def sorted_neighbourhood(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.sorted_neighbourhood` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.sorted_neighbourhood`][liken.sorted_neighbourhood] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").sorted_neighbourhood(window=5))
+
+        """
+        return self.__getattr__("sorted_neighbourhood")(*args, **kwargs)
+
     def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 

@@ -2,6 +2,7 @@
 title: Release History
 ---
 
+
 ## v0.15.0 (2026-10-20)
 
 **Features**
@@ -22,6 +23,8 @@ title: Release History
   whitespace-separated words in any order.
 - New `token_overlap` deduper: matches compound-column records by set
   containment, either direction.
+- New `sorted_neighbourhood` deduper: fuzzy string matching restricted to
+  a window of sorted-order neighbours.
 
 
 ## v0.14.1 (2026-10-20)

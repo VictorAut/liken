@@ -630,6 +630,7 @@ BUILTIN_DEDUPER_NAMES = [
     "isna",
     "knn",
     "num_range",
+    "sorted_neighbourhood",
     "sorted_tokens",
     "str_contains",
     "str_endswith",

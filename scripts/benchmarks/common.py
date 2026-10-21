@@ -124,6 +124,12 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("exact", ("address",), "exact"),
     DeduperEntry("fuzzy", ("address",), "fuzzy"),
     DeduperEntry("fuzzy_topn", ("address",), "fuzzy", kwargs={"threshold": 0.95, "topn": 5}),
+    DeduperEntry(
+        "sorted_neighbourhood",
+        ("address",),
+        "sorted_neighbourhood",
+        kwargs={"threshold": 0.95, "window": 5},
+    ),
     DeduperEntry("tfidf", ("address",), "tfidf"),
     DeduperEntry("lsh", ("address",), "lsh"),
     DeduperEntry("jaccard", ("city", "country", "job"), "jaccard"),
