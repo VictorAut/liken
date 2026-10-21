@@ -101,6 +101,15 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.45, "scorer": "jaro_winkler"}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     #
+    # FUZZY TOPN:
+    # candidate-limited variant; the null star pair (rows 4, 8) survives
+    # regardless of topn. At topn=2 the groups match the all-pairs rows at
+    # the same thresholds on this fixture.
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "topn": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.75, "topn": 2}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 1}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    #
     # EDIT DISTANCE:
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
