@@ -3018,26 +3018,25 @@ def test_token_overlap_str_renders_threshold():
 def test_sorted_neighbourhood_window_limits_pairs():
     """`window=w` scores each row only against the next w-1 rows in sort order.
 
-    Values sorted: "abcd" < "abce" < "abcf" < "abcdz". s("abcd","abce")=75,
-    s("abce","abcf")=75, s("abcf","abcdz")~83, s("abcd","abcdz")~83, but
-    s("abcd","abcf")=50 and s("abce","abcdz")~67. At threshold 0.75:
-    window=2 emits only the adjacent-sorted pairs; window=3 also emits
-    (0, 2) — s("abcd","abcf")=50, no wait, that is below threshold. Use
-    s>=0.75 pairs only: window=2 gives (0,1),(1,2),(2,3); window=3 still
-    gives the same because the skipped pairs score below 0.75 except
-    (0,3).
+    Sorted layout: "abcd"(0) < "abcdz"(3) < "abce"(1) < "abcf"(2), input
+    order [abcd, abce, abcf, abcdz]. fuzz.ratio scores: abcd-abcdz 88.9,
+    abcdz-abce 66.7, abcdz-abcf 66.7, abcd-abce 75, abce-abcf 75,
+    abcd-abcf 75. At threshold 0.75, window=2 scores only consecutive
+    sorted pairs — abcd-abcdz (88.9) and abce-abcf (75) — so the pairs
+    are (0,3) and (1,2). window=3 also scores abcd-abce (75): (0,1)
+    joins. The abcdz-abce/abcf pairs (66.7) stay unscored even at
+    window=3; all-pairs fuzzy at the same threshold emits them all.
     """
-    # Sorted layout: abcd(0) abce(1) abcf(2) abcdz(3)
-    # Adjacent: abcd-abce 75, abce-abcf 75, abcf-abcdz 83.3
-    # Skip-1: abcd-abcf 50, abce-abcdz 66.7  (both < 75)
-    # Skip-2: abcd-abcdz 83.3 (>= 75)
     array = pa.array(["abcd", "abce", "abcf", "abcdz"])
 
     pairs_w2 = sorted(lk.sorted_neighbourhood(threshold=0.75, window=2)._gen_similarity_pairs(array))
     pairs_w3 = sorted(lk.sorted_neighbourhood(threshold=0.75, window=3)._gen_similarity_pairs(array))
 
-    assert pairs_w2 == [(0, 1), (1, 2), (2, 3)]
-    assert pairs_w3 == [(0, 1), (1, 2), (2, 3), (0, 3)]
+    assert pairs_w2 == [(0, 3), (1, 2)]
+    assert pairs_w3 == [(0, 1), (0, 3), (1, 2)]
+
+    all_pairs = sorted(lk.fuzzy(threshold=0.75)._gen_similarity_pairs(array))
+    assert all_pairs == [(0, 1), (0, 2), (0, 3), (1, 2)]
 
 
 def test_sorted_neighbourhood_scores_in_sorted_order():
@@ -3076,54 +3075,63 @@ def test_sorted_neighbourhood_pair_direction_matches_fuzzy(monkeypatch):
     """Each in-window pair is scored in fuzzy's original-index direction.
 
     fuzzy scores the pair (earlier original index -> later original
-    index). `partial_ratio` is asymmetric
-    (partial_ratio("abcd", "xxx abcd yyy") = 100, the reverse far
-    lower), so a sorted-order scoring would emit a pair all-pairs fuzzy
-    rejects. Original order [long, short]: fuzzy's direction scores
-    partial_ratio(long, short), which is low — the pair must NOT be
-    emitted. Reversed original order [short, long]: fuzzy scores
-    partial_ratio(short, long) = 100 — the pair IS emitted.
+    index). The stub scorer below is asymmetric by construction — the
+    real scorers in the registry happen to be symmetric (probed:
+    partial_ratio("abcd", "xxx abcd yyy") = 100 both ways on
+    rapidfuzz), so a stub is what makes the direction observable. A
+    sorted-direction implementation would score s(B, A) here and emit
+    the pair; fuzzy's direction scores s(A, B) = 80 and rejects s(B, A)
+    = 0.
     """
-    from rapidfuzz import fuzz
+    directed = {("A", "B"): 80.0}
 
-    # sanity on the asymmetry itself
-    assert fuzz.partial_ratio("xxx abcd yyy", "abcd") == 100.0
-    assert fuzz.partial_ratio("abcd", "xxx abcd yyy") < 60.0
+    def scorer(s1, s2, score_cutoff=None):
+        return directed.get((s1, s2), 0.0)
 
-    array_long_first = pa.array(["xxx abcd yyy", "abcd"])
-    array_short_first = pa.array(["abcd", "xxx abcd yyy"])
+    deduper = lk.sorted_neighbourhood(threshold=0.75, window=2)
+    monkeypatch.setattr(deduper, "get_scorer", lambda: scorer)
 
-    pairs = list(
-        lk.sorted_neighbourhood(threshold=0.95, window=2, scorer="partial_ratio")._gen_similarity_pairs(
-            array_long_first
-        )
-    )
-    assert pairs == []  # fuzzy's direction scores low here
+    # input [A, B]: sorted order is A, B (A < B); the pair is scored
+    # A->B (fuzzy's direction) = 80 >= 75: emitted
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["A", "B"])))
+    assert pairs == [(0, 1)]
 
-    pairs = list(
-        lk.sorted_neighbourhood(threshold=0.95, window=2, scorer="partial_ratio")._gen_similarity_pairs(
-            array_short_first
-        )
-    )
-    assert pairs == [(0, 1)]  # fuzzy's direction scores 100 here
+    # input [B, A]: same sorted layout, but fuzzy's direction is B->A
+    # = 0 < 75: NOT emitted
+    pairs = sorted(deduper._gen_similarity_pairs(pa.array(["B", "A"])))
+    assert pairs == []
 
     # and all-pairs fuzzy agrees on both orders
-    assert list(lk.fuzzy(threshold=0.95, scorer="partial_ratio")._gen_similarity_pairs(array_long_first)) == []
-    assert list(lk.fuzzy(threshold=0.95, scorer="partial_ratio")._gen_similarity_pairs(array_short_first)) == [(0, 1)]
+    fuzzy = lk.fuzzy(threshold=0.75)
+    monkeypatch.setattr(fuzzy, "get_scorer", lambda: scorer)
+    assert sorted(fuzzy._gen_similarity_pairs(pa.array(["A", "B"]))) == [(0, 1)]
+    assert sorted(fuzzy._gen_similarity_pairs(pa.array(["B", "A"]))) == []
 
 
-def test_sorted_neighbourhood_boundary():
+def test_sorted_neighbourhood_boundary(monkeypatch):
     """Exact-at-threshold and within-tolerance emission on the 0-100 scale.
 
-    fuzz.ratio("abcd", "abce") is exactly 75: emitted at threshold 0.75
-    (inclusive) and at 0.7499999999 (the tolerance guard absorbs the
-    downward drift), not at 0.7500000001.
+    A stubbed `process.cdist` returning `100 * threshold + drift` pins
+    the guard itself (the edit_distance drift tests' convention): at the
+    exact boundary and within the 1e-9 tolerance the pair is emitted,
+    beyond it is not. A stub is needed because real `cdist` rounds to
+    float32 by default, which absorbs the 2e-9 drift. The real-string
+    case pins inclusivity: fuzz.ratio("abcd", "abce") is exactly 75, so
+    threshold 0.75 matches and 0.76 does not.
     """
+    from rapidfuzz import process as fuzz_process
+
     array = pa.array(["abcd", "abce"])
 
     assert list(lk.sorted_neighbourhood(threshold=0.75, window=2)._gen_similarity_pairs(array)) == [(0, 1)]
-    assert list(lk.sorted_neighbourhood(threshold=0.7499999999, window=2)._gen_similarity_pairs(array)) == [(0, 1)]
-    assert list(lk.sorted_neighbourhood(threshold=0.7500000001, window=2)._gen_similarity_pairs(array)) == []
+    assert list(lk.sorted_neighbourhood(threshold=0.76, window=2)._gen_similarity_pairs(array)) == []
+
+    threshold = 0.75
+    for drift, expected in ((0.0, [(0, 1)]), (-5e-10, [(0, 1)]), (-2e-9, [])):
+        score = float(Decimal(str(threshold)) * 100) + drift
+        deduper = lk.sorted_neighbourhood(threshold=threshold, window=2)
+        monkeypatch.setattr(fuzz_process, "cdist", lambda queries, choices, score=score, **kwargs: [[score]])
+        assert list(deduper._gen_similarity_pairs(pa.array(["x", "y"]))) == expected
 
 
 def test_sorted_neighbourhood_scorer_registry_is_fuzzys():
@@ -3172,21 +3180,32 @@ def test_sorted_neighbourhood_jaro_winkler_matches_at_scaled_threshold():
 
 
 def test_sorted_neighbourhood_nulls_pair_with_nulls_only():
-    """Missing values pair with each other, never with a value."""
+    """Missing values pair with each other, never with a value.
+
+    Sorted layout: "nadia"(2) < "nathan"(0), adjacent, and
+    fuzz.ratio("nathan", "nadia") is ~54.5 >= 50, so the value pair also
+    fires at window=2. The null star pair (1, 3) forms regardless.
+    """
     array = pa.array(["nathan", None, "nadia", None])
 
     pairs = sorted(lk.sorted_neighbourhood(threshold=0.5, window=2)._gen_similarity_pairs(array))
 
-    assert pairs == [(1, 3)]
+    assert pairs == [(0, 2), (1, 3)]
 
 
 def test_sorted_neighbourhood_null_never_pairs_with_value():
-    """At any threshold a null pairs only with another null."""
+    """At any threshold a null pairs only with another null.
+
+    Near-zero threshold: every in-window value pair also fires (the
+    fuzzy near-zero pin emitted (0, 2) as well); the assertion is that
+    no pair crosses the null/value divide.
+    """
     array = pa.array(["nathan", None, "nadia", None])
 
-    pairs = sorted(lk.sorted_neighbourhood(threshold=0.01, window=4)._gen_similarity_pairs(array))
+    pairs = sorted(lk.sorted_neighbourhood(threshold=math.nextafter(0.0, 1.0), window=4)._gen_similarity_pairs(array))
 
-    assert pairs == [(1, 3)]
+    assert (1, 3) in pairs
+    assert all(1 not in pair and 3 not in pair for pair in pairs if pair != (1, 3))
 
 
 def test_sorted_neighbourhood_all_null_input_yields_star_pairs():

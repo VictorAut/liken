@@ -19,6 +19,7 @@ from liken.dedupers.jaccard import jaccard
 from liken.dedupers.knn import knn
 from liken.dedupers.lsh import lsh
 from liken.dedupers.num_range import num_range
+from liken.dedupers.sorted_neighbourhood import sorted_neighbourhood
 from liken.dedupers.sorted_tokens import sorted_tokens
 from liken.dedupers.str_contains import str_contains
 from liken.dedupers.str_endswith import str_endswith
@@ -46,6 +47,7 @@ __all__ = [
     "isna",
     "knn",
     "num_range",
+    "sorted_neighbourhood",
     "sorted_tokens",
     "str_contains",
     "str_endswith",
