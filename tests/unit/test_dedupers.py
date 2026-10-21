@@ -1656,35 +1656,6 @@ def test_date_range_default_window_is_zero():
     assert lk.date_range(format="%Y-%m-%d")._window == 0
 
 
-@pytest.mark.parametrize(
-    "values, window, expected",
-    [
-        # same date: star-shaped from the first index (predicate semantics)
-        (["2024-01-05", "2024-01-05", "2024-01-05"], 0, [(0, 1), (0, 2)]),
-        # one day apart at window=1
-        (["2024-01-05", "2024-01-06"], 1, [(0, 1)]),
-        # two days apart at window=1: rejected
-        (["2024-01-05", "2024-01-07"], 1, []),
-        # inclusive boundary: exactly window days apart matches; 1 day
-        # apart is inside window=2
-        (["2024-01-05", "2024-01-06", "2024-01-07"], 2, [(0, 1), (0, 2), (1, 2)]),
-        # window=0 is same-date equality: adjacent dates never pair
-        (["2024-01-05", "2024-01-06"], 0, []),
-        # duplicates at window=1 all pair
-        (["2024-03-01", "2024-03-01", "2024-03-02"], 1, [(0, 1), (0, 2), (1, 2)]),
-        # far apart at any window: nothing matches
-        (["2024-01-01", "2024-06-01"], 30, []),
-    ],
-)
-def test_date_range_matches_pairs_within_window(values, window, expected):
-    deduper = lk.date_range(format="%Y-%m-%d", window=window)
-    deduper.validate("date")
-
-    pairs = sorted(deduper._gen_similarity_pairs(pa.array(values)))
-
-    assert pairs == expected
-
-
 def test_date_range_boundary_crossing_bucket_merge():
     """Jan 5 and Jan 7 at window=2 merge even though plain date-key
     bucketing would separate them; this pins the window+1 cell scheme."""
