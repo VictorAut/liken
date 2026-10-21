@@ -2,6 +2,13 @@
 title: Release History
 ---
 
+## Unreleased
+
+**Features**
+
+- New `sorted_neighbourhood` deduper: fuzzy string matching restricted to
+  a window of sorted-order neighbours.
+
 ## v0.15.0 (2026-10-20)
 
 **Features**

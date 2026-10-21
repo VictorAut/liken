@@ -124,12 +124,45 @@ def sorted_neighbourhood(
 ) -> BaseDeduper:
     """Sorted-neighbourhood-method deduplication.
 
-    Usage is on single columns of a dataframe.
+    Usage is on single columns of a dataframe. Appropriate for string
+    data sorted close to its duplicate axis.
+
+    The column is sorted by value and each row is scored only against
+    the following `window - 1` rows in sorted order; a pair matches
+    when its score reaches the threshold. The scored pair set is a
+    strict subset of all-pairs `fuzzy` at the same threshold and
+    scorer — same acceptance semantics, restricted pair generation.
+
+    Sorting is on the raw values (code-point order, no locale). Two
+    values similar in the middle but different at the start, such as
+    postcodes "OL5 9PL" and "0L5 9PL", can fall outside each other's
+    windows. Word-order variants ("John Smith" vs "Smith John") land
+    far apart in sort order and are not this deduper's job — that is
+    `sorted_tokens`. What the window catches is typo-drift between
+    values that are close in sorted order.
+
+    Each row keeps at most `window - 1` candidate scores instead of a
+    score against every other value: scorer work falls from O(n^2) to
+    O(n * window). Values whose sort keys are equal (identical
+    strings) sit in input order within the sorted run, and a tie group
+    larger than the window is cut at window edges: some identical
+    pairs are never scored, and which pairs those are depends on input
+    order. The same input order gives the same output; reordering the
+    column can change the result.
+
+    `sorted_neighbourhood(threshold, scorer, window=w)` differs from
+    `fuzzy(threshold, scorer, topn=k)`: the neighbourhood is a bounded
+    slice of the sorted order around each value, while `topn` keeps
+    each value's k best partners anywhere in the column. Neither
+    subsumes the other. Missing values are unaffected by the window:
+    they pair with each other star-shaped, never with a value, exactly
+    as in `fuzzy`.
 
     Args:
         threshold: The minimum threshold at which similarity between two pairs
             of values will be considered valid for deduplication.
-        scorer: The fuzzy scorer. Defaults to "simple ratio". Options are
+        scorer: The fuzzy scorer, shared with `fuzzy`. Defaults to
+            "simple ratio". Options are
             - "simple_ratio"
             - "partial_ratio"
             - "token_sort_ratio"
@@ -142,12 +175,21 @@ def sorted_neighbourhood(
               postcodes and product codes.
         window: The number of neighbouring rows, in sorted order, each
             value is scored against. Required: there is no principled
-            default width. Sort the column by value, score each row
-            against the following `window - 1` rows, and pair those
-            whose score reaches the threshold. (Interim docstring; final
-            wording in the docs task.)
+            default width. The comparison is inclusive: a pair scoring
+            exactly at the threshold matches.
 
     Returns:
         Instance of `BaseDeduper`.
+
+    Example:
+        Applied to a single column:
+
+            import liken as lk
+
+            df = (
+                lk.dedupe(df)
+                .apply({"address": sorted_neighbourhood(threshold=0.8, window=5)})
+                .drop_duplicates(keep="last")
+            )
     """
     return SortedNeighbourhood(threshold=threshold, scorer=scorer, window=window)
