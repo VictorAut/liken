@@ -16,6 +16,8 @@ title: Release History
   matches two dates whose difference is at most `window` days.
 - New `sorted_tokens` deduper: matches values built from the same
   whitespace-separated words in any order.
+- New `token_overlap` deduper: matches compound-column records by set
+  containment, either direction.
 
 
 ## v0.14.1 (2026-10-20)

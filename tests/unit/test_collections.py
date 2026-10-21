@@ -634,6 +634,8 @@ BUILTIN_DEDUPER_NAMES = [
     "str_endswith",
     "str_len",
     "str_startswith",
+    "tfidf",
+    "token_overlap",
     "within",
 ]
 
