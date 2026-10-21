@@ -24,6 +24,7 @@ dependencies = [
     "polars>=0.20.4",
     "rapidfuzz>=3.12.2,<4",
     "scikit-learn>=1.6.1,<2",
+    "scipy>=1.6,<2",
     "sparse-dot-topn>=1.1.5,<2",
     "typing-extensions>=4.13.0,<5",
     "datasketch>=1.8.0,<2",
