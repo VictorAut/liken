@@ -178,7 +178,6 @@ def within(tol: float) -> BaseDeduper:
             +------+-------+----------------------+
             |  1   | 10.02 |  fizzpop@gmail.com   |
             |  2   |  null |  foobar@gmail.com    |
-            |  3   | 10.03 |  foobar@gmail.co.uk  |
             +------+-----------+------------------+
     """
     return Within(tol=tol)
