@@ -231,6 +231,20 @@ PARAMS = [
     # 0.20000000000000018 rides the 1e-9 boundary guard
     (lk.within, "property_height", {"tol": 0.1}, [0, 0, 2, 3, 4, 2, 2, 2, 2, 2]),
     (lk.within, "property_height", {"tol": 0.2}, [0, 0, 2, 3, 2, 2, 2, 2, 2, 2]),
+    #
+    # DATE RANGE:
+    # date_joined: rows 0,1 = Jan 5; row 2 = Jan 7; row 3 = Jan 8;
+    # rows 4,8 = null; row 5 = Jun 1; rows 6,7 = Mar 15; row 9 = Jun 2.
+    # Expectations derived by brute force over the dates, then confirmed
+    # by run.
+    # window=0 is same-date matching
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d"}, [0, 0, 2, 3, 4, 5, 6, 6, 4, 9]),
+    # window=1: Jan 7-Jan 8 and Jun 1-Jun 2 merge; Jan 5 stays apart from
+    # Jan 7 (2 days)
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d", "window": 1}, [0, 0, 2, 2, 4, 5, 6, 6, 4, 5]),
+    # window=2: Jan 5, Jan 7 and Jan 8 merge — the inclusive bound at
+    # exactly 2 days crosses the plain date-key boundary
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d", "window": 2}, [0, 0, 0, 0, 4, 5, 6, 6, 4, 5]),
 ]
 
 # fmt: on
