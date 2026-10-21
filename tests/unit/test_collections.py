@@ -633,6 +633,7 @@ BUILTIN_DEDUPER_NAMES = [
     "str_endswith",
     "str_len",
     "str_startswith",
+    "sorted_tokens",
     "within",
 ]
 

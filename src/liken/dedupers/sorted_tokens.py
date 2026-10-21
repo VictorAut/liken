@@ -44,7 +44,9 @@ class SortedTokens(
         with at least one token."""
         if is_missing(value):
             return False
-        return bool(value.split())
+        # The negated path has passed `_vectorized_matches`, so the column
+        # is string-typed and the value is a Python string.
+        return bool(str(value).split())
 
     def _require_string_array(self, array: pa.Array) -> None:
         """Raise unless `array` is a string array, or the all-empty `null`
