@@ -3,13 +3,16 @@ title: Release History
 ---
 
 
-## v0.15.0 (2026-10-20)
+## v0.15.0 (2026-10-22)
 
 **Features**
 
-- The `edit_distance` deduper accepts a `metric` option:
-  `damerau_levenshtein`, `jaro_winkler`, `indel` or `hamming`, in
-  addition to the, previous, default `levenshtein`.
+- The `edit_distance` deduper accepts a new `metric` option (in
+  addition to the, previous, default `levenshtein`):
+    - `damerau_levenshtein`
+    - `jaro_winkler`
+    - `indel`
+    - `hamming`
 - New `knn` deduper: matches compound-column numeric vectors by their k
   nearest neighbours under a similarity threshold.
 - The `fuzzy` deduper accepts `scorer="jaro_winkler"`.
