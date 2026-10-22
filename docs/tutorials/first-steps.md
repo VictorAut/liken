@@ -183,89 +183,157 @@ When things aren't *exactly* the same, you can still deduplicate data. Liken is 
 
 Liken comes with many deduplication methods built-in:
 
-| |               | Deduper                                              | Description                                                                 |
-|-------------| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example).  |
-| *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching.                                                                            |
-| *Similarity* |*single-column*| [`edit_distance`](../reference/liken/#liken.edit_distance) | Values within a maximum edit (Levenshtein) distance.                                     |
-| *Similarity* |*single-column*| [`within`](../reference/liken/#liken.within)     | Values within an absolute numeric tolerance.                                                        |
-| *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf.                                                                      |
-| *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH).                                            |
-| *Similarity* |*single-column*| [`sorted_neighbourhood`](../reference/liken/#liken.sorted_neighbourhood) | Fuzzy string matching inside a window of sorted-order neighbours.                                       |
-| *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                |
-| *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data.                                   |
-| *Similarity* |*compound-column*| [`token_overlap`](../reference/liken/#liken.token_overlap) | Multi column set containment: a record whose values are a subset of another's matches.        |
-| *Similarity* |*compound-column*| [`knn`](../reference/liken/#liken.knn) | Multi column k nearest neighbours on numerical data: each row matches its k best under a similarity threshold.        |
-| *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`.                                        |
-| *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members.                               |
-| *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern. |
-| *Predicate* |*single-column*| [`str_endswith`](../reference/liken/#liken.str_endswith)       | Records where the string ends with a pattern. |
-| *Predicate* |*single-column*| [`str_contains`](../reference/liken/#liken.str_contains)         | Records where the string contains a pattern. Accepts Regex. |
-| *Predicate* |*single-column*| [`str_len`](../reference/liken/#liken.str_len) | Records where the string length is bounded by a minimum and maximum length. |
-| *Predicate* |*single-column*| [`num_range`](../reference/liken/#liken.num_range) | Records where the numeric value falls inside the inclusive interval. |
-| *Predicate* |*single-column*| [`date_range`](../reference/liken/#liken.date_range) | Records whose dates, parsed under an explicit format, are at most `window` days apart. |
-| *Predicate* |*single-column*| [`sorted_tokens`](../reference/liken/#liken.sorted_tokens) | Records whose whitespace-separated words are the same, in any order. |
+| |               | Deduper                                              | Description                                                                 | Complexity |
+|-------------| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------- | -------- |
+| *Similarity* |*single-column*| [`exact`](../reference/liken/#liken.exact)       | You've already seen this in use *implicitly* in [The Simplest Example](./first-steps.md#the-simplest-example).  | *O(n)* |
+| *Similarity* |*single-column*| [`fuzzy`](../reference/liken/#liken.fuzzy)       | Fuzzy string matching.                                                                            | *O(n²)* |
+| *Similarity* |*single-column*| [`edit_distance`](../reference/liken/#liken.edit_distance) | Values within a maximum edit (Levenshtein) distance. | *O(n²)* |
+| *Similarity* |*single-column*| [`within`](../reference/liken/#liken.within)     | Values within an absolute numeric tolerance. | *O(n log n)* |
+| *Similarity* |*single-column*| [`tfidf`](../reference/liken/#liken.tfidf)       | String token matching with Tf-Idf. | *~O(n·c)* |
+| *Similarity* |*single-column*| [`lsh`](../reference/liken/#liken.lsh)           | String token matching with Locality Sensitive Hashing (LSH). | *O(n)* |
+| *Similarity* |*single-column*| [`sorted_neighbourhood`](../reference/liken/#liken.sorted_neighbourhood) | Fuzzy string matching inside a window of sorted-order neighbours. | *O(n log n)* |
+| *Similarity* |*compound-column*| [`jaccard`](../reference/liken/#liken.jaccard) | Multi column similarity based on intersection of categorical data.                                | *O(n²)* |
+| *Similarity* |*compound-column*| [`cosine`](../reference/liken/#liken.cosine)   | Multi column similarity based on dot product of numerical data.                                   | *O(n²)* |
+| *Similarity* |*compound-column*| [`token_overlap`](../reference/liken/#liken.token_overlap) | Multi column set containment: a record whose values are a subset of another's matches.        | *O(n²)* |
+| *Similarity* |*compound-column*| [`knn`](../reference/liken/#liken.knn) | Multi column k nearest neighbours on numerical data: each row matches its k best under a similarity threshold.        | *O(n log n)* |
+| *Predicate* |*single-column*| [`isna`](../reference/liken/#liken.isna)                | Records where the column value is null/`None`.                                        | *O(n)* |
+| *Predicate* |*single-column*| [`isin`](../reference/liken/#liken.isin)                | Records where the column value is in a list of members.                               | *O(n)* |
+| *Predicate* |*single-column*| [`str_startswith`](../reference/liken/#liken.str_startswith)     | Records where the string starts with a pattern. | *O(n)* |
+| *Predicate* |*single-column*| [`str_endswith`](../reference/liken/#liken.str_endswith)       | Records where the string ends with a pattern. | *O(n)* |
+| *Predicate* |*single-column*| [`str_contains`](../reference/liken/#liken.str_contains)         | Records where the string contains a pattern. Accepts Regex. | *O(n)* |
+| *Predicate* |*single-column*| [`str_len`](../reference/liken/#liken.str_len) | Records where the string length is bounded by a minimum and maximum length. | *O(n)* |
+| *Predicate* |*single-column*| [`num_range`](../reference/liken/#liken.num_range) | Records where the numeric value falls inside the inclusive interval. | *O(n)* |
+| *Predicate* |*single-column*| [`date_range`](../reference/liken/#liken.date_range) | Records whose dates, parsed under an explicit format, are at most `window` days apart. | *O(n)* |
+| *Predicate* |*single-column*| [`sorted_tokens`](../reference/liken/#liken.sorted_tokens) | Records whose whitespace-separated words are the same, in any order. | *O(n)* |
 
 *Single-column* dedupers apply to single columns and are implementation of near string matching. *Compound-column* dedupers are set operations where the values of the set are the values of the columns in a given record. *Similarity* dedupers have a `threshold` argument. *Predicate* dedupers choose an outcome based on a discrete outcome (e.g. is null / not null).
 
 To *use* dedupers, you have to *apply* them, which is covered in the next tutorial.
 
-## Choosing a Deduper
+### Choosing a Deduper
 
-One route from your data problem to a built-in deduper. Start at the top and answer for the column you want to deduplicate. Cost classes describe how matching work grows with the number of rows, `n`.
+One route from your data problem to a built-in deduper. Start at the top and answer for the column you want to deduplicate:
+
+- *Teal* dedupers are similarity-based dedupers
+- *Orange* dedupers are rule-predicate dedupers
 
 ``` mermaid
 flowchart TD
 
-    q{{"`What are you deduplicating, and how do true duplicates differ?`"}}
+    classDef predicate fill:#fde68a,stroke:#b45309,color:#78350f
+    classDef similarity fill:#99f6e4,stroke:#0d9488,color:#134e4a
 
-    any["`**Any column**: a rule on membership or nulls`"]
-    s["`**One string column**`"]
-    num["`**One numeric or date column**`"]
-    comp["`**Several columns together**`"]
-    para["`Different wording, same meaning (paraphrase)`"]
+    q{{"`**What are you deduplicating?**`"}}
 
-    q --> any
-    q --> s
-    q --> num
+    single(["`**One column**`"])
+    sstr(["`**String**`"])
+    num(["`**Numeric**`"])
+    date(["`**Date**`"])
+    comp(["`**Several Columns**`"])
+
+    q --> single
     q --> comp
-    q --> para
 
-    any --> isin
-    isin["`isin · isna — O(n)`"]
+    single -- Rule predication on membership or null checks on any type --> anyrule
+    anyrule["`**isin** <br/>**isna**`"]
 
-    s --> sexact
-    sexact["`Exact copies — exact, O(n)`"]
-    s --> stok
-    stok["`Same words, any order — sorted_tokens, O(n)`"]
-    s --> srule
-    srule["`A rule on start, end, contents or length — str_startswith · str_endswith · str_contains · str_len, O(n)`"]
-    s --> sfuzzy
-    sfuzzy["`Typos or small edits — fuzzy, O(n²), with topn=k still all-pairs scoring`"]
-    s --> ssn
-    ssn["`Typos inside a bounded window — sorted_neighbourhood, O(n·window)`"]
-    s --> sed
-    sed["`Strict edit budget — edit_distance, O(n²)`"]
-    s --> stfidf
-    stfidf["`Large columns, token similarity — tfidf · lsh, indexed`"]
+    single --> sstr
+    single --> date
+    single --> num
 
-    num --> nrule
-    nrule["`Value or date in range — num_range · date_range, O(n)`"]
-    num --> nwithin
-    nwithin["`Within a tolerance — within, O(n log n)`"]
+    sstr -- Exact copies --> sexact
+    sexact["`**exact**`"]
+    sstr -- Same words, in any order --> stok
+    stok["`**sorted_tokens**`"]
+    sstr -- Rule predication on strings --> srule
+    srule["`**str_startswith** <br/>**str_endswith** <br/>**str_contains** <br/>**str_len**`"]
+    sstr --Typos or small edits --> sfuzzy
+    sfuzzy["`**fuzzy** <br/>**edit_distance** <br/>**sorted_neighbourhood**`"]
+    sstr -- Large columns, token similarity --> stfidf
+    stfidf["`**lsh** <br/>**tfidf**`"]
 
-    comp --> cjac
-    cjac["`Categorical values, set-like — jaccard · token_overlap, O(n²)`"]
-    comp --> cvec
-    cvec["`Numeric vectors — cosine, O(n²) · knn, O(n log n)`"]
 
-    para --> pexit
-    pexit["`No built-in deduper fits yet — write a custom deduper`"]
+    date -- Date in range --> ndate
+    ndate["`**date_range**`"]
+
+    num -- Within an absolute tolerance --> nwithin
+    num -- Value in range --> nrange
+    nwithin["`**within**`"]
+    nrange["`**num_range**`"]
+
+    comp -- Categorical sets --> cjac
+    cjac["`**jaccard** <br/>**token_overlap**`"]
+    comp -- Numeric vectors --> cvec
+    cvec["`**cosine** <br/>**knn**`"]
+
+    nrange ~~~ sstr
+
+    class cjac,cvec,sed,nwithin,sexact,stok,sfuzzy,stfidf,ssn similarity
+    class anyrule,nrange,ndate,srule predicate
+```
+
+test
+
+``` mermaid
+flowchart TD
+
+    classDef predicate fill:#fde68a,stroke:#b45309,color:#78350f
+    classDef similarity fill:#99f6e4,stroke:#0d9488,color:#134e4a
+
+    q{{"`**What are you deduplicating?**`"}}
+
+    rules(["`**Values predicate**`"])
+    values(["`**Values differ**`"])
+    single(["`**One column**`"])
+    sstr(["`**String**`"])
+    num(["`**Numeric**`"])
+    comp(["`**Several Columns**`"])
+
+    q --> rules
+    q --> values
+    values --> single
+    values --> comp
+
+    rules --> allrules
+    allrules["`
+        **isin** *(any type; single col)*
+        **isna** *(any type; single col)*
+        **str_startswith** *(str type; single col)*
+        **str_endswith** *(str type; single col)*
+        **str_contains** *(str type; single col)*
+        **str_len** *(str type; single col)*
+        **date_range** *(date type; single col)*
+        **num_range** *(num type; single col)*
+        `"]
+
+    single --> sstr
+    single --> num
+
+    sstr -- Exact copies --> sexact
+    sexact["`**exact**`"]
+    sstr -- Same words, in any order --> stok
+    stok["`**sorted_tokens**`"]
+    sstr --Typos or small edits --> sfuzzy
+    sfuzzy["`**fuzzy** <br/>**edit_distance** <br/>**sorted_neighbourhood**`"]
+    sstr -- Large columns, token similarity --> stfidf
+    stfidf["`**lsh** <br/>**tfidf**`"]
+
+
+    num -- Within an absolute tolerance --> nwithin
+    nwithin["`**within**`"]
+
+    comp -- Categorical sets --> cjac
+    cjac["`**jaccard** <br/>**token_overlap**`"]
+    comp -- Numeric vectors --> cvec
+    cvec["`**cosine** <br/>**knn**`"]
+
+    class cjac,cvec,sed,nwithin,sexact,stok,sfuzzy,stfidf,ssn similarity
+    class allrules predicate
 ```
 
 Every rule-based deduper above — `isin`, `isna`, the `str_*` predicates, `num_range` and `date_range` — scans the column once, O(n). Reference pages: [`exact`](../reference/liken/#liken.exact), [`fuzzy`](../reference/liken/#liken.fuzzy), [`edit_distance`](../reference/liken/#liken.edit_distance), [`sorted_neighbourhood`](../reference/liken/#liken.sorted_neighbourhood), [`within`](../reference/liken/#liken.within), [`tfidf`](../reference/liken/#liken.tfidf), [`lsh`](../reference/liken/#liken.lsh), [`sorted_tokens`](../reference/liken/#liken.sorted_tokens), [`jaccard`](../reference/liken/#liken.jaccard), [`token_overlap`](../reference/liken/#liken.token_overlap), [`cosine`](../reference/liken/#liken.cosine), [`knn`](../reference/liken/#liken.knn), [`isin`](../reference/liken/#liken.isin), [`isna`](../reference/liken/#liken.isna), [`str_startswith`](../reference/liken/#liken.str_startswith), [`str_endswith`](../reference/liken/#liken.str_endswith), [`str_contains`](../reference/liken/#liken.str_contains), [`str_len`](../reference/liken/#liken.str_len), [`num_range`](../reference/liken/#liken.num_range), [`date_range`](../reference/liken/#liken.date_range). For wording a tree cannot route on, write a [custom deduper](./custom-dedupers.md). The taxonomy table under [Built-in Dedupers](#built-in-dedupers) describes each deduper in one line.
 
-## Choosing a Threshold
+### Choosing a Threshold
 
 Similarity dedupers compare values pairwise and keep the pairs whose score meets their `threshold`. All thresholds are on a 0–1 scale, and matching is inclusive: a pair scoring exactly *at* the threshold matches. At the extreme, `threshold=0` matches every pair, including pairs with no similarity at all. Thresholds differ in what they measure:
 
