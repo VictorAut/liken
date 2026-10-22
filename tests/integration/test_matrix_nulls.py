@@ -101,6 +101,15 @@ CASES = [
         lk.col("address").fuzzy(threshold=0.5),
         [0, 1, 0, 1],
     ),
+    # the same contract under topn: the null star pair survives outside
+    # the candidate-limited path
+    (
+        "fuzzy-topn-nulls-never-pair-with-values",
+        ["address"],
+        [("nathan",), (None,), ("nadia",), (None,)],
+        lk.col("address").fuzzy(threshold=0.5, topn=2),
+        [0, 1, 0, 1],
+    ),
     # nulls group with nulls at the default ngram=3, where they did not
     (
         "tfidf-nulls-group-at-default-ngram",
@@ -208,6 +217,56 @@ CASES = [
         [(None,), (None,), ("x",)],
         lk.col("address").isin(values=["x"]),
         [0, 1, 2],
+    ),
+    # nulls pair with each other only; the values sit far enough apart
+    # that they too stay singletons
+    (
+        "within-null-vs-values",
+        ["number"],
+        [(1.0,), (float("nan"),), (None,), (5.0,)],
+        lk.col("number").within(tol=0.5),
+        [0, 1, 1, 3],
+    ),
+    # date_range: nulls group together only; parsed dates on far-apart
+    # days never merge with each other or with the nulls
+    (
+        "date-range-null-vs-values",
+        ["date_joined"],
+        [("2024-01-05",), (None,), (None,), ("2024-06-01",)],
+        lk.col("date_joined").date_range(format="%Y-%m-%d"),
+        [0, 1, 1, 3],
+    ),
+    # knn: an all-null compound row fills to the zero vector and matches
+    # nothing — not even another all-null row (unlike the star-shaped
+    # null groups of the string dedupers). The two orthogonal value rows
+    # stay apart (cosine 0), and neither merges with the null row.
+    (
+        "knn-all-null-compound-row-matches-nothing",
+        ["h", "w"],
+        [(1.0, 2.0), (2.0, 1.0), (None, None), (2.0, 1.0)],
+        lk.col(("h", "w")).knn(threshold=0.9, k=2, metric="cosine"),
+        [0, 1, 2, 1],
+    ),
+    # sorted_neighbourhood: nulls group together (star-shaped) and never
+    # with a value, independent of the window; the two distinct values
+    # are the only present ones, so they are sorted-adjacent (the wide
+    # window is irrelevant here) and stay apart because their score
+    # sits far below the default threshold
+    (
+        "sorted-neighbourhood-null-vs-values",
+        ["address"],
+        [("zzz last",), (None,), (None,), ("aaa first",)],
+        lk.col("address").sorted_neighbourhood(window=10),
+        [0, 1, 1, 3],
+    ),
+    # sorted_tokens: nulls group together only; distinct token sets never
+    # merge with each other or with the nulls
+    (
+        "sorted-tokens-null-vs-values",
+        ["name"],
+        [("b a",), (None,), (None,), ("b c",)],
+        lk.col("name").sorted_tokens(),
+        [0, 1, 1, 3],
     ),
 ]
 

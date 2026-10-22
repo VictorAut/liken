@@ -9,19 +9,25 @@ from liken.collections.pipelines import Pipeline
 from liken.collections.pipelines import col
 from liken.collections.pipelines import pipeline
 from liken.dedupers.cosine import cosine
+from liken.dedupers.date_range import date_range
 from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.exact import exact
 from liken.dedupers.fuzzy import fuzzy
 from liken.dedupers.isin import isin
 from liken.dedupers.isna import isna
 from liken.dedupers.jaccard import jaccard
+from liken.dedupers.knn import knn
 from liken.dedupers.lsh import lsh
 from liken.dedupers.num_range import num_range
+from liken.dedupers.sorted_neighbourhood import sorted_neighbourhood
+from liken.dedupers.sorted_tokens import sorted_tokens
 from liken.dedupers.str_contains import str_contains
 from liken.dedupers.str_endswith import str_endswith
 from liken.dedupers.str_len import str_len
 from liken.dedupers.str_startswith import str_startswith
 from liken.dedupers.tfidf import tfidf
+from liken.dedupers.token_overlap import token_overlap
+from liken.dedupers.within import within
 from liken.liken import Dedupe
 from liken.liken import dedupe
 
@@ -35,14 +41,21 @@ __all__ = [
     "tfidf",
     "edit_distance",
     "cosine",
+    "date_range",
     "jaccard",
     "isin",
     "isna",
+    "knn",
     "num_range",
+    "sorted_neighbourhood",
+    "sorted_tokens",
     "str_contains",
     "str_endswith",
     "str_len",
     "str_startswith",
+    "tfidf",
+    "token_overlap",
+    "within",
     "pipeline",
     "Pipeline",
     "col",

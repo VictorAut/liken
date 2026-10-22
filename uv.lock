@@ -1015,7 +1015,7 @@ wheels = [
 
 [[package]]
 name = "liken"
-version = "0.14.1"
+version = "0.15.0"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [
@@ -1031,6 +1031,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "rapidfuzz" },
     { name = "scikit-learn" },
+    { name = "scipy" },
     { name = "sparse-dot-topn" },
     { name = "typing-extensions" },
 ]
@@ -1107,6 +1108,7 @@ requires-dist = [
     { name = "ray", marker = "extra == 'all'", specifier = ">=2.50.0" },
     { name = "ray", marker = "extra == 'ray'", specifier = ">=2.50.0" },
     { name = "scikit-learn", specifier = ">=1.6.1,<2" },
+    { name = "scipy", specifier = ">=1.10,<2" },
     { name = "sparse-dot-topn", specifier = ">=1.1.5,<2" },
     { name = "typing-extensions", specifier = ">=4.13.0,<5" },
 ]

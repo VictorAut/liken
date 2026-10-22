@@ -625,12 +625,20 @@ BUILTIN_DEDUPER_NAMES = [
     "jaccard",
     "cosine",
     "edit_distance",
+    "date_range",
     "isin",
     "isna",
+    "knn",
+    "num_range",
+    "sorted_neighbourhood",
+    "sorted_tokens",
     "str_contains",
     "str_endswith",
     "str_len",
     "str_startswith",
+    "tfidf",
+    "token_overlap",
+    "within",
 ]
 
 

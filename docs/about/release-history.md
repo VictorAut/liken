@@ -2,6 +2,34 @@
 title: Release History
 ---
 
+
+## v0.15.0 (2026-10-22)
+
+**Features**
+
+- The `edit_distance` deduper accepts a new `metric` option (in
+  addition to the, previous, default `levenshtein`):
+    - `damerau_levenshtein`
+    - `jaro_winkler`
+    - `indel`
+    - `hamming`
+- New `knn` deduper: matches compound-column numeric vectors by their k
+  nearest neighbours under a similarity threshold.
+- The `fuzzy` deduper accepts `scorer="jaro_winkler"`.
+- The `fuzzy` deduper accepts a `topn` option for candidate-limited
+  approximate matching.
+- New `within` deduper: matches two numbers whose absolute difference is
+  at most `tol`.
+- New `date_range` deduper: parses values under an explicit `format` and
+  matches two dates whose difference is at most `window` days.
+- New `sorted_tokens` deduper: matches values built from the same
+  whitespace-separated words in any order.
+- New `token_overlap` deduper: matches compound-column records by set
+  containment, either direction.
+- New `sorted_neighbourhood` deduper: fuzzy string matching restricted to
+  a window of sorted-order neighbours.
+
+
 ## v0.14.1 (2026-10-20)
 
 **Misc**

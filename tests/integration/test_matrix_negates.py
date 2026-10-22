@@ -32,6 +32,17 @@ PARAMS = [
     #
     (lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
     (~lk.col("property_area_sq_ft").num_range(min=500, max=620), [0, 1, 1, 1, 1, 1, 6, 7, 1, 1]),
+    #
+    # ~date_range: no fixture value fails to parse under the format and
+    # nulls match nothing on either polarity, so negation is a no-op here
+    (lk.col("date_joined").date_range(format="%Y-%m-%d"), [0, 0, 2, 3, 4, 5, 6, 6, 4, 9]),
+    (~lk.col("date_joined").date_range(format="%Y-%m-%d"), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    #
+    # ~sorted_tokens: only the zero-token values group (row 4 is "", row 9
+    # is whitespace-only); values with tokens and the null (row 5) match
+    # nothing under negation
+    (lk.col("name").sorted_tokens(), [0, 0, 2, 2, 4, 5, 2, 7, 0, 9]),
+    (~lk.col("name").sorted_tokens(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 4]),
 ]
 
 # fmt: on

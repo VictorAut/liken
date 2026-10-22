@@ -249,6 +249,54 @@ class Col:
         """
         return self.__getattr__("jaccard")(*args, **kwargs)
 
+    def token_overlap(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.token_overlap` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.token_overlap`][liken.token_overlap] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").token_overlap())
+
+        """
+        return self.__getattr__("token_overlap")(*args, **kwargs)
+
+    def knn(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.knn` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.knn`][liken.knn] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").knn(k=5))
+
+        """
+        return self.__getattr__("knn")(*args, **kwargs)
+
+    def sorted_neighbourhood(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.sorted_neighbourhood` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.sorted_neighbourhood`][liken.sorted_neighbourhood] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").sorted_neighbourhood(window=5))
+
+        """
+        return self.__getattr__("sorted_neighbourhood")(*args, **kwargs)
+
     def isin(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.isin` function.
 
@@ -296,6 +344,38 @@ class Col:
 
         """
         return self.__getattr__("num_range")(*args, **kwargs)
+
+    def within(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.within` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.within`][liken.within] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").within(tol=0.01))
+
+        """
+        return self.__getattr__("within")(*args, **kwargs)
+
+    def date_range(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.date_range` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.date_range`][liken.date_range] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").date_range(format="%Y-%m-%d", window=1))
+
+        """
+        return self.__getattr__("date_range")(*args, **kwargs)
 
     def str_contains(self, *args, **kwargs) -> Col:
         """Method wrapper of `lk.str_contains` function.
@@ -360,6 +440,22 @@ class Col:
 
         """
         return self.__getattr__("str_startswith")(*args, **kwargs)
+
+    def sorted_tokens(self, *args, **kwargs) -> Col:
+        """Method wrapper of `lk.sorted_tokens` function.
+
+        Usage is identical to the function but chained to an instance of `Col`.
+
+        Info:
+            See [`lk.sorted_tokens`][liken.sorted_tokens] reference for complete documentation.
+
+        Example:
+            Define as part of a pipeline:
+
+                pipeline = lk.pipeline().step(lk.col("col").sorted_tokens())
+
+        """
+        return self.__getattr__("sorted_tokens")(*args, **kwargs)
 
     def __init__(self, columns: Columns, preprocessors: InputPreprocessor = ()):
         self._columns: Columns = columns

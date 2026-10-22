@@ -92,20 +92,87 @@ PARAMS = [
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.45}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.35}, [0, 0, 2, 2, 4, 2, 0, 0, 4, 0]),
     (lk.fuzzy, SINGLE_COL, {"threshold": 0.25}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
+    # jaro_winkler: pairwise similarities on this fixture are
+    # 0-7 = 1.0, 2-3 = 0.905, 3-5 = 0.639, 1-6 = 0.675, 2-5 = 0.668,
+    # with all remaining pairs below 0.55
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "scorer": "jaro_winkler"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.90, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.65, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.45, "scorer": "jaro_winkler"}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
+    #
+    # FUZZY TOPN:
+    # candidate-limited variant; the null star pair (rows 4, 8) survives
+    # regardless of topn. At topn=2 the groups match the all-pairs rows at
+    # the same thresholds on this fixture.
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.95, "topn": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.75, "topn": 2}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 1}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.fuzzy, SINGLE_COL, {"threshold": 0.55, "topn": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    #
+    # SORTED NEIGHBOURHOOD:
+    # the windowed variant of all-pairs fuzzy: pair set is a subset
+    # (equal at window >= n) at the same threshold and scorer. The null
+    # star pair (rows 4, 8) survives regardless of window. window=2
+    # scores only consecutive sorted pairs, so the ladder shows
+    # truncation where a matching pair sits further than one sorted
+    # position: with weighted_ratio at 0.85 the all-pairs group is
+    # {0, 1, 6, 7, 9} while window=2 splits rows 1 and 6 off (the 0-6
+    # pair spans several sorted positions). At 0.55 window=2 drops only
+    # the (3, 5) pair and window=3 scores it back, but the canonical
+    # groups are identical on this fixture (2-3-5 already merge via
+    # (2, 5)) — the w3 row pins that equality, the truncation
+    # transition is visible only in the weighted_ratio row. At
+    # window=10 (>= n) the groups equal the all-pairs fuzzy rows.
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.95, "window": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.85, "window": 2, "scorer": "weighted_ratio"}, [0, 1, 2, 3, 4, 5, 1, 0, 4, 0]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.75, "window": 2}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 2}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 3}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.55, "window": 2, "scorer": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 1]),
+    (lk.sorted_neighbourhood, SINGLE_COL, {"threshold": 0.25, "window": 10}, [0, 0, 0, 0, 4, 0, 0, 0, 4, 0]),
     #
     # EDIT DISTANCE:
     (lk.edit_distance, SINGLE_COL, {"max_distance": 2}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     (lk.edit_distance, "email", {"max_distance": 1}, [0, 1, 2, 3, 2, 2, 3, 3, 8, 0]),
     (lk.edit_distance, "email", {"max_distance": 2}, [0, 1, 0, 3, 0, 0, 3, 3, 8, 0]),
+    # metric variants: normalized max_distance in [0, 1]
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "damerau_levenshtein"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "jaro_winkler"}, [0, 1, 2, 2, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.35, "metric": "jaro_winkler"}, [0, 1, 2, 2, 4, 2, 1, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "indel"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
+    (lk.edit_distance, SINGLE_COL, {"max_distance": 0.2, "metric": "hamming"}, [0, 1, 2, 3, 4, 5, 6, 0, 4, 9]),
     #
     # COSINE:
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.999}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.99}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),
     (lk.cosine, NUMERICAL_COMPOUND_COL, {"threshold": 0.98}, [0, 0, 0, 0, 0, 0, 6, 6, 0, 0]),
     #
+    # KNN:
+    # the cosine k=5 rows match the all-pairs cosine rows at the same
+    # thresholds (k=5 exceeds every cluster on this fixture); the k=1
+    # rows show the top-k truncation: at t=0.999 the all-pairs set joins
+    # rows 4, 5 and 8 into the big 0-group (pairs (0,4),(1,4),(2,4),
+    # (4,9),(4,8),(5,8)), while k=1 keeps only (4,8),(5,8), so rows 4, 5
+    # and 8 split off. Euclidean rows use raw distance thresholds:
+    # property-scale values (sq ft, rooms) make the 1/(1+d) similarities
+    # tiny on this fixture.
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.999, "k": 5, "metric": "cosine"}, [0, 0, 0, 3, 0, 0, 6, 7, 0, 0]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.99, "k": 5, "metric": "cosine"}, [0, 0, 0, 0, 0, 0, 6, 7, 0, 0]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.98, "k": 5, "metric": "cosine"}, [0, 0, 0, 0, 0, 0, 6, 6, 0, 0]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.999, "k": 1, "metric": "cosine"}, [0, 0, 0, 3, 4, 4, 6, 7, 4, 0]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.98, "k": 1, "metric": "cosine"}, [0, 0, 0, 3, 3, 3, 6, 6, 3, 0]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.012, "k": 5, "metric": "euclidean"}, [0, 1, 0, 3, 4, 5, 6, 7, 8, 9]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.009, "k": 5, "metric": "euclidean"}, [0, 0, 0, 3, 4, 5, 6, 6, 0, 9]),
+    (lk.knn, NUMERICAL_COMPOUND_COL, {"threshold": 0.004, "k": 5, "metric": "euclidean"}, [0, 0, 0, 3, 4, 5, 0, 0, 0, 9]),
+    #
     # JACCARD:
     (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"threshold": 0.65}, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9]),
     (lk.jaccard, CATEGORICAL_COMPOUND_COL, {"threshold": 0.35}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
+    #
+    # TOKEN_OVERLAP:
+    (lk.token_overlap, CATEGORICAL_COMPOUND_COL, {"threshold": 0.75}, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9]),
+    (lk.token_overlap, CATEGORICAL_COMPOUND_COL, {"threshold": 0.6}, [0, 0, 2, 3, 0, 0, 3, 7, 0, 9]),
     #
     # LSH:
     # progressive deduping: fix ngram; vary threshold
@@ -201,6 +268,43 @@ PARAMS = [
     (lk.num_range, "property_area_sq_ft", {"max": 600}, [0, 0, 2, 3, 4, 5, 0, 0, 0, 9]),
     # no value in range: no deduping
     (lk.num_range, "property_area_sq_ft", {"min": 5000, "max": 6000}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    #
+    # WITHIN:
+    # tol=0: numeric equality, all values distinct
+    (lk.within, "property_area_sq_ft", {"tol": 0}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    # 545-500 = 45 exactly: the inclusive bound merges {500, 509, 545}
+    (lk.within, "property_area_sq_ft", {"tol": 45}, [0, 1, 2, 3, 4, 5, 0, 0, 8, 9]),
+    # transitive chain 452-500 (48), 500-545 (45), 545-623 (78) merges all
+    # five, though 452 and 623 are 171 apart
+    (lk.within, "property_area_sq_ft", {"tol": 100}, [0, 0, 0, 3, 4, 5, 0, 0, 8, 9]),
+    # wide tolerance collapses the whole column (skew shape)
+    (lk.within, "property_area_sq_ft", {"tol": 2000}, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    # property_height carries nulls (rows 0 and 8): nulls group together,
+    # the 2.5s merge, and 2.7 joins at tol=0.2 — its float difference
+    # 0.20000000000000018 rides the 1e-9 boundary guard
+    (lk.within, "property_height", {"tol": 0.1}, [0, 0, 2, 3, 4, 2, 2, 2, 2, 2]),
+    (lk.within, "property_height", {"tol": 0.2}, [0, 0, 2, 3, 2, 2, 2, 2, 2, 2]),
+    #
+    # DATE RANGE:
+    # date_joined: rows 0,1 = Jan 5; row 2 = Jan 7; row 3 = Jan 8;
+    # rows 4,8 = null; row 5 = Jun 1; rows 6,7 = Mar 15; row 9 = Jun 2.
+    # Expectations derived by brute force over the dates, then confirmed
+    # by run.
+    # window=0 is same-date matching
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d"}, [0, 0, 2, 3, 4, 5, 6, 6, 4, 9]),
+    # window=1: Jan 7-Jan 8 and Jun 1-Jun 2 merge; Jan 5 stays apart from
+    # Jan 7 (2 days)
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d", "window": 1}, [0, 0, 2, 2, 4, 5, 6, 6, 4, 5]),
+    # window=2: Jan 5, Jan 7 and Jan 8 merge — the inclusive bound at
+    # exactly 2 days crosses the plain date-key boundary
+    (lk.date_range, "date_joined", {"format": "%Y-%m-%d", "window": 2}, [0, 0, 0, 0, 4, 5, 6, 6, 4, 5]),
+    #
+    # SORTED TOKENS:
+    # name column: rows 0, 1, 8 share the tokens {john, smith} in any
+    # order; rows 2, 3, 6 share {ann, lee, mary}; row 4 is "" and row 9 is
+    # whitespace-only — zero-token values match nothing on the positive
+    # path; row 5 is null.
+    (lk.sorted_tokens, "name", {}, [0, 0, 2, 2, 4, 5, 2, 7, 0, 9]),
 ]
 
 # fmt: on
