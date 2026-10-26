@@ -7,8 +7,8 @@ title: Release History
 
 **Misc**
 
-- Standardized documentation vocabulary and spelling
-- Standardized internal code vocabulary and spelling
+- Standardized documentation vocabulary and spelling.
+- Standardized internal code vocabulary and spelling.
 
 
 ## v0.15.0 (2026-10-22)
