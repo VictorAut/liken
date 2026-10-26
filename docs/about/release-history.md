@@ -7,8 +7,8 @@ title: Release History
 
 **Misc**
 
-- Standardized internal code vocabulary and spelling; no public API or
-  behaviour change.
+- Standardized documentation vocabulary and spelling
+- Standardized internal code vocabulary and spelling
 
 
 ## v0.15.0 (2026-10-22)
