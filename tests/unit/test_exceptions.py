@@ -47,10 +47,10 @@ def test_invalid_deduper_error_catches_via_base():
 def test_warn_attributes_to_the_users_call_site_via_dedupe(dataframe):
     """`warn` attributes to the user's call through the full public path:
     user code -> `Dedupe.apply` -> `CollectionsManager.apply` -> `warn`."""
-    dupe = Dedupe(dataframe)
-    dupe.apply({"address": exact()})
+    dedupe = Dedupe(dataframe)
+    dedupe.apply({"address": exact()})
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        dupe.apply({"email": exact()})
+        dedupe.apply({"email": exact()})
     assert len(caught) == 1
     assert caught[0].filename == __file__

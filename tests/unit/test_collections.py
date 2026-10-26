@@ -233,7 +233,7 @@ def test_collections_manager_apply_rejects_reserved_default_key(s1):
 
 def test_collections_manager_apply_rejection_does_not_set_has_applies():
     """A rejected apply does not mark `has_applies`, so the exact fallback
-    continues to trigger on the next enact."""
+    continues to trigger on the next execute."""
     sm = CollectionsManager()
     with pytest.raises(InvalidDeduperError):
         sm.apply({})

@@ -65,7 +65,7 @@ WARN_DICT_REPLACES_DICT_MSG: Final[str] = "Replacing previously added dict dedup
 WARN_DICT_REPLACES_PIPELINE_MSG: Final[str] = "Replacing previously added 'Pipeline' deduper with a dict deduper"
 WARN_PIPELINE_REPLACES_SEQUENCE_MSG: Final[str] = "Replacing previously added sequence deduper with a 'Pipeline' deduper"
 WARN_PIPELINE_REPLACES_DICT_MSG: Final[str] = "Replacing previously added dict deduper with a 'Pipeline' deduper"
-WARN_RULES_REPLACES_RULES_MSG: Final[str] = "Replacing previously added 'Pipeline' deduper with a new 'Pipeline' deduper"
+WARN_PIPELINE_REPLACES_PIPELINE_MSG: Final[str] = "Replacing previously added 'Pipeline' deduper with a new 'Pipeline' deduper"
 WARN_COL_RECHAINED_MSG: Final[str] = "Chaining a second deduper on the same 'Col' replaces the previously chained deduper; only the last one applies"
 WARN_COL_REUSED_MSG: Final[str] = "The same 'Col' is used in more than one step; each step re-applies its deduper"
 

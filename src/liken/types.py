@@ -28,7 +28,7 @@ else:
 SupportedBackends: TypeAlias = Literal["pandas", "polars", "modin", "pyspark", "ray", "dask", "pyarrow"]
 
 Columns: TypeAlias = str | tuple[str, ...]  # label(s) that identify attributes of a dataframe for deduplication
-Keep: TypeAlias = Literal["first", "last"]  # Canonicalisation rule
+Keep: TypeAlias = Literal["first", "last"]  # Survivorship rule
 SimilarPairIndices: TypeAlias = tuple[int, int]
 
 SingleComponents: TypeAlias = dict[int, list[int]]

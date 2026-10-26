@@ -78,7 +78,7 @@ class LocalExecutor(Executor):
             - Pipeline: in which case "and" combination steps are allowed
             - DeduplicationDict: in which case handles Sequential and Dict API
 
-        For Pipeline, predication is implemented if an and combination contains at
+        For Pipeline, predicate evaluation applies when an "and" combination contains at
         least one Predicate Deduper. In that case the predicate dedupers are proxy
         WHERE filters that propagate a set of dataframe indice positions to the
         next deduper (most likely a threshold deduper, but optionally predicate
@@ -112,7 +112,7 @@ class LocalExecutor(Executor):
             for step in dedupers.steps:
                 any_predicate: bool = dedupers._has_any_predicate(step)
 
-                # predication only if at least one predicate deduper
+                # predicate evaluation only if at least one predicate deduper
                 if any_predicate:
                     indices: set = set()
 

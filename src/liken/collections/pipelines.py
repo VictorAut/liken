@@ -125,7 +125,7 @@ class Col:
                         ~lk.col(
                             "address",
                             preprocessors=[lk.preprocessors.lower()],
-                        ).isna(), # uses it's own preprocessor, `lower`.
+                        ).isna(), # uses its own preprocessor, `lower`.
                     ],
                     preprocessors=[lk.preprocessors.alnum()], # defines the step's preprocessor
                 )
@@ -566,9 +566,9 @@ class Pipeline:
         """Define a deduplication pipeline step
 
         Accepts a single deduper or a list of dedupers. A list of dedupers that
-        has more than one member are composed as "and rules" meaning that the
-        deduplication of both (or more) dedupers are considered for
-        canonicalisation.
+        has more than one member are combined as an "and" combination, meaning
+        that the deduplication of both (or more) dedupers are considered for
+        canonicalization.
 
         Args:
             cols: `Col` deduper, or list of the same.
@@ -593,7 +593,7 @@ class Pipeline:
                     .step(lk.col("address").tfidf())
                 )
 
-            More than on deduper can be added to form composable rules within
+            More than one deduper can be added to form an "and" combination within
             a step:
 
                 pipeline = (
@@ -653,7 +653,7 @@ class Pipeline:
         # propagate preprocessor
         step = [s._replace(preprocessors=preprocessors_list) if not s.preprocessors else s for s in step]
 
-        # predicates sorted to first for "rule predication"
+        # predicates sorted to first for predicate evaluation
         step: PipelineStep = sorted(step, key=lambda x: not isinstance(x[1], PredicateDeduper))
 
         self._steps.append(step)
