@@ -59,7 +59,7 @@ The first split is execution scope:
 - **pyarrow** runs over the whole table in one process. Arrow tables are columnar in memory, the same format Liken uses internally.
 - **dask, ray, pyspark** run over partitions — over batches, on ray. Deduplication executes per partition or batch, on the worker holding it.
 
-The partitioned execution has a consequence you must plan around: **records are only matched within a partition**. Two identical rows in different partitions will not be deduplicated, and each partition's duplicates get ids from that partition's own numbering. Partition your data so that likely duplicates land together, or use `repartition` on the columns your rules match against — see [Use Partitioned Data](performance.md#use-partitioned-data).
+The partitioned execution has a consequence you must plan around: **records are only matched within a partition**. Two identical rows in different partitions will not be deduplicated, and each partition's duplicates get ids from that partition's own numbering. Partition your data so that likely duplicates land together, or use `repartition` on the columns your dedupers match against — see [Use Partitioned Data](performance.md#use-partitioned-data).
 
 ## What You Get Back
 
@@ -80,8 +80,8 @@ The partitioned execution has a consequence you must plan around: **records are 
 Three methods pull data to the driver, so they trigger a collect on the distributed backends:
 
 - `canonicalize()` with no `source_id` — computing the auto-increment ids requires the whole frame's row positions.
-- `canonicals()` — counts groups by materialising the canonical ids. On PySpark this needs Spark 4 or above, as documented on the method.
-- `synthesize()` — builds the synthetic records from collected groups.
+- `canonicals()` — counts clusters by materialising the canonical ids. On PySpark this needs Spark 4 or above, as documented on the method.
+- `synthesize()` — builds the synthetic records from collected clusters.
 
 Passing an existing id column (`canonicalize(source_id="uid")`) avoids the auto-increment collect on dask and ray.
 
@@ -89,7 +89,7 @@ Passing an existing id column (`canonicalize(source_id="uid")`) avoids the auto-
 
 One API difference to know before you write code against a distributed backend:
 
-- `explore` runs on the pandas, polars, modin and pyarrow backends only. On dask, ray or pyspark it raises `ValueError`. Profile a sample locally first, then apply the chosen rules to the full distributed DataFrame. On pandas and modin the result is indexed by `metric`; on polars and pyarrow there is no index and `metric` is a regular column.
+- `explore` runs on the pandas, polars, modin and pyarrow backends only. On dask, ray or pyspark it raises `ValueError`. Profile a sample locally first, then apply the chosen dedupers to the full distributed DataFrame. On pandas and modin the result is indexed by `metric`; on polars and pyarrow there is no index and `metric` is a regular column.
 - Custom dedupers receive a plain Python list built per partition on the worker (see [Data Size and Distributed Backends](../tutorials/custom-dedupers.md#data-size-and-distributed-backends)). Keep the function importable so it can be shipped to workers.
 
 ## Which One Do I Pick?
@@ -102,4 +102,4 @@ One API difference to know before you write code against a distributed backend:
 - **ray** — dataset-oriented pipelines with ray already in your stack.
 - **pyspark** — data already lives in Spark. Deduplicate where the data is, rather than moving it.
 
-All seven accept the same dedupers, dict collections and pipelines. The choice is about where your data lives and how far it must scale, not about which rules you can write.
+All seven accept the same dedupers, dict collections and pipelines. The choice is about where your data lives and how far it must scale, not about which dedupers you can write.

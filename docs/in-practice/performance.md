@@ -53,7 +53,7 @@ id| address                  | email
 4 | 65 lindberg way, 90345   | extreme.trees@plants.co.uk
 
 /// caption
-Dummy data: two records with a null address, two records sharing an email.
+Dummy data: two records with a missing address, two records sharing an email.
 ///
 
 Deduplicating this data on the "email" column with an exact deduper could be implemented like:
@@ -66,7 +66,7 @@ df = (
 )
 ```
 
-In such a case, Liken would loop through all 4 email records and identify the last 2 as duplicates. But, you may be well placed to "qualify" your deduplication step with a predicate deduper, using AND semantics. This might be that you only want to consider "email" instances as valid for deduplication if the "address" column is itself not null (as seen in the data):
+In such a case, Liken would loop through all 4 email records and identify the last 2 as duplicates. But, you may be well placed to "qualify" your deduplication step with a predicate deduper, using AND semantics. This might be that you only want to consider "email" records as valid for deduplication if the "address" column is itself not missing (as seen in the data):
 
 ``` python
 df = (
@@ -83,7 +83,7 @@ df = (
 )
 ```
 
-In this case, with predicate pushdown the exact deduper will only loop through the instances of records where the "address" column is not null, in this case only 2 records — this can result in a significant performance boost because the predicate deduper operates first at approximately *O(n)*, returning *n'*, where *n' < n*. It's always useful to try to qualify a similarity deduper with a predicate deduper using AND semantics, especially if performance is an issue and the logic is well motivated from a logical point of view. Regardless of the above two cases, with our dummy data, the deduplicated data looks the same:
+In this case, with predicate pushdown the exact deduper will only loop through the records where the "address" column is not missing, in this case only 2 records — this can result in a significant performance boost because the predicate deduper operates first at approximately *O(n)*, returning *n'*, where *n' < n*. It's always useful to try to qualify a threshold deduper with a predicate deduper using AND semantics, especially if performance is an issue and the logic is well motivated from a logical point of view. Regardless of the above two cases, with our dummy data, the deduplicated data looks the same:
 
 id| address                  | email
 --|--------------------------|-------
@@ -92,7 +92,7 @@ id| address                  | email
 3 | 43 queensbridge, n99 6lt | extreme.trees@plants.co.uk
 
 /// caption
-The result is unchanged here — the two duplicate emails both have non-null addresses, so qualification cost nothing and bought the pushdown speed-up.
+The result is unchanged here — the two duplicate emails both have non-missing addresses, so qualification cost nothing and bought the pushdown speed-up.
 ///
 
 ### Use the LSH deduper

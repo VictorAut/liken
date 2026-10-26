@@ -18,7 +18,7 @@ The bundle contains one skill per API tier:
 | ----- | ----- |
 | `liken` | Overview, and which API to reach for |
 | `liken-dedupers` | Applying built-in dedupers |
-| `liken-pipelines` | Pipelines with AND/OR/NOT rules and built-in preprocessors |
+| `liken-pipelines` | Pipelines with AND/OR/NOT combination and built-in preprocessors |
 | `liken-custom-dedupers` | Writing your own dedupers in pure Python |
 | `liken-record-linkage` | Canonicalization and synthetic records |
 | `liken-backends-performance` | Backend selection, scaling and performance |

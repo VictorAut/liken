@@ -39,8 +39,8 @@ The key features are:
 - Jaccard set deduper
 - Cosine set deduper
 - Pandas API extension
-- Composable, rules-based, deduplication pipelines
-- Predicate dedupers for rules
+- Composable, predicate-based, deduplication pipelines
+- Predicate dedupers for discrete checks
 - Record linkage and canonicalization
 - Built-in Preprocessors
 - Pandas, Polars, Modin, Ray, Dask and PySpark support
@@ -49,14 +49,14 @@ The key features are:
 - Easy to understand syntax
 - Dummy datasets for practice
 
-Liken makes near deduplication as approachable as exact deduplication. Describe the rules, apply them, and get deduplicated or canonicalized DataFrames back.
+Liken makes near deduplication as approachable as exact deduplication. Describe the predicates, apply them, and get deduplicated or canonicalized DataFrames back.
 
 ### Use Cases
 
 - **Find near-duplicate records.** Catch what exact matching misses.
-- **Link records that describe the same entity.** Combine datasets and label duplicates with configurable matching rules instead of exact keys.
-- **Canonicalize duplicate groups.** Collapse each group of duplicates to a single row and keep a canonical id on every record.
-- **Build golden records.** Consolidate each duplicate group into one synthetic, "golden", record.
+- **Link records that describe the same entity.** Combine datasets and label duplicates with configurable predicates instead of exact keys.
+- **Canonicalize duplicate clusters.** Merge each cluster of duplicates into a single record and keep a canonical id on every record.
+- **Build representative records.** Consolidate each duplicate cluster into one synthetic record, the representative chosen by survivorship.
 - **Explore duplicate rates first.** Profile how much duplication each column carries.
 
 ## Supported DataFrame Libraries

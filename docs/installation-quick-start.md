@@ -104,7 +104,7 @@ deduper = lk.dedupe(df).apply(lk.fuzzy(threshold=0.7))
 print("With Liken fuzzy deduplication at threshold:")
 print(deduper.drop_duplicates("email"))
 
-print("Normal Pandas only exact match dedupication:")
+print("Normal Pandas only exact match deduplication:")
 print(df.drop_duplicates("email"))
 
 ```

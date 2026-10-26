@@ -69,7 +69,7 @@ df = (
   3   |  5 low road
 
 /// caption
-Rows 0 and 1 were linked and collapsed; the rest survive.
+Rows 0 and 1 were linked and merged; the rest survive.
 ///
 
 ## Using a Custom Deduper
@@ -112,7 +112,7 @@ The keyword arguments you pass at the call site (`min_len=12` above) are stored 
 
 ## Predicate-Style Results
 
-A custom deduper yields pairs, but nothing stops you yielding the pairs that a *predicate* deduper would. A predicate groups **all matching records into one group**:
+A custom deduper yields pairs, but nothing stops you yielding the pairs that a *predicate* deduper would. A predicate links **all matching records into one cluster**:
 
 ```python
 import liken as lk
@@ -150,7 +150,7 @@ The two `@gmail.com` records share a canonical id; the others keep their own.
 ///
 
 ??? note "Inversion of a custom, predicate, deduper"
-    Your custom deduper is still treated as a threshold deduper, not a predicate: you cannot invert it with `~`, and rule predication does not single it out. It can however be combined with real predicate dedupers in an AND step. See the limitations below.
+    Your custom deduper is still treated as a threshold deduper, not a predicate: you cannot invert it with `~`, and predicate evaluation does not single it out. It can however be combined with real predicate dedupers in an AND step. See the limitations below.
 
 ## Limitations
 

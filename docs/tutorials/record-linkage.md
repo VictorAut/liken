@@ -45,7 +45,7 @@ df = (
 
 1.  `canonicalize` does not return the dataframe, unlike `drop_duplicates`. It needs to be collected first!
 
-The `keep` argument picks the *representative* of each duplicate group: `"first"` keeps the earliest record of the group in the dataframe's current row order, `"last"` the latest. The representative's identity is what the group's `canonical_id` will carry.
+The `keep` argument picks the *representative* of each duplicate cluster under the survivorship policy: `"first"` keeps the earliest record of the cluster in the dataframe's current row order, `"last"` the latest. The representative's identity is what the cluster's `canonical_id` will carry.
 
 Now, `df` looks the same, with an extra `canonical_id` column:
 
@@ -62,9 +62,9 @@ The two email addresses are linked to the canonical record "0".
 
 `.canonicalize` creates a new `canonical_id` field. Any repeated `canonical_id` is a duplicate. In this instance that was an auto-incrementing numeric field. As such, the repeated `canonical_id` represents the index position in the DataFrame of the *canonical* record.
 
-With `keep="last"` the group would be represented by its latest record instead, and both rows would carry `a002`'s position as their id.
+With `keep="last"` the cluster would be represented by its latest record instead, and both rows would carry `a002`'s position as their id.
 
-You can control this behaviour by passing an explicit label to the `id` argument of `.canonicalize`. The values of the column you name become the `canonical_id` values: name `canonical_id` itself and it is left as is; name any other column and `canonical_id` is written from its values. For example:
+You can control this behaviour by passing an explicit label to the `source_id` argument of `.canonicalize`. The values of the column you name become the `canonical_id` values: name `canonical_id` itself and it is left as is; name any other column and `canonical_id` is written from its values. For example:
 
 ```python
 import liken as lk
@@ -95,14 +95,14 @@ Canonical records are no longer identified by index position in the DataFrame, b
 ///
 
 
-## How Groups Form
+## How Clusters Form
 
 Canonicalization is one model, end to end:
 
 1. The applied dedupers pair up matching records — the same pairs that `drop_duplicates` would have collapsed.
-2. Pairs merge *transitively*. If record `a` matches `b`, and `b` matches `c`, all three land in one group — even when `a` and `c` would not match each other directly.
-3. One record per group becomes the representative, chosen by `keep`: the first or the last record of the group, in row order.
-4. Every member of the group receives the representative's `canonical_id`.
+2. Pairs merge *transitively*. If record `a` matches `b`, and `b` matches `c`, all three land in one cluster — even when `a` and `c` would not match each other directly.
+3. One record per cluster becomes the representative, chosen by `keep` under the survivorship policy: the first or the last record of the cluster, in row order.
+4. Every member of the cluster receives the representative's `canonical_id`.
 
 Transitivity is worth seeing. At threshold 0.85, `"london"` and `"londn"` match (score 0.91), and `"londn"` and `"lond"` match (score 0.86) — but `"london"` and `"lond"` do not (score 0.73):
 
@@ -126,9 +126,9 @@ lk.dedupe(address_df).apply(addresses).canonicalize().collect()
 
 All three records receive `canonical_id 0` — `"londn"` bridges the gap. At threshold 0.95 no pair matches at all, and each record keeps its own id. Whether two records share an id is decided by the whole chain of matches, not by any single pair.
 
-## Inspecting Groups
+## Inspecting Clusters
 
-Once `canonicalize` has run, `canonicals` answers the natural next question: *which groups actually hold duplicates?* It returns a dict of `canonical_id` to record count, for every group with at least `n` records — the default `n` is 2:
+Once `canonicalize` has run, `canonicals` answers the natural next question: *which clusters actually hold duplicates?* It returns a dict of `canonical_id` to record count, for every cluster with at least `n` records — the default `n` is 2:
 
 ```python
 import liken as lk
@@ -146,12 +146,12 @@ result = (
 result.canonicals()  # {'a001': 2}
 ```
 
-`a003` is absent from the result: its group holds a single record. Raise `n` to demand larger groups — `canonicals(3)` returns only groups of three or more records. `canonicals` collects the canonical ids to your machine, so on distributed backends it triggers a collect.
+`a003` is absent from the result: its cluster holds a single record. Raise `n` to demand larger clusters — `canonicals(3)` returns only clusters of three or more records. `canonicals` collects the canonical ids to your machine, so on distributed backends it triggers a collect.
 
 
 ## Synthetic Records
 
-A canonical record can be linked to several child records. Use `.synthesize` to create a new record per canonical group, coalescing the values of the group's child records:
+A canonical record can be linked to several child records. Use `.synthesize` to create a new record per canonical cluster, coalescing the values of the cluster's child records:
 
 ```python
 import liken as lk
@@ -169,7 +169,7 @@ result = (
 synthetic_records = result.synthesize()
 ```
 
-`synthesize` returns a new DataFrame with exactly one record per canonical group. For each column, the synthetic value is the *first non-null* value among the group's records, in row order. The canonicalized DataFrame itself keeps all child records, unchanged — the synthetic records sit alongside them, in their own frame:
+`synthesize` returns a new DataFrame with exactly one record per canonical cluster. For each column, the synthetic value is the *first non-missing* value among the cluster's records, in row order. The canonicalized DataFrame itself keeps all child records, unchanged — the synthetic records sit alongside them, in their own frame:
 
  canonical_id  |  uid   |  address  |        email
 ---------------|--------|-----------|---------------------
@@ -177,10 +177,10 @@ synthetic_records = result.synthesize()
       a003     |  a003  |   paris   |       a@msn.fr
 
 /// caption
-One synthetic record per canonical group: `a001`'s group coalesces into a single record.
+One synthetic record per canonical cluster: `a001`'s cluster coalesces into a single record.
 ///
 
-First non-null means the first record's null does not win — the first *non-null* value does:
+First non-missing means the first record's missing value does not win — the first *non-missing* value does:
 
   uid   |  address  |  email
 --------|-----------|----------
@@ -199,7 +199,7 @@ result.synthesize()
       b001     |  b001  |   oslo    |  x@y.io
 
 /// caption
-`b001`'s address is null, so the synthetic record takes `b002`'s.
+`b001`'s address is missing, so the synthetic record takes `b002`'s.
 ///
 
-`synthesize` collects to your machine on distributed backends. Unlike `canonicals`, it does not refuse to run before a `canonicalize` — on an un-canonicalized chain it silently treats every record as its own group, which is rarely what you want.
+`synthesize` collects to your machine on distributed backends. Unlike `canonicals`, it does not refuse to run before a `canonicalize` — on an un-canonicalized chain it silently treats every record as its own cluster, which is rarely what you want.
