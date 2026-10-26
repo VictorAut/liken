@@ -32,6 +32,7 @@ nav = [
         "reference/datasets.md",
     ] },
     { "About" = [
+        "about/glossary.md",
         "about/release-history.md",
         "about/contributing.md",
         "about/license.md",
@@ -90,6 +91,7 @@ filters = ["!^_"]
 # MARKDOWN EXTENSIONS:
 
 [project.markdown_extensions.pymdownx.blocks.caption]
+[project.markdown_extensions.def_list]
 [project.markdown_extensions.pymdownx.caret]
 [project.markdown_extensions.pymdownx.details]
 [project.markdown_extensions.pymdownx.emoji]
