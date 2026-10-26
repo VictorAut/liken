@@ -51,6 +51,8 @@ The key features are:
 
 Liken makes near deduplication as approachable as exact deduplication. Describe the predicates, apply them, and get deduplicated or canonicalized DataFrames back.
 
+Terms used across the documentation are defined in the [Glossary](about/glossary.md).
+
 ### Use Cases
 
 - **Find near-duplicate records.** Catch what exact matching misses.

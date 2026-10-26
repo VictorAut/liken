@@ -45,7 +45,7 @@ df = (
 
 1.  `canonicalize` does not return the dataframe, unlike `drop_duplicates`. It needs to be collected first!
 
-The `keep` argument picks the *representative* of each duplicate cluster under the survivorship policy: `"first"` keeps the earliest record of the cluster in the dataframe's current row order, `"last"` the latest. The representative's identity is what the cluster's `canonical_id` will carry.
+The `keep` argument picks the *representative* of each duplicate cluster under the survivorship policy: `"first"` keeps the earliest record of the cluster in the dataframe's current row order, `"last"` the latest. The representative's identity is what the cluster's `canonical_id` will carry. See the [Glossary](../about/glossary.md) for the vocabulary used here.
 
 Now, `df` looks the same, with an extra `canonical_id` column:
 
