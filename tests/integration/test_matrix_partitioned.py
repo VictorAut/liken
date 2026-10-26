@@ -1,4 +1,4 @@
-"""Test that canonicalisation is only operated upon per partition"""
+"""Test that canonicalization is only operated upon per partition"""
 
 from __future__ import annotations
 

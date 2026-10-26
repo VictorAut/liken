@@ -54,25 +54,25 @@ class RayExecutor(Executor):
             from liken.collections.base import SEQUENTIAL_API_DEFAULT_KEY
             from liken.collections.dict import DeduplicationDict as DictImpl
 
-            dupe = Dedupe(batch)  # type: ignore[return-value]
+            dedupe = Dedupe(batch)  # type: ignore[return-value]
 
             # Internal handoff: the sequential API stores dedupers under the
             # reserved `_default_` key, which a public dict apply must not use.
             # Re-apply them individually to keep the sequential semantics.
             if isinstance(dedupers, DictImpl) and set(dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}:
                 for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
-                    dupe.apply(deduper)
+                    dedupe.apply(deduper)
             else:
-                dupe.apply(dedupers)  # type: ignore[arg-type]
+                dedupe.apply(dedupers)  # type: ignore[arg-type]
 
-            dupe._canonicalize(
+            dedupe._canonicalize(
                 columns=columns,
                 keep=keep,
                 drop_duplicates=drop_duplicates,
                 source_id=source_id,
                 canonical_id=canonical_id,
             )
-            return dupe.collect()  # type: ignore[return-value]
+            return dedupe.collect()  # type: ignore[return-value]
 
         # IMPORTANT: "pandas" batch
         # canonical_id is passed to keep the schema-only re-wrap from adding a

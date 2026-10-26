@@ -20,7 +20,7 @@ class StrContains(
     PredicateDeduper,
 ):
     """
-    Strings contains canonicalizer.
+    Contains deduper.
 
     Defaults to case sensitive. Supports literal substring or regex search.
     """

@@ -53,73 +53,73 @@ def test_no_apply_still_has_exact_apply_on_drop_duplicates(
 # canonicals
 
 
-def test_re_enactment_after_drop_duplicates_reapplies_exact():
-    """exact fallback fires on every enact, not only the first.
+def test_re_execution_after_drop_duplicates_reapplies_exact():
+    """exact fallback fires on every execute, not only the first.
 
-    The second enactment runs on a clean frame: `drop_duplicates` reset the
+    The second execute runs on a clean frame: `drop_duplicates` reset the
     collection, so `canonicalize` must re-apply the exact fallback and group
     the two equal "a" values.
     """
     df = pd.DataFrame({"a": ["x", "x", "y"], "b": ["p", "q", "r"]})
 
-    dupe = Dedupe(df)
-    dupe.apply(lk.exact()).drop_duplicates("b")  # no duplicates in "b"
+    dedupe = Dedupe(df)
+    dedupe.apply(lk.exact()).drop_duplicates("b")  # no duplicates in "b"
 
-    dupe.canonicalize("a")
+    dedupe.canonicalize("a")
 
-    assert list(dupe.collect()["canonical_id"]) == [0, 0, 2]
+    assert list(dedupe.collect()["canonical_id"]) == [0, 0, 2]
 
 
 def test_canonicals_rejects_n_below_two(dataframe):
-    dupe = Dedupe(dataframe)
+    dedupe = Dedupe(dataframe)
     with pytest.raises(InvalidArgumentValueError, match=r"`n` must be an integer in the range \[2, inf\), got 1"):
-        dupe.canonicals(n=1)
+        dedupe.canonicals(n=1)
 
 
 @pytest.mark.parametrize("n", ["2", 2.5, True, None])
 def test_canonicals_rejects_non_integer_n(n, dataframe):
     """`n` is type-checked before the bound."""
-    dupe = Dedupe(dataframe)
+    dedupe = Dedupe(dataframe)
     with pytest.raises(InvalidArgumentTypeError, match="`n` must be an integer, got"):
-        dupe.canonicals(n=n)
+        dedupe.canonicals(n=n)
 
 
 def test_canonicalize_rejects_empty_id():
     """an empty `source_id` previously fell through to autoincrement."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="`source_id` must be a non-empty string, got ''"):
-        dupe.canonicalize("a", source_id="")
+        dedupe.canonicalize("a", source_id="")
 
 
 def test_canonicalize_rejects_non_str_id():
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentTypeError, match="`source_id` must be of type 'str', got 'int'"):
-        dupe.canonicalize("a", source_id=1)
+        dedupe.canonicalize("a", source_id=1)
 
 
 def test_canonicalize_rejects_non_bool_drop_duplicates():
     """`drop_duplicates=0` was accepted silently and dropped nothing."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentTypeError, match="`drop_duplicates` must be of type 'bool', got 'int'"):
-        dupe.canonicalize("a", drop_duplicates=0)
+        dedupe.canonicalize("a", drop_duplicates=0)
 
 
 def test_synthesize_before_canonicalize_raises():
     """`synthesize` requires a prior `canonicalize`; the state error
     comes before any frame work."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(RuntimeError, match=r"Run `\.canonicalize\(\)` first"):
-        dupe.synthesize()
+        dedupe.synthesize()
 
 
 def test_canonicals_before_canonicalize_raises(dataframe):
-    dupe = Dedupe(dataframe)
+    dedupe = Dedupe(dataframe)
     with pytest.raises(RuntimeError, match="No canonical_id counts found"):
-        dupe.canonicals()
+        dedupe.canonicals()
 
 
 # dispatch
@@ -218,59 +218,59 @@ def test_validate_columns_args_non_str_tuple_member_type_error(mock_wrap, dedupl
 # Boundary checks (U13, U46, U51):
 
 
-def test_enact_rejects_nonexistent_column_label():
+def test_execute_rejects_nonexistent_column_label():
     """`columns` labels are existence-checked at the frame boundary."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.drop_duplicates("nope")
+        dedupe.drop_duplicates("nope")
 
 
-def test_enact_rejects_nonexistent_tuple_member():
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+def test_execute_rejects_nonexistent_tuple_member():
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.drop_duplicates(("a", "nope"))
+        dedupe.drop_duplicates(("a", "nope"))
 
 
 def test_canonicalize_rejects_nonexistent_id():
     """`source_id` names an existing column."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.canonicalize("a", source_id="nope")
+        dedupe.canonicalize("a", source_id="nope")
 
 
 def test_apply_rejects_nonexistent_dict_tuple_member():
     """dict tuple-key members are existence-checked at apply."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(InvalidArgumentValueError, match="column 'nope' not found in the dataframe"):
-        dupe.apply({("a", "nope"): lk.exact()})
+        dedupe.apply({("a", "nope"): lk.exact()})
 
 
-def test_enact_rejects_zero_column_frame():
-    """a zero-column frame is rejected at the enact boundary."""
-    dupe = Dedupe(pd.DataFrame())
+def test_execute_rejects_zero_column_frame():
+    """a zero-column frame is rejected at the execute boundary."""
+    dedupe = Dedupe(pd.DataFrame())
 
     with pytest.raises(ValueError, match="dataframe has no columns"):
-        dupe.drop_duplicates()
+        dedupe.drop_duplicates()
 
 
-def test_enact_accepts_zero_row_frame():
+def test_execute_accepts_zero_row_frame():
     """a zero-row frame stays accepted."""
-    dupe = Dedupe(pd.DataFrame({"a": [], "b": []}))
+    dedupe = Dedupe(pd.DataFrame({"a": [], "b": []}))
 
-    dupe.drop_duplicates("a")  # must not raise
+    dedupe.drop_duplicates("a")  # must not raise
 
 
-def test_enact_rejects_duplicate_frame_labels():
-    """duplicate labels in the user frame are rejected at the enact
+def test_execute_rejects_duplicate_frame_labels():
+    """duplicate labels in the user frame are rejected at the execute
     boundary, naming the labels."""
-    dupe = Dedupe(pd.DataFrame([[1, 2], [3, 4]], columns=["a", "a"]))
+    dedupe = Dedupe(pd.DataFrame([[1, 2], [3, 4]], columns=["a", "a"]))
 
     with pytest.raises(ValueError, match="dataframe has duplicate column labels: \\['a'\\]"):
-        dupe.drop_duplicates("a")
+        dedupe.drop_duplicates("a")
 
 
 # CollectionsManager
@@ -279,8 +279,8 @@ def test_enact_rejects_duplicate_frame_labels():
 @patch("liken.liken.CollectionsManager")
 def test_apply_delegates_to_collections_manager(mock, dataframe, deduplication_mock):
     mock_sm = mock.return_value
-    dupe = Dedupe(dataframe)
-    dupe.apply({"address": deduplication_mock})
+    dedupe = Dedupe(dataframe)
+    dedupe.apply({"address": deduplication_mock})
     mock_sm.apply.assert_called_once_with({"address": deduplication_mock})
 
 
@@ -303,11 +303,11 @@ def test_canonicalize_calls(
     mock_sm.get.return_value = {"address": deduplication_mock}
     mock_sm.validate_api_mode.side_effect = lambda columns: columns
 
-    dupe = Dedupe(dataframe)
-    dupe._executor = mock_executor
-    dupe._sm = mock_sm
+    dedupe = Dedupe(dataframe)
+    dedupe._executor = mock_executor
+    dedupe._sm = mock_sm
 
-    dupe.canonicalize("address")
+    dedupe.canonicalize("address")
 
     mock_sm.get.assert_called_once()
     mock_executor.execute.assert_called_once_with(
@@ -339,11 +339,11 @@ def test_drop_duplicate_calls(
     mock_sm.get.return_value = {"address": deduplication_mock}
     mock_sm.validate_api_mode.side_effect = lambda columns: columns
 
-    dupe = Dedupe(dataframe)
-    dupe._executor = mock_executor
-    dupe._sm = mock_sm
+    dedupe = Dedupe(dataframe)
+    dedupe._executor = mock_executor
+    dedupe._sm = mock_sm
 
-    dupe.drop_duplicates("address")
+    dedupe.drop_duplicates("address")
 
     mock_sm.get.assert_called_once()
     mock_executor.execute.assert_called_once_with(
@@ -367,9 +367,9 @@ def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
     mock_sm = mock_sm.return_value
     mock_sm.pretty_get.return_value = ("deduper1",)
 
-    dupe = Dedupe(dataframe)
-    dupe._sm = mock_sm
-    assert dupe.explain() == ("deduper1",)
+    dedupe = Dedupe(dataframe)
+    dedupe._sm = mock_sm
+    assert dedupe.explain() == ("deduper1",)
 
 
 # explain() with sequential dedupers
@@ -377,17 +377,17 @@ def test_dedupers_property_returns_manager_output(mock_sm, dataframe):
 
 def test_explain_single_sequential_deduper_returns_that_deduper_str(dataframe):
     exact = lk.exact()
-    dupe = Dedupe(dataframe).apply(exact)
+    dedupe = Dedupe(dataframe).apply(exact)
 
-    assert dupe.explain() == str(exact)
+    assert dedupe.explain() == str(exact)
 
 
 def test_explain_two_sequential_dedupers_returns_both_names_comma_separated(dataframe):
     exact = lk.exact()
     fuzzy = lk.fuzzy()
-    dupe = Dedupe(dataframe).apply(exact).apply(fuzzy)
+    dedupe = Dedupe(dataframe).apply(exact).apply(fuzzy)
 
-    out = dupe.explain()
+    out = dedupe.explain()
     assert isinstance(out, str)
     lowered = out.lower()
     assert "exact" in lowered
@@ -397,10 +397,10 @@ def test_explain_two_sequential_dedupers_returns_both_names_comma_separated(data
 
 def test_canonicalize_rejects_canonical_id_collision():
     """`canonical_id` naming an existing column is rejected before execution."""
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
 
     with pytest.raises(ValueError, match="the dataframe already has a column with this label"):
-        dupe.canonicalize("a", canonical_id="b")
+        dedupe.canonicalize("a", canonical_id="b")
 
 
 def test_drop_duplicates_signature_unchanged():
@@ -438,10 +438,10 @@ def test_drop_duplicates_keeps_custom_labelled_canonical_column():
     """Path convergence: the stored label is irrelevant to the drop path."""
     df = pd.DataFrame({"master_id": [7, 7, 8], "email": ["a@x", "a@x", "b@x"]})
 
-    dupe = Dedupe(df)
-    dupe._canonical_id = "master_id"
+    dedupe = Dedupe(df)
+    dedupe._canonical_id = "master_id"
 
-    out = dupe.drop_duplicates("email")
+    out = dedupe.drop_duplicates("email")
 
     assert list(out.columns) == ["master_id", "email"]
     assert list(out["master_id"]) == [7, 8]
@@ -452,10 +452,10 @@ def test_drop_duplicates_rejects_internal_label_collision():
     """A frame pre-carrying the internal label is rejected before execution."""
     df = pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2], "email": ["a@x", "b@x"]})
 
-    dupe = Dedupe(df)
+    dedupe = Dedupe(df)
 
     with pytest.raises(ValueError, match=INTERNAL_CANONICAL_ID_COLLISION_MSG):
-        dupe.drop_duplicates("email")
+        dedupe.drop_duplicates("email")
 
 
 def test_canonicalize_rejects_reserved_label_argument():
@@ -463,10 +463,10 @@ def test_canonicalize_rejects_reserved_label_argument():
     (Amendment 2)."""
     from liken.constants import CANONICAL_ID_RESERVED_MSG
 
-    dupe = Dedupe(pd.DataFrame({"a": [1, 2], "email": ["x", "y"]}))
+    dedupe = Dedupe(pd.DataFrame({"a": [1, 2], "email": ["x", "y"]}))
 
     with pytest.raises(ValueError, match=CANONICAL_ID_RESERVED_MSG):
-        dupe.canonicalize("a", canonical_id=INTERNAL_CANONICAL_ID)
+        dedupe.canonicalize("a", canonical_id=INTERNAL_CANONICAL_ID)
 
 
 def test_canonicalize_rejects_frame_carrying_internal_label():
@@ -474,7 +474,7 @@ def test_canonicalize_rejects_frame_carrying_internal_label():
     (Amendment 2)."""
     from liken.constants import INTERNAL_CANONICAL_ID_COLLISION_MSG
 
-    dupe = Dedupe(pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2], "email": ["x", "y"]}))
+    dedupe = Dedupe(pd.DataFrame({INTERNAL_CANONICAL_ID: [1, 2], "email": ["x", "y"]}))
 
     with pytest.raises(ValueError, match=INTERNAL_CANONICAL_ID_COLLISION_MSG):
-        dupe.canonicalize("email")
+        dedupe.canonicalize("email")

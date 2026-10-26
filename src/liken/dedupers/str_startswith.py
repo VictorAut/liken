@@ -20,7 +20,7 @@ class StrStartsWith(
     PredicateDeduper,
 ):
     """
-    Strings start with canonicalizer.
+    Starts-with deduper.
 
     Defaults to case sensitive.
 

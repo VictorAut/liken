@@ -106,7 +106,7 @@ class PysparkExecutor(Executor):
             return iter([])
 
         # Core API reused per partition, per worker node
-        dupe = factory._from_rows(rows)
+        dedupe = factory._from_rows(rows)
 
         # Internal handoff: the sequential API stores dedupers under the
         # reserved `_default_` key, which a public dict apply must not use.
@@ -116,17 +116,17 @@ class PysparkExecutor(Executor):
 
         if isinstance(dedupers, DictImpl) and set(dedupers) == {SEQUENTIAL_API_DEFAULT_KEY}:
             for deduper in dedupers[SEQUENTIAL_API_DEFAULT_KEY]:
-                dupe.apply(deduper)
+                dedupe.apply(deduper)
         else:
-            dupe.apply(dedupers)  # type: ignore[arg-type]
+            dedupe.apply(dedupers)  # type: ignore[arg-type]
 
-        dupe._canonicalize(
+        dedupe._canonicalize(
             columns=columns,
             keep=keep,
             drop_duplicates=drop_duplicates,
             source_id=source_id,
             canonical_id=canonical_id,
         )
-        df = dupe.collect()
+        df = dedupe.collect()
 
         return iter(df)  # type: ignore[arg-type]
