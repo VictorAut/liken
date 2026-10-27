@@ -55,6 +55,27 @@ def block_rows_for(n: int, itemsize: int, cap_bytes: int) -> int:
     return max(1, cap_bytes // denominator)
 
 
+def probe_itemsize(compare: Callable, *, float64: bool) -> int:
+    """Byte size of one score, from one tiny `cdist` call.
+
+    The score dtype is the scorer's; probing it once per generation keeps
+    the block-size formula in bytes without hard-coding per scorer.
+
+    Args:
+        compare: The scorer the block loop will run.
+        float64: Whether the caller forces `dtype="float64"` (normalized
+            edit metrics do, for boundary-tolerance precision).
+
+    Returns:
+        The itemsize of the score dtype, in bytes.
+    """
+    if float64:
+        matrix = process.cdist(["abc"], ["abd", "abe"], scorer=compare, dtype="float64")
+    else:
+        matrix = process.cdist(["abc"], ["abd", "abe"], scorer=compare)
+    return int(matrix.dtype.itemsize)
+
+
 def resolve_workers(workers: int | None, *, distributed: bool) -> int:
     """Resolve the `workers` knob to a `cdist` worker count.
 

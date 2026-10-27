@@ -19,6 +19,12 @@ from liken.core.deduper import SingleColumnMixin
 from liken.core.deduper import ThresholdDeduper
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
+from liken.dedupers._blockwise import DEFAULT_BLOCK_MEMORY
+from liken.dedupers._blockwise import block_rows_for
+from liken.dedupers._blockwise import probe_itemsize
+from liken.dedupers._blockwise import resolve_workers
+from liken.dedupers._blockwise import similar_pairs_blockwise
+from liken.exceptions import InvalidArgumentValueError
 from liken.types import SimilarPairIndices
 from liken.validations import require_choice
 from liken.validations import require_int
@@ -96,17 +102,29 @@ class Fuzzy(
         threshold: float = 0.95,
         scorer: ScorerName = "simple_ratio",
         topn: int | None = None,
+        workers: int | None = None,
+        max_block_memory: int | None = None,
     ):
         require_type("scorer", scorer, str)
         require_choice("scorer", scorer, _SCORER_NAMES)
         topn = require_int("topn", topn, low=1, allow_none=True)
+        workers = require_int("workers", workers, low=-1, allow_none=True)
+        if workers == 0:
+            raise InvalidArgumentValueError("`workers` must be a nonzero integer or -1, got 0")
+        max_block_memory = require_int("max_block_memory", max_block_memory, low=0, allow_none=True)
         init_kwargs: dict[str, Any] = {"threshold": threshold, "scorer": scorer}
         if topn is not None:
             init_kwargs["topn"] = topn
+        if workers is not None:
+            init_kwargs["workers"] = workers
+        if max_block_memory is not None:
+            init_kwargs["max_block_memory"] = max_block_memory
         super().__init__(**init_kwargs)
         self._threshold = threshold
         self._scorer = scorer
         self._topn = topn
+        self._workers = workers
+        self._max_block_memory = max_block_memory
 
     def get_scorer(self):
         return self._SCORERS[self._scorer]
@@ -134,19 +152,19 @@ class Fuzzy(
             yield from self._topk_pairs(present, scored, threshold, scorer)
             return
 
-        for pos, s1 in enumerate(scored):
-            if pos + 1 >= len(scored):
-                break
+        max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
+        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, float64=False), max_block_memory)
+        workers = resolve_workers(self._workers, distributed=getattr(getattr(self, "wdf", None), "distributed", False))
 
-            scores = process.cdist(
-                [s1],
-                scored[pos + 1 :],
-                scorer=scorer,
-            )[0]
-
-            for offset, score in enumerate(scores):
-                if score >= threshold - _BOUNDARY_TOLERANCE:
-                    yield present[pos], present[pos + 1 + offset]
+        for r, c in similar_pairs_blockwise(
+            scored,
+            compare=scorer,
+            low=False,
+            bound=threshold - _BOUNDARY_TOLERANCE,
+            block_rows=block_rows,
+            workers=workers,
+        ):
+            yield present[r], present[c]
 
     def _topk_pairs(
         self,
@@ -207,6 +225,8 @@ def fuzzy(
     threshold: float = 0.95,
     scorer: ScorerName = "simple_ratio",
     topn: int | None = None,
+    workers: int | None = None,
+    max_block_memory: int | None = None,
 ) -> BaseDeduper:
     """Near string deduplication.
 
@@ -240,6 +260,21 @@ def fuzzy(
             pairs survive. Ties at rank k are broken by row order: the
             same input order gives the same output, and reordering the
             column can change the result.
+        workers: The number of worker threads used for scoring, in the
+            all-pairs mode. This parameter has multiple effective
+            defaults: `None` chooses automatically, using all CPU cores
+            locally and a single worker under a distributed backend,
+            where the executor owns parallelism and an all-cores request
+            would oversubscribe the cores. An explicit integer always
+            wins, `-1` meaning all cores. Under a distributed backend an
+            explicit all-cores value risks executor contention.
+        max_block_memory: The approximate memory budget, in bytes, of one
+            scored block in the all-pairs mode. Values are scored in
+            blocks bounded by this cap; smaller blocks lower peak memory
+            at some cost in scoring speed. Defaults to a library constant
+            of 64 MiB. A cap too small for even one row's score band
+            clamps to a one-row block, so peak memory may exceed the cap
+            by that band.
 
     Returns:
         Instance of `BaseDeduper`.
@@ -274,4 +309,4 @@ def fuzzy(
             |  3   |  london   |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
     """
-    return Fuzzy(threshold=threshold, scorer=scorer, topn=topn)
+    return Fuzzy(threshold=threshold, scorer=scorer, topn=topn, workers=workers, max_block_memory=max_block_memory)
