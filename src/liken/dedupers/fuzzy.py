@@ -260,14 +260,12 @@ def fuzzy(
             pairs survive. Ties at rank k are broken by row order: the
             same input order gives the same output, and reordering the
             column can change the result.
-        workers: The number of worker threads used for scoring, in the
-            all-pairs mode. This parameter has multiple effective
-            defaults: `None` chooses automatically, using all CPU cores
-            locally and a single worker under a distributed backend,
-            where the executor owns parallelism and an all-cores request
-            would oversubscribe the cores. An explicit integer always
-            wins, `-1` meaning all cores. Under a distributed backend an
-            explicit all-cores value risks executor contention.
+        workers: The number of worker threads used for scoring. This
+            parameter has multiple effective defaults: `None` chooses
+            automatically, using all CPU cores locally or for single node
+            backends, but a single worker under a distributed backend.`-1`
+            overrides the default and uses all cores, else choose an integer
+            number for the desired number of cores.
         max_block_memory: The approximate memory budget, in bytes, of one
             scored block in the all-pairs mode. Values are scored in
             blocks bounded by this cap; smaller blocks lower peak memory
