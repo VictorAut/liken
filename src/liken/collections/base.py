@@ -23,8 +23,8 @@ from liken.constants import WARN_DICT_REPLACES_DICT_MSG
 from liken.constants import WARN_DICT_REPLACES_PIPELINE_MSG
 from liken.constants import WARN_DICT_REPLACES_SEQUENCE_MSG
 from liken.constants import WARN_PIPELINE_REPLACES_DICT_MSG
+from liken.constants import WARN_PIPELINE_REPLACES_PIPELINE_MSG
 from liken.constants import WARN_PIPELINE_REPLACES_SEQUENCE_MSG
-from liken.constants import WARN_RULES_REPLACES_RULES_MSG
 from liken.core.deduper import BaseDeduper
 from liken.exceptions import InvalidArgumentValueError
 from liken.exceptions import InvalidDeduperError
@@ -128,7 +128,7 @@ class CollectionsManager:
                 raise InvalidDeduperError(INVALID_EMPTY_PIPELINE_MSG)
             # replace policy: every non-accumulating transition warns.
             if isinstance(self._dedupers, Pipeline):
-                warn(WARN_RULES_REPLACES_RULES_MSG, stacklevel=4)
+                warn(WARN_PIPELINE_REPLACES_PIPELINE_MSG, stacklevel=4)
             elif self.is_sequential_applied:
                 if self._dedupers[SEQUENTIAL_API_DEFAULT_KEY]:  # type: ignore[index, union-attr]
                     warn(WARN_PIPELINE_REPLACES_SEQUENCE_MSG, stacklevel=4)
@@ -194,7 +194,7 @@ class CollectionsManager:
     def reset(self):
         """Reset collection to empty defaultdict
 
-        Also resets `has_applies`, so a subsequent enact applies the exact
+        Also resets `has_applies`, so a subsequent execute applies the exact
         fallback again."""
         self._dedupers = DeduplicationDict({SEQUENTIAL_API_DEFAULT_KEY: []})
         self.has_applies = False

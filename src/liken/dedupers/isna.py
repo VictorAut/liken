@@ -21,7 +21,7 @@ class IsNA(
     """
     Deduplicates all missing / null values into a single group.
 
-    Inversion operator here calls it's own negation class. The paired
+    Inversion operator here calls its own negation class. The paired
     `_gen_similarity_pairs` implementations are deliberately not factored
     through `_NegatedPredicateDeduper` because NA needs its own inversion
     logic.

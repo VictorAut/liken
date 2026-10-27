@@ -20,7 +20,7 @@ class StrEndsWith(
     PredicateDeduper,
 ):
     """
-    Strings start with canonicalizer.
+    Ends-with deduper.
 
     Defaults to case sensitive.
 

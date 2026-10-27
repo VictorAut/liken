@@ -129,7 +129,7 @@ class Dedupe:
 
                 import liken as lk
 
-            Simple API:
+            Sequential API:
 
                 lk.dedupe(df).apply(lk.exact())
 
@@ -215,7 +215,7 @@ class Dedupe:
         *,
         keep: Keep = "first",
     ) -> UserDataFrame:
-        """Drop duplicates by enacting the applied dedupers.
+        """Drop duplicates by executing the applied dedupers.
 
         If no dedupers are explicitly provided, will carry out an exact
         deduplication on any number of columns provided in `columns`.
@@ -284,7 +284,7 @@ class Dedupe:
         source_id: str | None = None,
         canonical_id: str = CANONICAL_ID,
     ) -> Self:
-        """Canonicalize by enacting the applied dedupers.
+        """Canonicalize by executing the applied dedupers.
 
         If no dedupers are explicitly provided, will carry out an exact
         canonicalization on any number of columns provided in `columns`.
@@ -300,7 +300,7 @@ class Dedupe:
                 is raised before any execution.
 
         Warning:
-            Leaving `source_id` to it's default `None` value forces collection
+            Leaving `source_id` to its default `None` value forces collection
             to driver node when using `Ray` Datasets and `Dask` DataFrames,
             which is not recommended. Use the dataset's unique identifier with
             the `source_id` arg, instead.
@@ -377,7 +377,7 @@ class Dedupe:
         source_id: str | None,
         canonical_id: str,
     ) -> None:
-        """Enact dedupers without entry validation.
+        """Execute dedupers without entry validation.
 
         Internal path for partition processors: a partition arrives already
         carrying the canonical-id column, which the public `canonicalize`
@@ -513,7 +513,7 @@ class Dedupe:
 
     @staticmethod
     def _validate_frame_shape(df_columns: list[str]) -> None:
-        """Reject frames the enact boundary cannot process.
+        """Reject frames the execute boundary cannot process.
 
         Data rules, so a `ValueError`.
 

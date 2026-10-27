@@ -7,7 +7,7 @@ Dedupers are either:
         similarity. Routed through main package.
     - "Predicate" dedupers: deduplication is decided according to discrete
         outcomes. As this choice is fit for combinations using "and"
-        operations, this is routed via the "rules" module.
+        operations, this is routed via the Pipeline collection.
 """
 
 from __future__ import annotations
@@ -250,7 +250,7 @@ class PredicateDeduper(BaseDeduper):
 
     For example, if StrStartsWith is used for all strings starting with "a",
     then all records for the column starting with the character "a" will
-    be canonicalised to the same record.
+    be canonicalized to the same record.
     """
 
     def __init__(self, **kwargs):
@@ -304,7 +304,7 @@ class PredicateDeduper(BaseDeduper):
 class _NegatedPredicateDeduper(PredicateDeduper):
     """
     Composable deduplication instance that inverts the results of any predicate
-    deduper (except IsNA deduper which follows it's own inversion logic).
+    deduper (except IsNA deduper which follows its own inversion logic).
     """
 
     def __init__(self, inner: PredicateDeduper):

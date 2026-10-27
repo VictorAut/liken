@@ -63,10 +63,10 @@ df = lk.dedupe(stacked).apply(pipeline).canonicalize(source_id="canonical_id", k
        3       |  Carol Fox
 
 /// caption
-The new duplicate inherited the existing id `0` — the group keeps its established identity.
+The new duplicate inherited the existing id `0` — the cluster keeps its established identity.
 ///
 
-Because `keep="first"` picks the earliest record of the group, the new record joins the existing id rather than the other way around. Later appends that duplicate other members of the group likewise collapse onto id `0`. The dataset keeps one continuous identifier space across runs.
+Because `keep="first"` picks the earliest record of the cluster under the survivorship policy, the new record joins the existing id rather than the other way around. Later appends that duplicate other members of the cluster likewise merge onto id `0`. The dataset keeps one continuous identifier space across runs.
 
 ## Decision Tree
 

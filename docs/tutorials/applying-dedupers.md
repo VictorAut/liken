@@ -18,7 +18,7 @@ df = (
 
 ## Single Dedupers
 
-If you only need a single deduper, use it straight in an `apply` function as seen above, i.e. `apply(lk.fuzzy())`, or any other deduper. The column or columns to dedupe on are passed in `drop_duplicates`.
+If you only need a single deduper, use it straight in an `apply` function as seen above, i.e. `apply(lk.fuzzy())`, or any other deduper. The column or columns to deduplicate are passed in `drop_duplicates`.
 
 Usage of single dedupers is limited — you can only ever use a single deduper on a single set of columns.
 
@@ -69,17 +69,17 @@ Liken supports deduplicating with a collection of dedupers. This allows:
 - Deduplicating multiple sets of columns with different dedupers
 - Defining several dedupers to be run sequentially on a set of columns
 
-Collections are supported in two formats. Dictionaries provide quick and easy composability; pipelines provide fully-featured composability with support for logical rules and built-in preprocessors.
+Collections are supported in two formats. Dictionaries provide quick and easy composability; pipelines provide fully-featured composability with support for logical combination and built-in preprocessors.
 
 ### Dictionaries
 
 When defining a collection as a dictionary, `drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary.
 
-Dictionaries have three rules:
+Dictionaries have three properties:
 
-- **Keys are column sets.** A key is a column label (`"email"`) or a tuple of labels (`("first_name", "last_name")`) — the columns its rule runs on.
+- **Keys are column sets.** A key is a column label (`"email"`) or a tuple of labels (`("first_name", "last_name")`) — the columns its deduper runs on.
 - **Tuple values are sequential steps.** A value is one deduper, or a tuple of dedupers chained on that key's columns: a record counts as a duplicate if it is linked by any deduper in the tuple.
-- **Keys combine as OR.** Records linked by *any* key's rule end up in the same group.
+- **Keys combine as OR.** Records linked by *any* key's deduper end up in the same cluster.
 
 ```python
 import liken as lk
@@ -99,12 +99,12 @@ df = (
 )
 ```
 
-The collection above reads as: deduplicate records that share an exact email; and separately, deduplicate records whose addresses are fuzzy-similar at 0.98, then token-similar at 0.9. Records caught by either rule end up in one group.
+The collection above reads as: deduplicate records that share an exact email; and separately, deduplicate records whose addresses are fuzzy-similar at 0.98, then token-similar at 0.9. Records caught by either deduper end up in one cluster.
 
 Keys run in insertion order, and the dedupers in a tuple value run in their listed order — both can matter; see [How a pipeline executes](#how-a-pipeline-executes).
 
 ??? info "`keep` arg"
-    The `keep` argument accepts the literals "first" or "last" which defines which record will be kept from a duplicate set of records, based on their position in the dataframe.
+    The `keep` argument accepts the literals "first" or "last" which picks the *representative* of each duplicate cluster — the record kept under the survivorship policy, based on its position in the dataframe.
 
 ### Pipelines of Dedupers
 
@@ -137,7 +137,7 @@ A pipeline has the following features:
 
 ### How a pipeline executes
 
-Each step produces groups of linked records. Steps combine as OR: records linked by any step end up in one group. But groups are not recomputed from scratch at the end — each step rewrites the canonical ids built so far, so the order of steps can change the outcome.
+Each step produces clusters of linked records. Steps combine as OR: records linked by any step end up in one cluster. But clusters are not recomputed from scratch at the end — each step rewrites the canonical ids built so far, so the order of steps can change the outcome.
 
  id   |    x     |    y
 ------|----------|---------
@@ -149,7 +149,7 @@ Each step produces groups of linked records. Steps combine as OR: records linked
 Three records: `x` links rows 0 and 1; `y` links rows 1 and 2.
 ///
 
-With `x` first, step `x` merges rows 0 and 1; step `y` then merges rows 1 and 2, and row 2 inherits row 1's canonical id — all three records share one id. With `y` first, row 2's group forms before `x` runs — and `x` never touches it, so row 2 keeps its own id. Run both orders and compare:
+With `x` first, step `x` merges rows 0 and 1; step `y` then merges rows 1 and 2, and row 2 inherits row 1's canonical id — all three records share one id. With `y` first, row 2's cluster forms before `x` runs — and `x` never touches it, so row 2 keeps its own id. Run both orders and compare:
 
 ```python
 import liken as lk
@@ -165,13 +165,13 @@ lk.dedupe(df).apply(yx).canonicalize().collect()  # canonical_id: [0, 0, 1]
 Step order changes which records survive `drop_duplicates`.
 ///
 
-The same rule applies to dictionaries: keys run in insertion order. If your rules are truly independent — no record is linked by more than one rule — order does not matter. When rules overlap, order them from the broadest to the narrowest.
+The same applies to dictionaries: keys run in insertion order. If your dedupers are truly independent — no record is linked by more than one deduper — order does not matter. When dedupers overlap, order them from the broadest to the narrowest.
 
 #### AND semantics
 
 Pipelines support combining the effects of multiple dedupers using implicit and statements.
 
-AND semantics are supported in Liken when lists of dedupers are passed to a `step` in a pipeline. For a step of similarity dedupers, a pair of records is linked only when every deduper in the step matches it. For a step mixing predicate and similarity dedupers, the step runs as a chain: the predicates match first, and each later deduper sees only the records matched so far — so records are linked only when every condition holds on the way through:
+AND semantics are supported in Liken when lists of dedupers are passed to a `step` in a pipeline. For a step of threshold dedupers, a pair of records is linked only when every deduper in the step matches it. For a step mixing predicate and threshold dedupers, the step runs as a chain: the predicates match first, and each later deduper sees only the records matched so far — so records are linked only when every condition holds on the way through:
 
 ```python
 import liken as lk
@@ -207,7 +207,7 @@ In the above case, for the first step, both conditions must hold — similar add
 Four addresses. The "10" pair and the "99" pair are both fuzzy-similar above 0.8.
 ///
 
-With `fuzzy(0.8)` alone, all four records collapse to one row. With the AND step, the predicate rules out the "99" pair:
+With `fuzzy(0.8)` alone, all four records merge into one. With the AND step, the predicate rules out the "99" pair:
 
  id   |    address
 ------|----------------
@@ -219,11 +219,11 @@ With `fuzzy(0.8)` alone, all four records collapse to one row. With the AND step
 AND step output: only rows 0 and 1 were linked; the "99" records survive as two rows.
 ///
 
-AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *rule predication*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself, and results are identical either way. The optimisation matters because predicate dedupers run in about O(n) time while similarity dedupers compare every pair of records at about O(n²): restricting the similarity deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
+AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *predicate evaluation*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself, and results are identical either way. The optimisation matters because predicate dedupers run in about O(n) time while threshold dedupers compare every pair of records at about O(n²): restricting the threshold deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
 
 #### OR semantics
 
-OR semantics behaviour is captured by distinct steps in a pipeline.
+OR semantics are captured by distinct steps in a pipeline.
 
 OR semantics are actually implicitly supported when using dictionaries and are best understood in comparison with AND semantics:
 
@@ -268,13 +268,13 @@ pipeline = (
     .step(
         [
             lk.col("address").fuzzy(),
-            ~lk.col("address").isna(), # NOT null
+            ~lk.col("address").isna(), # NOT missing
         ]
     )
 )
 ```
 
-A negated predicate groups the records that *do not* satisfy it. Watch it isolate nulls on a small dataset:
+A negated predicate links the records that *do not* satisfy it. Watch it isolate missing values on a small dataset:
 
  id   |  address
 ------|-----------
@@ -286,10 +286,10 @@ A negated predicate groups the records that *do not* satisfy it. Watch it isolat
   5   |  tokyo
 
 /// caption
-Six addresses: three identical, two null, one distinct.
+Six addresses: three identical, two missing, one distinct.
 ///
 
-The step `~lk.col("address").isna()` groups every record whose address is *not* null — rows 0, 1, 2 and 5 — so the three london records collapse and tokyo stays apart:
+The step `~lk.col("address").isna()` links every record whose address is *not* missing — rows 0, 1, 2 and 5 — so the three london records merge and tokyo stays apart:
 
  id   |  address
 ------|-----------
@@ -298,10 +298,10 @@ The step `~lk.col("address").isna()` groups every record whose address is *not* 
   4   |  None
 
 /// caption
-`~isna` output: the london records merged; the null records were never in the group.
+`~isna` output: the london records merged; the missing records were never in the cluster.
 ///
 
-The un-negated `lk.col("address").isna()` is the mirror image: the two null records collapse to one, and every other record survives untouched.
+The un-negated `lk.col("address").isna()` is the mirror image: the two missing records merge into one, and every other record survives untouched.
 
 #### Preprocessors
 
@@ -404,7 +404,7 @@ pipeline = (
 
 ## Growing a Pipeline
 
-The features above compose into a way of working: start narrow, observe what the rules miss, widen carefully, and qualify what overshoots. This section walks through that on one small dataset:
+The features above compose into a way of working: start narrow, observe what the dedupers miss, widen carefully, and qualify what overshoots. This section walks through that on one small dataset:
 
  id   |     name      |        email
 ------|---------------|----------------------
@@ -476,7 +476,7 @@ That is the loop: exact to see the baseline, fuzzy to catch the near-misses, and
 
 Different collections of dedupers, whether a single deduper, a dictionary or a pipeline, are best suited to different use cases:
 
-| Collection | Pandas extension | Quick tasks | Multiple columns | Logical rule semantics | Preprocessors |
+| Collection | Pandas extension | Quick tasks | Multiple columns | Logical combination semantics | Preprocessors |
 | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
 | Single | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: | :material-close: |
 | Dict | :material-close: | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: |

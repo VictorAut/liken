@@ -144,7 +144,7 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
         """Ensure the unwrapped dataframe is always an instance of DataFrame
 
         Permits the access of the base Dedupe class attribute dataframe to be
-        returned as a DataFrame even if no canonicalisation has been applied
+        returned as a DataFrame even if no canonicalization has been applied
         yet. For example this would be needed if inspecting the dataframe as
         contained in an instance of Dedupe having yet to call the canonicalizer
         on the collection of dedupers."""

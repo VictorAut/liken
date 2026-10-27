@@ -107,11 +107,13 @@ def test_from_rows_canonicalizes():
     # The worker path bypasses the public collision check: partitions arrive
     # already carrying the canonical column, so it re-canonicalizes via the
     # internal entry point.
-    dupe = Dedupe._from_rows(rows)
-    dupe.apply(lk.exact())
-    dupe._canonicalize(columns="address", keep="first", drop_duplicates=True, source_id=None, canonical_id=CANONICAL_ID)
+    dedupe = Dedupe._from_rows(rows)
+    dedupe.apply(lk.exact())
+    dedupe._canonicalize(
+        columns="address", keep="first", drop_duplicates=True, source_id=None, canonical_id=CANONICAL_ID
+    )
 
-    result = dupe.collect()
+    result = dedupe.collect()
 
     ids = [row["id"] for row in result]
     assert ids == [1, 3]

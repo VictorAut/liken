@@ -3,6 +3,14 @@ title: Release History
 ---
 
 
+## v0.15.1 (2026-10-27)
+
+**Misc**
+
+- Standardized documentation vocabulary and spelling.
+- Standardized internal code vocabulary and spelling.
+
+
 ## v0.15.0 (2026-10-22)
 
 **Features**

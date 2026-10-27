@@ -4,20 +4,20 @@ title: "Common Recipes"
 
 Variously common scenarios are explored here.
 
-## Similarity vs Predicate
+## Threshold vs Predicate
 
-Liken's [built-in dedupers](../tutorials/first-steps.md#built-in-dedupers) are classed as being "Similarity" or "Predicate" dedupers.
+Liken's [built-in dedupers](../tutorials/first-steps.md#built-in-dedupers) are classed as being "Threshold" or "Predicate" dedupers.
 
-Similarity dedupers are easy to understand — things are likened one-to-another when a similarity exceeds a threshold. Predicate dedupers operate based on a binary choice: something either is or isn't something, where that something is what the predicate deduper selects for.
+Threshold dedupers are easy to understand — things are likened one-to-another when a similarity score exceeds the threshold. Predicate dedupers operate based on a binary choice: something either is or isn't something, where that something is what the predicate deduper selects for.
 
 The above explanation might still sound tricky, especially regarding predicate dedupers. It's worth, therefore, listing some key facts about predicate dedupers.
 
-1. Predicate dedupers are actually derived from the same base classes as similarity dedupers. Ultimately, this means you can use them just like you would a similarity deduper. But...
+1. Predicate dedupers are actually derived from the same base classes as threshold dedupers. Ultimately, this means you can use them just like you would a threshold deduper. But...
 2. ...they feel like "filters".
-3. Predicate Dedupers feel like "filters" because they can be powerfully composed using [AND semantics](../tutorials/applying-dedupers.md#and-semantics) with similarity dedupers in pipelines...
+3. Predicate Dedupers feel like "filters" because they can be powerfully composed using [AND semantics](../tutorials/applying-dedupers.md#and-semantics) with threshold dedupers in pipelines...
 4. ...in that regard it's generally recommended to use predicate dedupers **only** when defining pipelines with `lk.pipeline()` — you can use them outside of pipelines, but the use cases are limited.
-5. Because they are fundamentally based on the same base classes as similarity dedupers, they are also accessed with the `lk.col()` expression.
-6. The "filter" paradigm is especially useful when considering that Liken implements "rule predication" optimizations. Rule Predication states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent similarity dedupers will operate on a subset of data.
+5. Because they are fundamentally based on the same base classes as threshold dedupers, they are also accessed with the `lk.col()` expression.
+6. The "filter" paradigm is especially useful when considering that Liken implements predicate-evaluation optimizations. Predicate evaluation states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent threshold dedupers will operate on a subset of data.
 7. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics).
 
 ## Powerful Pipelines
@@ -67,7 +67,7 @@ A few key points are worth noting:
 
 1. [`strip`](../reference/preprocessors.md), [`remove_punctuation`](../reference/preprocessors.md), [`normalize_unicode`](../reference/preprocessors.md) should be made ample use of. There are few instances where not using them is meaningful.
 2. [`lower`](../reference/preprocessors.md) and [`ascii_fold`](../reference/preprocessors.md) are more nuanced and should be used with more care.
-3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based similarity dedupers (namely, `lk.tfidf` and `lk.lsh`).
+3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based threshold dedupers (namely, `lk.tfidf` and `lk.lsh`).
 4. [`collapse_whitespace`](../reference/preprocessors.md) collapses internal whitespace runs to single spaces. It complements `strip`, which only trims the edges. Whitespace at the start or end collapses to one space, it is not removed.
 5. [`regex_replace`](../reference/preprocessors.md) a useful fail-safe option for all other cleaning processes.
 
