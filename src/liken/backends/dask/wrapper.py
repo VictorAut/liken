@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
     """Dask DataFrame wrapper"""
 
+    distributed = True
+
     def __init__(
         self,
         df: dd.DataFrame,

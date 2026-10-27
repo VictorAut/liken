@@ -3,6 +3,14 @@ title: Release History
 ---
 
 
+## v0.16.0 (unreleased)
+
+**Features**
+
+- Faster pair generation in the `fuzzy` and `edit_distance` dedupers, with new
+  `workers` and `max_block_memory` options for parallelism and memory control.
+
+
 ## v0.15.1 (2026-10-27)
 
 **Misc**

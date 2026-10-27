@@ -98,6 +98,15 @@ class BaseDeduper(Base):
         self.wdf: DF = wdf
         return self
 
+    @property
+    def distributed(self) -> bool:
+        """Whether the wrapped dataframe lives under a distributed executor.
+
+        Cost-heavy work can default to single-threaded there. Reads the
+        flag off the injected wrapper; `False` before `set_frame`.
+        """
+        return getattr(self.__dict__.get("wdf"), "distributed", False)
+
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
         raise NotImplementedError
