@@ -55,24 +55,22 @@ def block_rows_for(n: int, itemsize: int, cap_bytes: int) -> int:
     return max(1, cap_bytes // denominator)
 
 
-def probe_itemsize(compare: Callable, *, float64: bool) -> int:
+def probe_itemsize(compare: Callable, *, dtype: str | None) -> int:
     """Byte size of one score, from one tiny `cdist` call.
 
     The score dtype is the scorer's; probing it once per generation keeps
-    the block-size formula in bytes without hard-coding per scorer.
+    the block-size formula in bytes without hard-coding per scorer. The
+    probe must run with the same `dtype` as the real block calls, or the
+    resolved strip size mis-sizes the matrix.
 
     Args:
         compare: The scorer the block loop will run.
-        float64: Whether the caller forces `dtype="float64"` (normalized
-            edit metrics do, for boundary-tolerance precision).
+        dtype: The `dtype` the block calls will pass to `cdist`.
 
     Returns:
         The itemsize of the score dtype, in bytes.
     """
-    if float64:
-        matrix = process.cdist(["abc"], ["abd", "abe"], scorer=compare, dtype="float64")
-    else:
-        matrix = process.cdist(["abc"], ["abd", "abe"], scorer=compare)
+    matrix = process.cdist(["abc"], ["abd", "abe"], scorer=compare, dtype=dtype)
     return int(matrix.dtype.itemsize)
 
 
@@ -82,24 +80,18 @@ def resolve_workers(workers: int | None, *, distributed: bool) -> int:
     `None` means "choose automatically": all cores locally, single-threaded
     on a distributed backend, where the executor owns parallelism and a
     partition task's all-cores request would oversubscribe the cores. An
-    explicit integer always wins, `-1` included.
+    explicit integer always wins, `-1` included. `workers` is expected
+    validated by the constructing deduper; this function does not re-check.
 
     Args:
-        workers: The user's knob value, or `None` for automatic.
+        workers: The validated knob value, or `None` for automatic.
         distributed: Whether the deduper runs under a distributed backend.
 
     Returns:
         The worker count for `process.cdist`.
-
-    Raises:
-        InvalidArgumentValueError: if `workers` is an integer below -1.
     """
-    from liken.exceptions import InvalidArgumentValueError
-
     if workers is None:
         return 1 if distributed else (os.cpu_count() or 1)
-    if workers == 0 or workers < -1:
-        raise InvalidArgumentValueError(f"`workers` must be a nonzero integer or -1, got {workers!r}")
     return workers
 
 
@@ -111,6 +103,7 @@ def similar_pairs_blockwise(
     bound: float,
     block_rows: int,
     workers: int,
+    dtype: str | None = None,
 ) -> Iterator[SimilarPairIndices]:
     """Yield matching index pairs in block-wise batched shape.
 
@@ -131,6 +124,9 @@ def similar_pairs_blockwise(
         bound: The comparison bound in the scorer's own scale.
         block_rows: Rows per strip, at least 1.
         workers: Worker count passed to `process.cdist`.
+        dtype: The score dtype passed to `process.cdist`, or `None` for
+            the scorer's default. Must match the `dtype` the block size
+            was probed with, and the dtype the replaced loop scored in.
 
     Yields:
         Pairs of indices into `scored`, matching the replaced per-row
@@ -139,8 +135,6 @@ def similar_pairs_blockwise(
     n = len(scored)
     if n < 2 or block_rows < 1:
         return
-
-    kwargs: dict = {"workers": workers}
 
     start = 0
     while start < n - 1:
@@ -151,7 +145,8 @@ def similar_pairs_blockwise(
             scored[start:end],
             choices,
             scorer=compare,
-            **kwargs,
+            dtype=dtype,
+            workers=workers,
         )
 
         scores: np.ndarray = np.asarray(matrix)

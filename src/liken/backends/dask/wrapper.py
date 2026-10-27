@@ -25,8 +25,6 @@ class DaskDF(DF["dd.DataFrame"], CanonicalIdMixin):
 
     distributed = True
 
-    """Dask DataFrame wrapper"""
-
     def __init__(
         self,
         df: dd.DataFrame,

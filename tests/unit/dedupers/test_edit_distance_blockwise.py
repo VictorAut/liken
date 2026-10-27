@@ -131,6 +131,20 @@ def test_edit_distance_boundary_tolerance_survives_blocks():
     assert got == [(0, 1)]
 
 
+def test_edit_distance_float64_branch_scores_in_float64():
+    """The normalized metrics score in float64, as the old loop did.
+
+    A Jaro-Winkler distance of 1.0 at a bound just below 1 must not match:
+    in float32 the bound casts up to 1.0 (one f32 ULP tolerance), admitting
+    the pair; in float64 the comparison stays exact and rejects it.
+    """
+    values = ["bb", "cc"]
+    max_distance = 0.999999998  # 1 - 2e-9: only a float32 comparison admits it
+
+    deduper = lk.edit_distance(max_distance=max_distance, metric="jaro_winkler")
+    assert list(deduper._gen_similarity_pairs(pa.array(values))) == []
+
+
 def test_edit_distance_nulls_and_missing_shapes():
     """Null star pairs, null-value separation and NaN handling are unchanged."""
     deduper = lk.edit_distance(max_distance=2)

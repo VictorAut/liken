@@ -24,8 +24,6 @@ class ModinDF(DF["mpd.DataFrame"], CanonicalIdMixin):
 
     distributed = True
 
-    """Modin DataFrame wrapper"""
-
     def __init__(self, df: mpd.DataFrame, source_id: str | None = None, *, canonical_id: str):
         self._df: mpd.DataFrame = self._add_canonical_id(df, source_id, canonical_id)
         self._canonical_id = canonical_id

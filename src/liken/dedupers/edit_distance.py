@@ -128,16 +128,16 @@ class EditDistance(
         # levenshtein keeps its absolute integer contract on cdist's default
         # int dtype; the normalized metrics run on float64 so the boundary
         # tolerance stays meaningful against float32 rounding.
-        float64 = self._metric != "levenshtein"
+        dtype = "float64" if self._metric != "levenshtein" else None
         bound = cast("float", self._max_distance)
-        if float64:
+        if dtype is not None:
             bound += _BOUNDARY_TOLERANCE
         else:
             bound = float(bound)
 
         max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
-        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, float64=float64), max_block_memory)
-        workers = resolve_workers(self._workers, distributed=getattr(getattr(self, "wdf", None), "distributed", False))
+        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, dtype=dtype), max_block_memory)
+        workers = resolve_workers(self._workers, distributed=self.distributed)
 
         for r, c in similar_pairs_blockwise(
             scored,
@@ -146,6 +146,7 @@ class EditDistance(
             bound=bound,
             block_rows=block_rows,
             workers=workers,
+            dtype=dtype,
         ):
             yield present[r], present[c]
 

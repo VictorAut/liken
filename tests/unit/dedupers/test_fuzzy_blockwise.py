@@ -17,8 +17,12 @@ def _brute_force_pairs(values, threshold, scorer):
     """Pure-Python reference: the per-row loop's pair output, in yield order.
 
     Mirrors fuzzy.py's pre-change all-pairs loop exactly, including the
-    missing-value star pairs.
+    missing-value star pairs. Scores go through per-row `process.cdist`
+    (float32), not direct scorer calls, so the oracle matches the old
+    loop's real output at the boundary.
     """
+    from rapidfuzz import process
+
     from liken.core.missing import partition_missing
 
     missing, present = partition_missing(values)
@@ -30,8 +34,9 @@ def _brute_force_pairs(values, threshold, scorer):
     for pos, s1 in enumerate(scored):
         if pos + 1 >= len(scored):
             break
-        for offset, s2 in enumerate(scored[pos + 1 :]):
-            if scorer(s1, s2) >= thr - _BOUNDARY_TOLERANCE:
+        scores = process.cdist([s1], scored[pos + 1 :], scorer=scorer)[0]
+        for offset, score in enumerate(scores):
+            if score >= thr - _BOUNDARY_TOLERANCE:
                 pairs.append((present[pos], present[pos + 1 + offset]))
 
     return pairs

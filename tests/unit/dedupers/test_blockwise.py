@@ -63,9 +63,10 @@ def test_resolve_workers_none_distributed_is_single_threaded():
     assert resolve_workers(None, distributed=True) == 1
 
 
-def test_resolve_workers_zero_is_rejected():
-    with pytest.raises(Exception, match="workers"):
-        resolve_workers(0, distributed=False)
+def test_resolve_workers_passes_validated_values_through():
+    """Validation belongs to the constructing deduper; resolution is a lookup."""
+    assert resolve_workers(0, distributed=False) == 0
+    assert resolve_workers(7, distributed=True) == 7
 
 
 ##############################

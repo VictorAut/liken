@@ -153,8 +153,8 @@ class Fuzzy(
             return
 
         max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
-        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, float64=False), max_block_memory)
-        workers = resolve_workers(self._workers, distributed=getattr(getattr(self, "wdf", None), "distributed", False))
+        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, dtype=None), max_block_memory)
+        workers = resolve_workers(self._workers, distributed=self.distributed)
 
         for r, c in similar_pairs_blockwise(
             scored,
