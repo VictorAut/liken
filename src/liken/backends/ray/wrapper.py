@@ -23,6 +23,10 @@ if TYPE_CHECKING:
 class RayDF(DF["RayDataset"], CanonicalIdMixin):
     """Ray Dataset wrapper"""
 
+    distributed = True
+
+    """Ray Dataset wrapper"""
+
     def __init__(self, df: RayDataset, source_id: str | None = None, *, canonical_id: str):
         import ray
 

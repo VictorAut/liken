@@ -30,6 +30,11 @@ class DF(Generic[D]):
     Defines inheritable methods as well as some of the interface.
     """
 
+    # Whether the wrapped dataframe lives under a distributed executor.
+    # Local backends keep the base default; distributed wrappers override
+    # it, so cost-heavy work can default to single-threaded there.
+    distributed: bool = False
+
     # Label of the canonical-id column. Assigned by every subclass
     # constructor from its own parameter; the base class only declares it.
     _canonical_id: str

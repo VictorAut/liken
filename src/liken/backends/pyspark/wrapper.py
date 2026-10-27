@@ -52,6 +52,8 @@ class PysparkDF(DF["SparkObject"], CanonicalIdMixin):
             canonical ID creation, or not.
     """
 
+    distributed = True
+
     err_msg = "Method is available for spark Rows only, not spark DataFrame"
 
     def __init__(
