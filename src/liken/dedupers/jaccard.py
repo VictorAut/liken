@@ -43,9 +43,9 @@ class Jaccard(
         columns = [array[col] for col in array.column_names]
         n = array.num_rows
 
-        # Option C ingestion: None and NaN are both missing, dropped before
-        # encoding so they neither match nor count. Distinct members map to
-        # dense IDs 0..v-1 via one sorted pass.
+        # None and NaN are both missing, dropped before encoding so they
+        # neither match nor count. Distinct members map to dense IDs 0..v-1
+        # via one sorted pass.
         row_sets: list[set] = []
         distinct: set = set()
         for i in range(n):

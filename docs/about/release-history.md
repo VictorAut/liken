@@ -15,9 +15,7 @@ title: Release History
 **Fixes**
 
 - The `jaccard` and `token_overlap` dedupers now treat None and NaN as
-  missing: a missing member never matches and never counts toward a
-  record's size.
-
+  missing.
 
 ## v0.15.1 (2026-10-27)
 
