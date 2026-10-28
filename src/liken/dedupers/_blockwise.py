@@ -5,6 +5,10 @@ remaining tail, one `process.cdist` call per strip, and filters pairs with
 a vectorized mask per block. Memory is bounded by a block cap; small
 inputs degenerate into a single batched call.
 
+The set dedupers (`jaccard`, `token_overlap`) share `gram_strip_pairs`,
+which scores pairs from blocked one-hot Gram strips of member sets under
+the same memory cap.
+
 Pair output is byte-identical to the per-row loops it replaces, yield
 order included.
 """
@@ -240,7 +244,11 @@ def gram_strip_pairs(
         scoring: The score formula, "jaccard" or "token_overlap".
         max_block_memory: Memory cap in bytes for one strip and one score
             block. `None` uses `DEFAULT_BLOCK_MEMORY`. Values too small
-            for one row's strip clamp to one-row blocks.
+            for one row's strip clamp to one-row blocks. The cap bounds
+            the strip and score block; the per-i-block pair buffer used to
+            restore the loop's global order is a third peak term not
+            bounded by the cap (proportional to the matches in one
+            i-block).
 
     Yields:
         Pairs `(i, j)` with `i < j`, `i` ascending then `j` ascending,
@@ -311,11 +319,6 @@ def gram_strip_pairs(
                     out=np.zeros_like(counts),
                     where=counts > 0,
                 )
-
-            # The loop skips pairs with an empty intersection, and a pair
-            # can only have scored through a shared member, so the match
-            # condition is score >= threshold over non-zero counts.
-            np.greater_equal(scores, threshold, out=scores)
 
             # The loop skips pairs with an empty intersection, and a pair
             # can only have scored through a shared member, so the match

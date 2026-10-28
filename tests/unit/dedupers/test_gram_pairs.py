@@ -8,6 +8,7 @@ import pytest
 
 from liken.dedupers._blockwise import DEFAULT_BLOCK_MEMORY
 from liken.dedupers._blockwise import gram_strip_pairs
+from liken.dedupers._blockwise import strip_rows_for
 
 
 def _reference_pairs(members, sizes, threshold, scoring):
@@ -169,3 +170,33 @@ def test_gram_strip_pairs_raises_when_a_row_size_exceeds_the_guard():
 
     with pytest.raises(ValueError, match=r"2\^24|16777216"):
         list(gram_strip_pairs(members, sizes, 0.5, "jaccard"))
+
+
+########################
+# strip row sizing #
+#######################
+
+
+@pytest.mark.parametrize(
+    "v, cap, expected",
+    [
+        (1000, 64 * 1024 * 1024, 16777),  # 64 MiB / (1000 * 4) floors to 16777
+        (1000, 4000, 1),  # cap / 4000 floors to 1
+        (1000, 4001, 1),  # just over one row's strip still floors to 1
+        (1000, 8000, 2),  # two rows' strips
+        (1, 16, 4),  # tiny vocabulary: cap / 4
+    ],
+    ids=["sixty-four-mib", "floors-to-one", "just-over-one-row", "two-rows", "tiny-vocab"],
+)
+def test_strip_rows_for_floors_to_whole_rows(v, cap, expected):
+    assert strip_rows_for(v, cap) == expected
+
+
+@pytest.mark.parametrize(
+    "v, cap",
+    [(0, 1024), (1000, 0), (1000, -5)],
+    ids=["zero-vocab", "zero-cap", "negative-cap"],
+)
+def test_strip_rows_for_clamps_degenerate_values_to_one_row(v, cap):
+    """A cap below one row's strip clamps to one row, never raises."""
+    assert strip_rows_for(v, cap) == 1

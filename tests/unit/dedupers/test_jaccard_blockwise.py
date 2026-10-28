@@ -141,6 +141,14 @@ def test_jaccard_rejects_negative_max_block_memory():
         lk.jaccard(max_block_memory=-1)
 
 
+def test_jaccard_accepts_zero_max_block_memory():
+    """A zero cap clamps to one-row blocks at generation time, never raises."""
+    deduper = lk.jaccard(max_block_memory=0)
+    assert deduper._max_block_memory == 0
+    table = pa.table({"x": ["a", "a"], "y": ["b", "b"]})
+    assert list(deduper._gen_similarity_pairs(table)) == [(0, 1)]
+
+
 def test_jaccard_rejects_non_integer_max_block_memory():
     with pytest.raises(InvalidArgumentTypeError, match="`max_block_memory` must be an integer, got"):
         lk.jaccard(max_block_memory=64.5)
