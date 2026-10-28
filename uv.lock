@@ -1024,7 +1024,6 @@ dependencies = [
     { name = "datasketch" },
     { name = "faker" },
     { name = "nameparser" },
-    { name = "networkx" },
     { name = "nltk" },
     { name = "pandas" },
     { name = "polars" },
@@ -1079,7 +1078,6 @@ lint = [
     { name = "pandas-stubs" },
     { name = "ruff" },
     { name = "scipy-stubs" },
-    { name = "types-networkx" },
 ]
 test = [
     { name = "pytest" },
@@ -1097,7 +1095,6 @@ requires-dist = [
     { name = "modin", extras = ["dask", "ray"], marker = "extra == 'all'", specifier = ">=0.22.0" },
     { name = "modin", extras = ["dask", "ray"], marker = "extra == 'modin'", specifier = ">=0.22.0" },
     { name = "nameparser", specifier = ">=1.1.3" },
-    { name = "networkx", specifier = ">=3.6.1,<4" },
     { name = "nltk", specifier = ">=3.9.3" },
     { name = "pandas", specifier = ">=1.5.3" },
     { name = "polars", specifier = ">=0.20.4" },
@@ -1137,7 +1134,6 @@ lint = [
     { name = "pandas-stubs", marker = "python_full_version >= '3.10'", specifier = ">=2.2.3.250308,<3" },
     { name = "ruff", specifier = ">=0.15.2" },
     { name = "scipy-stubs", marker = "python_full_version >= '3.10'", specifier = ">=1.15.2.1,<2" },
-    { name = "types-networkx", specifier = ">=3.6.1.20251220,<4" },
 ]
 test = [
     { name = "pytest", specifier = ">=8.3.5,<9" },
@@ -1659,15 +1655,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/83/f8/51569ac65d696c8ecbee95938f89d4abf00f47d58d48f6fbabfe8f0baefe/nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe", size = 7418, upload-time = "2024-01-21T14:25:19.227Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/c4/c2971a3ba4c6103a3d10c4b0f24f461ddc027f0f09763220cf35ca1401b3/nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c", size = 5195, upload-time = "2024-01-21T14:25:17.223Z" },
-]
-
-[[package]]
-name = "networkx"
-version = "3.6.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762", size = 2068504, upload-time = "2025-12-08T17:02:38.159Z" },
 ]
 
 [[package]]
@@ -3160,18 +3147,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/eb/79/72064e6a701c2183016abbbfedaba506d81e30e232a68c9f0d6f6fcd1574/traitlets-5.14.3.tar.gz", hash = "sha256:9ed0579d3502c94b4b3732ac120375cda96f923114522847de4b3bb98b96b6b7", size = 161621, upload-time = "2024-04-19T11:11:49.746Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl", hash = "sha256:b74e89e397b1ed28cc831db7aea759ba6640cb3de13090ca145426688ff1ac4f", size = 85359, upload-time = "2024-04-19T11:11:46.763Z" },
-]
-
-[[package]]
-name = "types-networkx"
-version = "3.6.1.20251220"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/07/e3/dcc20d645dc0631b0df263959b8dde49dc47ad3c0537d8958bfefe692380/types_networkx-3.6.1.20251220.tar.gz", hash = "sha256:caf95e0d7777b969e50ceeb2c430d9d4dfe6b7bdee43c42dc9879a2d4408a790", size = 73500, upload-time = "2025-12-20T03:07:47.933Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/e7/fe40cfe7ba384d1f46fee835eb7727a4ee2fd80021a69add9553197b69a1/types_networkx-3.6.1.20251220-py3-none-any.whl", hash = "sha256:417ccbe7841f335a4c2b8e7515c3bc97a00fb5f686f399a763ef64392b209eac", size = 162715, upload-time = "2025-12-20T03:07:46.882Z" },
 ]
 
 [[package]]
