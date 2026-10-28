@@ -283,6 +283,8 @@ def gram_strip_pairs(
         strip_i = build_strip(start_i, end_i)
         size_i = sizes[start_i:end_i].astype(np.float64)[:, None]
 
+        block_pairs: list[np.ndarray] = []
+        block_row_starts: list[int] = []
         start_j = start_i
         while start_j < n:
             end_j = min(start_j + block_rows, n)
@@ -315,12 +317,32 @@ def gram_strip_pairs(
             # condition is score >= threshold over non-zero counts.
             np.greater_equal(scores, threshold, out=scores)
 
-            # np.argwhere is row-major: within one block rectangle that is
-            # exactly the loop's i-then-j order; across rectangles the
-            # block loop visits i-then-j blocks ascending.
-            for li, lj in np.argwhere(scores):
-                yield start_i + int(li), start_j + int(lj)
+            # The loop skips pairs with an empty intersection, and a pair
+            # can only have scored through a shared member, so the match
+            # condition is score >= threshold over non-zero counts.
+            np.greater_equal(scores, threshold, out=scores)
+
+            # Buffer this rectangle's pairs. One i-block produces pairs from
+            # several j-blocks, and the loop's i-then-j order interleaves
+            # them (a pair into a far j-block precedes a pair into the next
+            # j-block whose i is larger), so per-rectangle emission cannot
+            # be global. Sorting the i-block's pairs lexicographically
+            # restores the loop's exact order.
+            block_pairs.append(np.argwhere(scores))
+            block_row_starts.append(start_j)
 
             start_j = end_j
+
+        if block_pairs:
+            li_all = np.concatenate([bp[:, 0] for bp in block_pairs])
+            lj_all = np.concatenate([bp[:, 1] for bp in block_pairs])
+            gi_all = li_all + start_i
+            # Each rectangle's pairs carry its own row offset; expand the
+            # per-rectangle offsets to per-element before adding.
+            gj_all = lj_all + np.repeat(block_row_starts, [len(bp) for bp in block_pairs])
+            # lexsort is stable: last key is primary, so sort by j within i.
+            order = np.lexsort((gj_all, gi_all))
+            for gi, gj in zip(gi_all[order].tolist(), gj_all[order].tolist(), strict=True):
+                yield int(gi), int(gj)
 
         start_i = end_i

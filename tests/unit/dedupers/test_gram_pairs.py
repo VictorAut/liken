@@ -129,6 +129,22 @@ def test_gram_strip_pairs_orders_pairs_i_then_j_ascending():
     assert got == sorted(got)
 
 
+def test_gram_strip_pairs_interleaved_order_across_row_blocks():
+    """Multi-block output is globally i-then-j, not block-by-block.
+
+    With several row blocks, one i-block's pairs into a far j-block must
+    still precede a later i-block's pairs into an earlier j-block: the
+    loop's (i, j) order crosses block boundaries. A block-by-block
+    emission breaks this; a large block_count with a small cap forces the
+    multi-block path.
+    """
+    members = _seeded_members(60, seed=17, empty_rate=0.0)
+    got = list(gram_strip_pairs(members, _sizes_for(members), 0.01, "jaccard", max_block_memory=4))
+
+    assert got == sorted(got)
+    assert got == _reference_pairs(members, _sizes_for(members), 0.01, "jaccard")
+
+
 def test_gram_strip_pairs_fewer_than_two_rows_yields_nothing():
     assert list(gram_strip_pairs([], np.array([], dtype=np.int64), 0.5, "jaccard")) == []
     single = [np.array([0], dtype=np.int64)]
