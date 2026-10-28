@@ -18,9 +18,9 @@ from typing import Self
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
+from liken.core.disjoint_set import DisjointSet
 from liken.core.missing import is_missing
 from liken.exceptions import InvalidArgumentTypeError
 from liken.validations import require_real_number
@@ -53,7 +53,7 @@ class Base(Protocol):
         columns: Columns,
         preprocessors: Collection[Preprocessor],
         predicate: Collection[int] = (),
-    ) -> tuple[UnionFind[int], int]: ...
+    ) -> tuple[DisjointSet, int]: ...
     def canonicalizer(
         self,
         *,
@@ -158,7 +158,7 @@ class BaseDeduper(Base):
         columns: Columns,
         preprocessors: Collection[Preprocessor],
         predicate: Collection[int] = (),
-    ) -> tuple[UnionFind[int], int]:
+    ) -> tuple[DisjointSet, int]:
         self.validate(columns)
 
         array: pa.Array | pa.Table = self.wdf.get_array(columns)
@@ -173,7 +173,7 @@ class BaseDeduper(Base):
 
         n = len(subset)
 
-        uf = UnionFind(range(n))
+        uf = DisjointSet(n)
         for i, j in self._gen_similarity_pairs(subset):
             uf.union(i, j)
 
