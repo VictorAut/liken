@@ -5,15 +5,21 @@ remaining tail, one `process.cdist` call per strip, and filters pairs with
 a vectorized mask per block. Memory is bounded by a block cap; small
 inputs degenerate into a single batched call.
 
+The set dedupers (`jaccard`, `token_overlap`) share `gram_strip_pairs`,
+which scores pairs from blocked one-hot Gram strips of member sets under
+the same memory cap.
+
 Pair output is byte-identical to the per-row loops it replaces, yield
 order included.
 """
 
 from __future__ import annotations
 
+import math
 import os
 from typing import TYPE_CHECKING
 from typing import Final
+from typing import Literal
 
 import numpy as np
 from rapidfuzz import process
@@ -23,12 +29,20 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterator
 
+    import numpy.typing as npt
+
     from liken.types import SimilarPairIndices
 
 
 # Library default for the per-block memory cap, in bytes. The WI013
 # benchmark study (2026-10-27) confirmed it produces sensible block sizes.
 DEFAULT_BLOCK_MEMORY: Final[int] = 64 * 1024 * 1024
+
+# float32 sgemm is exact for intersection counts up to 2^24. A count beyond
+# that would need a single row to hold over 16M distinct members, which no
+# real compound column reaches, so the guard is a cheap shape check, not a
+# dtype change.
+_MAX_FLOAT32_EXACT_COUNT: Final[int] = 2**24
 
 
 def block_rows_for(n: int, itemsize: int, cap_bytes: int) -> int:
@@ -157,3 +171,181 @@ def similar_pairs_blockwise(
             yield start + int(r), start + 1 + int(c)
 
         start = end
+
+
+def strip_rows_for(v: int, cap_bytes: int) -> int:
+    """Rows per Gram strip under a block memory cap.
+
+    The cap bounds one row-block strip: a strip of `strip_rows` rows holds
+    `strip_rows * v` float32 indicator entries, so its size is
+    `strip_rows * v * 4` bytes. Degenerate inputs — a cap below one row's
+    strip, a zero `v` or cap — clamp to a one-row strip. Peak memory may
+    then exceed the cap by that strip; a single row strip is `v * 4` bytes
+    and cannot be blocked further.
+
+    Args:
+        v: Vocabulary size, the strip's column count.
+        cap_bytes: Memory cap for one row-block strip.
+
+    Returns:
+        The strip row count, at least 1.
+    """
+    denominator = v * 4
+    if denominator <= 0 or cap_bytes <= 0:
+        return 1
+    return max(1, cap_bytes // denominator)
+
+
+def _gram_strip_block_rows(v: int, cap_bytes: int) -> int:
+    """Strip rows also fitting the score block under the memory cap.
+
+    A square `m x m'` score block of float32 counts costs `m * m' * 4`
+    bytes; with square blocks `m = m'`, so `m` is additionally bounded by
+    the square root of `cap_bytes // 4`. The strip bound still applies:
+    blocking the score block cannot shrink one row's `v * 4` strip.
+
+    Args:
+        v: Vocabulary size, the strip's column count.
+        cap_bytes: Memory cap in bytes.
+
+    Returns:
+        The block row count, at least 1.
+    """
+    square_rows = max(1, math.isqrt(max(1, cap_bytes // 4)))
+    return min(strip_rows_for(v, cap_bytes), square_rows)
+
+
+def gram_strip_pairs(
+    members: list[npt.NDArray[np.int64]],
+    sizes: npt.NDArray[np.int64],
+    threshold: float,
+    scoring: Literal["jaccard", "token_overlap"],
+    max_block_memory: int | None = None,
+) -> Iterator[SimilarPairIndices]:
+    """Yield matching row pairs from member sets via blocked Gram strips.
+
+    Each row's members are one-hot encoded into a float32 strip (a row
+    block of the full n x v indicator matrix); the product of two strips
+    gives exact intersection counts for every row pair in the block
+    rectangle, because a one-hot product counts shared members exactly.
+    The full n x v indicator is never materialised: strips are built per
+    row block, so peak memory is the strip plus one score block.
+
+    Scores are computed from (count, |A|, |B|) per pair. "jaccard"
+    divides the count by |A| + |B| - count; "token_overlap" divides it by
+    min(|A|, |B|). The comparison is inclusive: a pair whose score is
+    exactly equal to `threshold` matches.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs
+            (`0..v-1`). Rows with no members produce no pairs.
+        sizes: Row member counts, `len(members[i])` per row.
+        threshold: The inclusive score bound.
+        scoring: The score formula, "jaccard" or "token_overlap".
+        max_block_memory: Memory cap in bytes for one strip and one score
+            block. `None` uses `DEFAULT_BLOCK_MEMORY`. Values too small
+            for one row's strip clamp to one-row blocks. The cap bounds
+            the strip and score block; the per-i-block pair buffer used to
+            restore the loop's global order is a third peak term not
+            bounded by the cap (proportional to the matches in one
+            i-block).
+
+    Yields:
+        Pairs `(i, j)` with `i < j`, `i` ascending then `j` ascending,
+        the order of the per-row loops this generator replaces.
+
+    Raises:
+        ValueError: If any row size exceeds 2^24, where float32 counts
+            could no longer be exact.
+    """
+    n = len(members)
+    if n < 2:
+        return
+
+    cap = DEFAULT_BLOCK_MEMORY if max_block_memory is None else int(max_block_memory)
+    if int(sizes.max(initial=0)) > _MAX_FLOAT32_EXACT_COUNT:
+        raise ValueError(
+            f"a row holds more than the maximum of {_MAX_FLOAT32_EXACT_COUNT} distinct members;"
+            " intersection counts would not be exact in float32"
+        )
+
+    # Distinct member IDs actually present, so v tracks the data, not the
+    # nominal vocabulary passed in.
+    v = 1 + max((int(m.max(initial=-1)) for m in members if len(m)), default=-1)
+
+    if v <= 0:
+        return
+
+    block_rows = _gram_strip_block_rows(v, cap)
+
+    def build_strip(start: int, end: int) -> np.ndarray:
+        """One float32 row-block strip: `m x v` one-hot rows."""
+        strip = np.zeros((end - start, v), dtype=np.float32)
+        for local_row, member_array in enumerate(members[start:end]):
+            strip[local_row, member_array] = 1.0
+        return strip
+
+    start_i = 0
+    while start_i < n - 1:
+        end_i = min(start_i + block_rows, n)
+        strip_i = build_strip(start_i, end_i)
+        size_i = sizes[start_i:end_i].astype(np.float64)[:, None]
+
+        block_pairs: list[np.ndarray] = []
+        block_row_starts: list[int] = []
+        start_j = start_i
+        while start_j < n:
+            end_j = min(start_j + block_rows, n)
+            strip_j = strip_i if start_j == start_i else build_strip(start_j, end_j)
+            size_j = sizes[start_j:end_j].astype(np.float64)[None, :]
+
+            counts: np.ndarray = (strip_i @ strip_j.T).astype(np.float64)
+            if start_j == start_i:
+                # The diagonal block holds every (i, j) ordering; the loop
+                # emits only j > i, and zeroing the lower triangle and
+                # diagonal before the dense pass also skips its
+                # empty-intersection work.
+                counts = np.triu(counts, k=1)
+
+            # Dense, vectorised scoring over the whole block rectangle:
+            # every (i, j) in the rectangle is scored once.
+            size_ij = size_i + size_j
+            if scoring == "jaccard":
+                scores = np.divide(counts, size_ij - counts, out=np.zeros_like(counts), where=counts > 0)
+            else:
+                scores = np.divide(
+                    counts,
+                    np.minimum(size_i, size_j),
+                    out=np.zeros_like(counts),
+                    where=counts > 0,
+                )
+
+            # The loop skips pairs with an empty intersection, and a pair
+            # can only have scored through a shared member, so the match
+            # condition is score >= threshold over non-zero counts.
+            np.greater_equal(scores, threshold, out=scores)
+
+            # Buffer this rectangle's pairs. One i-block produces pairs from
+            # several j-blocks, and the loop's i-then-j order interleaves
+            # them (a pair into a far j-block precedes a pair into the next
+            # j-block whose i is larger), so per-rectangle emission cannot
+            # be global. Sorting the i-block's pairs lexicographically
+            # restores the loop's exact order.
+            block_pairs.append(np.argwhere(scores))
+            block_row_starts.append(start_j)
+
+            start_j = end_j
+
+        if block_pairs:
+            li_all = np.concatenate([bp[:, 0] for bp in block_pairs])
+            lj_all = np.concatenate([bp[:, 1] for bp in block_pairs])
+            gi_all = li_all + start_i
+            # Each rectangle's pairs carry its own row offset; expand the
+            # per-rectangle offsets to per-element before adding.
+            gj_all = lj_all + np.repeat(block_row_starts, [len(bp) for bp in block_pairs])
+            # lexsort is stable: last key is primary, so sort by j within i.
+            order = np.lexsort((gj_all, gi_all))
+            for gi, gj in zip(gi_all[order].tolist(), gj_all[order].tolist(), strict=True):
+                yield int(gi), int(gj)
+
+        start_i = end_i

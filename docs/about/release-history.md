@@ -9,7 +9,13 @@ title: Release History
 
 - Faster pair generation in the `fuzzy` and `edit_distance` dedupers, with new
   `workers` and `max_block_memory` options for parallelism and memory control.
+- Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
+  new `max_block_memory` option for memory control.
 
+**Fixes**
+
+- The `jaccard` and `token_overlap` dedupers now treat None and NaN as
+  missing.
 
 ## v0.15.1 (2026-10-27)
 
