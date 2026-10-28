@@ -281,42 +281,45 @@ def gram_strip_pairs(
     while start_i < n - 1:
         end_i = min(start_i + block_rows, n)
         strip_i = build_strip(start_i, end_i)
+        size_i = sizes[start_i:end_i].astype(np.float64)[:, None]
 
         start_j = start_i
         while start_j < n:
             end_j = min(start_j + block_rows, n)
             strip_j = strip_i if start_j == start_i else build_strip(start_j, end_j)
+            size_j = sizes[start_j:end_j].astype(np.float64)[None, :]
 
             counts: np.ndarray = (strip_i @ strip_j.T).astype(np.float64)
-            local_i, local_j = np.nonzero(counts)
-
-            global_i = local_i + start_i
-            global_j = local_j + start_j
-
-            kept = counts[local_i, local_j] > 0
             if start_j == start_i:
                 # The diagonal block holds every (i, j) ordering; the loop
-                # emits only j > i.
-                kept &= global_j > global_i
+                # emits only j > i, and zeroing the lower triangle and
+                # diagonal before the dense pass also skips its
+                # empty-intersection work.
+                counts = np.triu(counts, k=1)
 
-            size_i = sizes[global_i].astype(np.float64)
-            size_j = sizes[global_j].astype(np.float64)
+            # Dense, vectorised scoring over the whole block rectangle:
+            # every (i, j) in the rectangle is scored once.
+            size_ij = size_i + size_j
             if scoring == "jaccard":
-                denominator = size_i + size_j - counts[local_i, local_j]
+                scores = np.divide(counts, size_ij - counts, out=np.zeros_like(counts), where=counts > 0)
             else:
-                denominator = np.minimum(size_i, size_j)
-
-            scores = counts[local_i, local_j] / denominator
-            kept &= scores >= threshold
+                scores = np.divide(
+                    counts,
+                    np.minimum(size_i, size_j),
+                    out=np.zeros_like(counts),
+                    where=counts > 0,
+                )
 
             # The loop skips pairs with an empty intersection, and a pair
-            # can only have scored through a shared member, so `kept` is
-            # the full match condition. Emit in i-then-j ascending order:
-            # np.nonzero is row-major, and within one block rectangle that
-            # is exactly the loop's order; across rectangles the block
-            # loop visits i-then-j blocks ascending.
-            for gi, gj in zip(global_i[kept], global_j[kept], strict=True):
-                yield int(gi), int(gj)
+            # can only have scored through a shared member, so the match
+            # condition is score >= threshold over non-zero counts.
+            np.greater_equal(scores, threshold, out=scores)
+
+            # np.argwhere is row-major: within one block rectangle that is
+            # exactly the loop's i-then-j order; across rectangles the
+            # block loop visits i-then-j blocks ascending.
+            for li, lj in np.argwhere(scores):
+                yield start_i + int(li), start_j + int(lj)
 
             start_j = end_j
 
