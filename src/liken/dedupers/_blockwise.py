@@ -371,11 +371,19 @@ def inverted_index_pairs(
     float64 boundary rules as `gram_strip_pairs`, and the comparison is
     inclusive.
 
-    Peak key memory is bounded by the cap: groups are emitted in anchor
-    slices and deduplicated per slice, so the full pre-dedup key array is
-    never materialised. This is the regime for high-vocabulary data, where
-    most values are rare and the Gram product of `gram_strip_pairs` would
-    be mostly waste.
+    Peak in-flight key memory is bounded by the cap: groups are emitted in
+    anchor slices and deduplicated per slice, so the full pre-dedup key
+    array is never materialised at once. The accumulated per-chunk unique
+    arrays and the final scoring stage scale with the candidate-pair count
+    (at most the pre-dedup key count), so total peak memory is not capped —
+    at csv 50k the run peaks at ~1.3 GB against the 64 MiB chunk cap, the
+    same relationship V1's blocks have to the cap. One caveat: a single
+    anchor slice emits at most `block * (k - 1)` keys, and when one value
+    group alone out-sizes the chunk budget, one slice exceeds the chunk
+    cap — reachable only at n of several million rows sharing one value,
+    far past where the auto guard vetoes. This is the regime for
+    high-vocabulary data, where most values are rare and the Gram product
+    of `gram_strip_pairs` would be mostly waste.
 
     Args:
         members: Per-row member arrays holding dense member IDs
@@ -495,13 +503,26 @@ def inverted_index_pairs(
 
 # Dispatch floor for the set dedupers' regime selection, in V1 Gram
 # cell-op estimate units (n*n*v). V2 (the inverted index) is picked only
-# when V1's estimated cost exceeds this: the WI069 calibration
-# (.dev work item, 2026-10-29) fitted the floor from WI063's measured
-# grid plus the scrap_data_1M.csv cells. The feasible band spans
-# 8.6e11 (largest Gram-won cost) to 6.4e13 (smallest index-won cost);
-# the floor is its geometric midpoint, leaving >= 8.7x margin to each
-# binding cell. V1 stays the default away from the extreme.
-_V2_MIN_V1_COST: Final[int] = 7_400_000_000_000
+# when V1's estimated cost exceeds this. Re-derived 2026-10-29 (WI069
+# Task 2 redo) from production-encoded estimator inputs: the WI063 grid
+# plus the scrap_data_1M.csv cells, with the fixture nan column's `1.0`
+# member and the CSV's `""` member counted (the first calibration missed
+# both; see the WI069 stop report). The feasible band spans 2.113e11
+# (largest Gram-won cost, sparse 5k) to 4.604e11 (smallest index-won
+# cost, highvocab 5k); the floor is its geometric midpoint, leaving a
+# 1.5x margin to each binding cell. V1 stays the default away from the
+# extreme.
+_V2_MIN_V1_COST: Final[int] = 311_900_000_000
+
+# Memory budget for the auto dispatch's V2 admission, in bytes of
+# estimated pre-dedup key volume (8 bytes * sum C(k,2)). Deliberately
+# not `max_block_memory`: the corrected V2-won cells estimate 77-86 MiB
+# against a 64 MiB block cap, and the cap's meaning (bounding one score
+# block) differs from bounding V2's emitted-key volume. 4x the default
+# cap admits every recorded V2 winner and vetoes the study's OOM cell
+# (n=25k: 2.0 GB estimate) with 8x margin. An explicit `strategy="index"`
+# bypasses this guard: the user asked for it.
+_V2_KEY_BUDGET: Final[int] = 4 * DEFAULT_BLOCK_MEMORY
 
 _LOG = logging.getLogger(__name__)
 
@@ -531,27 +552,41 @@ def estimate_v2_key_count(members: list[npt.NDArray[np.int64]]) -> int:
 
 def pick_set_regime(
     members: list[npt.NDArray[np.int64]],
-    sizes: npt.NDArray[np.int64],
-    max_block_memory: int | None,
+    strategy: Literal["auto", "gram", "index"],
 ) -> Literal["gram", "index"]:
     """Pick the pair-generation regime for one set-deduper call.
 
-    V2 (the inverted index) wins only deep in the high-vocabulary regime:
-    when V1's estimated Gram cost exceeds `_V2_MIN_V1_COST`. The memory
-    guard vetoes V2 whenever its estimated pre-dedup key volume exceeds
-    the block cap, closing the study's OOM finding (WI063: 252M keys,
-    ~2 GB, at n=25k).
+    An explicit strategy is honored as given. `"auto"` compares cost
+    estimates: V2 (the inverted index) wins only deep in the
+    high-vocabulary regime, when V1's estimated Gram cost exceeds
+    `_V2_MIN_V1_COST`. The memory guard then vetoes V2 whenever its
+    estimated pre-dedup key volume exceeds `_V2_KEY_BUDGET`, closing the
+    study's OOM finding (WI063: 252M keys, ~2 GB, at n=25k). An explicit
+    strategy bypasses the guard: the user asked for it.
 
     Args:
         members: Per-row member arrays holding dense member IDs
             (`0..v-1`), as the dedupers' encoding produces.
-        sizes: Row member counts.
-        max_block_memory: The deduper's block cap in bytes, or `None`
-            for `DEFAULT_BLOCK_MEMORY`.
+        strategy: The deduper's `strategy` knob: `"auto"` for the
+            calibrated pick, or `"gram"`/`"index"` to force a regime.
 
     Returns:
         "gram" for `gram_strip_pairs`, "index" for `inverted_index_pairs`.
     """
+    if strategy != "auto":
+        regime: Literal["gram", "index"] = strategy
+        _LOG.debug(
+            "set deduper regime dispatch: strategy=%s regime=%s n=%d",
+            strategy,
+            regime,
+            len(members),
+        )
+        return regime
+    return _auto_set_regime(members)
+
+
+def _auto_set_regime(members: list[npt.NDArray[np.int64]]) -> Literal["gram", "index"]:
+    """The calibrated auto pick: cost comparison plus the memory guard."""
     n = len(members)
     if n < 2:
         return "gram"
@@ -561,17 +596,18 @@ def pick_set_regime(
         return "gram"
 
     v1_est = n * n * v
-    cap = DEFAULT_BLOCK_MEMORY if max_block_memory is None else int(max_block_memory)
+    keys = 0
     if v1_est <= _V2_MIN_V1_COST:
         regime: Literal["gram", "index"] = "gram"
     else:
         keys = estimate_v2_key_count(members)
-        regime = "index" if 8 * keys <= cap else "gram"
+        regime = "index" if 8 * keys <= _V2_KEY_BUDGET else "gram"
     _LOG.debug(
-        "set deduper regime dispatch: n=%d v=%d v1_est=%d regime=%s",
+        "set deduper auto dispatch: n=%d v=%d v1_est=%d keys=%d regime=%s",
         n,
         v,
         v1_est,
+        keys,
         regime,
     )
     return regime

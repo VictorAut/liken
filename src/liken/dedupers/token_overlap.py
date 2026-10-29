@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from typing import ClassVar
+from typing import Literal
 from typing import final
 
 import numpy as np
@@ -17,6 +18,7 @@ from liken.dedupers._blockwise import inverted_index_pairs
 from liken.dedupers._blockwise import pick_set_regime
 from liken.types import SimilarPairIndices
 from liken.validations import require_int
+from liken.validations import validate_strategy_arg
 
 
 @final
@@ -30,19 +32,30 @@ class TokenOverlap(
     None and NaN are both missing: a missing member never matches and
     never counts toward either record's size.
 
-    Pair generation picks between two internal strategies automatically
-    per call; no parameter changes.
+    Pair generation picks between two internal strategies (dense Gram
+    strips, inverted index) per call. `strategy="auto"`, the default,
+    picks from a measured cost model; `"gram"` or `"index"` force one
+    strategy for every call.
     """
 
     _NAME: ClassVar[str] = "token_overlap"
 
-    def __init__(self, threshold: float = 0.95, max_block_memory: int | None = None):
+    def __init__(
+        self,
+        threshold: float = 0.95,
+        max_block_memory: int | None = None,
+        strategy: Literal["auto", "gram", "index"] = "auto",
+    ):
         max_block_memory = require_int("max_block_memory", max_block_memory, low=0, allow_none=True)
+        strategy = validate_strategy_arg(strategy)
         super().__init__(
-            threshold=threshold, **({"max_block_memory": max_block_memory} if max_block_memory is not None else {})
+            threshold=threshold,
+            **({"max_block_memory": max_block_memory} if max_block_memory is not None else {}),
+            **({"strategy": strategy} if strategy != "auto" else {}),
         )
         self._threshold = threshold
         self._max_block_memory = max_block_memory
+        self._strategy = strategy
 
     def _gen_similarity_pairs(self, array: pa.Table) -> Iterator[SimilarPairIndices]:
         columns = [array[col] for col in array.column_names]
@@ -66,7 +79,7 @@ class TokenOverlap(
         ]
         sizes = np.fromiter((len(row_set) for row_set in row_sets), dtype=np.int64, count=n)
 
-        if pick_set_regime(members, sizes, self._max_block_memory) == "index":
+        if pick_set_regime(members, self._strategy) == "index":
             yield from inverted_index_pairs(members, sizes, self._threshold, "token_overlap", self._max_block_memory)
         else:
             yield from gram_strip_pairs(members, sizes, self._threshold, "token_overlap", self._max_block_memory)
@@ -76,7 +89,11 @@ class TokenOverlap(
 
 
 @dedupers_registry.register("token_overlap")
-def token_overlap(threshold: float = 0.95, max_block_memory: int | None = None) -> BaseDeduper:
+def token_overlap(
+    threshold: float = 0.95,
+    max_block_memory: int | None = None,
+    strategy: Literal["auto", "gram", "index"] = "auto",
+) -> BaseDeduper:
     """Multi-column deduplication using set containment.
 
     Usage is on multiple columns of a dataframe. Appropriate for categorical
@@ -107,6 +124,13 @@ def token_overlap(threshold: float = 0.95, max_block_memory: int | None = None) 
             Defaults to a library constant of 64 MiB. A cap too small for
             even one row's strip clamps to a one-row block, so peak memory
             may exceed the cap by that strip.
+        strategy: Which internal pair-generation strategy to use.
+            `"auto"` (the default) picks per call from a measured cost
+            model, with a memory guard that can fall back to the dense
+            strategy. `"gram"` forces the dense Gram-strip strategy;
+            `"index"` forces the inverted-index strategy, bypassing the
+            memory guard. Both forced values apply to every call on the
+            instance.
 
     Returns:
         Instance of `BaseDeduper`.
@@ -147,4 +171,4 @@ def token_overlap(threshold: float = 0.95, max_block_memory: int | None = None) 
         Row 1's set {reddit, married, UK} is fully contained in row 0's
         {reddit, married, UK, house}: containment 1.0 against jaccard 0.75.
     """
-    return TokenOverlap(threshold=threshold, max_block_memory=max_block_memory)
+    return TokenOverlap(threshold=threshold, max_block_memory=max_block_memory, strategy=strategy)
