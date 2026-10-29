@@ -11,6 +11,8 @@ title: Release History
   `workers` and `max_block_memory` options for parallelism and memory control.
 - Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
   new `max_block_memory` option for memory control.
+- Faster pair generation in the `within` deduper: dense numeric data no longer
+  produces quadratic work, so large runs finish in a fraction of the time.
 
 **Fixes**
 
