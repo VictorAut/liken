@@ -17,6 +17,10 @@ title: Release History
 - The `jaccard` and `token_overlap` dedupers now treat None and NaN as
   missing.
 
+**Misc**
+
+- `networkx` dependency is removed in favour of an in-house disjoint-set implementation
+
 ## v0.15.1 (2026-10-27)
 
 **Misc**

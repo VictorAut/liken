@@ -23,8 +23,7 @@ from liken.core.wrapper import DF
 if TYPE_CHECKING:
     from collections.abc import Collection
 
-    from networkx.utils.union_find import UnionFind
-
+    from liken.core.disjoint_set import DisjointSet
     from liken.preprocessors import Preprocessor
     from liken.types import Columns
     from liken.types import Keep
@@ -153,12 +152,12 @@ class LocalExecutor(Executor):
         columns: Columns,
         preprocessors: Collection[Preprocessor] = (),
         predicate: Collection[int] = (),
-    ) -> tuple[UnionFind[int], int]:
+    ) -> tuple[DisjointSet, int]:
         return deduper.set_frame(df).build_union_find(columns, preprocessors, predicate=predicate)
 
     @staticmethod
     def _get_components(
-        uf: UnionFind[int],
+        uf: DisjointSet,
         n: int,
     ) -> SingleComponents:
         components = defaultdict(list)
@@ -168,7 +167,7 @@ class LocalExecutor(Executor):
 
     @staticmethod
     def _get_multi_components(
-        ufs: list[UnionFind[int]],
+        ufs: list[DisjointSet],
         n: int,
     ) -> MultiComponents:
         components = defaultdict(list)

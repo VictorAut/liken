@@ -28,7 +28,6 @@ dependencies = [
     "sparse-dot-topn>=1.1.5,<2",
     "typing-extensions>=4.13.0,<5",
     "datasketch>=1.8.0,<2",
-    "networkx>=3.6.1,<4",
     "pyarrow>=13.0.0",
     "faker>=37.12.0",
     "catalogue>=2.0.10",
@@ -63,7 +62,6 @@ lint = [
     "pandas-stubs>=2.2.3.250308,<3 ; python_full_version >= '3.10'",
     "ruff>=0.15.2",
     "scipy-stubs>=1.15.2.1,<2 ; python_full_version >= '3.10'",
-    "types-networkx>=3.6.1.20251220,<4",
 ]
 test = ["pytest>=8.3.5,<9", "pytest-cov>=6.1.1,<7"]
 docs = [
