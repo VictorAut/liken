@@ -13,6 +13,8 @@ from liken.core.deduper import ThresholdDeduper
 from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.dedupers._blockwise import gram_strip_pairs
+from liken.dedupers._blockwise import inverted_index_pairs
+from liken.dedupers._blockwise import pick_set_regime
 from liken.types import SimilarPairIndices
 from liken.validations import require_int
 
@@ -27,6 +29,9 @@ class TokenOverlap(
 
     None and NaN are both missing: a missing member never matches and
     never counts toward either record's size.
+
+    Pair generation picks between two internal strategies automatically
+    per call; no parameter changes.
     """
 
     _NAME: ClassVar[str] = "token_overlap"
@@ -61,7 +66,10 @@ class TokenOverlap(
         ]
         sizes = np.fromiter((len(row_set) for row_set in row_sets), dtype=np.int64, count=n)
 
-        yield from gram_strip_pairs(members, sizes, self._threshold, "token_overlap", self._max_block_memory)
+        if pick_set_regime(members, sizes, self._max_block_memory) == "index":
+            yield from inverted_index_pairs(members, sizes, self._threshold, "token_overlap", self._max_block_memory)
+        else:
+            yield from gram_strip_pairs(members, sizes, self._threshold, "token_overlap", self._max_block_memory)
 
     def __str__(self):
         return self.str_representation(self._NAME)

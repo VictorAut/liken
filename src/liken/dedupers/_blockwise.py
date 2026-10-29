@@ -17,6 +17,7 @@ order included.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from typing import TYPE_CHECKING
@@ -490,3 +491,87 @@ def inverted_index_pairs(
     matches = scores >= threshold
     for lo_val, hi_val in zip(lo[matches].tolist(), hi[matches].tolist(), strict=True):
         yield int(lo_val), int(hi_val)
+
+
+# Dispatch floor for the set dedupers' regime selection, in V1 Gram
+# cell-op estimate units (n*n*v). V2 (the inverted index) is picked only
+# when V1's estimated cost exceeds this: the WI069 calibration
+# (.dev work item, 2026-10-29) fitted the floor from WI063's measured
+# grid plus the scrap_data_1M.csv cells. The feasible band spans
+# 8.6e11 (largest Gram-won cost) to 6.4e13 (smallest index-won cost);
+# the floor is its geometric midpoint, leaving >= 8.7x margin to each
+# binding cell. V1 stays the default away from the extreme.
+_V2_MIN_V1_COST: Final[int] = 7_400_000_000_000
+
+_LOG = logging.getLogger(__name__)
+
+
+def estimate_v2_key_count(members: list[npt.NDArray[np.int64]]) -> int:
+    """V2's emitted-key estimate: sum over values of C(k, 2).
+
+    One pass over the flattened members; the estimate feeds both the
+    dispatch's compute comparison and its memory guard.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs.
+
+    Returns:
+        The estimated pre-dedup key count, at least 0.
+    """
+    flat = (
+        np.concatenate([np.asarray(m, dtype=np.int64) for m in members])
+        if any(len(m) for m in members)
+        else np.array([], dtype=np.int64)
+    )
+    if flat.size == 0:
+        return 0
+    _, counts = np.unique(flat, return_counts=True)
+    return int((counts * (counts - 1) // 2).sum())
+
+
+def pick_set_regime(
+    members: list[npt.NDArray[np.int64]],
+    sizes: npt.NDArray[np.int64],
+    max_block_memory: int | None,
+) -> Literal["gram", "index"]:
+    """Pick the pair-generation regime for one set-deduper call.
+
+    V2 (the inverted index) wins only deep in the high-vocabulary regime:
+    when V1's estimated Gram cost exceeds `_V2_MIN_V1_COST`. The memory
+    guard vetoes V2 whenever its estimated pre-dedup key volume exceeds
+    the block cap, closing the study's OOM finding (WI063: 252M keys,
+    ~2 GB, at n=25k).
+
+    Args:
+        members: Per-row member arrays holding dense member IDs
+            (`0..v-1`), as the dedupers' encoding produces.
+        sizes: Row member counts.
+        max_block_memory: The deduper's block cap in bytes, or `None`
+            for `DEFAULT_BLOCK_MEMORY`.
+
+    Returns:
+        "gram" for `gram_strip_pairs`, "index" for `inverted_index_pairs`.
+    """
+    n = len(members)
+    if n < 2:
+        return "gram"
+
+    v = 1 + max((int(m.max(initial=-1)) for m in members if len(m)), default=-1)
+    if v <= 0:
+        return "gram"
+
+    v1_est = n * n * v
+    cap = DEFAULT_BLOCK_MEMORY if max_block_memory is None else int(max_block_memory)
+    if v1_est <= _V2_MIN_V1_COST:
+        regime: Literal["gram", "index"] = "gram"
+    else:
+        keys = estimate_v2_key_count(members)
+        regime = "index" if 8 * keys <= cap else "gram"
+    _LOG.debug(
+        "set deduper regime dispatch: n=%d v=%d v1_est=%d regime=%s",
+        n,
+        v,
+        v1_est,
+        regime,
+    )
+    return regime
