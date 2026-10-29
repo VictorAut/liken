@@ -15,23 +15,9 @@ Benchmarking was carried out on a standard personal machine.
 ![Liken](../images/liken-benchmarks.png)
 
 /// caption
-Performance of Liken's dedupers measured as execution time against increasing dataset sizes. In instances where a dataset size caused a deduper's projected runtime to greatly exceed 1 hour, it was excluded. The single minute and hour marks are provided for orientative benchmarking. The "million-class" dedupers are highlighted in red.
+Performance of Liken's dedupers measured as execution time (log) against increasing dataset sizes. In instances where a dataset size caused a deduper's projected runtime to greatly exceed 1 hour, it was excluded. The single minute and hour marks are provided for orientative benchmarking.
 ///
 
-### Scaling
-
-Above we saw the performance of Liken's dedupers. The following graphic provides a normalized view of how the dedupers scale with complexity (dataset size).
-
-![Liken](../images/liken-scaling.png)
-
-/// caption
-Computational complexity scaling of Liken's dedupers.
-///
-
-The scaling of deduper's can be useful to provide approximate estimates of the performance of specific deduper's when not provided in the prior performance graphic. For example, in the case of `cosine` complexity evolves as *O(n^2^)* and it can be estimated that with nominal data, doubling the dataset size from 100K to 200K would result in a four-fold execution time increase i.e. from ~2 hours to ~8 hours.
-
-??? note "Performance with distributed computing"
-    These figures are single-machine measurements. On the distributed backends (dask, ray and pyspark), the calculus changes: work is spread across workers but deduplication runs per partition, so both the per-worker data size and the partitioning strategy determine performance. See [Backends](backends.md) for what differs, and [Use Partitioned Data](#use-partitioned-data) below.
 
 ### Performance Caveats
 
@@ -94,6 +80,18 @@ id| address                  | email
 /// caption
 The result is unchanged here — the two duplicate emails both have non-missing addresses, so qualification cost nothing and bought the pushdown speed-up.
 ///
+
+### Tune the Dedupers
+
+Dedupers expose knobs that trade speed, memory and recall. The defaults are sensible: touch them only when a run is too slow or runs out of memory.
+
+| Knob | Dedupers | Default | Touch when |
+|------|----------|---------|------------|
+| [`workers`](../reference/liken/#liken.fuzzy) | [fuzzy](../reference/liken/#liken.fuzzy), [edit_distance](../reference/liken/#liken.edit_distance) | Chosen automatically | The run is too slow |
+| [`max_block_memory`](../reference/liken/#liken.fuzzy) | [fuzzy](../reference/liken/#liken.fuzzy), [edit_distance](../reference/liken/#liken.edit_distance), [jaccard](../reference/liken/#liken.jaccard), [token_overlap](../reference/liken/#liken.token_overlap) | 64 MiB (67108864 bytes) | The run exhausts memory |
+| [`topn`](../reference/liken/#liken.fuzzy) | [fuzzy](../reference/liken/#liken.fuzzy) | `None` | The run is slow and produces too many pairs |
+
+`workers` controls scoring parallelism. It is chosen automatically: all cores on a single-machine backend, one worker per node under a distributed backend. `-1` forces all cores. Values are scored in blocks, and `max_block_memory` sets the memory budget, in bytes, of one block — lower it to reduce peak memory, at some cost in speed. `topn` keeps only each value's best `k` partners instead of scoring all pairs, but matching becomes approximate: in a cluster of more than `k` near-identical records some pairs are dropped.
 
 ### Use the LSH deduper
 

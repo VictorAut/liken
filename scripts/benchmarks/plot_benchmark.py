@@ -29,6 +29,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+SIZE_COLORS: dict[int, str] = {
+    10_000: "#74d6fd",  # bluish-teal
+    50_000: "#6da7ec",  # lighter blue
+    100_000: "#3987e5",  # mid blue
+    250_000: "#1c5cab",  # darker blue
+    1_000_000: "#b2182b",  # deep red
+}
+
 
 # HELPERS:
 
@@ -42,6 +50,11 @@ def ordered_labels(runs: Sequence[dict[str, Any]]) -> list[str]:
     unknown = [name for name in dict.fromkeys(str(run["deduper"]) for run in runs) if name not in known]
 
     return known + unknown
+
+
+def size_label(size: int) -> str:
+    """Human-readable size label: 10000 -> "10K", 1000000 -> "1M"."""
+    return f"{size // 1_000_000}M" if size >= 1_000_000 else f"{size // 1_000}K"
 
 
 def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
@@ -61,7 +74,6 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
 
     y = range(len(labels))
     height = 0.8 / len(sizes)
-    cmap = plt.get_cmap("viridis")
 
     plt.figure(figsize=(10, 6))
 
@@ -71,8 +83,8 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
             [position + offset for position in y],
             [seconds.get((label, size), float("nan")) for label in labels],
             height=height,
-            label=str(size),
-            color=cmap(i / max(len(sizes) - 1, 1)),
+            label=size_label(size),
+            color=SIZE_COLORS.get(size, "#888888"),
         )
 
     plt.gca().invert_yaxis()
@@ -80,15 +92,60 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
 
     plt.axvline(60, color="gray", linestyle="--", linewidth=1, alpha=0.7)
     plt.axvline(3600, color="red", linestyle="--", linewidth=1, alpha=0.7)
-    plt.text(40, -1.2, "1 min", color="gray")
-    plt.text(2000, -1.2, "1 hour", color="red")
+    plt.text(40, -1.5, "1 min", color="gray")
+    plt.text(2000, -1.5, "1 hour", color="red")
+
+    ax = plt.gca()
+    ax.axvspan(
+        0,
+        10000,
+        ymin=0.04,
+        ymax=0.36,
+        color="lightgray",
+        zorder=0,
+    )
+    ax.axvspan(
+        0,
+        10000,
+        ymin=0.36,
+        ymax=0.87,
+        color="goldenrod",
+        alpha=0.5,
+        zorder=0,
+    )
+    plt.text(
+        2000,
+        0.18,
+        "PREDICATE",
+        rotation=300,
+        ha="center",
+        va="center",
+        color="gray",
+        transform=ax.get_xaxis_transform(),
+    )
+    plt.text(
+        2000,
+        0.6,
+        "THRESHOLD",
+        rotation=300,
+        ha="center",
+        va="center",
+        color="darkgoldenrod",
+        transform=ax.get_xaxis_transform(),
+    )
 
     plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:g}"))
 
     plt.yticks(list(y), labels)
     plt.ylabel("Deduper", fontsize=12)
     plt.xlabel("Execution Time (seconds)", fontsize=12)
-    plt.legend(title="Dataset Size", loc="lower right")
+    plt.legend(
+        title="Dataset Size",
+        loc="lower center",
+        bbox_to_anchor=(0.75, 0.0),
+        fontsize=7,
+        title_fontsize=8,
+    )
 
     plt.tight_layout()
     plt.savefig(output, dpi=150)
