@@ -7,7 +7,9 @@ inputs degenerate into a single batched call.
 
 The set dedupers (`jaccard`, `token_overlap`) share `gram_strip_pairs`,
 which scores pairs from blocked one-hot Gram strips of member sets under
-the same memory cap.
+the same memory cap. `inverted_index_pairs` is the high-vocabulary
+alternative: it emits one key per shared member and counts pairs through
+the inverted index.
 
 Pair output is byte-identical to the per-row loops it replaces, yield
 order included.
@@ -349,3 +351,142 @@ def gram_strip_pairs(
                 yield int(gi), int(gj)
 
         start_i = end_i
+
+
+def inverted_index_pairs(
+    members: list[npt.NDArray[np.int64]],
+    sizes: npt.NDArray[np.int64],
+    threshold: float,
+    scoring: Literal["jaccard", "token_overlap"],
+    max_block_memory: int | None = None,
+    *,
+    max_chunk_bytes: int | None = None,
+) -> Iterator[SimilarPairIndices]:
+    """Yield matching row pairs from member sets via inverted-index counting.
+
+    Every pair sharing at least one member emits one key per shared
+    member; `np.unique` over the keys gives each pair's exact intersection
+    count. Scores come from (count, |A|, |B|) under the same formulas and
+    float64 boundary rules as `gram_strip_pairs`, and the comparison is
+    inclusive.
+
+    Peak key memory is bounded by the cap: groups are emitted in anchor
+    slices and deduplicated per slice, so the full pre-dedup key array is
+    never materialised. This is the regime for high-vocabulary data, where
+    most values are rare and the Gram product of `gram_strip_pairs` would
+    be mostly waste.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs
+            (`0..v-1`). Rows with no members produce no pairs.
+        sizes: Row member counts, `len(members[i])` per row.
+        threshold: The inclusive score bound.
+        scoring: The score formula, "jaccard" or "token_overlap".
+        max_block_memory: Memory cap in bytes bounding one in-flight key
+            chunk. `None` uses `DEFAULT_BLOCK_MEMORY`. Values too small
+            for one key clamp to one-key chunks.
+        max_chunk_bytes: Harness-only override of the chunk cap, for
+            forcing multi-chunk runs; keyword-only.
+
+    Yields:
+        Pairs `(i, j)` with `i < j`, `i` ascending then `j` ascending,
+        the order of the per-row loops this generator replaces.
+    """
+    n = len(members)
+    if n < 2:
+        return
+
+    # Flatten to (member, row) pairs. Rows arrive with their members
+    # already dense-ID encoded and option-C filtered by the caller.
+    lengths = np.fromiter((len(m) for m in members), dtype=np.int64, count=n)
+    total = int(lengths.sum())
+    if total == 0:
+        return
+    row_ids = np.repeat(np.arange(n, dtype=np.int64), lengths)
+    member_ids = np.concatenate([np.asarray(m, dtype=np.int64) for m in members])
+
+    # Sort by (member, row) so each value's rows are contiguous and
+    # ascending: within a group, row i < row j implies rows[i] < rows[j].
+    order = np.lexsort((row_ids, member_ids))
+    rows_sorted = row_ids[order]
+    members_sorted = member_ids[order]
+
+    # Group boundaries: where the member ID changes.
+    boundaries = np.flatnonzero(np.diff(members_sorted)) + 1
+    group_starts = np.concatenate(([0], boundaries))
+    group_ends = np.concatenate((boundaries, [total]))
+
+    # Emit each group's C(k, 2) keys in anchor slices bounded by the chunk
+    # cap. Key `lo * n + hi` is unique per pair and sorts lexicographic in
+    # (lo, hi), which is the loop's i-then-j order. A slice holds one
+    # anchor block's pairs: anchor a contributes its k - 1 - a later rows,
+    # so a block of `block` anchors holds at most `block * (k - 1)` keys.
+    cap = DEFAULT_BLOCK_MEMORY if max_block_memory is None else int(max_block_memory)
+    chunk_cap = cap if max_chunk_bytes is None else int(max_chunk_bytes)
+    budget = max(1, chunk_cap // 8)
+
+    chunk_parts: list[np.ndarray] = []
+    uniq_parts: list[np.ndarray] = []
+    count_parts: list[np.ndarray] = []
+    buffered = 0
+
+    def flush() -> None:
+        """Deduplicate the buffered keys into one (unique, counts) part."""
+        nonlocal buffered, chunk_parts
+        if not chunk_parts:
+            return
+        keys = np.concatenate(chunk_parts)
+        uniq, counts = np.unique(keys, return_counts=True)
+        uniq_parts.append(uniq)
+        count_parts.append(counts)
+        chunk_parts = []
+        buffered = 0
+
+    for start, end in zip(group_starts.tolist(), group_ends.tolist(), strict=True):
+        k = end - start
+        if k < 2:
+            continue
+        group_rows = rows_sorted[start:end]
+        block = max(1, budget // (k - 1))
+        for anchor_start in range(0, k - 1, block):
+            anchor_end = min(anchor_start + block, k - 1)
+            anchors = np.arange(anchor_start, anchor_end)
+            run_lengths = (k - 1) - anchors
+            run_total = int(run_lengths.sum())
+            run_starts = np.cumsum(run_lengths) - run_lengths
+            # Position within each anchor's run of later rows.
+            positions = np.arange(run_total, dtype=np.int64) - np.repeat(run_starts, run_lengths)
+            hi_idx = np.repeat(anchors + 1, run_lengths) + positions
+            # Rows ascend within the group, so the anchor row is the
+            # pair's lo without a min/max pass.
+            keys = np.repeat(group_rows[anchors], run_lengths) * n + group_rows[hi_idx]
+            chunk_parts.append(keys)
+            buffered += keys.size
+            if buffered >= budget:
+                flush()
+    flush()
+
+    if not uniq_parts:
+        return
+
+    # Merge the per-chunk (unique, counts) parts into global unique keys
+    # and exact intersection counts. Each part is already sorted-unique,
+    # so the merge is a searchsplit into the globally sorted keyspace.
+    if len(uniq_parts) == 1:
+        uniq, counts = uniq_parts[0], count_parts[0]
+    else:
+        uniq = np.unique(np.concatenate(uniq_parts))
+        counts = np.zeros(uniq.size, dtype=np.int64)
+        for part_uniq, part_counts in zip(uniq_parts, count_parts, strict=True):
+            counts[np.searchsorted(uniq, part_uniq)] += part_counts
+
+    lo = uniq // n
+    hi = uniq % n
+    size_lo = sizes[lo]
+    size_hi = sizes[hi]
+    denominator = size_lo + size_hi - counts if scoring == "jaccard" else np.minimum(size_lo, size_hi)
+    # int64 / int64 true-divides to float64, matching the loop's arithmetic.
+    scores = counts / denominator
+    matches = scores >= threshold
+    for lo_val, hi_val in zip(lo[matches].tolist(), hi[matches].tolist(), strict=True):
+        yield int(lo_val), int(hi_val)
