@@ -206,20 +206,20 @@ def test_within_pair_stream_is_linear_in_dense_regions():
     """
     pairs = list(lk.within(tol=0)._gen_similarity_pairs(pa.array([7.0, 7.0, 7.0, 7.0, 7.0])))
 
-    assert len(pairs) <= 4
+    assert len(pairs) == 4
 
 
 @pytest.mark.parametrize(
-    "values, tol, null_every",
+    "values, tol, null_at",
     [
-        ([10.0, 10.4, 10.9, 11.3, 12.0, 20.0, 5.0, 5.05], 0.5, None),
-        ([3.0, 3.001, 3.002, 3.004, 2.999], 0.0, None),
-        ([1.0, 1.01, 1.02, 1.03, 1.05, 2.0], 0.01, None),
-        ([-4.5, -4.0, 0.0, 4.0, 4.5, 4.6], 1.1, None),
-        ([0.0, 0.0, 1.0, None, None, 1.5], 0.6, 3),
-        ([2.0, None, None, None, 2.1, 9.0], 0.5, 1),
-        ([5.0, 5.2, 5.21, 5.3], 0.11, None),
-        ([1.0, 2.0, 3.0], 0.0, None),
+        ([10.0, 10.4, 10.9, 11.3, 12.0, 20.0, 5.0, 5.05], 0.5, []),
+        ([3.0, 3.001, 3.002, 3.004, 2.999], 0.0, []),
+        ([1.0, 1.01, 1.02, 1.03, 1.05, 2.0], 0.01, []),
+        ([-4.5, -4.0, 0.0, 4.0, 4.5, 4.6], 1.1, []),
+        ([0.0, 0.0, 1.0, None, None, 1.5], 0.6, [3, 4]),
+        ([2.0, None, None, None, 2.1, 9.0], 0.5, [1, 2, 3]),
+        ([5.0, 5.2, 5.21, 5.3], 0.11, []),
+        ([1.0, 2.0, 3.0], 0.0, []),
     ],
     ids=[
         "spread",
@@ -232,28 +232,29 @@ def test_within_pair_stream_is_linear_in_dense_regions():
         "separated",
     ],
 )
-def test_within_partition_matches_all_pairs_reference(values, tol, null_every):
+def test_within_partition_matches_all_pairs_reference(values, tol, null_at):
     """Chain edges must imply the same partition as all within-bound pairs.
 
-    Single-linkage equivalence: the adjacent sorted pair maximises the
-    difference within any window, so a window holds a within-bound pair
-    iff its adjacent pair is within bound; transitivity then covers every
-    other pair. Reference: brute-force all-pairs bound check.
+    Single-linkage equivalence: within any window the adjacent sorted pair
+    minimises the difference and the differences telescope, so a window
+    holds a within-bound pair only through within-bound adjacent steps;
+    transitivity then covers every other pair. Reference: brute-force
+    all-pairs bound check.
     """
     values = list(values)
-    if null_every is not None:
-        for i in range(null_every, len(values), 2):
-            values[i] = None
+    for i in null_at:
+        values[i] = None
 
     n = len(values)
     deduper = lk.within(tol=tol)
     actual = _components(n, deduper._gen_similarity_pairs(pa.array(values)))
 
-    missing = [i for i, v in enumerate(values) if v is None]
-    present = [i for i, v in enumerate(values) if v is not None]
-    # The reference bound mirrors the documented one, guard included:
-    # a difference rounding to at most tol + 1e-9 matches (tol > 0).
+    # The reference mirrors the documented bound, guard included: a
+    # difference rounding to at most tol + 1e-9 matches (tol > 0). Missing
+    # detection mirrors `is_missing`: None or not equal to itself (NaN).
     guard = 1e-9 if tol > 0 else 0.0
+    missing = [i for i, v in enumerate(values) if v is None or v != v]
+    present = [i for i, v in enumerate(values) if not (v is None or v != v)]
     reference_pairs = [
         (i, j) for a, i in enumerate(present) for j in present[a + 1 :] if abs(values[i] - values[j]) <= tol + guard
     ]

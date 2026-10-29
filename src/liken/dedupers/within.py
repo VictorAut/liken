@@ -88,11 +88,12 @@ class Within(
 
         # Sort once, then emit chain edges over the sorted order: the
         # (n-1) adjacent sorted pairs whose difference is within the
-        # bound. The adjacent pair maximises the difference within any
-        # window, so a window holds a within-bound pair if and only if
-        # its adjacent pair does; single-linkage over chain edges equals
-        # single-linkage over all pairs. O(n log n) overall; no all-pairs
-        # scan.
+        # bound. Within any window the adjacent sorted pair minimises the
+        # difference, and the differences between a pair and its adjacent
+        # steps telescope: if any pair in the window is within the bound,
+        # every adjacent pair between those values is too. Single-linkage
+        # over chain edges therefore equals single-linkage over all
+        # within-bound pairs. O(n log n) overall; no all-pairs scan.
         order = sorted(present, key=lambda i: values[i])
 
         guard = _BOUNDARY_TOLERANCE if self._tol > 0 else 0.0
