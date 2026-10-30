@@ -119,73 +119,6 @@ def _select_top(
     return idx, sco
 
 
-def _merge_topk(
-    state_score: np.ndarray,
-    state_index: np.ndarray,
-    owners: np.ndarray,
-    indices: np.ndarray,
-    scores: np.ndarray,
-    width: int,
-) -> None:
-    """Merge candidate `(owner, index, score)` triples into the state.
-
-    Candidates scatter into per-owner buckets of `2 * width` slots (each
-    owner receives at most `width` from either direction per strip),
-    merged with the owner's existing state and re-selected to the top
-    `width` by (score desc, index asc). A partner can arrive from both
-    directions with the identical score, so duplicates deduplicate by
-    index; re-selection is unconditional because the dedupe pass leaves
-    candidates index-ordered while emission depends on score order.
-    """
-    order = np.argsort(owners, kind="stable")
-    owners_sorted = owners[order]
-    idx_sorted = indices[order]
-    sco_sorted = scores[order]
-
-    uniq, first_pos = np.unique(owners_sorted, return_index=True)
-    group_sizes = np.diff(np.append(first_pos, len(owners_sorted)))
-    pos_in_group = np.arange(len(owners_sorted)) - np.repeat(first_pos, group_sizes)
-    # invariant guard: each owner receives exactly `width` candidates per
-    # direction, so pos_in_group never reaches the 2 * width bucket. If a
-    # selection change overflows the bucket, the mask drops the excess
-    # instead of wrapping into the next owner's slots.
-    flat_ok = pos_in_group < 2 * width
-    slots = owners_sorted * 2 * width + pos_in_group
-
-    bucket = np.full((len(state_score), 2 * width), -np.inf, dtype=np.float64)
-    bucket_idx = np.full((len(state_score), 2 * width), -1, dtype=np.int64)
-    bucket_flat = bucket.ravel()
-    bucket_idx_flat = bucket_idx.ravel()
-    bucket_flat[slots[flat_ok]] = sco_sorted[flat_ok]
-    bucket_idx_flat[slots[flat_ok]] = idx_sorted[flat_ok]
-
-    touched = uniq
-    all_s = np.concatenate([state_score[touched], bucket[touched]], axis=1)
-    all_i = np.concatenate([state_index[touched], bucket_idx[touched]], axis=1)
-
-    keep = all_i >= 0
-    all_s = np.where(keep, all_s, -np.inf)
-    all_i = np.where(keep, all_i, -1)
-
-    # dedupe by index: sort index-ascending (score descending within an
-    # index — identical by symmetry, so the first occurrence is kept)
-    dedupe_order = np.lexsort((-all_s, all_i), axis=1)
-    all_s = np.take_along_axis(all_s, dedupe_order, axis=1)
-    all_i = np.take_along_axis(all_i, dedupe_order, axis=1)
-    dup = np.zeros_like(all_i, dtype=bool)
-    dup[:, 1:] = all_i[:, 1:] == all_i[:, :-1]
-    valid = (all_i >= 0) & ~dup
-    all_s = np.where(valid, all_s, -np.inf)
-    all_i = np.where(valid, all_i, -1)
-
-    # re-select by (score desc, index asc), always
-    final_order = np.lexsort((all_i, -all_s), axis=1)
-    all_s = np.take_along_axis(all_s, final_order, axis=1)
-    all_i = np.take_along_axis(all_i, final_order, axis=1)
-    state_score[touched, :] = all_s[:, :width]
-    state_index[touched, :] = all_i[:, :width]
-
-
 def _jaro_winkler(s1: str, s2: str, score_cutoff: float | None = None) -> float:
     """JaroWinkler normalized similarity on the 0-100 scale.
 
@@ -316,18 +249,22 @@ class Fuzzy(
         `block_rows` queries against the remaining tail, sized by
         `block_rows_for` under the `max_block_memory` cap and scored with
         `resolve_workers`' worker count — the same shape as the all-pairs
-        path. Each strip merges into a per-row running top-k state of
-        `k + 1` slots, from both directions: the query rows gain the
-        tail's choices as partners, and the tail's rows gain the query
-        rows (a row's k best can include earlier rows, whose scores only
-        appear in earlier strips' columns). Selection is by score
-        descending then index ascending — the tie rule `process.extract`
-        documents — and deduplicates by partner index, since one pair can
-        arrive from both directions with the identical score.
+        path. The strip's `score_cutoff` zeroes below-cutoff cells before
+        materialization, so candidates are the above-cutoff cells only;
+        both strip directions append their candidates as (owner, index,
+        score) triples and one global sort by (owner, score desc, index
+        asc) reduces them — no per-strip state merge. A strip too dense
+        to buffer sparsely contributes bounded per-row top-`width`
+        windows instead (`_select_top`), which compose exactly: the
+        top-k of a union is the k best of the union of the parts' top-ks.
 
-        The cutoff applies Python-side on the float64 strip scores; the
-        boundary tolerance mirrors the all-pairs comparison and stays
-        authoritative regardless of rapidfuzz version behaviour.
+        Ranking is score descending then index ascending — the tie rule
+        `process.extract` documents. Within an owner's sorted slice,
+        duplicates (one pair can arrive from both directions with the
+        identical score) and self drop by index, the first `topn`
+        partners remain, and the Python-side cutoff re-check with the
+        boundary tolerance stays authoritative regardless of rapidfuzz
+        version behaviour.
         """
         n = len(scored)
         if n < 2:
@@ -335,14 +272,20 @@ class Fuzzy(
 
         topn = self._topn
         cutoff: float = threshold - _BOUNDARY_TOLERANCE
-        width = topn + 1  # state row width: k partners + self transiently
+        width = topn + 1  # window width: k partners + self transiently
 
         max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
         block_rows = block_rows_for(n, probe_itemsize(scorer, dtype="float64"), max_block_memory)
         workers = resolve_workers(self._workers, distributed=self.distributed)
 
-        state_score = np.full((n, width), -np.inf, dtype=np.float64)
-        state_index = np.full((n, width), -1, dtype=np.int64)
+        # a sparse strip's triples cost 24 bytes each; the budget bounds
+        # them by the same cap as the matrix, with the window path as the
+        # floor for degenerate caps
+        dense_budget = max(max_block_memory // 24, block_rows * width)
+
+        parts_owner: list[np.ndarray] = []
+        parts_index: list[np.ndarray] = []
+        parts_score: list[np.ndarray] = []
 
         start = 0
         while start < n - 1:
@@ -353,46 +296,75 @@ class Fuzzy(
                     scored[start + 1 :],
                     scorer=scorer,
                     dtype="float64",
+                    score_cutoff=cutoff,
                     workers=workers,
                 )
             )
+            _, c = strip.shape
 
-            q_idx, q_sco = _select_top(strip, start + 1, width)
-            c_idx, c_sco = _select_top(strip.T, start, width)
-            _merge_topk(
-                state_score,
-                state_index,
-                np.concatenate(
-                    [
-                        np.repeat(np.arange(start, end), width),
-                        np.repeat(np.arange(start + 1, start + 1 + strip.shape[1]), width),
-                    ]
-                ),
-                np.concatenate([q_idx.ravel(), c_idx.ravel()]),
-                np.concatenate([q_sco.ravel(), c_sco.ravel()]),
-                width,
-            )
+            if np.count_nonzero(strip) > dense_budget:
+                q_idx, q_sco = _select_top(strip, start + 1, width)
+                parts_owner.append(np.repeat(np.arange(start, end), width))
+                parts_index.append(q_idx.ravel())
+                parts_score.append(q_sco.ravel())
+                c_idx, c_sco = _select_top(strip.T, start, width)
+                parts_owner.append(np.repeat(np.arange(start + 1, start + 1 + c), width))
+                parts_index.append(c_idx.ravel())
+                parts_score.append(c_sco.ravel())
+            else:
+                rows_idx, cols_idx = np.nonzero(strip)
+                scores = strip[rows_idx, cols_idx]
+                # query side: rows start..end-1 gain partners start+1..n-1
+                parts_owner.append(rows_idx + start)
+                parts_index.append(cols_idx + start + 1)
+                parts_score.append(scores)
+                # column side: rows start+1..n-1 gain partners start..end-1
+                parts_owner.append(cols_idx + start + 1)
+                parts_index.append(rows_idx + start)
+                parts_score.append(scores)
 
             start = end
 
+        if not parts_owner:
+            return
+
+        owner = np.concatenate(parts_owner)
+        index = np.concatenate(parts_index)
+        score = np.concatenate(parts_score)
+
+        # one global reduction: owner ascending (primary), score
+        # descending, index ascending within ties
+        order = np.lexsort((index, -score, owner))
+        owner = owner[order]
+        index = index[order]
+        score = score[order]
+
         seen: set[tuple[int, int]] = set()
+        bounds = np.searchsorted(owner, np.arange(n), side="right")
+        lo = 0
         for pos in range(n):
+            hi = bounds[pos]
+            if hi == lo:
+                continue
             partners = 0
-            for slot in range(width):
+            prev_index = -1
+            for slot in range(lo, hi):
                 if partners == topn:
                     break
-                index = int(state_index[pos, slot])
-                if index < 0:
-                    break
-                if index == pos:
+                idx = int(index[slot])
+                if idx == prev_index:  # both directions carry the pair
+                    continue
+                prev_index = idx
+                if idx == pos:
                     continue
                 partners += 1
-                if state_score[pos, slot] < cutoff:
+                if score[slot] < cutoff:
                     continue
-                pair = (min(present[pos], present[index]), max(present[pos], present[index]))
+                pair = (min(present[pos], present[idx]), max(present[pos], present[idx]))
                 if pair not in seen:
                     seen.add(pair)
                     yield pair
+            lo = hi
 
     def __str__(self):
         return self.str_representation(self._NAME)
