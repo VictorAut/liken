@@ -108,16 +108,16 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
         0,
         10000,
         ymin=0.36,
-        ymax=0.87,
+        ymax=0.865,
         color="goldenrod",
         alpha=0.5,
         zorder=0,
     )
     plt.text(
         2000,
-        0.18,
+        0.2,
         "PREDICATE",
-        rotation=300,
+        rotation=315,
         ha="center",
         va="center",
         color="gray",
@@ -125,9 +125,9 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
     )
     plt.text(
         2000,
-        0.6,
+        0.62,
         "THRESHOLD",
-        rotation=300,
+        rotation=315,
         ha="center",
         va="center",
         color="darkgoldenrod",

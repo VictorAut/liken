@@ -123,7 +123,7 @@ class Preset:
 REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("exact", ("address",), "exact"),
     DeduperEntry("sorted_tokens", ("address",), "sorted_tokens"),
-    DeduperEntry("fuzzy", ("address",), "fuzzy"),
+    DeduperEntry("fuzzy", ("address",), "fuzzy", kwargs={"topn": 5}),
     DeduperEntry("fuzzy_topn", ("address",), "fuzzy", kwargs={"threshold": 0.95, "topn": 5}),
     DeduperEntry("edit_distance", ("address",), "edit_distance"),
     DeduperEntry("within", ("height",), "within", kwargs={"tol": 1.1}),
@@ -136,8 +136,8 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("tfidf", ("address",), "tfidf"),
     DeduperEntry("lsh", ("address",), "lsh"),
     DeduperEntry("knn", ("probability", "house_number", "height"), "knn", kwargs={"k": 2}),
-    DeduperEntry("jaccard", ("city", "country", "job"), "jaccard"),
-    DeduperEntry("token_overlap", ("city", "country", "job"), "token_overlap"),
+    DeduperEntry("jaccard", ("city", "country", "job"), "jaccard", kwargs={"strategy": "index"}),
+    DeduperEntry("token_overlap", ("city", "country", "job"), "token_overlap", kwargs={"strategy": "index"}),
     DeduperEntry("cosine", ("probability", "house_number", "height"), "cosine"),
     DeduperEntry(
         "knn",
