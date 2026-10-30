@@ -89,7 +89,7 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
 
     plt.gca().invert_yaxis()
     plt.xscale("log")
-
+    plt.xlim(right=10_000)
     plt.axvline(60, color="gray", linestyle="--", linewidth=1, alpha=0.7)
     plt.axvline(3600, color="red", linestyle="--", linewidth=1, alpha=0.7)
     plt.text(40, -1.5, "1 min", color="gray")
@@ -108,26 +108,26 @@ def run_chart(runs: Sequence[dict[str, Any]], output: Path) -> None:
         0,
         10000,
         ymin=0.36,
-        ymax=0.87,
+        ymax=0.865,
         color="goldenrod",
         alpha=0.5,
         zorder=0,
     )
     plt.text(
-        2000,
-        0.18,
+        8000,
+        0.2,
         "PREDICATE",
-        rotation=300,
+        rotation=270,
         ha="center",
         va="center",
         color="gray",
         transform=ax.get_xaxis_transform(),
     )
     plt.text(
-        2000,
-        0.6,
+        8000,
+        0.62,
         "THRESHOLD",
-        rotation=300,
+        rotation=270,
         ha="center",
         va="center",
         color="darkgoldenrod",

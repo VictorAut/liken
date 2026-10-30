@@ -136,8 +136,8 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("tfidf", ("address",), "tfidf"),
     DeduperEntry("lsh", ("address",), "lsh"),
     DeduperEntry("knn", ("probability", "house_number", "height"), "knn", kwargs={"k": 2}),
-    DeduperEntry("jaccard", ("city", "country", "job"), "jaccard"),
-    DeduperEntry("token_overlap", ("city", "country", "job"), "token_overlap"),
+    DeduperEntry("jaccard", ("city", "country", "job"), "jaccard", kwargs={"strategy": "index"}),
+    DeduperEntry("token_overlap", ("city", "country", "job"), "token_overlap", kwargs={"strategy": "index"}),
     DeduperEntry("cosine", ("probability", "house_number", "height"), "cosine"),
     DeduperEntry(
         "knn",

@@ -9,6 +9,7 @@ from typing import Literal
 from typing import TypeAlias
 from typing import final
 
+import numpy as np
 import pyarrow as pa
 from rapidfuzz import fuzz
 from rapidfuzz import process
@@ -50,6 +51,72 @@ ScorerName: TypeAlias = Literal[
 # far more, so the guard only admits scores equal to the boundary at any
 # meaningful precision.
 _BOUNDARY_TOLERANCE: Final[float] = 1e-9
+
+
+def _select_top(
+    matrix: np.ndarray,
+    base: int,
+    width: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per-row top-`width` columns by (score desc, index asc).
+
+    Selection over one strip matrix: the running top-k state's tie rule
+    must match `process.extract`'s documented "ties sort by choice
+    index". A full argsort per strip is O(rows x cols x log cols) and
+    dominates wall-clock; argpartition is O(cols) but picks arbitrary
+    indices among ties at the cut. The shape here: argpartition to
+    `width` candidates, then repair ties at the boundary — candidates
+    strictly above the partition's minimum score sort by (score desc,
+    index asc) within the small selected slice, and columns tied at the
+    boundary fill the remaining slots in ascending index order.
+
+    Args:
+        matrix: Score matrix `(rows, cols)`; float64.
+        base: Global index of column 0 (strip column offsets differ
+            per direction).
+        width: Slots to return per row, at most `cols`.
+
+    Returns:
+        `(indices, scores)` of shape `(rows, width)`: global partner
+        indices and their scores, `-1` / `-inf` padded.
+    """
+    rows, cols = matrix.shape
+    w = min(width, cols)
+
+    if cols > w:
+        part = np.argpartition(-matrix, w - 1, axis=1)[:, :w]
+        part_score = np.take_along_axis(matrix, part, axis=1)
+        boundary = part_score.min(axis=1, keepdims=True)
+        # the cut ties: every column whose score equals the boundary
+        # competes with the partition's tail by index
+        tied = matrix == boundary
+        part_order = np.lexsort((part, -part_score), axis=1)
+        part_sorted_idx = np.take_along_axis(part, part_order, axis=1) + base
+        part_sorted_sco = np.take_along_axis(part_score, part_order, axis=1)
+        # strictly-above candidates are all within the partition; the
+        # boundary is its minimum, so at most w - 1 of them
+        n_above = (part_score > boundary).sum(axis=1)
+        out_idx = np.full((rows, width), -1, dtype=np.int64)
+        out_sco = np.full((rows, width), -np.inf, dtype=np.float64)
+        for r in range(rows):
+            na = int(n_above[r])
+            out_idx[r, :na] = part_sorted_idx[r, :na]
+            out_sco[r, :na] = part_sorted_sco[r, :na]
+            need = width - na
+            if need > 0:
+                tied_cols = np.flatnonzero(tied[r])[:need]
+                n_t = len(tied_cols)
+                out_idx[r, na : na + n_t] = tied_cols + base
+                out_sco[r, na : na + n_t] = boundary[r, 0]
+        return out_idx, out_sco
+
+    order = np.argsort(-matrix, axis=1, kind="stable")
+    idx = np.take_along_axis(np.broadcast_to(np.arange(cols), (rows, cols)), order, axis=1) + base
+    sco = np.take_along_axis(matrix, order, axis=1)
+    if w < width:
+        idx = np.pad(idx, ((0, 0), (0, width - w)), constant_values=-1)
+        sco = np.pad(sco, ((0, 0), (0, width - w)), constant_values=-np.inf)
+    return idx, sco
 
 
 def _jaro_winkler(s1: str, s2: str, score_cutoff: float | None = None) -> float:
@@ -176,45 +243,179 @@ class Fuzzy(
         """Candidate-limited pairs: each row keeps its k best partners.
 
         A pair is emitted when either side holds the other in its k best
-        and the score reaches the threshold. Per-row `process.extract`
-        over the full present-value list computes each row's directed
-        top-k, so both directions are covered without a second pass.
+        and the score reaches the threshold.
 
-        The cutoff passed to `process.extract` is inclusive and already
-        applies the boundary tolerance, mirroring the all-pairs
-        comparison; the Python-side re-check keeps that contract
-        authoritative regardless of rapidfuzz version behaviour.
+        Pairs come from the block machinery: `process.cdist` strips of
+        `block_rows` queries against the remaining tail, sized by
+        `block_rows_for` under the `max_block_memory` cap and scored with
+        `resolve_workers`' worker count — the same shape as the all-pairs
+        path. The strip's `score_cutoff` zeroes below-cutoff cells before
+        materialization, so candidates are the above-cutoff cells only;
+        both strip directions append their candidates as (owner, index,
+        score) triples and one global sort by (owner, score desc, index
+        asc) reduces them — no per-strip state merge. A strip too dense
+        to buffer sparsely contributes bounded per-row top-`width`
+        windows instead (`_select_top`), which compose exactly: the
+        top-k of a union is the k best of the union of the parts' top-ks.
+
+        Ranking is score descending then index ascending — the tie rule
+        `process.extract` documents. Within an owner's sorted slice,
+        entries deduplicate by index (the check's live role is skipping
+        the `-1` padding sentinel; a real partner reaches an owner from
+        exactly one strip), self drops by index, the first `topn`
+        partners remain, and the Python-side cutoff re-check with the
+        boundary tolerance stays authoritative regardless of rapidfuzz
+        version behaviour.
+
+        The candidate pool is bounded: when the accumulated triples
+        exceed the memory cap's budget, a flush-reduce sorts the pool
+        and keeps each owner's top-`width` entries. Windows compose
+        exactly (the top-k of a union is the k best of the union of the
+        parts' top-ks), so the final reduction is unchanged.
         """
+        n = len(scored)
+        if n < 2:
+            return
+
         topn = self._topn
         cutoff: float = threshold - _BOUNDARY_TOLERANCE
+        width = topn + 1  # window width: k partners + self transiently
+
+        max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
+        block_rows = block_rows_for(n, probe_itemsize(scorer, dtype="float64"), max_block_memory)
+        workers = resolve_workers(self._workers, distributed=self.distributed)
+
+        # a sparse strip's triples cost 24 bytes each; the budget bounds
+        # them by the same cap as the matrix, with the window path as the
+        # floor for degenerate caps
+        dense_budget = max(max_block_memory // 24, block_rows * width)
+        # at cutoff <= 0.0 a real 0.0 score is a candidate (extract
+        # admits it), but the sparse branch cannot see it: cdist's
+        # zeroed cells and real 0.0 scores are the same value. Every
+        # cell is a candidate, so force the dense branch, whose
+        # selection reads 0.0 cells and whose emission re-check admits
+        # them.
+        force_dense = cutoff <= 0.0
+
+        parts_owner: list[np.ndarray] = []
+        parts_index: list[np.ndarray] = []
+        parts_score: list[np.ndarray] = []
+        pool_bytes = 0
+
+        def flush_reduce() -> None:
+            """Sort-merge the pool into per-owner top-width windows."""
+            nonlocal parts_owner, parts_index, parts_score, pool_bytes
+            if not parts_owner:
+                return
+            owner = np.concatenate(parts_owner)
+            index = np.concatenate(parts_index)
+            score = np.concatenate(parts_score)
+            order = np.lexsort((index, -score, owner))
+            owner = owner[order]
+            index = index[order]
+            score = score[order]
+            # dedupe by (owner, index): windows from different strips
+            # can repeat a partner; the first occurrence carries the
+            # score
+            _, first = np.unique(owner * n + index, return_index=True)
+            first = np.sort(first)
+            owner = owner[first]
+            index = index[first]
+            score = score[first]
+            counts = np.bincount(owner, minlength=n)
+            grp_start = np.searchsorted(owner, np.arange(n))
+            pos_in_group = np.arange(len(owner)) - np.repeat(grp_start, counts)
+            keep = pos_in_group < width
+            parts_owner = [owner[keep]]
+            parts_index = [index[keep]]
+            parts_score = [score[keep]]
+            pool_bytes = len(owner) * 24
+
+        start = 0
+        while start < n - 1:
+            end = min(start + block_rows, n)
+            strip = np.asarray(
+                process.cdist(
+                    scored[start:end],
+                    scored[start + 1 :],
+                    scorer=scorer,
+                    dtype="float64",
+                    score_cutoff=cutoff,
+                    workers=workers,
+                )
+            )
+            _, c = strip.shape
+
+            rows_idx, cols_idx = np.nonzero(strip)
+            if force_dense or len(rows_idx) > dense_budget:
+                q_idx, q_sco = _select_top(strip, start + 1, width)
+                parts_owner.append(np.repeat(np.arange(start, end), width))
+                parts_index.append(q_idx.ravel())
+                parts_score.append(q_sco.ravel())
+                c_idx, c_sco = _select_top(strip.T, start, width)
+                parts_owner.append(np.repeat(np.arange(start + 1, start + 1 + c), width))
+                parts_index.append(c_idx.ravel())
+                parts_score.append(c_sco.ravel())
+                pool_bytes += 24 * (end - start + c) * width
+            else:
+                scores = strip[rows_idx, cols_idx]
+                # query side: rows start..end-1 gain partners start+1..n-1
+                parts_owner.append(rows_idx + start)
+                parts_index.append(cols_idx + start + 1)
+                parts_score.append(scores)
+                # column side: rows start+1..n-1 gain partners start..end-1
+                parts_owner.append(cols_idx + start + 1)
+                parts_index.append(rows_idx + start)
+                parts_score.append(scores)
+                pool_bytes += 48 * len(rows_idx)
+
+            if pool_bytes >= dense_budget:
+                flush_reduce()
+
+            start = end
+
+        flush_reduce()
+
+        if not parts_owner:
+            return
+
+        owner = np.concatenate(parts_owner)
+        index = np.concatenate(parts_index)
+        score = np.concatenate(parts_score)
+
+        # one global reduction: owner ascending (primary), score
+        # descending, index ascending within ties
+        order = np.lexsort((index, -score, owner))
+        owner = owner[order]
+        index = index[order]
+        score = score[order]
 
         seen: set[tuple[int, int]] = set()
-
-        for pos, s1 in enumerate(scored):
-            results = process.extract(
-                s1,
-                scored,
-                scorer=scorer,
-                limit=topn + 1,
-                score_cutoff=cutoff,
-            )
-
-            # drop self by index, keep at most topn partners; ties sort by
-            # choice index, so self may sit beyond rank topn + 1 and the
-            # truncation then takes the first topn non-self entries
+        bounds = np.searchsorted(owner, np.arange(n), side="right")
+        lo = 0
+        for pos in range(n):
+            hi = bounds[pos]
+            if hi == lo:
+                continue
             partners = 0
-            for _choice, score, index in results:
+            prev_index = -1
+            for slot in range(lo, hi):
                 if partners == topn:
                     break
-                if index == pos:
+                idx = int(index[slot])
+                if idx == prev_index:  # -1 padding sentinel, or a repeat
+                    continue
+                prev_index = idx
+                if idx == pos:
                     continue
                 partners += 1
-                if score < cutoff:
+                if score[slot] < cutoff:
                     continue
-                pair = (min(present[pos], present[index]), max(present[pos], present[index]))
+                pair = (min(present[pos], present[idx]), max(present[pos], present[idx]))
                 if pair not in seen:
                     seen.add(pair)
                     yield pair
+            lo = hi
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -246,20 +447,19 @@ def fuzzy(
               towards shared prefixes. Scores on the same 0-100 scale as
               the other options. Suited to short strings such as names,
               postcodes and product codes.
-        topn: The number of best matches to consider per value. The
-            headline value of `topn` is memory: each value holds at most
-            `k` candidate scores instead of a score against every other
-            value. The default `None` compares every value against every
-            other. An integer `k` bounds the matches held per value to
-            `k`: a pair matches when either side holds the other in its
-            k best and the score reaches the threshold. Scorer work per
-            value is unchanged; only the matches kept are limited.
-            Matching is approximate: in a cluster of more than k near-identical
-            records some pairs are dropped, so the cluster may fail to
-            link transitively even though union-find merges whatever
-            pairs survive. Ties at rank k are broken by row order: the
-            same input order gives the same output, and reordering the
-            column can change the result.
+        topn: The number of best matches to consider per value. Each value
+            holds at most `k` candidate scores: a pair matches when either
+            side holds the other in its k best and the score reaches the
+            threshold. The default `None` compares every value against
+            every other and keeps every matching pair. Scorer work is
+            unchanged in either mode; only the matches kept are limited,
+            so `topn` bounds the pair output and downstream work, not the
+            scoring cost. Matching is approximate: in a cluster of more
+            than k near-identical records some pairs are dropped, so the
+            cluster may fail to link transitively even though union-find
+            merges whatever pairs survive. Ties at rank k are broken by
+            row order: the same input order gives the same output, and
+            reordering the column can change the result.
         workers: The number of worker threads used for scoring. This
             parameter has multiple effective defaults: `None` chooses
             automatically, using all CPU cores locally or for single node
@@ -267,7 +467,7 @@ def fuzzy(
             overrides the default and uses all cores, else choose an integer
             number for the desired number of cores.
         max_block_memory: The approximate memory budget, in bytes, of one
-            scored block in the all-pairs mode. Values are scored in
+            scored block. Values are scored in
             blocks bounded by this cap; smaller blocks lower peak memory
             at some cost in scoring speed. Defaults to a library constant
             of 64 MiB. A cap too small for even one row's score band
