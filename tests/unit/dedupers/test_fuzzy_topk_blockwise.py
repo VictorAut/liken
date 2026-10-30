@@ -188,8 +188,6 @@ def test_fuzzy_topk_blockwise_parity_50k_scale():
 def test_fuzzy_topk_uses_cdist_not_extract(monkeypatch):
     """The top-k path scores through `process.cdist` strips, not per-row
     `process.extract`."""
-    from rapidfuzz import process
-
     calls = {"cdist": 0, "extract": 0}
     real_cdist, real_extract = process.cdist, process.extract
 
@@ -213,8 +211,6 @@ def test_fuzzy_topk_uses_cdist_not_extract(monkeypatch):
 
 def test_fuzzy_topk_cdist_receives_resolved_workers(monkeypatch):
     """`workers` reaches the top-k block calls like the all-pairs path."""
-    from rapidfuzz import process
-
     seen_workers = []
     real_cdist = process.cdist
 
@@ -237,8 +233,6 @@ def test_fuzzy_topk_cdist_runs_in_float64(monkeypatch):
 
     Precedent: the edit-distance block path (50ceb98).
     """
-    from rapidfuzz import process
-
     seen_dtypes = []
     real_cdist = process.cdist
 
@@ -262,7 +256,7 @@ def test_fuzzy_topk_max_block_memory_bounds_strips():
     reference = _reference_topk_pairs(
         ["abcd", "abce", "abcf", "zzzz", "abcm", "abcn"],
         list(range(6)),
-        0.7,
+        100 * 0.7,
         lk.fuzzy().get_scorer(),
         2,
     )

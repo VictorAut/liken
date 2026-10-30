@@ -145,6 +145,10 @@ def _merge_topk(
     uniq, first_pos = np.unique(owners_sorted, return_index=True)
     group_sizes = np.diff(np.append(first_pos, len(owners_sorted)))
     pos_in_group = np.arange(len(owners_sorted)) - np.repeat(first_pos, group_sizes)
+    # invariant guard: each owner receives exactly `width` candidates per
+    # direction, so pos_in_group never reaches the 2 * width bucket. If a
+    # selection change overflows the bucket, the mask drops the excess
+    # instead of wrapping into the next owner's slots.
     flat_ok = pos_in_group < 2 * width
     slots = owners_sorted * 2 * width + pos_in_group
 

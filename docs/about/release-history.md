@@ -9,6 +9,8 @@ title: Release History
 
 - Faster pair generation in the `fuzzy` and `edit_distance` dedupers, with new
   `workers` and `max_block_memory` options for parallelism and memory control.
+- The `fuzzy` deduper's `topn` option now pairs through the same batched
+  scoring as the default mode, removing its per-row penalty.
 - Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
   new `max_block_memory` option for memory control.
 - The `jaccard` and `token_overlap` dedupers gain a `strategy` option
