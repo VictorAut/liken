@@ -420,20 +420,19 @@ def fuzzy(
               towards shared prefixes. Scores on the same 0-100 scale as
               the other options. Suited to short strings such as names,
               postcodes and product codes.
-        topn: The number of best matches to consider per value. The
-            headline value of `topn` is memory: each value holds at most
-            `k` candidate scores instead of a score against every other
-            value. The default `None` compares every value against every
-            other. An integer `k` bounds the matches held per value to
-            `k`: a pair matches when either side holds the other in its
-            k best and the score reaches the threshold. Scorer work per
-            value is unchanged; only the matches kept are limited.
-            Matching is approximate: in a cluster of more than k near-identical
-            records some pairs are dropped, so the cluster may fail to
-            link transitively even though union-find merges whatever
-            pairs survive. Ties at rank k are broken by row order: the
-            same input order gives the same output, and reordering the
-            column can change the result.
+        topn: The number of best matches to consider per value. Each value
+            holds at most `k` candidate scores: a pair matches when either
+            side holds the other in its k best and the score reaches the
+            threshold. The default `None` compares every value against
+            every other and keeps every matching pair. Scorer work is
+            unchanged in either mode; only the matches kept are limited,
+            so `topn` bounds the pair output and downstream work, not the
+            scoring cost. Matching is approximate: in a cluster of more
+            than k near-identical records some pairs are dropped, so the
+            cluster may fail to link transitively even though union-find
+            merges whatever pairs survive. Ties at rank k are broken by
+            row order: the same input order gives the same output, and
+            reordering the column can change the result.
         workers: The number of worker threads used for scoring. This
             parameter has multiple effective defaults: `None` chooses
             automatically, using all CPU cores locally or for single node
@@ -441,7 +440,7 @@ def fuzzy(
             overrides the default and uses all cores, else choose an integer
             number for the desired number of cores.
         max_block_memory: The approximate memory budget, in bytes, of one
-            scored block in the all-pairs mode. Values are scored in
+            scored block. Values are scored in
             blocks bounded by this cap; smaller blocks lower peak memory
             at some cost in scoring speed. Defaults to a library constant
             of 64 MiB. A cap too small for even one row's score band
