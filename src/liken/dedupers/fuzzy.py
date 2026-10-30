@@ -260,11 +260,18 @@ class Fuzzy(
 
         Ranking is score descending then index ascending — the tie rule
         `process.extract` documents. Within an owner's sorted slice,
-        duplicates (one pair can arrive from both directions with the
-        identical score) and self drop by index, the first `topn`
+        entries deduplicate by index (the check's live role is skipping
+        the `-1` padding sentinel; a real partner reaches an owner from
+        exactly one strip), self drops by index, the first `topn`
         partners remain, and the Python-side cutoff re-check with the
         boundary tolerance stays authoritative regardless of rapidfuzz
         version behaviour.
+
+        The candidate pool is bounded: when the accumulated triples
+        exceed the memory cap's budget, a flush-reduce sorts the pool
+        and keeps each owner's top-`width` entries. Windows compose
+        exactly (the top-k of a union is the k best of the union of the
+        parts' top-ks), so the final reduction is unchanged.
         """
         n = len(scored)
         if n < 2:
@@ -282,10 +289,47 @@ class Fuzzy(
         # them by the same cap as the matrix, with the window path as the
         # floor for degenerate caps
         dense_budget = max(max_block_memory // 24, block_rows * width)
+        # at cutoff <= 0.0 a real 0.0 score is a candidate (extract
+        # admits it), but the sparse branch cannot see it: cdist's
+        # zeroed cells and real 0.0 scores are the same value. Every
+        # cell is a candidate, so force the dense branch, whose
+        # selection reads 0.0 cells and whose emission re-check admits
+        # them.
+        force_dense = cutoff <= 0.0
 
         parts_owner: list[np.ndarray] = []
         parts_index: list[np.ndarray] = []
         parts_score: list[np.ndarray] = []
+        pool_bytes = 0
+
+        def flush_reduce() -> None:
+            """Sort-merge the pool into per-owner top-width windows."""
+            nonlocal parts_owner, parts_index, parts_score, pool_bytes
+            if not parts_owner:
+                return
+            owner = np.concatenate(parts_owner)
+            index = np.concatenate(parts_index)
+            score = np.concatenate(parts_score)
+            order = np.lexsort((index, -score, owner))
+            owner = owner[order]
+            index = index[order]
+            score = score[order]
+            # dedupe by (owner, index): windows from different strips
+            # can repeat a partner; the first occurrence carries the
+            # score
+            _, first = np.unique(owner * n + index, return_index=True)
+            first = np.sort(first)
+            owner = owner[first]
+            index = index[first]
+            score = score[first]
+            counts = np.bincount(owner, minlength=n)
+            grp_start = np.searchsorted(owner, np.arange(n))
+            pos_in_group = np.arange(len(owner)) - np.repeat(grp_start, counts)
+            keep = pos_in_group < width
+            parts_owner = [owner[keep]]
+            parts_index = [index[keep]]
+            parts_score = [score[keep]]
+            pool_bytes = len(owner) * 24
 
         start = 0
         while start < n - 1:
@@ -302,7 +346,8 @@ class Fuzzy(
             )
             _, c = strip.shape
 
-            if np.count_nonzero(strip) > dense_budget:
+            rows_idx, cols_idx = np.nonzero(strip)
+            if force_dense or len(rows_idx) > dense_budget:
                 q_idx, q_sco = _select_top(strip, start + 1, width)
                 parts_owner.append(np.repeat(np.arange(start, end), width))
                 parts_index.append(q_idx.ravel())
@@ -311,8 +356,8 @@ class Fuzzy(
                 parts_owner.append(np.repeat(np.arange(start + 1, start + 1 + c), width))
                 parts_index.append(c_idx.ravel())
                 parts_score.append(c_sco.ravel())
+                pool_bytes += 24 * (end - start + c) * width
             else:
-                rows_idx, cols_idx = np.nonzero(strip)
                 scores = strip[rows_idx, cols_idx]
                 # query side: rows start..end-1 gain partners start+1..n-1
                 parts_owner.append(rows_idx + start)
@@ -322,8 +367,14 @@ class Fuzzy(
                 parts_owner.append(cols_idx + start + 1)
                 parts_index.append(rows_idx + start)
                 parts_score.append(scores)
+                pool_bytes += 48 * len(rows_idx)
+
+            if pool_bytes >= dense_budget:
+                flush_reduce()
 
             start = end
+
+        flush_reduce()
 
         if not parts_owner:
             return
@@ -352,7 +403,7 @@ class Fuzzy(
                 if partners == topn:
                     break
                 idx = int(index[slot])
-                if idx == prev_index:  # both directions carry the pair
+                if idx == prev_index:  # -1 padding sentinel, or a repeat
                     continue
                 prev_index = idx
                 if idx == pos:

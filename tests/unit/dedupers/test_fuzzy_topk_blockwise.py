@@ -262,3 +262,47 @@ def test_fuzzy_topk_max_block_memory_bounds_strips():
     )
 
     assert capped == reference
+
+
+def test_fuzzy_topk_zero_score_pairs_at_zero_cutoff():
+    """A real 0.0-score pair is a candidate when the cutoff is 0.0.
+
+    `threshold = 1.0000000000000001e-11` makes `100 * threshold - 1e-9`
+    exactly 0.0. `process.extract(score_cutoff=0.0)` admits 0.0-score
+    choices; the sparse branch cannot see them (cdist's zeroed cells and
+    real 0.0 scores are the same value), so the path forces the dense
+    branch, whose selection reads 0.0 cells.
+    """
+    values = ["abc", "zzz", "qqq", "abcdef", "abcdefg", "zzzzzz", "abcxyz"]
+    threshold = 1.0000000000000001e-11
+
+    scorer = lk.fuzzy().get_scorer()
+    present = list(range(len(values)))
+    expected = _reference_topk_pairs(values, present, 100 * threshold, scorer, 3)
+    got = list(lk.fuzzy(threshold=threshold, topn=3)._gen_similarity_pairs(pa.array(values)))
+
+    assert got == expected
+
+
+def test_fuzzy_topk_duplicate_heavy_pool_flushes():
+    """Duplicate-heavy data keeps the candidate pool bounded, parity intact.
+
+    All-identical values make every strip dense (every pair scores 100):
+    the pool flush-reduces to per-owner top-`width` windows instead of
+    holding every pair as a triple.
+    """
+    _assert_parity(["identical"] * 300, 0.95, 5, "simple_ratio")
+
+
+def test_fuzzy_topk_duplicate_heavy_with_tiny_cap():
+    """A tiny cap forces frequent flushes on dense strips; parity holds."""
+    rng = np.random.default_rng(11)
+    words = ["alpha", "beta", "gamma"]
+    values = [f"{'-'.join(rng.choice(words, size=2))}-{rng.integers(0, 100):03d}" for _ in range(150)]
+
+    scorer = lk.fuzzy().get_scorer()
+    present = list(range(len(values)))
+    expected = _reference_topk_pairs(values, present, 60, scorer, 4)
+    got = list(lk.fuzzy(threshold=0.6, topn=4, max_block_memory=256)._gen_similarity_pairs(pa.array(values)))
+
+    assert got == expected
