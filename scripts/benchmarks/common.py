@@ -123,7 +123,7 @@ class Preset:
 REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("exact", ("address",), "exact"),
     DeduperEntry("sorted_tokens", ("address",), "sorted_tokens"),
-    DeduperEntry("fuzzy", ("address",), "fuzzy", kwargs={"topn": 5}),
+    DeduperEntry("fuzzy", ("address",), "fuzzy"),
     DeduperEntry("fuzzy_topn", ("address",), "fuzzy", kwargs={"threshold": 0.95, "topn": 5}),
     DeduperEntry("edit_distance", ("address",), "edit_distance"),
     DeduperEntry("within", ("height",), "within", kwargs={"tol": 1.1}),
