@@ -7,7 +7,9 @@ inputs degenerate into a single batched call.
 
 The set dedupers (`jaccard`, `token_overlap`) share `gram_strip_pairs`,
 which scores pairs from blocked one-hot Gram strips of member sets under
-the same memory cap.
+the same memory cap. `inverted_index_pairs` is the high-vocabulary
+alternative: it emits one key per shared member and counts pairs through
+the inverted index.
 
 Pair output is byte-identical to the per-row loops it replaces, yield
 order included.
@@ -15,6 +17,7 @@ order included.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from typing import TYPE_CHECKING
@@ -349,3 +352,262 @@ def gram_strip_pairs(
                 yield int(gi), int(gj)
 
         start_i = end_i
+
+
+def inverted_index_pairs(
+    members: list[npt.NDArray[np.int64]],
+    sizes: npt.NDArray[np.int64],
+    threshold: float,
+    scoring: Literal["jaccard", "token_overlap"],
+    max_block_memory: int | None = None,
+    *,
+    max_chunk_bytes: int | None = None,
+) -> Iterator[SimilarPairIndices]:
+    """Yield matching row pairs from member sets via inverted-index counting.
+
+    Every pair sharing at least one member emits one key per shared
+    member; `np.unique` over the keys gives each pair's exact intersection
+    count. Scores come from (count, |A|, |B|) under the same formulas and
+    float64 boundary rules as `gram_strip_pairs`, and the comparison is
+    inclusive.
+
+    Peak in-flight key memory is bounded by the cap: groups are emitted in
+    anchor slices and deduplicated per slice, so the full pre-dedup key
+    array is never materialised at once. The accumulated per-chunk unique
+    arrays and the final scoring stage scale with the candidate-pair count
+    (at most the pre-dedup key count), so total peak memory is not capped —
+    at csv 50k the run peaks at ~1.3 GB against the 64 MiB chunk cap, the
+    same relationship V1's blocks have to the cap. One caveat: a single
+    anchor slice emits at most `block * (k - 1)` keys, and when one value
+    group alone out-sizes the chunk budget, one slice exceeds the chunk
+    cap — reachable only at n of several million rows sharing one value,
+    far past where the auto guard vetoes. This is the regime for
+    high-vocabulary data, where most values are rare and the Gram product
+    of `gram_strip_pairs` would be mostly waste.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs
+            (`0..v-1`). Rows with no members produce no pairs.
+        sizes: Row member counts, `len(members[i])` per row.
+        threshold: The inclusive score bound.
+        scoring: The score formula, "jaccard" or "token_overlap".
+        max_block_memory: Memory cap in bytes bounding one in-flight key
+            chunk. `None` uses `DEFAULT_BLOCK_MEMORY`. Values too small
+            for one key clamp to one-key chunks.
+        max_chunk_bytes: Harness-only override of the chunk cap, for
+            forcing multi-chunk runs; keyword-only.
+
+    Yields:
+        Pairs `(i, j)` with `i < j`, `i` ascending then `j` ascending,
+        the order of the per-row loops this generator replaces.
+    """
+    n = len(members)
+    if n < 2:
+        return
+
+    # Flatten to (member, row) pairs. Rows arrive with their members
+    # already dense-ID encoded and option-C filtered by the caller.
+    lengths = np.fromiter((len(m) for m in members), dtype=np.int64, count=n)
+    total = int(lengths.sum())
+    if total == 0:
+        return
+    row_ids = np.repeat(np.arange(n, dtype=np.int64), lengths)
+    member_ids = np.concatenate([np.asarray(m, dtype=np.int64) for m in members])
+
+    # Sort by (member, row) so each value's rows are contiguous and
+    # ascending: within a group, row i < row j implies rows[i] < rows[j].
+    order = np.lexsort((row_ids, member_ids))
+    rows_sorted = row_ids[order]
+    members_sorted = member_ids[order]
+
+    # Group boundaries: where the member ID changes.
+    boundaries = np.flatnonzero(np.diff(members_sorted)) + 1
+    group_starts = np.concatenate(([0], boundaries))
+    group_ends = np.concatenate((boundaries, [total]))
+
+    # Emit each group's C(k, 2) keys in anchor slices bounded by the chunk
+    # cap. Key `lo * n + hi` is unique per pair and sorts lexicographic in
+    # (lo, hi), which is the loop's i-then-j order. A slice holds one
+    # anchor block's pairs: anchor a contributes its k - 1 - a later rows,
+    # so a block of `block` anchors holds at most `block * (k - 1)` keys.
+    cap = DEFAULT_BLOCK_MEMORY if max_block_memory is None else int(max_block_memory)
+    chunk_cap = cap if max_chunk_bytes is None else int(max_chunk_bytes)
+    budget = max(1, chunk_cap // 8)
+
+    chunk_parts: list[np.ndarray] = []
+    uniq_parts: list[np.ndarray] = []
+    count_parts: list[np.ndarray] = []
+    buffered = 0
+
+    def flush() -> None:
+        """Deduplicate the buffered keys into one (unique, counts) part."""
+        nonlocal buffered, chunk_parts
+        if not chunk_parts:
+            return
+        keys = np.concatenate(chunk_parts)
+        uniq, counts = np.unique(keys, return_counts=True)
+        uniq_parts.append(uniq)
+        count_parts.append(counts)
+        chunk_parts = []
+        buffered = 0
+
+    for start, end in zip(group_starts.tolist(), group_ends.tolist(), strict=True):
+        k = end - start
+        if k < 2:
+            continue
+        group_rows = rows_sorted[start:end]
+        block = max(1, budget // (k - 1))
+        for anchor_start in range(0, k - 1, block):
+            anchor_end = min(anchor_start + block, k - 1)
+            anchors = np.arange(anchor_start, anchor_end)
+            run_lengths = (k - 1) - anchors
+            run_total = int(run_lengths.sum())
+            run_starts = np.cumsum(run_lengths) - run_lengths
+            # Position within each anchor's run of later rows.
+            positions = np.arange(run_total, dtype=np.int64) - np.repeat(run_starts, run_lengths)
+            hi_idx = np.repeat(anchors + 1, run_lengths) + positions
+            # Rows ascend within the group, so the anchor row is the
+            # pair's lo without a min/max pass.
+            keys = np.repeat(group_rows[anchors], run_lengths) * n + group_rows[hi_idx]
+            chunk_parts.append(keys)
+            buffered += keys.size
+            if buffered >= budget:
+                flush()
+    flush()
+
+    if not uniq_parts:
+        return
+
+    # Merge the per-chunk (unique, counts) parts into global unique keys
+    # and exact intersection counts. Each part is already sorted-unique,
+    # so the merge is a searchsplit into the globally sorted keyspace.
+    if len(uniq_parts) == 1:
+        uniq, counts = uniq_parts[0], count_parts[0]
+    else:
+        uniq = np.unique(np.concatenate(uniq_parts))
+        counts = np.zeros(uniq.size, dtype=np.int64)
+        for part_uniq, part_counts in zip(uniq_parts, count_parts, strict=True):
+            counts[np.searchsorted(uniq, part_uniq)] += part_counts
+
+    lo = uniq // n
+    hi = uniq % n
+    size_lo = sizes[lo]
+    size_hi = sizes[hi]
+    denominator = size_lo + size_hi - counts if scoring == "jaccard" else np.minimum(size_lo, size_hi)
+    # int64 / int64 true-divides to float64, matching the loop's arithmetic.
+    scores = counts / denominator
+    matches = scores >= threshold
+    for lo_val, hi_val in zip(lo[matches].tolist(), hi[matches].tolist(), strict=True):
+        yield int(lo_val), int(hi_val)
+
+
+# Dispatch floor for the set dedupers' regime selection, in V1 Gram
+# cell-op estimate units (n*n*v). V2 (the inverted index) is picked only
+# when V1's estimated cost exceeds this. Re-derived 2026-10-29 (WI069
+# Task 2 redo) from production-encoded estimator inputs: the WI063 grid
+# plus the scrap_data_1M.csv cells, with the fixture nan column's `1.0`
+# member and the CSV's `""` member counted (the first calibration missed
+# both; see the WI069 stop report). The feasible band spans 2.113e11
+# (largest Gram-won cost, sparse 5k) to 4.604e11 (smallest index-won
+# cost, highvocab 5k); the floor is its geometric midpoint, leaving a
+# 1.5x margin to each binding cell. V1 stays the default away from the
+# extreme.
+_V2_MIN_V1_COST: Final[int] = 311_900_000_000
+
+# Memory budget for the auto dispatch's V2 admission, in bytes of
+# estimated pre-dedup key volume (8 bytes * sum C(k,2)). Deliberately
+# not `max_block_memory`: the corrected V2-won cells estimate 77-86 MiB
+# against a 64 MiB block cap, and the cap's meaning (bounding one score
+# block) differs from bounding V2's emitted-key volume. 4x the default
+# cap admits every recorded V2 winner and vetoes the study's OOM cell
+# (n=25k: 2.0 GB estimate) with 8x margin. An explicit `strategy="index"`
+# bypasses this guard: the user asked for it.
+_V2_KEY_BUDGET: Final[int] = 4 * DEFAULT_BLOCK_MEMORY
+
+_LOG = logging.getLogger(__name__)
+
+
+def estimate_v2_key_count(members: list[npt.NDArray[np.int64]]) -> int:
+    """V2's emitted-key estimate: sum over values of C(k, 2).
+
+    One pass over the flattened members; the estimate feeds both the
+    dispatch's compute comparison and its memory guard.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs.
+
+    Returns:
+        The estimated pre-dedup key count, at least 0.
+    """
+    flat = (
+        np.concatenate([np.asarray(m, dtype=np.int64) for m in members])
+        if any(len(m) for m in members)
+        else np.array([], dtype=np.int64)
+    )
+    if flat.size == 0:
+        return 0
+    _, counts = np.unique(flat, return_counts=True)
+    return int((counts * (counts - 1) // 2).sum())
+
+
+def pick_set_regime(
+    members: list[npt.NDArray[np.int64]],
+    strategy: Literal["auto", "gram", "index"],
+) -> Literal["gram", "index"]:
+    """Pick the pair-generation regime for one set-deduper call.
+
+    An explicit strategy is honored as given. `"auto"` compares cost
+    estimates: V2 (the inverted index) wins only deep in the
+    high-vocabulary regime, when V1's estimated Gram cost exceeds
+    `_V2_MIN_V1_COST`. The memory guard then vetoes V2 whenever its
+    estimated pre-dedup key volume exceeds `_V2_KEY_BUDGET`, closing the
+    study's OOM finding (WI063: 252M keys, ~2 GB, at n=25k). An explicit
+    strategy bypasses the guard: the user asked for it.
+
+    Args:
+        members: Per-row member arrays holding dense member IDs
+            (`0..v-1`), as the dedupers' encoding produces.
+        strategy: The deduper's `strategy` knob: `"auto"` for the
+            calibrated pick, or `"gram"`/`"index"` to force a regime.
+
+    Returns:
+        "gram" for `gram_strip_pairs`, "index" for `inverted_index_pairs`.
+    """
+    if strategy != "auto":
+        regime: Literal["gram", "index"] = strategy
+        _LOG.debug(
+            "set deduper regime dispatch: strategy=%s regime=%s n=%d",
+            strategy,
+            regime,
+            len(members),
+        )
+        return regime
+    return _auto_set_regime(members)
+
+
+def _auto_set_regime(members: list[npt.NDArray[np.int64]]) -> Literal["gram", "index"]:
+    """The calibrated auto pick: cost comparison plus the memory guard."""
+    n = len(members)
+    if n < 2:
+        return "gram"
+
+    v = 1 + max((int(m.max(initial=-1)) for m in members if len(m)), default=-1)
+    if v <= 0:
+        return "gram"
+
+    v1_est = n * n * v
+    keys = 0
+    if v1_est <= _V2_MIN_V1_COST:
+        regime: Literal["gram", "index"] = "gram"
+    else:
+        keys = estimate_v2_key_count(members)
+        regime = "index" if 8 * keys <= _V2_KEY_BUDGET else "gram"
+    _LOG.debug(
+        "set deduper auto dispatch: n=%d v=%d v1_est=%d keys=%d regime=%s",
+        n,
+        v,
+        v1_est,
+        keys,
+        regime,
+    )
+    return regime

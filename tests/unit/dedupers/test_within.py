@@ -7,8 +7,23 @@ import pyarrow as pa
 import pytest
 
 import liken as lk
+from liken.core.disjoint_set import DisjointSet
 from liken.exceptions import InvalidArgumentTypeError
 from liken.exceptions import InvalidArgumentValueError
+
+
+def _components(n: int, pairs) -> frozenset[frozenset[int]]:
+    """Partition of 0..n-1 implied by a pair stream, as a frozenset of
+    frozensets.
+
+    Identity-independent: union-find root labels depend on merge order,
+    component membership does not.
+    """
+    ds = DisjointSet(n)
+    for i, j in pairs:
+        ds.union(i, j)
+    root: dict[int, int] = {i: ds[i] for i in range(n)}
+    return frozenset(frozenset(i for i in range(n) if root[i] == r) for r in set(root.values()))
 
 
 #############
@@ -69,14 +84,16 @@ def test_within_accepts_valid_tol(tol):
         ([1.0, 5.0, 9.0], 1.0, []),
         # unsorted input still pairs correctly
         ([30.0, 10.1, 20.0, 10.0], 0.2, [(1, 3)]),
-        # duplicates match each other
+        # duplicates merge into one group
         ([7.0, 7.0, 7.0], 0.0, [(0, 1), (0, 2), (1, 2)]),
     ],
 )
 def test_within_matches_pairs_within_tolerance(values, tol, expected):
-    pairs = sorted(lk.within(tol=tol)._gen_similarity_pairs(pa.array(values)))
+    """The partition implied by the pair stream matches the expected groups."""
+    n = len(values)
+    pairs = lk.within(tol=tol)._gen_similarity_pairs(pa.array(values))
 
-    assert pairs == expected
+    assert _components(n, pairs) == _components(n, expected)
 
 
 @pytest.mark.parametrize(
@@ -109,14 +126,14 @@ def test_within_boundary_guard_admits_rounding_drift():
 
 
 def test_within_zero_tol_is_exact_equality():
-    """`tol=0` reduces to numeric equality: only exactly equal values pair.
+    """`tol=0` reduces to numeric equality: only exactly equal values group.
 
     No boundary guard applies at tol=0: equal values subtract to exactly
     0.0, so equality is exact, not guarded.
     """
-    pairs = sorted(lk.within(tol=0)._gen_similarity_pairs(pa.array([1.0, 1.0, 1.5, 2])))
+    pairs = list(lk.within(tol=0)._gen_similarity_pairs(pa.array([1.0, 1.0, 1.5, 2])))
 
-    assert pairs == [(0, 1)]
+    assert _components(4, pairs) == _components(4, [(0, 1)])
 
 
 @pytest.mark.parametrize(
@@ -166,18 +183,85 @@ def test_within_large_integers_survive_float_conversion():
 
 
 def test_within_pair_emission_is_deterministic():
-    """Repeated runs over the same input emit identical pair lists.
+    """Repeated runs over the same input emit an identical pair stream.
 
-    Multi-pair input: emission order is window-scan order over the sorted
-    values, not globally sorted; only run-to-run stability is claimed.
+    Only run-to-run stability is claimed; the grouping is asserted
+    elsewhere, the emission order is not part of the contract.
     """
     deduper = lk.within(tol=0.5)
+    values = pa.array([3.0, 1.2, 1.0, 1.1])
 
-    first = list(deduper._gen_similarity_pairs(pa.array([3.0, 1.2, 1.0, 1.1])))
-    second = list(deduper._gen_similarity_pairs(pa.array([3.0, 1.2, 1.0, 1.1])))
+    first = list(deduper._gen_similarity_pairs(values))
+    second = list(deduper._gen_similarity_pairs(values))
 
-    assert first == [(2, 3), (1, 2), (1, 3)]
     assert first == second
+    assert _components(4, first) == _components(4, [(2, 3), (1, 2), (1, 3)])
+
+
+def test_within_pair_stream_is_linear_in_dense_regions():
+    """The pair stream is bounded by n-1 value edges plus missing edges.
+
+    A dense region (here: identical values) is where the window scan would
+    yield quadratic all-pairs output; the chain keeps it linear.
+    """
+    pairs = list(lk.within(tol=0)._gen_similarity_pairs(pa.array([7.0, 7.0, 7.0, 7.0, 7.0])))
+
+    assert len(pairs) == 4
+
+
+@pytest.mark.parametrize(
+    "values, tol, null_at",
+    [
+        ([10.0, 10.4, 10.9, 11.3, 12.0, 20.0, 5.0, 5.05], 0.5, []),
+        ([3.0, 3.001, 3.002, 3.004, 2.999], 0.0, []),
+        ([1.0, 1.01, 1.02, 1.03, 1.05, 2.0], 0.01, []),
+        ([-4.5, -4.0, 0.0, 4.0, 4.5, 4.6], 1.1, []),
+        ([0.0, 0.0, 1.0, None, None, 1.5], 0.6, [3, 4]),
+        ([2.0, None, None, None, 2.1, 9.0], 0.5, [1, 2, 3]),
+        ([5.0, 5.2, 5.21, 5.3], 0.11, []),
+        ([1.0, 2.0, 3.0], 0.0, []),
+    ],
+    ids=[
+        "spread",
+        "tight-chain-zero-tol",
+        "boundary-chain",
+        "wide-tol-bridged",
+        "nulls-among-values",
+        "null-block",
+        "guard-drift",
+        "separated",
+    ],
+)
+def test_within_partition_matches_all_pairs_reference(values, tol, null_at):
+    """Chain edges must imply the same partition as all within-bound pairs.
+
+    Single-linkage equivalence: within any window the adjacent sorted pair
+    minimises the difference and the differences telescope, so a window
+    holds a within-bound pair only through within-bound adjacent steps;
+    transitivity then covers every other pair. Reference: brute-force
+    all-pairs bound check.
+    """
+    values = list(values)
+    for i in null_at:
+        values[i] = None
+
+    n = len(values)
+    deduper = lk.within(tol=tol)
+    actual = _components(n, deduper._gen_similarity_pairs(pa.array(values)))
+
+    # The reference mirrors the documented bound, guard included: a
+    # difference rounding to at most tol + 1e-9 matches (tol > 0). Missing
+    # detection mirrors `is_missing`: None or not equal to itself (NaN).
+    guard = 1e-9 if tol > 0 else 0.0
+    missing = [i for i, v in enumerate(values) if v is None or v != v]
+    present = [i for i, v in enumerate(values) if not (v is None or v != v)]
+    reference_pairs = [
+        (i, j) for a, i in enumerate(present) for j in present[a + 1 :] if abs(values[i] - values[j]) <= tol + guard
+    ]
+    reference_pairs.extend((missing[0], m) for m in missing[1:])
+    expected = _components(n, reference_pairs)
+
+    assert actual == expected
 
 
 @pytest.mark.parametrize(

@@ -11,6 +11,14 @@ title: Release History
   `workers` and `max_block_memory` options for parallelism and memory control.
 - Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
   new `max_block_memory` option for memory control.
+- The `jaccard` and `token_overlap` dedupers gain a `strategy` option
+  (`"auto"`, `"gram"`, `"index"`; default `"auto"`). High-vocabulary data —
+  where most values are rare — now pair-generates through an inverted index,
+  selected automatically: the benchmark CSV cell that took 44 minutes takes
+  under 8 seconds. `"auto"` decides per call from a measured cost model with
+  a memory guard; `"gram"` or `"index"` force one strategy.
+- Faster pair generation in the `within` deduper: dense numeric data no longer
+  produces quadratic work, so large runs finish in a fraction of the time.
 
 **Fixes**
 

@@ -122,8 +122,11 @@ class Preset:
 
 REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("exact", ("address",), "exact"),
+    DeduperEntry("sorted_tokens", ("address",), "sorted_tokens"),
     DeduperEntry("fuzzy", ("address",), "fuzzy"),
     DeduperEntry("fuzzy_topn", ("address",), "fuzzy", kwargs={"threshold": 0.95, "topn": 5}),
+    DeduperEntry("edit_distance", ("address",), "edit_distance"),
+    DeduperEntry("within", ("height",), "within", kwargs={"tol": 1.1}),
     DeduperEntry(
         "sorted_neighbourhood",
         ("address",),
@@ -132,7 +135,9 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     ),
     DeduperEntry("tfidf", ("address",), "tfidf"),
     DeduperEntry("lsh", ("address",), "lsh"),
+    DeduperEntry("knn", ("probability", "house_number", "height"), "knn", kwargs={"k": 2}),
     DeduperEntry("jaccard", ("city", "country", "job"), "jaccard"),
+    DeduperEntry("token_overlap", ("city", "country", "job"), "token_overlap"),
     DeduperEntry("cosine", ("probability", "house_number", "height"), "cosine"),
     DeduperEntry(
         "knn",
@@ -146,6 +151,7 @@ REGISTRY: tuple[DeduperEntry, ...] = (
     DeduperEntry("str_startswith", ("address",), "str_startswith", args=("5",)),
     DeduperEntry("str_endswith", ("address",), "str_endswith", args=("5",)),
     DeduperEntry("str_len", ("address",), "str_len", kwargs={"min_len": 2, "max_len": 25}),
+    DeduperEntry("num_range", ("height",), "num_range", kwargs={"min": 2, "max": 3.5}),
 )
 
 FAST_DEDUPERS = ("exact", "isna", "isin", "str_contains", "str_len")

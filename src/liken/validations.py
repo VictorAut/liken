@@ -223,6 +223,23 @@ def validate_keep_arg(keep: Literal["first", "last"]) -> Literal["first", "last"
     return cast("Literal['first', 'last']", require_choice("keep", keep, ("first", "last")))
 
 
+def validate_strategy_arg(strategy: Literal["auto", "gram", "index"]) -> Literal["auto", "gram", "index"]:
+    """Validates the set dedupers' `strategy` argument.
+
+    Raises:
+        InvalidArgumentTypeError: if `strategy` is not a string
+        InvalidArgumentValueError: if `strategy` is a string outside
+            ("auto", "gram", "index")
+    """
+    require_type("strategy", strategy, str)
+    # `require_choice` returns `str`; the membership check above pins the
+    # narrower `Literal` return type of this function.
+    return cast(
+        "Literal['auto', 'gram', 'index']",
+        require_choice("strategy", strategy, ("auto", "gram", "index")),
+    )
+
+
 def validate_columns_arg(columns: Columns | None) -> Columns | None:
     """Validates the type and structure of the public api 'columns' arg.
 
