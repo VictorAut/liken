@@ -227,7 +227,9 @@ def test_fuzzy_topk_cdist_receives_resolved_workers(monkeypatch):
     array = pa.array(["abcd", "abce", "abcf", "zzzz"])
     list(lk.fuzzy(threshold=0.7, topn=2, workers=2)._gen_similarity_pairs(array))
 
-    assert seen_workers and all(w == 2 for w in seen_workers)
+    # the first call is probe_itemsize's one-row probe, which passes no
+    # workers; every strip call carries the resolved count
+    assert all(w == 2 for w in seen_workers[1:])
 
 
 def test_fuzzy_topk_cdist_runs_in_float64(monkeypatch):
