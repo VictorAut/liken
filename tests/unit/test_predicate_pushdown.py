@@ -277,7 +277,77 @@ class TestPreprocessors:
         assert pool == set()
 
 
-# Pair-endpoint contributions  #
+# Pool-scoped semantics on real dedupers  #
+
+
+def make_pandas_df(columns: dict):
+    """Real wrapped pandas frame: candidate selection and windows run on
+    the wrapper, not a mock."""
+    import pandas as pd
+
+    from liken.core.dispatcher import wrap
+
+    return wrap(pd.DataFrame(columns), canonical_id="canonical_id")
+
+
+class TestPoolScopedCandidates:
+    """Candidate-scarce and chain dedupers select partners within the
+    visible set. This is the definition, not an approximation."""
+
+    def test_fuzzy_topn_picks_best_among_admitted_rows(self):
+        """The true best partner is predicate-excluded; `fuzzy(topn=1)`
+        must emit the pair with the best admitted partner."""
+        from liken.core.predicate_pushdown import resolve_predicate_step
+        from liken.dedupers.fuzzy import Fuzzy
+
+        # "abcd" (0): best partner "abzz" (1, ratio 2/4) is excluded by
+        # the predicate; "abcc" (2, ratio 3/4) is admitted.
+        df = make_pandas_df({"col": ["abcd", "abzz", "abcc"], "pick": ["y", "n", "y"]})
+
+        fuzzy = Fuzzy(threshold=0.5, topn=1)
+        step = [unit("pick", IsIn(["y"])), unit("col", fuzzy)]
+
+        components = resolve_predicate_step(step, df)
+
+        # pool {0, 2}: "abcd" pairs with "abcc" (3/4 >= 0.5); the
+        # excluded "abzz" is never a candidate
+        assert components == {0: [0, 2]}
+
+    def test_sorted_neighbourhood_window_runs_over_admitted_rows(self):
+        """The sorted-neighbourhood window is taken over the visible set's
+        sorted order: excluded rows do not consume window slots."""
+        from liken.core.predicate_pushdown import resolve_predicate_step
+        from liken.dedupers.sorted_neighbourhood import SortedNeighbourhood
+
+        # sorted: "ba" (0), "bb" (1, excluded), "bc" (2), "bd" (3).
+        # window=2 over admitted rows {0,2,3}: "ba" and "bc" are window
+        # neighbours once "bb" is gone.
+        df = make_pandas_df({"col": ["ba", "bb", "bc", "bd"], "pick": ["y", "n", "y", "y"]})
+        sn = SortedNeighbourhood(threshold=0.5, window=2)
+        step = [unit("pick", IsIn(["y"])), unit("col", sn)]
+
+        components = resolve_predicate_step(step, df)
+
+        # over admitted {0,2,3}: "ba"-"bc" adjacent (ratio 50 >= 50) pair;
+        # "bc"-"bd" (ratio 50 >= 50) pair -> all three merge. With "bb"
+        # present, "ba"'s forward window is ["bb"] only: no pair.
+        assert components == {0: [0, 2, 3]}
+
+    def test_within_chain_does_not_group_through_excluded_row(self):
+        """A chain broken by an excluded row does not group the outer
+        rows: `within` chains over the visible set only."""
+        from liken.core.predicate_pushdown import resolve_predicate_step
+        from liken.dedupers.within import Within
+
+        # chain 1.0 - 1.01 - 1.02 at tol=0.01: without the predicate all
+        # three merge. Row 1 (1.01) excluded: 1.0 and 1.02 differ by 0.02
+        # and must not group.
+        df = make_pandas_df({"col": [1.0, 1.01, 1.02], "pick": ["y", "n", "y"]})
+        step = [unit("pick", IsIn(["y"])), unit("col", Within(tol=0.01))]
+
+        components = resolve_predicate_step(step, df)
+
+        assert components == {0: [0], 2: [2]}
 
 
 class TestPairEndpointContribution:
