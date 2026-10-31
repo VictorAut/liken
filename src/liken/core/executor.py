@@ -15,14 +15,14 @@ from typing import TypeVar
 from liken.collections.base import Pipeline
 from liken.collections.dict import DeduplicationDict
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
-from liken.core.deduper import BaseDeduper
-from liken.core.deduper import PredicateDeduper
+from liken.core.predicate_pushdown import resolve_predicate_step
 from liken.core.wrapper import DF
 
 
 if TYPE_CHECKING:
     from collections.abc import Collection
 
+    from liken.core.deduper import BaseDeduper
     from liken.core.disjoint_set import DisjointSet
     from liken.preprocessors import Preprocessor
     from liken.types import Columns
@@ -109,37 +109,21 @@ class LocalExecutor(Executor):
 
         if isinstance(dedupers, Pipeline):
             for step in dedupers.steps:
-                any_predicate: bool = dedupers._has_any_predicate(step)
+                # predicate steps resolve a visible set: the intersection
+                # of the predicate match sets; the step's last deduper
+                # builds the union-find over it. `None` means no predicate
+                # deduper: the signature branch runs on the full frame.
+                components: SingleComponents | MultiComponents = resolve_predicate_step(step, df)
 
-                # predicate evaluation only if at least one predicate deduper
-                if any_predicate:
-                    indices: set = set()
-
-                    for col, deduper, preprocessor in step:
-                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
-
-                        components = defaultdict(list)
-                        idx: list = sorted(indices)
-                        for i in range(n):
-                            if not indices:
-                                components[uf[i]].append(i)
-                            else:
-                                components[idx[uf[i]]].append(idx[i])
-
-                        if isinstance(deduper, PredicateDeduper):
-                            for c in components.values():
-                                if len(c) > 1:
-                                    indices = indices.union(set(c))
-
-                else:
+                if components is None:
                     ufs = []
 
                     for col, deduper, preprocessor in step:
                         uf, n = self._build_uf(deduper, df, col, preprocessor)
                         ufs.append(uf)
-                    components: MultiComponents = self._get_multi_components(ufs, n)
+                    components = self._get_multi_components(ufs, n)
 
-                df = call_deduper(deduper, components)
+                df = call_deduper(step[-1][1], components)
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)
