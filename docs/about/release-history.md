@@ -9,18 +9,11 @@ title: Release History
 
 - Faster pair generation in the `fuzzy` and `edit_distance` dedupers, with new
   `workers` and `max_block_memory` options for parallelism and memory control.
-- The `fuzzy` deduper's `topn` option now pairs through the same batched
-  scoring as the default mode, removing its per-row penalty.
 - Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
   new `max_block_memory` option for memory control.
 - The `jaccard` and `token_overlap` dedupers gain a `strategy` option
-  (`"auto"`, `"gram"`, `"index"`; default `"auto"`). High-vocabulary data —
-  where most values are rare — now pair-generates through an inverted index,
-  selected automatically: the benchmark CSV cell that took 44 minutes takes
-  under 8 seconds. `"auto"` decides per call from a measured cost model with
-  a memory guard; `"gram"` or `"index"` force one strategy.
-- Faster pair generation in the `within` deduper: dense numeric data no longer
-  produces quadratic work, so large runs finish in a fraction of the time.
+  (`"auto"`, `"gram"`, `"index"`; default `"auto"`).
+- Faster pair generation in the `within` deduper.
 
 **Fixes**
 
@@ -30,6 +23,10 @@ title: Release History
 **Misc**
 
 - `networkx` dependency is removed in favour of an in-house disjoint-set implementation
+- In pipeline steps, combining predicate and threshold dedupers act as pre-filters: threshold dedupers see only
+  records every predicate matched. A step with several predicates now
+  requires all of them, where previously a record matched by one
+  predicate could stay grouped through another.
 
 ## v0.15.1 (2026-10-27)
 

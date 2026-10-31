@@ -15,14 +15,14 @@ from typing import TypeVar
 from liken.collections.base import Pipeline
 from liken.collections.dict import DeduplicationDict
 from liken.constants import SEQUENTIAL_API_DEFAULT_KEY
-from liken.core.deduper import BaseDeduper
-from liken.core.deduper import PredicateDeduper
+from liken.core.predicate_pushdown import resolve_predicate_step
 from liken.core.wrapper import DF
 
 
 if TYPE_CHECKING:
     from collections.abc import Collection
 
+    from liken.core.deduper import BaseDeduper
     from liken.core.disjoint_set import DisjointSet
     from liken.preprocessors import Preprocessor
     from liken.types import Columns
@@ -77,11 +77,13 @@ class LocalExecutor(Executor):
             - Pipeline: in which case "and" combination steps are allowed
             - DeduplicationDict: in which case handles Sequential and Dict API
 
-        For Pipeline, predicate evaluation applies when an "and" combination contains at
-        least one Predicate Deduper. In that case the predicate dedupers are proxy
-        WHERE filters that propagate a set of dataframe indice positions to the
-        next deduper (most likely a threshold deduper, but optionally predicate
-        also.)
+        For Pipeline, predicate evaluation applies when an "and" combination
+        contains at least one Predicate Deduper. In that case the predicate
+        dedupers are pre-filters: the step resolves a visible set, the
+        intersection of the predicates' contributions, and the step's last
+        deduper runs on the visible set alone — for grouping and for
+        candidate selection. Rows failing any predicate are invisible to
+        the step: they neither group nor supply candidates.
         """
 
         del source_id  # Unused: here for interface symmetry with PysparkExecutor
@@ -109,37 +111,21 @@ class LocalExecutor(Executor):
 
         if isinstance(dedupers, Pipeline):
             for step in dedupers.steps:
-                any_predicate: bool = dedupers._has_any_predicate(step)
+                # predicate steps resolve a visible set: the intersection
+                # of the predicate match sets; the step's last deduper
+                # builds the union-find over it. `None` means no predicate
+                # deduper: the signature branch runs on the full frame.
+                components: SingleComponents | MultiComponents = resolve_predicate_step(step, df)
 
-                # predicate evaluation only if at least one predicate deduper
-                if any_predicate:
-                    indices: set = set()
-
-                    for col, deduper, preprocessor in step:
-                        uf, n = self._build_uf(deduper, df, col, preprocessor, predicate=indices)
-
-                        components = defaultdict(list)
-                        idx: list = sorted(indices)
-                        for i in range(n):
-                            if not indices:
-                                components[uf[i]].append(i)
-                            else:
-                                components[idx[uf[i]]].append(idx[i])
-
-                        if isinstance(deduper, PredicateDeduper):
-                            for c in components.values():
-                                if len(c) > 1:
-                                    indices = indices.union(set(c))
-
-                else:
+                if components is None:
                     ufs = []
 
                     for col, deduper, preprocessor in step:
                         uf, n = self._build_uf(deduper, df, col, preprocessor)
                         ufs.append(uf)
-                    components: MultiComponents = self._get_multi_components(ufs, n)
+                    components = self._get_multi_components(ufs, n)
 
-                df = call_deduper(deduper, components)
+                df = call_deduper(step[-1][1], components)
 
         if drop_canonical_id:
             return df.drop_col(canonical_id)

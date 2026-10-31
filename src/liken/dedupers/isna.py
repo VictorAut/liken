@@ -30,6 +30,10 @@ class IsNA(
     _NAME: ClassVar[str] = "isna"
 
     @override
+    def _matches(self, value: object) -> bool:
+        return is_missing(value)
+
+    @override
     def _gen_similarity_pairs(self, array: pa.Array):
         values: list = array.to_pylist()
 
@@ -59,6 +63,10 @@ class _NotNA(
     """
 
     _NAME: ClassVar[str] = "~isna"
+
+    @override
+    def _matches(self, value: object) -> bool:
+        return not is_missing(value)
 
     @override
     def _gen_similarity_pairs(self, array: pa.Array):
