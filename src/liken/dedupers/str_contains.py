@@ -40,14 +40,13 @@ class StrContains(
     def _matches(self, value: object) -> bool:
         """Scalar mirror of `_vectorized_matches`.
 
-        `case=False` lowercases both sides — value and pattern — the
-        same lowering the vectorised path applies via `pc.utf8_lower`
-        and `pattern.lower()` in literal mode. Literal mode is an exact
-        mirror, except where the two lowerers differ on unicode
-        (e.g. `İ` folds differently under `str.lower()` than under
-        `pc.utf8_lower`).
+        Literal mode: `case=False` lowercases both sides — value and
+        pattern — mirroring the vectorised `pc.utf8_lower` +
+        `pattern.lower()` pair. An exact mirror for ASCII; unicode is
+        exact only where the two lowerers agree (they differ on, e.g.,
+        `İ`).
 
-        Regex mode is an approximation, not a mirror: Python `re` and
+        Regex mode: an approximation, not a mirror. Python `re` and
         RE2 disagree on case-insensitive semantics in ways lowering
         cannot repair. Lowering the pattern can corrupt escape classes
         (`a\\S` lowered becomes `a\\s`, inverting the match), `$`
