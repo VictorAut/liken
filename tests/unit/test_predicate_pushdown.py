@@ -57,7 +57,7 @@ class TrackingDeduper:
         self.calls += 1
         self.seen_predicates.append(predicate)
 
-        n = len(columns)
+        n = len(list(predicate))  # the frame the caller subsets to
         uf = DisjointSet(n)
         for i, j in self._pairs:
             uf.union(i, j)
@@ -128,6 +128,21 @@ class TestResolvePredicateStep:
 
         assert components == {}
         assert tracker.calls == 0
+
+    def test_empty_visible_set_zeroes_step_where_deduper_would_group(self):
+        """Spec acceptance case: `[StrStartsWith("zzz"), Exact(col)]`
+        groups nothing on a frame where `Exact(col)` alone would group.
+        Old behaviour: the empty match fell back to the full frame, so
+        the exact deduper grouped rows 0 and 1."""
+        from liken.core.predicate_pushdown import resolve_predicate_step
+        from liken.dedupers.exact import Exact
+
+        df = make_df({"col1": ["a", "a"], "col2": ["A", "A"]})
+        step = [unit("col1", StrStartsWith("zzz")), unit("col2", Exact())]
+
+        components = resolve_predicate_step(step, df)
+
+        assert components == {}
 
     def test_intermediate_threshold_deduper_builds_no_union_find(self):
         """Only the last deduper in a predicate step builds a union-find.

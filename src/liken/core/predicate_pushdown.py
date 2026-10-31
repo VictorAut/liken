@@ -6,9 +6,11 @@ frame. A predicate's contribution is its pair-endpoint set — the rows
 appearing in at least one pair its pair generation emits over the
 current pool — which is the grouping membership for relational
 predicates (`sorted_tokens`, `date_range`) and the per-row match set for
-star-shaped ones (`isin`, `str_*`, `num_range`, `isna`). Downstream
-dedupers run on the visible set, for grouping and for candidate
-selection. Only the step's last deduper builds a union-find.
+star-shaped ones (`isin`, `str_*`, `num_range`, `isna`), except that a
+row matching alone emits no pair and stays invisible — matching old
+behaviour, where single-member components never entered the union pool.
+Downstream dedupers run on the visible set, for grouping and for
+candidate selection. Only the step's last deduper builds a union-find.
 
 Contributions are pool-restricted and therefore order-dependent for
 relational predicates: a predicate pairs only rows earlier predicates
@@ -104,7 +106,7 @@ def _predicate_match_set(
     subset = processed.take(pa.array(sorted(pool))) if pool is not None else processed
 
     endpoints: set[int] = set()
-    for i, j in deduper._gen_similarity_pairs(subset):
+    for i, j in deduper.set_frame(wdf)._gen_similarity_pairs(subset):
         endpoints.add(i)
         endpoints.add(j)
 
@@ -135,9 +137,10 @@ def resolve_predicate_step(
 
     Returns:
         `None` when the step has no predicate deduper: the caller falls
-        back to the no-predicate branch. Otherwise the components dict in
-        the shape the last deduper's union-find produces: original row
-        indices mapped to their group's first (smallest) visible index.
+        back to the no-predicate branch. Otherwise the components dict:
+        original row indices mapped to their union-find root's row
+        index. The key is not load-bearing — `BaseDeduper.canonicalizer`
+        picks the representative as `min(members)`.
 
     Raises:
         Same errors as the dedupers' preprocessing and matching.
