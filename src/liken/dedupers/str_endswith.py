@@ -10,6 +10,7 @@ from typing_extensions import override
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.validations import require_non_empty_str
 
@@ -34,6 +35,22 @@ class StrEndsWith(
         super().__init__(pattern=pattern, case=case)
         self._pattern = pattern
         self._case = case
+
+    @override
+    def _matches(self, value: object) -> bool:
+        """Scalar mirror of `_vectorized_matches`.
+
+        `case=False` lowercases both sides, mirroring the vectorised
+        `pc.utf8_lower` + `pattern.lower()` pair. A missing value never
+        satisfies the predicate.
+        """
+        if is_missing(value) or not isinstance(value, str):
+            return False
+
+        if self._case:
+            return value.endswith(self._pattern)
+
+        return value.lower().endswith(self._pattern.lower())
 
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:

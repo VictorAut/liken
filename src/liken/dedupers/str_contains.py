@@ -1,5 +1,6 @@
 """str contains predicate deduper"""
 
+import re
 from typing import ClassVar
 from typing import final
 
@@ -10,6 +11,7 @@ from typing_extensions import override
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.validations import require_non_empty_str
 
@@ -33,6 +35,29 @@ class StrContains(
         self._pattern = pattern
         self._case = case
         self._regex = regex
+
+    @override
+    def _matches(self, value: object) -> bool:
+        """Scalar mirror of `_vectorized_matches`.
+
+        `case=False` lowercases both sides — value and pattern — the
+        same lowering the vectorised path applies via `pc.utf8_lower`
+        and `pattern.lower()`, or `ignore_case=True` in regex mode.
+        Lowercasing both sides (not a regex flag) keeps the two paths
+        byte-equivalent. A missing value never satisfies the predicate.
+        """
+        if is_missing(value) or not isinstance(value, str):
+            return False
+
+        if self._regex:
+            if self._case:
+                return re.search(self._pattern, value) is not None
+            return re.search(self._pattern.lower(), value.lower()) is not None
+
+        if self._case:
+            return self._pattern in value
+
+        return self._pattern.lower() in value.lower()
 
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:

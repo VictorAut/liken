@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pyarrow as pa
 import pytest
+from typing_extensions import override
 
 import liken as lk
 from liken.constants import CANONICAL_ID
@@ -257,6 +258,76 @@ def test_vectorized_matches_same_pairs_as_python_fallback(values):
     fallback = _FallbackOnlyStrContains(pattern="app")
 
     assert list(vectorized._gen_similarity_pairs(array)) == list(fallback._gen_similarity_pairs(array))
+
+
+#####################################################
+# scalar path honours `case` (WI072)                #
+#####################################################
+
+
+class _FallbackOnlyPredicate:
+    """Wraps a predicate deduper subclass whose `_vectorized_matches`
+    returns `None`, forcing the scalar path while keeping the same
+    `_matches`."""
+
+    @staticmethod
+    def fallback_of(deduper):
+        class _Fallback(type(deduper)):
+            @override
+            def _vectorized_matches(self, array: pa.Array) -> pa.Array | None:
+                return None
+
+        return _Fallback(**deduper._init_kwargs)
+
+
+def _match_decisions(deduper, values):
+    """Match decision per value as a bool.
+
+    The vectorised mask is null at a missing value (the negated-path
+    contract); the scalar path answers `False` there. Null means "not a
+    match", so both sides normalise to bool for comparison.
+    """
+    array = pa.array(values, type=pa.string())
+    mask = deduper._vectorized_matches(array)
+    if mask is None:
+        return [deduper._matches(v) for v in values]
+    return [bool(mask[i].as_py()) for i in range(len(values))]
+
+
+@pytest.mark.parametrize(
+    "factory, kwargs",
+    [
+        (lk.str_startswith, {"pattern": "x"}),
+        (lk.str_endswith, {"pattern": "x"}),
+        (lk.str_contains, {"pattern": "x"}),
+        (lk.str_contains, {"pattern": "X", "regex": True}),
+    ],
+    ids=["startswith", "endswith", "contains", "contains-regex"],
+)
+@pytest.mark.parametrize("case", [True, False], ids=["case-sensitive", "case-insensitive"])
+def test_scalar_matches_agrees_with_vectorized_matches(factory, kwargs, case):
+    """The scalar path must honour `case` exactly as the vectorised path
+    does, on any value. WI072: before the fix, `case=False` scalar
+    returned `False` for mixed-case values the vectorised path matched.
+    """
+    values = ["Xab", "xaB", "abc", "zzz", None]
+
+    vectorized = factory(case=case, **kwargs)
+    fallback = _FallbackOnlyPredicate.fallback_of(vectorized)
+
+    assert _match_decisions(fallback, values) == _match_decisions(vectorized, values)
+
+
+def test_scalar_matches_missing_is_false_every_case():
+    """The negated-deduper contract: a missing value never satisfies a
+    predicate, on any case setting."""
+    for factory, kwargs in [
+        (lk.str_startswith, {"pattern": "x"}),
+        (lk.str_endswith, {"pattern": "x"}),
+        (lk.str_contains, {"pattern": "x"}),
+    ]:
+        for case in [True, False]:
+            assert factory(case=case, **kwargs)._matches(None) is False
 
 
 ####################################
