@@ -111,7 +111,7 @@ def _predicate_match_set(
     if pool is None:
         return endpoints
     pool_list = sorted(pool)
-    return {pool_list[i] for i in endpoints if i < len(pool_list)}
+    return {pool_list[i] for i in endpoints}
 
 
 def resolve_predicate_step(
@@ -120,11 +120,12 @@ def resolve_predicate_step(
 ) -> SingleComponents | MultiComponents | None:
     """Resolve a pipeline step containing predicate dedupers.
 
-    The visible set is the intersection of all predicate match sets. The
-    step's last deduper — predicate or threshold — builds the union-find
-    over the visible set; intermediate dedupers build nothing. A row
-    failing any predicate is invisible: it is excluded from grouping and
-    from candidate selection. An empty visible set yields no grouping.
+    The visible set is the intersection of all predicate pair-endpoint
+    contributions. The step's last deduper — predicate or threshold —
+    builds the union-find over the visible set; intermediate dedupers
+    build nothing. A row failing any predicate is invisible: it is
+    excluded from grouping and from candidate selection. An empty
+    visible set yields no grouping.
 
     Args:
         step: the pipeline step, a list of (columns, deduper,

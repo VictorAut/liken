@@ -219,7 +219,7 @@ With `fuzzy(0.8)` alone, all four records merge into one. With the AND step, the
 AND step output: only rows 0 and 1 were linked; the "99" records survive as two rows.
 ///
 
-AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *predicate evaluation*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself, and results are identical either way. The optimisation matters because predicate dedupers run in about O(n) time while threshold dedupers compare every pair of records at about O(n²): restricting the threshold deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
+AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *predicate evaluation*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself. A record counts as matched by a predicate only when the predicate actually links it to another record, and predicates see only the records the earlier predicates kept, so in a step with several predicates the order can matter. The optimisation matters because predicate dedupers run in about O(n) time while threshold dedupers compare every pair of records at about O(n²): restricting the threshold deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
 
 #### OR semantics
 

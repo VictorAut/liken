@@ -404,3 +404,44 @@ class TestPairEndpointContribution:
         # Jan 5 is 2 days from Jan 7 (window=1): not an endpoint.
         # Jun 1 alone: not an endpoint.
         assert pool == {1, 2, 3, 4}
+
+
+# Branch parity  #
+
+
+class TestBranchParity:
+    def test_predicate_step_matches_no_predicate_branch(self):
+        """A predicate step and the no-predicate signature branch agree
+        when run on the same value-determined dedupers: pair generation
+        over a subset equals pair generation over the full frame
+        restricted to it."""
+        from liken.collections.pipelines import Pipeline
+        from liken.core.executor import LocalExecutor
+        from liken.dedupers.exact import Exact
+
+        def run(step_units):
+            pipeline = Pipeline()
+            # parity test needs a controlled step list
+            pipeline._steps = [step_units]
+            executor = LocalExecutor()
+            return executor.execute(
+                make_pandas_df({"c1": ["x", "x", "y", "y"], "c2": ["A", "A", "B", "B"]}),
+                columns=None,
+                dedupers=pipeline,
+                keep="first",
+                drop_duplicates=False,
+                drop_canonical_id=False,
+                source_id=None,
+                canonical_id="canonical_id",
+            )
+
+        # signature branch: one "and" step over both columns, no predicate
+        no_predicate = run([unit(("c1", "c2"), Exact())])
+
+        # predicate branch: same deduper, preceded by an all-admitting
+        # predicate (every value in the membership set)
+        predicate_step = run([unit("c1", IsIn(["x", "y"])), unit(("c1", "c2"), Exact())])
+
+        left = list(no_predicate.unwrap()["canonical_id"])
+        right = list(predicate_step.unwrap()["canonical_id"])
+        assert left == right == [0, 0, 2, 2]

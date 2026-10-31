@@ -77,11 +77,13 @@ class LocalExecutor(Executor):
             - Pipeline: in which case "and" combination steps are allowed
             - DeduplicationDict: in which case handles Sequential and Dict API
 
-        For Pipeline, predicate evaluation applies when an "and" combination contains at
-        least one Predicate Deduper. In that case the predicate dedupers are proxy
-        WHERE filters that propagate a set of dataframe indice positions to the
-        next deduper (most likely a threshold deduper, but optionally predicate
-        also.)
+        For Pipeline, predicate evaluation applies when an "and" combination
+        contains at least one Predicate Deduper. In that case the predicate
+        dedupers are pre-filters: the step resolves a visible set, the
+        intersection of the predicates' contributions, and the step's last
+        deduper runs on the visible set alone — for grouping and for
+        candidate selection. Rows failing any predicate are invisible to
+        the step: they neither group nor supply candidates.
         """
 
         del source_id  # Unused: here for interface symmetry with PysparkExecutor
