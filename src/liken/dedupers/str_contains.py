@@ -42,9 +42,21 @@ class StrContains(
 
         `case=False` lowercases both sides — value and pattern — the
         same lowering the vectorised path applies via `pc.utf8_lower`
-        and `pattern.lower()`, or `ignore_case=True` in regex mode.
-        Lowercasing both sides (not a regex flag) keeps the two paths
-        byte-equivalent. A missing value never satisfies the predicate.
+        and `pattern.lower()` in literal mode. Literal mode is an exact
+        mirror, except where the two lowerers differ on unicode
+        (e.g. `İ` folds differently under `str.lower()` than under
+        `pc.utf8_lower`).
+
+        Regex mode is an approximation, not a mirror: Python `re` and
+        RE2 disagree on case-insensitive semantics in ways lowering
+        cannot repair. Lowering the pattern can corrupt escape classes
+        (`a\\S` lowered becomes `a\\s`, inverting the match), `$`
+        anchors behave differently around trailing newlines, and unicode
+        case folding differs (the long-s codepoint folds under one
+        lowerer only). Patterns valid in one engine may be
+        invalid in the other. The vectorised path is what runs in
+        practice; this scalar path exists for subclasses without a
+        vectorised form.
         """
         if is_missing(value) or not isinstance(value, str):
             return False

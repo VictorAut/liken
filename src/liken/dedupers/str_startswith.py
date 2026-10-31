@@ -41,8 +41,10 @@ class StrStartsWith(
         """Scalar mirror of `_vectorized_matches`.
 
         `case=False` lowercases both sides, mirroring the vectorised
-        `pc.utf8_lower` + `pattern.lower()` pair. A missing value never
-        satisfies the predicate.
+        `pc.utf8_lower` + `pattern.lower()` pair — an exact mirror for
+        ASCII, and wherever the two lowerers agree on unicode (e.g. `İ`
+        folds differently under `str.lower()` than under
+        `pc.utf8_lower`). A missing value never satisfies the predicate.
         """
         if is_missing(value) or not isinstance(value, str):
             return False

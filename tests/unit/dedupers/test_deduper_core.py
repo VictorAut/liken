@@ -300,19 +300,40 @@ def _match_decisions(deduper, values):
         (lk.str_startswith, {"pattern": "x"}),
         (lk.str_endswith, {"pattern": "x"}),
         (lk.str_contains, {"pattern": "x"}),
-        (lk.str_contains, {"pattern": "X", "regex": True}),
     ],
-    ids=["startswith", "endswith", "contains", "contains-regex"],
+    ids=["startswith", "endswith", "contains"],
 )
 @pytest.mark.parametrize("case", [True, False], ids=["case-sensitive", "case-insensitive"])
 def test_scalar_matches_agrees_with_vectorized_matches(factory, kwargs, case):
     """The scalar path must honour `case` exactly as the vectorised path
-    does, on any value. WI072: before the fix, `case=False` scalar
-    returned `False` for mixed-case values the vectorised path matched.
+    does, on any value. Literal mode is an exact mirror: the values here
+    pin it, and a future divergence on these (or any ASCII) values is a
+    regression. WI072: before the fix, the scalar path had no matching
+    logic at all — `PredicateDeduper`'s stub answered `False`.
+    """
+    values = ["Xab", "xaB", "abc", "zzz", "", None]
+
+    vectorized = factory(case=case, **kwargs)
+    fallback = _FallbackOnlyPredicate.fallback_of(vectorized)
+
+    assert _match_decisions(fallback, values) == _match_decisions(vectorized, values)
+
+
+@pytest.mark.parametrize("case", [True, False], ids=["case-sensitive", "case-insensitive"])
+def test_scalar_regex_matches_agrees_with_vectorized_matches_on_plain_values(case):
+    """The scalar regex path agrees with the vectorised path on plain
+    values (no escape classes, anchors, or unicode case folding).
+
+    Regex mode is a documented approximation, not a mirror: Python `re`
+    and RE2 diverge in ways lowering cannot repair (e.g. a lowered
+    `\\S` corrupts into `\\s`, `$` anchors around trailing newlines,
+    the long-s codepoint folds under one lowerer only). Those
+    divergences are excluded here by design and
+    recorded in the `_matches` docstring and the WI072 spec.
     """
     values = ["Xab", "xaB", "abc", "zzz", None]
 
-    vectorized = factory(case=case, **kwargs)
+    vectorized = lk.str_contains(pattern="X", regex=True, case=case)
     fallback = _FallbackOnlyPredicate.fallback_of(vectorized)
 
     assert _match_decisions(fallback, values) == _match_decisions(vectorized, values)
