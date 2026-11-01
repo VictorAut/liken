@@ -1,5 +1,6 @@
 """within deduper"""
 
+import itertools
 from collections.abc import Iterator
 from typing import ClassVar
 from typing import Final
@@ -85,9 +86,14 @@ class Within(
         if not present:
             return
 
-        # Sort once, then slide a window over the sorted order: a pair
-        # within `tol` in either direction is adjacent in sorted order
-        # within `tol`. O(n log n) overall; no all-pairs scan.
+        # Sort once, then emit chain edges over the sorted order: the
+        # (n-1) adjacent sorted pairs whose difference is within the
+        # bound. Within any window the adjacent sorted pair minimises the
+        # difference, and the differences between a pair and its adjacent
+        # steps telescope: if any pair in the window is within the bound,
+        # every adjacent pair between those values is too. Single-linkage
+        # over chain edges therefore equals single-linkage over all
+        # within-bound pairs. O(n log n) overall; no all-pairs scan.
         order = sorted(present, key=lambda i: values[i])
 
         guard = _BOUNDARY_TOLERANCE if self._tol > 0 else 0.0
@@ -95,19 +101,14 @@ class Within(
         # `float("inf")` data values: two infinities subtract to NaN, and
         # a NaN comparison is always False, so the bound is written as
         # `not (diff <= bound)` — a NaN difference falls outside the
-        # window and infinities never match. `start` never exceeds `pos`:
-        # the value at `pos` would otherwise pair with itself.
-        start = 0
-        for pos in range(1, len(order)):
-            left = order[pos]
-            while start < pos and not abs(values[left] - values[order[start]]) <= self._tol + guard:
-                start += 1
-            for j in range(start, pos):
-                i = order[j]
-                if i < left:
-                    yield i, left
-                else:
-                    yield left, i
+        # window and infinities never match.
+        for left, right in itertools.pairwise(order):
+            if not abs(values[right] - values[left]) <= self._tol + guard:
+                continue
+            if left < right:
+                yield left, right
+            else:
+                yield right, left
 
     def __str__(self):
         return self.str_representation(self._NAME)

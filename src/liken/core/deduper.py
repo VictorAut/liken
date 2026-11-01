@@ -18,9 +18,9 @@ from typing import Self
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from networkx.utils.union_find import UnionFind
 from typing_extensions import override
 
+from liken.core.disjoint_set import DisjointSet
 from liken.core.missing import is_missing
 from liken.exceptions import InvalidArgumentTypeError
 from liken.validations import require_real_number
@@ -53,7 +53,7 @@ class Base(Protocol):
         columns: Columns,
         preprocessors: Collection[Preprocessor],
         predicate: Collection[int] = (),
-    ) -> tuple[UnionFind[int], int]: ...
+    ) -> tuple[DisjointSet, int]: ...
     def canonicalizer(
         self,
         *,
@@ -97,6 +97,15 @@ class BaseDeduper(Base):
         """Inject dataframe and interface methods"""
         self.wdf: DF = wdf
         return self
+
+    @property
+    def distributed(self) -> bool:
+        """Whether the wrapped dataframe lives under a distributed executor.
+
+        Cost-heavy work can default to single-threaded there. Reads the
+        flag off the injected wrapper; `False` before `set_frame`.
+        """
+        return getattr(self.__dict__.get("wdf"), "distributed", False)
 
     def _gen_similarity_pairs(self, array: pa.Array | pa.Table) -> Iterator[SimilarPairIndices]:
         del array  # Unused
@@ -149,7 +158,7 @@ class BaseDeduper(Base):
         columns: Columns,
         preprocessors: Collection[Preprocessor],
         predicate: Collection[int] = (),
-    ) -> tuple[UnionFind[int], int]:
+    ) -> tuple[DisjointSet, int]:
         self.validate(columns)
 
         array: pa.Array | pa.Table = self.wdf.get_array(columns)
@@ -164,7 +173,7 @@ class BaseDeduper(Base):
 
         n = len(subset)
 
-        uf = UnionFind(range(n))
+        uf = DisjointSet(n)
         for i, j in self._gen_similarity_pairs(subset):
             uf.union(i, j)
 

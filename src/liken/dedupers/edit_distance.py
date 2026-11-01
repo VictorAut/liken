@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from collections.abc import Iterator
+from typing import Any
 from typing import ClassVar
 from typing import Final
 from typing import Literal
@@ -10,7 +11,6 @@ from typing import cast
 from typing import final
 
 import pyarrow as pa
-from rapidfuzz import process
 from rapidfuzz.distance import DamerauLevenshtein
 from rapidfuzz.distance import Hamming
 from rapidfuzz.distance import Indel
@@ -21,6 +21,12 @@ from liken.core.deduper import BaseDeduper
 from liken.core.deduper import SingleColumnMixin
 from liken.core.missing import partition_missing
 from liken.core.registries import dedupers_registry
+from liken.dedupers._blockwise import DEFAULT_BLOCK_MEMORY
+from liken.dedupers._blockwise import block_rows_for
+from liken.dedupers._blockwise import probe_itemsize
+from liken.dedupers._blockwise import resolve_workers
+from liken.dedupers._blockwise import similar_pairs_blockwise
+from liken.exceptions import InvalidArgumentValueError
 from liken.types import SimilarPairIndices
 from liken.validations import require_choice
 from liken.validations import require_int
@@ -75,16 +81,33 @@ class EditDistance(
 
     _NAME: ClassVar[str] = "edit_distance"
 
-    def __init__(self, max_distance: int | float = 2, metric: MetricName = "levenshtein"):
+    def __init__(
+        self,
+        max_distance: int | float = 2,
+        metric: MetricName = "levenshtein",
+        workers: int | None = None,
+        max_block_memory: int | None = None,
+    ):
         require_type("metric", metric, str)
         metric = cast("MetricName", require_choice("metric", metric, _METRIC_NAMES))
         if metric == "levenshtein":
             max_distance = require_int("max_distance", max_distance, low=0)
         else:
             max_distance = require_real_number("max_distance", max_distance, low=0, high=1, high_inclusive=True)
-        super().__init__(max_distance=max_distance, metric=metric)
+        workers = require_int("workers", workers, low=-1, allow_none=True)
+        if workers == 0:
+            raise InvalidArgumentValueError("`workers` must be a nonzero integer or -1, got 0")
+        max_block_memory = require_int("max_block_memory", max_block_memory, low=0, allow_none=True)
+        init_kwargs: dict[str, Any] = {"max_distance": max_distance, "metric": metric}
+        if workers is not None:
+            init_kwargs["workers"] = workers
+        if max_block_memory is not None:
+            init_kwargs["max_block_memory"] = max_block_memory
+        super().__init__(**init_kwargs)
         self._max_distance = max_distance
         self._metric = metric
+        self._workers = workers
+        self._max_block_memory = max_block_memory
 
     def _gen_similarity_pairs(self, array: pa.Array) -> Iterator[SimilarPairIndices]:
         values: list = array.to_pylist()
@@ -102,36 +125,30 @@ class EditDistance(
 
         scorer = _METRICS[self._metric]
 
-        for pos, s1 in enumerate(scored):
-            if pos + 1 >= len(scored):
-                break
+        # levenshtein keeps its absolute integer contract on cdist's default
+        # int dtype; the normalized metrics run on float64 so the boundary
+        # tolerance stays meaningful against float32 rounding.
+        dtype = "float64" if self._metric != "levenshtein" else None
+        bound = cast("float", self._max_distance)
+        if dtype is not None:
+            bound += _BOUNDARY_TOLERANCE
+        else:
+            bound = float(bound)
 
-            if self._metric == "levenshtein":
-                distances = process.cdist(
-                    [s1],
-                    scored[pos + 1 :],
-                    scorer=scorer,
-                )[0]
+        max_block_memory = DEFAULT_BLOCK_MEMORY if self._max_block_memory is None else int(self._max_block_memory)
+        block_rows = block_rows_for(len(scored), probe_itemsize(scorer, dtype=dtype), max_block_memory)
+        workers = resolve_workers(self._workers, distributed=self.distributed)
 
-                for offset, distance in enumerate(distances):
-                    if distance > self._max_distance:
-                        continue
-
-                    yield present[pos], present[pos + 1 + offset]
-
-            else:
-                distances = process.cdist(
-                    [s1],
-                    scored[pos + 1 :],
-                    scorer=scorer,
-                    dtype="float64",
-                )[0]
-
-                for offset, distance in enumerate(distances):
-                    if distance > self._max_distance + _BOUNDARY_TOLERANCE:
-                        continue
-
-                    yield present[pos], present[pos + 1 + offset]
+        for r, c in similar_pairs_blockwise(
+            scored,
+            compare=scorer,
+            low=True,
+            bound=bound,
+            block_rows=block_rows,
+            workers=workers,
+            dtype=dtype,
+        ):
+            yield present[r], present[c]
 
     def __str__(self):
         return self.str_representation(self._NAME)
@@ -141,6 +158,8 @@ class EditDistance(
 def edit_distance(
     max_distance: int | float = _DEFAULT_MAX_DISTANCE,
     metric: MetricName = "levenshtein",
+    workers: int | None = None,
+    max_block_memory: int | None = None,
 ) -> BaseDeduper:
     """Edit distance deduplication.
 
@@ -182,6 +201,18 @@ def edit_distance(
 
             Lower distances are closer, the opposite direction of
             `fuzzy`'s `threshold`.
+        workers: The number of worker threads used for scoring. This
+            parameter has multiple effective defaults: `None` chooses
+            automatically, using all CPU cores locally or for single node
+            backends, but a single worker under a distributed backend.`-1`
+            overrides the default and uses all cores, else choose an integer
+            number for the desired number of cores.
+        max_block_memory: The approximate memory budget, in bytes, of one
+            scored block. Values are scored in blocks bounded by this
+            cap; smaller blocks lower peak memory at some cost in scoring
+            speed. Defaults to a library constant of 64 MiB. A cap too
+            small for even one row's score band clamps to a one-row
+            block, so peak memory may exceed the cap by that band.
 
     Returns:
         Instance of `BaseDeduper`.
@@ -224,4 +255,4 @@ def edit_distance(
             |  3   |  OL5 9P1  |  foobar@gmail.co.uk  |
             +------+-----------+----------------------+
     """
-    return EditDistance(max_distance=max_distance, metric=metric)
+    return EditDistance(max_distance=max_distance, metric=metric, workers=workers, max_block_memory=max_block_memory)

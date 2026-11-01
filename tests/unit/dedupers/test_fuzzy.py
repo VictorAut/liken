@@ -361,19 +361,19 @@ def test_fuzzy_topn_all_null_input_yields_star_pairs():
     assert list(lk.fuzzy(threshold=0.5, topn=1)._gen_similarity_pairs(array)) == [(0, 1), (0, 2)]
 
 
-def test_fuzzy_topn_extract_receives_no_missing_values(monkeypatch):
-    """process.extract scores non-missing values only."""
+def test_fuzzy_topk_cdist_receives_no_missing_values(monkeypatch):
+    """process.cdist scores non-missing values only."""
     from rapidfuzz import process
 
     from liken.core.missing import is_missing
 
-    real_extract = process.extract
+    real_cdist = process.cdist
 
-    def spy_extract(query, choices, **kwargs):
-        assert all(not is_missing(value) for value in (query, *choices))
-        return real_extract(query, choices, **kwargs)
+    def spy_cdist(queries, choices, **kwargs):
+        assert all(not is_missing(value) for value in (*queries, *choices))
+        return real_cdist(queries, choices, **kwargs)
 
-    monkeypatch.setattr(process, "extract", spy_extract)
+    monkeypatch.setattr(process, "cdist", spy_cdist)
 
     array = pa.array(["nathan", None, "nadia", None])
 
@@ -400,31 +400,32 @@ def test_fuzzy_topn_transitivity_through_union_find(mock_df, monkeypatch):
     assert uf[0] == uf[1] == uf[2]
 
 
-def test_fuzzy_topn_calls_extract_once_per_present_row(monkeypatch):
-    """The mechanism is candidate-limited per row, not a trimmed full matrix.
+def test_fuzzy_topn_calls_cdist_in_strips_not_extract_per_row(monkeypatch):
+    """The mechanism is candidate-limited through the block machinery.
 
-    `process.extract` runs exactly once per present row, each call with
-    `limit=k+1` and the full present-value list as choices.
+    `process.cdist` scores the strips (never per-row `process.extract`),
+    and each strip's choices cover the rows after the strip's queries.
     """
     from rapidfuzz import process
 
-    real_extract = process.extract
+    real_cdist = process.cdist
     calls = []
 
-    def spy_extract(query, choices, **kwargs):
-        calls.append({"limit": kwargs.get("limit"), "choices_len": len(choices)})
-        return real_extract(query, choices, **kwargs)
+    def spy_cdist(queries, choices, **kwargs):
+        calls.append({"queries_len": len(queries), "choices_len": len(choices)})
+        return real_cdist(queries, choices, **kwargs)
 
-    monkeypatch.setattr(process, "extract", spy_extract)
+    monkeypatch.setattr(process, "cdist", spy_cdist)
 
     array = pa.array(["abcd", "abce", "abcf", None])
 
     pairs = list(lk.fuzzy(threshold=0.7, topn=2)._gen_similarity_pairs(array))
 
     assert pairs == [(0, 1), (0, 2), (1, 2)]
-    assert len(calls) == 3  # one per present row
-    assert all(call["limit"] == 3 for call in calls)  # k + 1
-    assert all(call["choices_len"] == 3 for call in calls)  # full present list
+    # drop probe_itemsize's one-row probe call (queries "abc"/"abd"/"abe")
+    strip_calls = [call for call in calls if call["choices_len"] != 2 or call["queries_len"] != 1]
+    assert strip_calls and all(call["choices_len"] == 2 for call in strip_calls)  # non-missing tail
+    assert sum(call["queries_len"] for call in strip_calls) == 3  # all present rows queried exactly once
 
 
 @pytest.mark.parametrize("topn", [0, -1])

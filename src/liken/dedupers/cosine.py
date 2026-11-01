@@ -44,9 +44,8 @@ class Cosine(
         for i in range(n):
             sims = normalized[i] @ normalized[i + 1 :].T
 
-            for offset, val in enumerate(sims):
-                if val >= self._threshold:
-                    yield i, i + 1 + offset
+            for offset in np.argwhere(sims >= self._threshold)[:, 0].tolist():
+                yield i, i + 1 + offset
 
     def __str__(self):
         return self.str_representation(self._NAME)

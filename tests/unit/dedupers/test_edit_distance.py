@@ -215,8 +215,8 @@ def test_edit_distance_jaro_winkler_matches_at_stubbed_exact_bound(monkeypatch):
     """
     deduper = EditDistance(max_distance=0.11666666666666667, metric="jaro_winkler")
     monkeypatch.setattr(
-        "liken.dedupers.edit_distance.process.cdist",
-        lambda queries, choices, **kwargs: [[0.11666666666666667]],
+        "liken.dedupers._blockwise.process.cdist",
+        lambda queries, choices, **kwargs: np.array([[0.11666666666666667]]),
     )
 
     assert list(deduper._gen_similarity_pairs(pa.array(["abcd", "abce"]))) == [(0, 1)]
@@ -248,8 +248,8 @@ def test_edit_distance_normalized_metric_matches_exactly_at_every_two_decimal_bo
     exact_distance = float(Decimal(str(max_distance)))
     deduper = EditDistance(max_distance=max_distance, metric="indel")
     monkeypatch.setattr(
-        "liken.dedupers.edit_distance.process.cdist",
-        lambda queries, choices, **kwargs: [[exact_distance]],
+        "liken.dedupers._blockwise.process.cdist",
+        lambda queries, choices, **kwargs: np.array([[exact_distance]]),
     )
 
     pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
@@ -267,8 +267,8 @@ def test_edit_distance_normalized_metric_tolerance_guard(drift, monkeypatch):
     """
     deduper = EditDistance(max_distance=0.5, metric="indel")
     monkeypatch.setattr(
-        "liken.dedupers.edit_distance.process.cdist",
-        lambda queries, choices, **kwargs: [[0.5 + drift]],
+        "liken.dedupers._blockwise.process.cdist",
+        lambda queries, choices, **kwargs: np.array([[0.5 + drift]]),
     )
 
     pairs = list(deduper._gen_similarity_pairs(pa.array(["x", "y"])))
@@ -280,8 +280,8 @@ def test_edit_distance_normalized_metric_does_not_match_above_the_bound(monkeypa
     """A distance more than the tolerance above the boundary never matches."""
     deduper = EditDistance(max_distance=0.5, metric="indel")
     monkeypatch.setattr(
-        "liken.dedupers.edit_distance.process.cdist",
-        lambda queries, choices, **kwargs: [[0.51]],
+        "liken.dedupers._blockwise.process.cdist",
+        lambda queries, choices, **kwargs: np.array([[0.51]]),
     )
 
     assert list(deduper._gen_similarity_pairs(pa.array(["x", "y"]))) == []

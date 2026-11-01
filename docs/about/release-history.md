@@ -3,6 +3,31 @@ title: Release History
 ---
 
 
+## v0.16.0 (unreleased)
+
+**Features**
+
+- Faster pair generation in the `fuzzy` and `edit_distance` dedupers, with new
+  `workers` and `max_block_memory` options for parallelism and memory control.
+- Faster pair generation in the `jaccard` and `token_overlap` dedupers, with a
+  new `max_block_memory` option for memory control.
+- The `jaccard` and `token_overlap` dedupers gain a `strategy` option
+  (`"auto"`, `"gram"`, `"index"`; default `"auto"`).
+- Faster pair generation in the `within` deduper.
+
+**Fixes**
+
+- The `jaccard` and `token_overlap` dedupers now treat None and NaN as
+  missing.
+
+**Misc**
+
+- `networkx` dependency is removed in favour of an in-house disjoint-set implementation
+- In pipeline steps, combining predicate and threshold dedupers act as pre-filters: threshold dedupers see only
+  records every predicate matched. A step with several predicates now
+  requires all of them, where previously a record matched by one
+  predicate could stay grouped through another.
+
 ## v0.15.1 (2026-10-27)
 
 **Misc**

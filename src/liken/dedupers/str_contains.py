@@ -1,5 +1,6 @@
 """str contains predicate deduper"""
 
+import re
 from typing import ClassVar
 from typing import final
 
@@ -10,6 +11,7 @@ from typing_extensions import override
 from liken.core.deduper import BaseDeduper
 from liken.core.deduper import PredicateDeduper
 from liken.core.deduper import SingleColumnMixin
+from liken.core.missing import is_missing
 from liken.core.registries import dedupers_registry
 from liken.validations import require_non_empty_str
 
@@ -33,6 +35,40 @@ class StrContains(
         self._pattern = pattern
         self._case = case
         self._regex = regex
+
+    @override
+    def _matches(self, value: object) -> bool:
+        """Scalar mirror of `_vectorized_matches`.
+
+        Literal mode: `case=False` lowercases both sides — value and
+        pattern — mirroring the vectorised `pc.utf8_lower` +
+        `pattern.lower()` pair. An exact mirror for ASCII; unicode is
+        exact only where the two lowerers agree (they differ on, e.g.,
+        `İ`).
+
+        Regex mode: an approximation, not a mirror. Python `re` and
+        RE2 disagree on case-insensitive semantics in ways lowering
+        cannot repair. Lowering the pattern can corrupt escape classes
+        (`a\\S` lowered becomes `a\\s`, inverting the match), `$`
+        anchors behave differently around trailing newlines, and unicode
+        case folding differs (the long-s codepoint folds under one
+        lowerer only). Patterns valid in one engine may be
+        invalid in the other. The vectorised path is what runs in
+        practice; this scalar path exists for subclasses without a
+        vectorised form.
+        """
+        if is_missing(value) or not isinstance(value, str):
+            return False
+
+        if self._regex:
+            if self._case:
+                return re.search(self._pattern, value) is not None
+            return re.search(self._pattern.lower(), value.lower()) is not None
+
+        if self._case:
+            return self._pattern in value
+
+        return self._pattern.lower() in value.lower()
 
     @override
     def _vectorized_matches(self, array: pa.Array) -> pa.Array:
