@@ -1,3 +1,5 @@
+from typing import cast
+
 import pyarrow as pa
 import pytest
 
@@ -231,6 +233,29 @@ def test_ascii_fold_takes_no_form_argument():
 
     with pytest.raises(TypeError):
         AsciiFold(form="NFC")
+
+
+# NORMALIZE NAME:
+
+
+def _normalize(values: list[str | None]) -> list[str | None]:
+    from liken.preprocessors import NormalizeName
+
+    preprocessor = NormalizeName()
+    preprocessor.from_array(pa.array(values))
+    return cast("list[str | None]", preprocessor.process().to_pylist())
+
+
+def test_normalize_name_keeps_given_middle_family():
+    assert _normalize(["Mr. John H Doe (Da Legend)", "John H Doe"]) == ["John H Doe", "John H Doe"]
+
+
+def test_normalize_name_drops_nickname():
+    assert _normalize(["Jane (Jenny) A Smith"]) == ["Jane A Smith"]
+
+
+def test_normalize_name_propagates_nulls():
+    assert _normalize([None]) == [None]
 
 
 ################

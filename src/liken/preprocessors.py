@@ -7,7 +7,7 @@ import nltk
 import pyarrow as pa
 import pyarrow.compute as pc
 from cleanco import basename
-from nameparser import HumanName
+from nameparser import parse
 from nltk.corpus import stopwords as nltk_stopwords
 from typing_extensions import override
 
@@ -194,8 +194,8 @@ class NormalizeName(Preprocessor):
     def process(self) -> pa.Array:
         def _clean_name(name: str) -> str:
 
-            hn = HumanName(name)
-            return f"{hn.first} {hn.middle} {hn.last}".strip()
+            pn = parse(name)
+            return f"{pn.given} {pn.middle} {pn.family}".strip()
 
         # Important: cast to python list first
         pylist = self._array.to_pylist()

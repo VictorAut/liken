@@ -9,6 +9,7 @@ title: Release History
 - Compound-column dedupers (`knn`, `cosine`, `jaccard`,
   `token_overlap`) reject a single-column `columns` argument. Use two
   or more columns; a previously working 1-tuple now raises.
+- `normalize_names` now uses nameparser v3.
 
 ## v0.16.0 (2026-11-01)
 
