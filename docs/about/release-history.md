@@ -2,8 +2,17 @@
 title: Release History
 ---
 
+## v0.16.1 (2026-11-10)
 
-## v0.16.0 (unreleased)
+**Fixes**
+
+- Compound-column dedupers (`knn`, `cosine`, `jaccard`,
+  `token_overlap`) reject a single-column `columns` argument. Use two
+  or more columns; a previously working 1-tuple now raises.
+- `normalize_names` now uses nameparser v3.
+- `ray` extra dependency ceiling pinned to <=2.59
+
+## v0.16.0 (2026-11-01)
 
 **Features**
 
@@ -19,6 +28,7 @@ title: Release History
 
 - The `jaccard` and `token_overlap` dedupers now treat None and NaN as
   missing.
+
 
 **Misc**
 

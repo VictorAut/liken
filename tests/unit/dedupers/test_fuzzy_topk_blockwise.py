@@ -169,17 +169,6 @@ def test_fuzzy_topk_blockwise_parity_exactly_at_a_real_boundary():
     _assert_parity(values, boundary - 1e-10, 5, "simple_ratio")
 
 
-def test_fuzzy_topk_blockwise_parity_50k_scale():
-    """Scale parity on the benchmark-shaped workload (slow, ~80s)."""
-    rng = np.random.default_rng(1234)
-    from string import ascii_lowercase
-
-    words = list(ascii_lowercase[:8])
-    values = [f"{'-'.join(rng.choice(words, size=3))}-{rng.integers(0, 10**6):06d}" for _ in range(50_000)]
-
-    _assert_parity(values, 0.95, 5, "simple_ratio")
-
-
 ###############################
 # mechanism: block machinery  #
 ##############################

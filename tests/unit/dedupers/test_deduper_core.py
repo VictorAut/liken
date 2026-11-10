@@ -110,6 +110,26 @@ def test_compound_column_validation_rejects_str():
         Jaccard().validate("a")
 
 
+def test_compound_column_validation_rejects_one_tuple():
+    """A 1-tuple is a single-column attempt: compound means two or more."""
+    with pytest.raises(InvalidArgumentTypeError, match="two or more"):
+        Jaccard().validate(("a",))
+
+
+def test_compound_column_validation_accepts_three_tuple():
+    Jaccard().validate(("a", "b", "c"))
+
+
+def test_knn_shares_compound_column_validation():
+    """All four compound dedupers validate through the shared mixin."""
+    for deduper in [lk.knn(k=2), lk.cosine(), lk.token_overlap(strategy="index")]:
+        with pytest.raises(InvalidArgumentTypeError):
+            deduper.validate("a")  # type: ignore[union-attr]
+        with pytest.raises(InvalidArgumentTypeError, match="two or more"):
+            deduper.validate(("a",))  # type: ignore[union-attr]
+        deduper.validate(("a", "b"))  # type: ignore[union-attr]
+
+
 ####################
 # str/repr output #
 ###################

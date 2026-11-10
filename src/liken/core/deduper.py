@@ -238,11 +238,15 @@ class SingleColumnMixin:
 class CompoundColumnMixin:
     """
     Validates the column of of `columns` param as passed to the deduper.
-    Only tuples of strings allowed.
+    Only tuples of two or more strings allowed.
     """
 
     def validate(self, columns: Columns) -> None:
         require_type("columns", columns, tuple)
+        if len(columns) == 1:
+            raise InvalidArgumentTypeError(
+                "`columns` is a single-column attempt: compound dedupers require two or more columns"
+            )
         for label in columns:
             if not isinstance(label, str):
                 raise InvalidArgumentTypeError(f"`columns` members must be of type 'str', got '{type(label).__name__}'")

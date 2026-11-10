@@ -340,29 +340,17 @@ def test_knn_query_called_once_per_frame(monkeypatch):
     assert calls[0]["k"] == 2  # k + 1
 
 
-def test_knn_single_column_table():
-    """One numeric column through the compound machinery works (1-D).
-
-    The research's noted overlap with `within`: coexistence, not
-    deduplication.
-    """
-    table = pa.table({"x": [1.0, 2.0, 3.0]})
-
-    pairs = sorted(lk.knn(threshold=0.3, k=1)._gen_similarity_pairs(table))
-
-    assert pairs == [(0, 1), (1, 2)]
-
-
 def test_knn_transitivity_through_union_find(mock_df):
     """Merged pairs chain transitively through union-find.
 
-    Points A=0, B=1, C=2, k=1, threshold 0.4: pairs (A,B) and (B,C)
-    qualify at 1/(1+1) = 0.5, A-C never does (d=2, s ~ 0.33). Union-find
-    still merges all three through B — the docstring's transitivity note.
+    Points A=(1,1), B=(1,2), C=(1,3), k=1, threshold 0.4: pairs (A,B)
+    and (B,C) qualify at 1/(1+1) = 0.5, A-C never does (d=2, s ~ 0.33).
+    Union-find still merges all three through B — the docstring's
+    transitivity note.
     """
-    mock_df.get_array = Mock(return_value=pa.table({"x": [1.0, 2.0, 3.0]}))
+    mock_df.get_array = Mock(return_value=pa.table({"x": [1.0, 1.0, 1.0], "y": [1.0, 2.0, 3.0]}))
 
-    uf, n = lk.knn(threshold=0.4, k=1).set_frame(mock_df).build_union_find(("x",), [])
+    uf, n = lk.knn(threshold=0.4, k=1).set_frame(mock_df).build_union_find(("x", "y"), [])
 
     assert n == 3
     assert uf[0] == uf[1] == uf[2]

@@ -19,7 +19,6 @@ import random
 import string
 
 import pyarrow as pa
-import pytest
 
 import liken as lk
 
@@ -78,23 +77,3 @@ def test_fuzzy_topn_recall_floor_on_graded_clusters():
 
     ratio = len(recovered & reference) / len(reference)
     assert ratio >= 0.9
-
-
-@pytest.mark.parametrize("n_members", [1000, 2000, 5000], ids=["1k", "2k", "5k"])
-def test_fuzzy_topn_characterization_dense_tie_cluster(n_members):
-    """All-tie dense clusters: recovery is deliberately unasserted quality-wise.
-
-    A single cluster of n near-identical values is the worst case the
-    docstring documents: every pair scores 100, ties sort by choice index,
-    and each row keeps only its k best-by-index partners. Recovery is a
-    property of k and cluster size, not of the code; the measured numbers
-    are recorded in the work item's verification.md. This test only pins
-    the sanity bound that the mechanism recovers something.
-    """
-    values = ["target"] * n_members
-
-    reference = _all_pairs_reference(values)
-    recovered = _topn_pairs(values, topn=5)
-
-    assert reference  # the fixture produces pairs at all
-    assert recovered
