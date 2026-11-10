@@ -39,12 +39,13 @@ dependencies = [
 [project.optional-dependencies]
 pyspark = ["pyspark>=4.0.0"]
 modin = ["modin[dask,ray]>=0.22.0"]
-ray = ["ray>=2.50.0"]
+# 2.60 dropped block ordering across hash-shuffle repartition, breaking input-order collect.
+ray = ["ray>=2.50.0,<2.60"]
 dask = ["dask[dataframe]>=2024.8.0"]
 all = [
     "pyspark>=4.0.0",
     "modin[dask,ray]>=0.22.0",
-    "ray>=2.50.0",
+    "ray>=2.50.0,<2.60",
     "dask[dataframe]>=2024.8.0",
 ]
 
