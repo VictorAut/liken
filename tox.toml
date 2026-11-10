@@ -635,7 +635,7 @@ commands_pre = [
         "uv",
         "pip",
         "install",
-        "ray",
+        "ray<2.60",
         "pandas==2.3.3",
         "polars==1.35.2",
         "pyarrow==23.0.1",
