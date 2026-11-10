@@ -162,10 +162,6 @@ def knn(threshold: float = 0.95, *, k: int, metric: MetricName = "euclidean") ->
         input order gives the same output, but the tie order is not row
         index order and reordering the column can change the result.
 
-        On a single numeric column `knn` works as the 1-D special case
-        and coexists with the `within` deduper: `within` matches on a
-        plain absolute tolerance, `knn` adds the top-k restriction.
-
     Example:
         Applied to multiple columns:
 
