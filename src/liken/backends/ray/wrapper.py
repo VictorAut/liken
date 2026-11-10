@@ -31,8 +31,18 @@ class RayDF(DF["RayDataset"], CanonicalIdMixin):
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
 
+        # Rows are collected in input order on every backend. Ray Data's
+        # streaming executor does not guarantee block order by default, so
+        # opt this lineage into order-preserving execution. Each Dataset
+        # captures its own copy of the DataContext, and derived datasets
+        # share it, so this stays scoped to this lineage and never touches
+        # the user's global Ray Data settings.
+        df.context.execution_options.preserve_order = True
+
         self._df: RayDataset = self._add_canonical_id(df, source_id, canonical_id)
         self._canonical_id = canonical_id
+
+        self._df.context.execution_options.preserve_order = True
 
     # CANONICAL ID HELPERS:
 
