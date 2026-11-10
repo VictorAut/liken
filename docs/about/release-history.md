@@ -19,6 +19,9 @@ title: Release History
 
 - The `jaccard` and `token_overlap` dedupers now treat None and NaN as
   missing.
+- Compound-column dedupers (`knn`, `cosine`, `jaccard`,
+  `token_overlap`) reject a single-column `columns` argument. Use two
+  or more columns; a previously working 1-tuple now raises.
 
 **Misc**
 
