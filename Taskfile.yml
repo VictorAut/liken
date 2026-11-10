@@ -94,3 +94,15 @@ tasks:
       ARGS: '{{.ARGS | default "--deduper fuzzy --size 10000"}}'
     cmds:
       - uv run --active python scripts/profiling/profile.py {{.ARGS}}
+
+  bump:
+    desc: Bump the project version.
+    summary: |
+      Bump the project version.
+    requires:
+      vars:
+        - name: VERSION
+          enum: ["major", "minor", "patch"]
+    cmds:
+      - cmd: uv version --bump {{.VERSION}}
+      - cmd: uv lock
