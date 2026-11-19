@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
+from typing import cast
 
 import pandas as pd
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from liken.core.deduper import BaseDeduper
     from liken.types import Columns
     from liken.types import Keep
+    from liken.types import UserDataFrame
 
 
 class DeduperProtocol(Protocol):
@@ -29,6 +31,8 @@ class DeduperProtocol(Protocol):
 
 
 class DropMixin(DeduperProtocol):
+    _df: pd.DataFrame
+
     def drop_duplicates(
         self,
         columns: Columns | None = None,
@@ -37,19 +41,19 @@ class DropMixin(DeduperProtocol):
         **kwargs: Any,
     ) -> pd.DataFrame:
 
-        self._deduper: Dedupe
-
-        return self._deduper.apply(
+        deduper: Dedupe = dedupe(self._df)
+        result: UserDataFrame = deduper.apply(
             self.func(**kwargs),
         ).drop_duplicates(
             columns=columns,
             keep=keep,
         )
+        return cast("pd.DataFrame", result)
 
 
 class Accessor(DropMixin):
     def __init__(self, df: pd.DataFrame):
-        self._deduper: Dedupe = dedupe(df)
+        self._df: pd.DataFrame = df
 
 
 def register_pd_affordances() -> None:
