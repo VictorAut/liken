@@ -2,10 +2,10 @@
 .claude/*
 .dev/*
 
+**.local*
+**AGENTS*
+
 scrap*
-CLAUDE.md
-tasks/*
-SPEC*
 
 **/__pycache__/*
 .python-version
@@ -18,5 +18,4 @@ site/
 
 .memsearch
 
-scripts/benchmarks/results/
-scripts/profiling/results/
+scripts/**/results/
