@@ -2,6 +2,9 @@
 title: First Steps
 ---
 
+!!! info
+
+    If you are a pandas user who wants simple, enhanced, deduplication perhaps the [Coming from Pandas?](./coming-from-pandas.md) tutorial is sufficient? If not, the full Liken workflow is taught from here onwards (with full support for pandas).
 
 ## The Liken Workflow
 
@@ -17,6 +20,9 @@ deduper = deduper.apply(lk.fuzzy())     # apply
 df = deduper.drop_duplicates("address") # execute
 ```
 
+!!! note
+
+    After constuction, you may want to [profile duplicate rates](#duplicate-rate-profiling) in your data *before* continuing with the workflow.
 
 ## Instantiating
 
@@ -118,16 +124,17 @@ Pass your dataframe to the top-level `dedupe` function.
 
     df = spark.read.parquet("...")
 
-    # the spark session is inferred from the dataframe
     df = (
-        lk.dedupe(df)
+        lk.dedupe(df) # (1)!
         # ...
     )
     ```
 
+    1. The spark session is inferred from the dataframe
+
 ## Duplicate Rate Profiling
 
-Before choosing a threshold, measure the variance @ threshold for any column. `explore` reports, for each column you name, the share of records that would be removed under exact matching and under each fuzzy threshold:
+Before choosing a threshold, measure the variance *@* threshold for any column. `explore` reports, for each column you name, the share of records that would be removed under exact matching and under each fuzzy threshold:
 
 ```python
 import liken as lk
@@ -168,4 +175,4 @@ lk.dedupe(df).explore({"email": lk.tfidf()})
 
 !!! warning
 
-    `explore` runs on the pandas, polars, modin and pyarrow backends. On dask, ray or pyspark, `explore` is not supported and raises a `ValueError`.
+    `explore` runs on the pandas, polars, modin and pyarrow backends. On dask, ray or pyspark, `explore` is **not supported** and raises a `ValueError`.

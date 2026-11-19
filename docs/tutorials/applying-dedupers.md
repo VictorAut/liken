@@ -3,7 +3,7 @@ title: Applying Dedupers
 ---
 
 
-In the [First Steps](../tutorials/first-steps.md) you found out how to instantiate Liken, and how to explore near duplicate rates in your data. Now, you can *apply* duplicates for execution, by using the `apply` function:
+In the [First Steps](../tutorials/first-steps.md) you found out how to [instantiate](./first-steps.md#instantiating) Liken, and how to [profile near duplicate rates](./first-steps.md#duplicate-rate-profiling) in your data. Now, you can *apply* duplicates for execution, by using the [`apply`](../reference/liken.md#liken.Dedupe.apply) function:
 
 ```python
 import liken as lk
@@ -135,36 +135,6 @@ A pipeline has the following features:
 - Each `step` in a pipeline represents a deduplication step.
 - Column access is provided by `lk.col` expression.
 - Dedupers are provided as method calls to the `lk.col` expression.
-
-### How a pipeline executes
-
-TODO move to common recipes
-
-Each step produces clusters of linked records. Steps combine as OR: records linked by any step end up in one cluster. But clusters are not recomputed from scratch at the end — each step rewrites the canonical ids built so far, so the order of steps can change the outcome.
-
- id   |    x     |    y
-------|----------|---------
-  0   |    a     |    m
-  1   |    a     |    n
-  2   |    z     |    n
-
-/// caption
-Three records: `x` links rows 0 and 1; `y` links rows 1 and 2.
-///
-
-With `x` first, step `x` merges rows 0 and 1; step `y` then merges rows 1 and 2, and row 2 inherits row 1's canonical id — all three records share one id. With `y` first, row 2's cluster forms before `x` runs — and `x` never touches it, so row 2 keeps its own id. Run both orders and compare:
-
-```python
-import liken as lk
-
-xy = lk.pipeline().step(lk.col("x").exact()).step(lk.col("y").exact())
-yx = lk.pipeline().step(lk.col("y").exact()).step(lk.col("x").exact())
-
-lk.dedupe(df).apply(xy).canonicalize().collect()  # canonical_id: [0, 0, 0]
-lk.dedupe(df).apply(yx).canonicalize().collect()  # canonical_id: [0, 0, 1]
-```
-
-The same applies to dictionaries: keys run in insertion order. If your dedupers are truly independent — no record is linked by more than one deduper — order does not matter. When dedupers overlap, order them from the broadest to the narrowest.
 
 ### AND semantics
 
@@ -400,3 +370,72 @@ pipeline = (
     )  # defaults to the pipeline's preprocessor, `ascii_fold`.
 )
 ```
+
+## Wait... What Did I Apply?
+
+You can see what is applied using the [explain](../reference/liken.md#liken.Dedupe.explain) function.
+
+Single deduper application:
+
+```python exec="yes" source="above" session="quickstart" result="python"
+import liken as lk
+import pandas as pd
+
+df = pd.DataFrame([{"id": 1, "text": "apple", "cat_1": "sweden", "cat_2": "reddit"}]) # Dummy data
+
+dedupers = lk.dedupe(df).apply(lk.fuzzy(threshold=0.6))
+
+print("df will be deduped with...")
+print(dedupers.explain())
+```
+
+!!! info
+    `.explain()` always shows any default args as well.
+
+For dictionaries of dedupers:
+
+```python exec="yes" source="above" session="quickstart" result="python"
+import liken as lk
+import pandas as pd
+
+df = pd.DataFrame([{"id": 1, "text": "apple", "height": 0.1, "width": 0.2 }]) # Dummy data
+
+dedupers = lk.dedupe(df).apply(
+    {
+        "text": lk.fuzzy(threshold=0.6),
+        ("height", "width"): lk.cosine(),
+    }
+)
+
+print("df will be deduped with...")
+print(dedupers.explain())
+```
+
+For pipelines of dedupers:
+
+```python exec="yes" source="above" session="quickstart" result="python"
+import liken as lk
+import pandas as pd
+
+df = pd.DataFrame([{"id": 1, "email": "x@y.io", "address": "10th street"}]) # Dummy data
+
+pipeline = (
+    lk.pipeline()
+    .step(
+        [
+            lk.col("address").fuzzy(threshold=0.8),
+            lk.col("address").str_startswith("10"),
+        ]
+    )
+    .step(lk.col("email").fuzzy(threshold=0.98))
+)
+
+deduper = lk.dedupe(df).apply(pipeline)
+
+print("df will be deduped with...")
+print(dedupers.explain())
+```
+
+!!! warning
+
+    Preprocessors are **not** currently shown in the explained output of a pipeline.

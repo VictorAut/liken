@@ -39,9 +39,9 @@ Simply import `liken`, and pass the deduper as an accessor to your pandas datafr
     2. `kwargs` for `fuzzy` are delegated to `drop_duplicates`. This is also true for other dedupers; for example, when using the `tfidf` deduper, the `ngram` kwarg would be passed in `drop_duplicates` too i.e. `df.tfidf.drop_duplicates("address", threshold=0.6, ngram=3)`
 
 
-## Example
+## Examples
 
-```python exec="yes" source="above" session="quickstart" result="python"
+```python hl_lines="20 23" exec="yes" source="above" session="quickstart" result="python"
 import liken as lk
 import pandas as pd
 
@@ -60,13 +60,30 @@ deduper = lk.dedupe(df).apply(lk.fuzzy(threshold=0.7))
 print("No deduplication:")
 print(df.drop_duplicates("email"))
 
-# print("\nBut Liken does:")
+print("\nBut Liken does:")
 print(df.fuzzy.drop_duplicates("email", threshold=0.7))
 
-# TODO: this needs fixing!
 print("\nUse the keep arg:")
 print(df.fuzzy.drop_duplicates("email", threshold=0.7, keep="last"))
 ```
+
+You can use multiple columns for any deduper that accepts multiple columns:
+
+```python hl_lines="6"
+import liken as lk
+import pandas as pd
+
+df = pd.DataFrame(data=...)
+
+df.knn.drop_duplicates(("height", "width"), threshold=0.6, k=2, keep="last") # (1)!
+```
+
+1. A tuple of columns is passed for `knn`. Any number of kwargs belong to `knn` are passed to `drop_duplicates`.
+
+
+!!! note
+
+    Remember, you must `import liken` to use these new dataframe accessors!
 
 ## Limitations
 

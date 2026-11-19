@@ -23,14 +23,15 @@ nav = [
     ] },
     { "In Practice" = [
         "in-practice/index.md",
+        "in-practice/choosing-a-deduper.md",
         "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
-        "in-practice/choosing-a-deduper.md",
         "in-practice/backends.md",
         "in-practice/ai-agent-skills.md",
         "in-practice/performance.md",
     ] },
     { "API Reference" = [
+        "reference/index.md",
         "reference/liken.md",
         "reference/preprocessors.md",
         "reference/custom.md",

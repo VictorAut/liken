@@ -2,7 +2,6 @@
 title: "Common Recipes"
 ---
 
-Variously common scenarios are explored here.
 
 ## Threshold vs Predicate
 
@@ -58,6 +57,35 @@ pipeline = (
 
 Now, only on longer `address` strings is more tolerance allowed.
 
+### Notes on Pipeline Executes
+
+Each step produces clusters of linked records. Steps combine as OR: records linked by any step end up in one cluster. But clusters are not recomputed from scratch at the end — each step rewrites the canonical ids built up to that point so far, so the order of steps can change the outcome.
+
+ id   |    x     |    y
+------|----------|---------
+  0   |    a     |    m
+  1   |    a     |    n
+  2   |    z     |    n
+
+/// caption
+Three records: `x` links rows 0 and 1; `y` links rows 1 and 2.
+///
+
+With `x` first, step `x` merges rows 0 and 1; step `y` then merges rows 1 and 2, and row 2 inherits row 1's canonical id, all three records share one id. With `y` first, row 2's cluster forms before `x` runs — and `x` never touches it, so row 2 keeps its own id. Run both orders and compare:
+
+```python
+import liken as lk
+
+xy = lk.pipeline().step(lk.col("x").exact()).step(lk.col("y").exact())
+yx = lk.pipeline().step(lk.col("y").exact()).step(lk.col("x").exact())
+
+lk.dedupe(df).apply(xy).canonicalize().collect()  # canonical_id: [0, 0, 0]
+lk.dedupe(df).apply(yx).canonicalize().collect()  # canonical_id: [0, 0, 1]
+```
+
+!!! tip
+    When dedupers overlap, order them from the broadest to the narrowest.
+
 ## Which Preprocessor When?
 
 Preprocessors are great additions to pipelines for fine tuning of deduplication behaviour. Favour their usage over boilerplate preprocessing done before using Liken.
@@ -69,6 +97,37 @@ A few key points are worth noting:
 3. [`alnum`](../reference/preprocessors.md) strips spaces — this can be powerful when used with `lk.fuzzy` but needs caution when used with tokenization based threshold dedupers (namely, `lk.tfidf` and `lk.lsh`).
 4. [`collapse_whitespace`](../reference/preprocessors.md) collapses internal whitespace runs to single spaces. It complements `strip`, which only trims the edges. Whitespace at the start or end collapses to one space, it is not removed.
 5. [`regex_replace`](../reference/preprocessors.md) a useful fail-safe option for all other cleaning processes.
+
+## How Clusters Form
+
+1. Applied dedupers pair up matching records.
+2. Pairs merge *transitively*. If record `a` matches `b`, and `b` matches `c`, **all three land in one cluster** — even when `a` and `c` would not match each other directly.
+3. One record per cluster becomes the representative, chosen by `keep` under the survivorship policy: the first or the last record of the cluster, in row order.
+
+For canonicalization, additionally:
+
+4. Every member of the cluster receives the representative's `canonical_id`.
+
+## Transitivity
+
+Look at the following dummy dataset.
+- `"london"` and `"londn"` match at 0.91
+- `"londn"` and `"lond"` match at 0.86
+- `"london"` and `"lond"` match at 0.73
+
+So, at a chose threshold of 0.85, only two out of three records directly match.
+
+ id   |  address
+------|-----------
+  0   |  london
+  1   |  londn
+  2   |  lond
+
+/// caption
+No pair of the three is exactly equal, and `london`/`lond` do not match directly at a score of 0.85
+///
+
+All three records, however, receive the **same `canonical_id`**, with `"londn"` "bridging" the other two records. At threshold 0.95 no pair matches at all, and each record keeps its own id. Whether two records share an id is decided by the whole chain of matches, not by any single pair.
 
 ## Recipes
 

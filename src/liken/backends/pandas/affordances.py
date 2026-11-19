@@ -8,10 +8,15 @@ from typing import cast
 import pandas as pd
 
 from liken.dedupers.cosine import cosine
+from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.fuzzy import fuzzy
 from liken.dedupers.jaccard import jaccard
+from liken.dedupers.knn import knn
 from liken.dedupers.lsh import lsh
+from liken.dedupers.sorted_neighbourhood import sorted_neighbourhood
 from liken.dedupers.tfidf import tfidf
+from liken.dedupers.token_overlap import token_overlap
+from liken.dedupers.within import within
 from liken.liken import Dedupe
 from liken.liken import dedupe
 
@@ -70,3 +75,8 @@ def register_pd_affordances() -> None:
     make_accessor("lsh", lsh)
     make_accessor("cosine", cosine)
     make_accessor("jaccard", jaccard)
+    make_accessor("sorted_neighbourhood", sorted_neighbourhood)
+    make_accessor("token_overlap", token_overlap)
+    make_accessor("knn", knn)
+    make_accessor("within", within)
+    make_accessor("edit_distance", edit_distance)

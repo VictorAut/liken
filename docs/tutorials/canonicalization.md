@@ -2,6 +2,25 @@
 title: Canonicalization
 ---
 
+??? info "TLDR?"
+
+    Swap [`.drop_duplicates()`](../reference/liken.md#liken.Dedupe.drop_duplicates) with [`.canonicalize()`](../reference/liken.md#liken.Dedupe.canonicalize) **and** [`collect()`](../reference/liken.md#liken.Dedupe.collect) the results:
+
+    ```python
+    import liken as lk
+
+    df = ...
+
+    df = (
+        lk.dedupe(df)
+        .apply(...)
+        .canonicalize(...)
+        .collect()
+    )
+    ```
+
+## Introduction
+
 Up to now you've learnt how to use dedupers with `apply`, specifically within the context of *dropping duplicates*.
 
 But, what if you want to retain your duplicate instances? And instead simply label them as such?
@@ -68,7 +87,15 @@ The two email addresses are linked to the canonical record "0".
 
 With `keep="last"` the cluster would be represented by its latest record instead, and both rows would carry `a002`'s position as their id.
 
-You can control this behaviour by passing an explicit label to the `source_id` argument of `.canonicalize`. The values of the column you name become the `canonical_id` values: name `canonical_id` itself and it is left as is; name any other column and `canonical_id` is written from its values. For example:
+## Canonical ID
+
+By default, Liken created a new, autoincrementing ID field, "canonical_id". Control the generated label:
+
+```python
+.canonicalize(canonical_id="my_canonical_id")
+```
+
+You can override the auto-incrementing mechanism such that it copies from another ID field in the data. Control this behaviour by passing an explicit label to the `source_id` argument of `.canonicalize`. The values of the column you name become the `canonical_id` values: name `canonical_id` itself and it is left as is; name any other column and `canonical_id` is written from its values. For example:
 
 ```python
 import liken as lk
@@ -99,42 +126,14 @@ Canonical records are no longer identified by index position in the DataFrame, b
 ///
 
 
-## How Clusters Form
+!!! info
 
-TODO: move to in-practice
+    Checkout the guide on [Iterative Workloads](../in-practice/iterative-workloads.md) for more information on how to modify the output of the canonical ID in accordance to your potential problem scenarios.
 
-Canonicalization is one model, end to end:
-
-1. The applied dedupers pair up matching records — the same pairs that `drop_duplicates` would have collapsed.
-2. Pairs merge *transitively*. If record `a` matches `b`, and `b` matches `c`, all three land in one cluster — even when `a` and `c` would not match each other directly.
-3. One record per cluster becomes the representative, chosen by `keep` under the survivorship policy: the first or the last record of the cluster, in row order.
-4. Every member of the cluster receives the representative's `canonical_id`.
-
-Transitivity is worth seeing. At threshold 0.85, `"london"` and `"londn"` match (score 0.91), and `"londn"` and `"lond"` match (score 0.86) — but `"london"` and `"lond"` do not (score 0.73):
-
- id   |  address
-------|-----------
-  0   |  london
-  1   |  londn
-  2   |  lond
-
-/// caption
-No pair of the three is exactly equal, and `london`/`lond` do not match directly.
-///
-
-```python
-import liken as lk
-
-addresses = lk.pipeline().step(lk.col("address").fuzzy(threshold=0.85))
-
-lk.dedupe(address_df).apply(addresses).canonicalize().collect()
-```
-
-All three records receive `canonical_id 0` — `"londn"` bridges the gap. At threshold 0.95 no pair matches at all, and each record keeps its own id. Whether two records share an id is decided by the whole chain of matches, not by any single pair.
 
 ## Inspecting Clusters
 
-Once `canonicalize` has run, `canonicals` answers the natural next question: *which clusters actually hold duplicates?* It returns a dict of `canonical_id` to record count, for every cluster with at least `n` records — the default `n` is 2:
+Once `canonicalize` has run, [`canonicals`](../reference/liken.md#liken.Dedupe.canonicals) answers the natural next question: *which clusters actually hold duplicates?* It returns a dict of `canonical_id` to record count, for every cluster with at least `n` records — the default `n` is 2:
 
 ```python
 import liken as lk
@@ -149,7 +148,8 @@ result = (
     )
 )
 
-result.canonicals()  # {'a001': 2}
+result.canonicals(n=5) # default 2, but can be increased.
 ```
 
-`a003` is absent from the result: its cluster holds a single record. Raise `n` to demand larger clusters — `canonicals(3)` returns only clusters of three or more records. `canonicals` collects the canonical ids to your machine, so on distributed backends it triggers a collect.
+!!! warning
+    `canonicals` collects the canonical ids to your machine, so on distributed backends (Ray, Dask, PySpark) it triggers a collect.
