@@ -52,7 +52,7 @@ The umbrella literature term for broadly undertakes [canonicalization](#canonica
 
 ### Golden record
 
-Not used by Liken per se, but appears in the literature. Prefer use of [representative record](#representative-record) instead.
+Not used by Liken, but appears in the literature. Prefer use of [representative record](#representative-record) instead.
 
 ### Match rule
 

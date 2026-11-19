@@ -100,7 +100,7 @@ flowchart TD
 
 Threshold dedupers compare values pairwise and keep the pairs whose score meets their `threshold`. All thresholds are on a 0–1 scale, and matching is inclusive: a pair scoring exactly *at* the threshold matches. At the extreme, `threshold=0` matches every pair, including pairs with no similarity at all. Thresholds differ in what they measure:
 
-- `fuzzy` uses [rapidfuzz](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive: `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale. With `topn=k`, `fuzzy` becomes a blocking strategy: each value keeps only its `k` best candidate pairs (a pair matches when either side holds the other), which bounds the scores held per value, but a cluster of more than `k` near-identical records may not link.
+- `fuzzy` uses [`rapidfuzz`](https://rapidfuzz.github.io/RapidFuzz/) string similarity. The default scorer, `simple_ratio`, compares whole strings character by character: `"london"` and `"londn"` score about 0.91. Matching is case-sensitive: `"LONDON"` and `"london"` score 0.0. Other scorers (`token_sort_ratio`, `token_set_ratio`, and more) change how strings are compared, not the scale. With `topn=k`, `fuzzy` becomes a blocking strategy: each value keeps only its `k` best candidate pairs (a pair matches when either side holds the other), which bounds the scores held per value, but a cluster of more than `k` near-identical records may not link.
 - `tfidf` splits each value into character n-grams (`ngram`, default 3), weights them, and compares the resulting vectors by cosine similarity. It tolerates more drift than `fuzzy`, but its default `topn=2` is a blocking strategy too: it keeps only the two best candidate pairs per record, one of which is the record itself. In dense clusters of near-duplicates, raise `topn`.
 - `lsh` builds MinHash signatures over character n-grams and matches approximately: the threshold estimates the Jaccard similarity of the n-gram sets. LSH is a blocking strategy — it scales well to very large data, but a match is probabilistic — pairs near the threshold can be missed.
 - `sorted_neighbourhood` is also a blocking strategy: it sorts the column by value and scores each record only against the next `window - 1` records in sorted order, so scorer work falls from O(n²) to O(n·window). The match set is a subset of all-pairs `fuzzy` at the same threshold and scorer. Sorting is on raw values: similar values differing near the start ("OL5 9PL" vs "0L5 9PL") can fall outside each other's windows, and word-order variants are `sorted_tokens`' job. `fuzzy(topn=k)` is the different trade-off: k best partners anywhere in the column, still all-pairs scoring.
@@ -117,10 +117,10 @@ Liken does not drop missing values and treats any missing value as `None` or any
 | `fuzzy` | Cluster with each other|
 | `edit_distance` | Cluster with each other|
 | `within` | Cluster with each other|
-| `tfidf` | Cluster with each other at any given `ngram`; the vectoriser receives non-missing values only. |
+| `tfidf` | Cluster with each other at any given `ngram`; the vectorizer receives non-missing values only. |
 | `lsh` | Same as `tfidf`. |
 | `isna` | Matches exactly the missing values; `~isna` matches exactly the non-missing values. |
 | `num_range` | Never matches: a missing value is outside any interval, positive or negated (`~num_range`). |
 | `date_range` | Never matches: a missing value parses to nothing, positive or negated (`~date_range`). |
 | `sorted_tokens` | Never matches: a missing value has no words to sort, positive or negated (`~sorted_tokens`). |
-| Other predicates | A missing value never satisfies a predicate, except positive `isin`, where a missing value matches iff `None` is listed in `values`. |
+| Other predicates | A missing value never satisfies a predicate, except positive `isin`, where a missing value matches only if `None` is listed in `values`. |

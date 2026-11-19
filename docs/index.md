@@ -93,7 +93,7 @@ The key features are:
 
 ## ... Wait What?
 
-Liken was first conveived as means to provide near deduping to pandas DataFrames. Jump to the [Coming from Pandas?](tutorials/coming-from-pandas.md) section if that's all you need. It's a single page document showing you how to do that, and you won't need anything else.
+Liken was first conceived as means to provide near deduping to pandas DataFrames. Jump to the [Coming from Pandas?](tutorials/coming-from-pandas.md) section if that's all you need. It's a single page document showing you how to do that, and you won't need anything else.
 
 Otherwise, head to [First Steps](tutorials/first-steps.md).
 

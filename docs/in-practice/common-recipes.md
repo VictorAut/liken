@@ -117,6 +117,8 @@ Look at the following dummy dataset.
 
 So, at a chose threshold of 0.85, only two out of three records directly match.
 
+<!-- vale Vale.Spelling = NO -->
+
  id   |  address
 ------|-----------
   0   |  london
@@ -126,6 +128,8 @@ So, at a chose threshold of 0.85, only two out of three records directly match.
 /// caption
 No pair of the three is exactly equal, and `london`/`lond` do not match directly at a score of 0.85
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 All three records, however, receive the **same `canonical_id`**, with `"londn"` "bridging" the other two records. At threshold 0.95 no pair matches at all, and each record keeps its own id. Whether two records share an id is decided by the whole chain of matches, not by any single pair.
 

@@ -25,6 +25,8 @@ synthetic_records = result.synthesize()
 
 `synthesize` returns a new DataFrame with exactly one record per canonical cluster. For each column, the synthetic value is the *first non-missing* value among the cluster's records, in row order. The canonicalized DataFrame itself keeps all child records, unchanged — the synthetic records sit alongside them, in their own frame:
 
+<!-- vale Vale.Spelling = NO -->
+
  canonical_id  |  uid   |  address  |        email
 ---------------|--------|-----------|---------------------
       a001     |  a001  |  london   |   fizzpop@yahoo.com
@@ -34,12 +36,18 @@ synthetic_records = result.synthesize()
 One synthetic record per canonical cluster: `a001`'s cluster coalesces into a single record.
 ///
 
+<!-- vale Vale.Spelling = YES -->
+
 First non-missing means the first record's missing value does not win — the first *non-missing* value does:
+
+<!-- vale Vale.Spelling = NO -->
 
   uid   |  address  |  email
 --------|-----------|----------
   b001  |   None    |  x@y.io
   b002  |   oslo    |  x@y.io
+
+<!-- vale Vale.Spelling = YES -->
 
 ```python
 import liken as lk
@@ -48,6 +56,8 @@ result = lk.dedupe(null_df).apply(lk.exact()).canonicalize("email", source_id="u
 result.synthesize()
 ```
 
+<!-- vale Vale.Spelling = NO -->
+
  canonical_id  |  uid   |  address  |  email
 ---------------|--------|-----------|----------
       b001     |  b001  |   oslo    |  x@y.io
@@ -55,5 +65,7 @@ result.synthesize()
 /// caption
 `b001`'s address is missing, so the synthetic record takes `b002`'s.
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 `synthesize` collects to your machine on distributed backends. Unlike `canonicals`, it does not refuse to run before a `canonicalize` — on an un-canonicalized chain it silently treats every record as its own cluster, which is rarely what you want.

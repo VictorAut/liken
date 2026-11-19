@@ -51,7 +51,7 @@ df = (
     .drop_duplicates(("height", "width"), keep = "last")
 )
 ```
-!!! info "`keep` arg"
+!!! info "`keep` argument"
     The `keep` argument accepts the literals "first" or "last" which picks the *representative* of each duplicate cluster.
 
 ## Dictionaries of Dedupers
@@ -245,6 +245,8 @@ pipeline = (
 
 A negated predicate links the records that *do not* satisfy it. Watch it isolate missing values on a small dataset:
 
+<!-- vale Vale.Spelling = NO -->
+
  id   |  address
 ------|-----------
   0   |  london
@@ -258,7 +260,11 @@ A negated predicate links the records that *do not* satisfy it. Watch it isolate
 Six addresses: three identical, two missing, one distinct.
 ///
 
-The step `~lk.col("address").isna()` links every record whose address is *not* missing — rows 0, 1, 2 and 5 — so the three london records merge and tokyo stays apart:
+<!-- vale Vale.Spelling = YES -->
+
+The step `~lk.col("address").isna()` links every record whose address is *not* missing — rows 0, 1, 2 and 5 — so the three `london` records merge and `tokyo` stays apart:
+
+<!-- vale Vale.Spelling = NO -->
 
  id   |  address
 ------|-----------
@@ -269,6 +275,8 @@ The step `~lk.col("address").isna()` links every record whose address is *not* m
 /// caption
 `~isna` output: the london records merged; the missing records were never in the cluster.
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 The un-negated `lk.col("address").isna()` is the mirror image: the two missing records merge into one, and every other record survives untouched.
 
@@ -390,7 +398,7 @@ print(dedupers.explain())
 ```
 
 !!! info
-    `.explain()` always shows any default args as well.
+    `.explain()` always shows any default arguments as well.
 
 For dictionaries of dedupers:
 

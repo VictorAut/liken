@@ -35,8 +35,8 @@ uv run --active python scripts/profiling/lineprofile.py --deduper exact --size 1
     --function liken.liken.Dedupe.canonicalize
 
 # or via the Taskfile
-task profile
-task profile ARGS="--deduper exact --size 5000"
+task uv:profile
+task uv:profile ARGS="--deduper exact --size 5000"
 ```
 
 

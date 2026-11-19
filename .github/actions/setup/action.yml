@@ -42,5 +42,5 @@ runs:
     - name: liken | install
       if: ${{ inputs.install-liken == 'true' }}
       run: |
-        task install
+        task uv:install
       shell: bash

@@ -28,3 +28,9 @@ repos:
         entry: uv run --no-sync python scripts/check_matrix_floors.py
         pass_filenames: false
         always_run: true
+      - id: docs-spell
+        name: Check documentation spelling
+        entry: task docs:lint
+        language: system
+        pass_filenames: false
+        files: ^(docs/.*\.md|\.vale\.ini|\.vale/.*)$

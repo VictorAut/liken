@@ -99,7 +99,7 @@ One API difference to know before you write code against a distributed backend:
 ## Which One Do I Pick?
 
 - **pandas**: in-memory frames. The reference backend: everything works, and results are the easiest to inspect.
-- **polars**: in-memory frames on a modern, multithreaded execution engine.
+- **polars**: in-memory frames on a modern, multi-threaded execution engine.
 - **pyarrow**: in-memory Arrow tables, when your data is already Arrow (for example loaded from Parquet with `pyarrow.parquet`).
 - **modin**: pandas code that has outgrown one core. Scales pandas across cores while keeping the pandas API.
 - **dask**: partitioned, pandas-like processing on one machine or a small cluster, when data does not fit in memory.

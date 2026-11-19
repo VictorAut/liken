@@ -38,6 +38,7 @@ Linkage is provided by a **canonical** record, which in Liken is identified by t
 
 Let's look at a dummy dataset, `df`:
 
+<!-- vale Vale.Spelling = NO -->
 
   uid   |  address  |          email
 --------|-----------|-----------------------
@@ -48,6 +49,8 @@ Let's look at a dummy dataset, `df`:
 /// caption
 Two very clearly similar emails exist.
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 
 We're going to aim to **link** the above email addresses. To do so, swap `.drop_duplicates` with `.canonicalize`, and collect the results:
@@ -72,6 +75,7 @@ The `keep` argument picks the *representative* of each duplicate cluster under t
 
 Now, `df` looks the same, with an extra `canonical_id` column:
 
+<!-- vale Vale.Spelling = NO -->
 
   uid   |  address  |          email        |  canonical_id
 --------|-----------|-----------------------|----------------
@@ -83,13 +87,15 @@ Now, `df` looks the same, with an extra `canonical_id` column:
 The two email addresses are linked to the canonical record "0".
 ///
 
+<!-- vale Vale.Spelling = YES -->
+
 `.canonicalize` creates a new `canonical_id` field. Any repeated `canonical_id` is a duplicate. In this instance that was an auto-incrementing numeric field. As such, the repeated `canonical_id` represents the index position in the DataFrame of the *canonical* record.
 
 With `keep="last"` the cluster would be represented by its latest record instead, and both rows would carry `a002`'s position as their id.
 
 ## Canonical ID
 
-By default, Liken created a new, autoincrementing ID field, "canonical_id". Control the generated label:
+By default, Liken created a new, auto-incrementing ID field, `canonical_id`. Control the generated label:
 
 ```python
 .canonicalize(canonical_id="my_canonical_id")
@@ -114,6 +120,7 @@ df = (
 
 Now, checkout the variation in the output of `df`:
 
+<!-- vale Vale.Spelling = NO -->
 
   uid   |  address  |          email        |  canonical_id
 --------|-----------|-----------------------|----------------
@@ -125,6 +132,7 @@ Now, checkout the variation in the output of `df`:
 Canonical records are no longer identified by index position in the DataFrame, but instead based on a pre-existing (unique) identifier.
 ///
 
+<!-- vale Vale.Spelling = YES -->
 
 !!! info
 

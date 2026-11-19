@@ -49,7 +49,7 @@ Pick the workflow that matches your project's dependencies.
 
 Liken supports `pandas`, `polars` and `pyarrow` in the default installation. Liken also exposes support for [multiple other DataFrame libraries](./index.md#supported-dataframe-libraries). For the authoritative list on optional dependencies, see `[project.optional-dependencies]` in [`pyproject.toml`](https://github.com/VictorAut/liken/blob/main/pyproject.toml).
 
-Install them optionally by specifying one or more extras in square brackets, or by specifying `all` for all optional depencies:
+Install them optionally by specifying one or more extras in square brackets, or by specifying `all` for all optional dependencies:
 
 === "uv"
 

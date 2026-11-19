@@ -78,7 +78,7 @@ df = pd.DataFrame(data=...)
 df.knn.drop_duplicates(("height", "width"), threshold=0.6, k=2, keep="last") # (1)!
 ```
 
-1. A tuple of columns is passed for `knn`. Any number of kwargs belong to `knn` are passed to `drop_duplicates`.
+1. A tuple of columns is passed for `knn`. Any number of `kwargs` belong to `knn` are passed to `drop_duplicates`.
 
 
 !!! note
@@ -87,4 +87,4 @@ df.knn.drop_duplicates(("height", "width"), threshold=0.6, k=2, keep="last") # (
 
 ## Limitations
 
-Pandas affordances support any deduper that works at a [threshold](../in-practice/common-recipes.md#threshold-vs-predicate) (such as [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine)). [Predicate](../in-practice/common-recipes.md#threshold-vs-predicate) dedupers are **not** supported.
+Any deduper that works at a [threshold](../in-practice/common-recipes.md#threshold-vs-predicate) (such as [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine)) is allowed. But, [predicate](../in-practice/common-recipes.md#threshold-vs-predicate) dedupers are **not** supported.

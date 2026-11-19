@@ -59,7 +59,7 @@ df = (
 )
 ```
 
-1. Note that your custom function is implicitely passed an `array`, which Liken picks up as "address"; and therefore you *only* need to pass additional `kwargs`!
+1. Note that your custom function is implicitly passed an `array`, which Liken picks up as "address"; and therefore you *only* need to pass additional `kwargs`!
 
 
  id   |     address
@@ -138,6 +138,8 @@ result = (
 
 `same_domain(suffix="@gmail.com")` links the two Gmail records and leaves the rest untouched:
 
+<!-- vale Vale.Spelling = NO -->
+
  id   |   canonical_id   |     email
 ------|------------------|----------------
   0   |        0         |  a@gmail.com
@@ -149,12 +151,14 @@ result = (
 The two `@gmail.com` records share a canonical id; the others keep their own.
 ///
 
+<!-- vale Vale.Spelling = YES -->
+
 ??? note "Inversion of a custom, predicate, deduper"
     Your custom deduper is still treated as a threshold deduper, not a predicate: you cannot invert it with `~`, and predicate evaluation does not single it out. It can however be combined with real predicate dedupers in an AND step. See the limitations below.
 
 ## Limitations
 
-- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of dicts (one per record) but that shape is not a tested guarantee.
+- **Only single-column custom dedupers are guaranteed.** A custom function may declare a tuple of columns, and it will receive a list of `dict`s (one per record) but that shape is not a tested guarantee.
 - **`~` negation is unavailable.** Negation is defined for *predicate* dedupers only, and a registered custom deduper is a threshold deduper regardless of what it yields. Applying `~` raises `TypeError: Only predicate dedupers support inversion`. To get the negated behaviour, define a second custom function — a `not_str_same_len`, say, that yields the complementary pairs.
 
 Custom dedupers **can** be combined using AND semantics in pipelines with other dedupers.
@@ -166,4 +170,4 @@ Your function always receives a plain Python list, which Liken produces from the
 - The list holds one Python object per value, so memory use is proportional to the column size.
 - On local backends (pandas, polars, modin, pyarrow) the list covers the whole column.
 - On distributed backends (dask, ray, pyspark) Liken runs your function per partition, per batch; on ray, the worker holding it. The DataFrame is not pulled to one machine, but instead each slice's column is materialised as a list on a single worker, and deduplication matches records only within that slice.
-- Your function must survive being sent to workers: keep it importable and picklable, and avoid closures over unserialisable state.
+- Your function must survive being sent to workers: keep it importable and it must be able to be pickled, and avoid closures over state that can't be serialised.

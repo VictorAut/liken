@@ -2,6 +2,8 @@
 title: Release History
 ---
 
+<!-- vale off -->
+
 ## v0.16.2
 
 **Fixes**
@@ -593,7 +595,7 @@ title: Release History
 **Fixes**
 
 
-- drop_duplicates now also drops canonical_id column
+- `drop_duplicates` now also drops `canonical_id` column
 
 
 
@@ -622,9 +624,9 @@ title: Release History
 
 - Added negation on On instances
 
-- Added isna binary deduper
+- Added `isna` binary deduper
 
-- Added str_len binary deduper
+- Added `str_len` binary deduper
 
 
 ## v0.0.0 (2025-12-31)
