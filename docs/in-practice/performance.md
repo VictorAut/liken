@@ -29,7 +29,7 @@ Performance of Liken's dedupers measured as execution time (log) against increas
 
 ### Use Pipelines
 
-[Pipelines](../tutorials/applying-dedupers.md#pipelines-of-dedupers) make ideal use cases for using [predicate dedupers](../tutorials/first-steps.md#built-in-dedupers), given the number of use cases that motivate AND semantics. When using predicate dedupers in a pipeline, Liken implements predicate pushdown. Let's look at what that means by using an example based on the following dummy data:
+[Pipelines](../tutorials/applying-dedupers.md#pipelines-of-dedupers) make ideal use cases for using [predicate dedupers](./choosing-a-deduper.md#built-in-dedupers), given the number of use cases that motivate AND semantics. When using predicate dedupers in a pipeline, Liken implements predicate pushdown. Let's look at what that means by using an example based on the following dummy data:
 
 id| address                  | email
 --|--------------------------|-------

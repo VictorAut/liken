@@ -18,7 +18,7 @@ Pick the workflow that matches your project's dependencies.
 
     This will create a virtual environment (if one doesn't already exist), add `liken` to your `pyproject.toml`, and update `uv.lock`.
 
-    To install Narwhals into an existing virtual environment without touching `pyproject.toml`, use:
+    To install Liken into an existing virtual environment without touching `pyproject.toml`, use:
 
     ```bash
     uv pip install liken
@@ -54,34 +54,38 @@ Install them optionally by specifying one or more extras in square brackets, or 
 === "uv"
 
     ```bash
-    uv add "liken[dask]"            # Installs dask extra
-    uv add "liken[dask,pyspark]"    # Installs dask and pyspark extras
+    uv add "liken[dask]"            # Installs only the dask extra
+    uv add "liken[dask,pyspark]"    # Installs the dask and pyspark extras
     uv add "liken[all]"             # Install all extras
     ```
 
 === "pip"
 
     ```bash
-    pip install "liken[dask]"            # Installs dask extra
-    pip install "liken[dask,pyspark]"    # Installs dask and pyspark extras
+    pip install "liken[dask]"            # Installs only the dask extra
+    pip install "liken[dask,pyspark]"    # Installs the dask and pyspark extras
     pip install "liken[all]"             # Install all extras
     ```
 
 === "poetry"
 
     ```bash
-    poetry add "liken[dask]"            # Installs dask extra
-    poetry add "liken[dask,pyspark]"    # Installs dask and pyspark extras
+    poetry add "liken[dask]"            # Installs only the dask extra
+    poetry add "liken[dask,pyspark]"    # Installs the dask and pyspark extras
     poetry add "liken[all]"             # Install all extras
     ```
 
 ## Use `liken` In Your Code
 
-### Fuzzy Deduplication
+### I... Just... Want... Pandas...
+
+Jump straight to [Coming from Pandas?](tutorials/coming-from-pandas.md) and stick to that only.
+
+### Deduplication
 
 ```python exec="yes" source="above" session="quickstart" result="python"
 import liken as lk
-import pandas as pd
+import pandas as pd # Or any other backend
 
 df = pd.DataFrame(
     {
@@ -104,16 +108,16 @@ deduper = lk.dedupe(df).apply(lk.fuzzy(threshold=0.7))
 print("With Liken fuzzy deduplication at threshold:")
 print(deduper.drop_duplicates("email"))
 
-print("Normal Pandas only exact match deduplication:")
+print("\nNormal Pandas only exact match deduplication:")
 print(df.drop_duplicates("email"))
-
 ```
+
 
 ### Canonicalization
 
 ```python exec="yes" source="above" session="quickstart" result="python"
 import liken as lk
-import pandas as pd
+import pandas as pd # Or any other backend
 
 df = pd.DataFrame(
     {

@@ -1,14 +1,18 @@
 ---
-title: Record Linkage
+title: Canonicalization
 ---
 
 Up to now you've learnt how to use dedupers with `apply`, specifically within the context of *dropping duplicates*.
 
 But, what if you want to retain your duplicate instances? And instead simply label them as such?
 
-Liken supports **Record Linkage**, where the deduplication process you are doing is not to drop data from your DataFrame, but rather to *link* it together. So, a deduper that defines a fuzzy string deduplication of an `address` column will *label* the duplicates as duplicates rather than *dropping* them. Records are instead *canonicalized*.
+Liken supports **canonicalization**, where the deduplication process you are doing is not to drop data from your DataFrame, but rather to *link* it together. So, a deduper that defines a fuzzy string deduplication of an `address` column will *label* the duplicates as duplicates rather than *dropping* them. Records are instead *canonicalized*.
 
-Retaining records as *known* duplicates instead of *dropping* duplicates is known as **Record Linkage** in Liken. This is also known as **Entity Resolution**, in other literature. The link is provided by a **canonical** record, which in Liken is identified by the auto-generated `canonical_id` column.
+Linkage is provided by a **canonical** record, which in Liken is identified by the auto-generated `canonical_id` column.
+
+!!! info "Entity Resolution"
+
+    Retaining records as *known* duplicates instead of *dropping* duplicates is known as canonicalization in Liken. This is also known as **Entity Resolution**, in other literature. See the [Glossary](../about/glossary.md).
 
 
 ## Canonicalization
@@ -45,7 +49,7 @@ df = (
 
 1.  `canonicalize` does not return the dataframe, unlike `drop_duplicates`. It needs to be collected first!
 
-The `keep` argument picks the *representative* of each duplicate cluster under the survivorship policy: `"first"` keeps the earliest record of the cluster in the dataframe's current row order, `"last"` the latest. The representative's identity is what the cluster's `canonical_id` will carry. See the [Glossary](../about/glossary.md) for the vocabulary used here.
+The `keep` argument picks the *representative* of each duplicate cluster under the survivorship policy: `"first"` keeps the earliest record of the cluster in the dataframe's current row order, `"last"` the latest. The representative's identity is what the cluster's `canonical_id` will carry.
 
 Now, `df` looks the same, with an extra `canonical_id` column:
 
@@ -97,6 +101,8 @@ Canonical records are no longer identified by index position in the DataFrame, b
 
 ## How Clusters Form
 
+TODO: move to in-practice
+
 Canonicalization is one model, end to end:
 
 1. The applied dedupers pair up matching records — the same pairs that `drop_duplicates` would have collapsed.
@@ -147,59 +153,3 @@ result.canonicals()  # {'a001': 2}
 ```
 
 `a003` is absent from the result: its cluster holds a single record. Raise `n` to demand larger clusters — `canonicals(3)` returns only clusters of three or more records. `canonicals` collects the canonical ids to your machine, so on distributed backends it triggers a collect.
-
-
-## Synthetic Records
-
-A canonical record can be linked to several child records. Use `.synthesize` to create a new record per canonical cluster, coalescing the values of the cluster's child records:
-
-```python
-import liken as lk
-
-result = (
-    lk.dedupe(df)
-    .apply(lk.fuzzy(threshold=0.85))
-    .canonicalize(
-        "email",
-        keep="first",
-        source_id="uid", # `source_id` arg included
-    )
-)
-
-synthetic_records = result.synthesize()
-```
-
-`synthesize` returns a new DataFrame with exactly one record per canonical cluster. For each column, the synthetic value is the *first non-missing* value among the cluster's records, in row order. The canonicalized DataFrame itself keeps all child records, unchanged — the synthetic records sit alongside them, in their own frame:
-
- canonical_id  |  uid   |  address  |        email
----------------|--------|-----------|---------------------
-      a001     |  a001  |  london   |   fizzpop@yahoo.com
-      a003     |  a003  |   paris   |       a@msn.fr
-
-/// caption
-One synthetic record per canonical cluster: `a001`'s cluster coalesces into a single record.
-///
-
-First non-missing means the first record's missing value does not win — the first *non-missing* value does:
-
-  uid   |  address  |  email
---------|-----------|----------
-  b001  |   None    |  x@y.io
-  b002  |   oslo    |  x@y.io
-
-```python
-import liken as lk
-
-result = lk.dedupe(null_df).apply(lk.exact()).canonicalize("email", source_id="uid")
-result.synthesize()
-```
-
- canonical_id  |  uid   |  address  |  email
----------------|--------|-----------|----------
-      b001     |  b001  |   oslo    |  x@y.io
-
-/// caption
-`b001`'s address is missing, so the synthetic record takes `b002`'s.
-///
-
-`synthesize` collects to your machine on distributed backends. Unlike `canonicals`, it does not refuse to run before a `canonicalize` — on an un-canonicalized chain it silently treats every record as its own cluster, which is rarely what you want.

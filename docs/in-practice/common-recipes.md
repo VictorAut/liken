@@ -6,7 +6,7 @@ Variously common scenarios are explored here.
 
 ## Threshold vs Predicate
 
-Liken's [built-in dedupers](../tutorials/first-steps.md#built-in-dedupers) are classed as being "Threshold" or "Predicate" dedupers.
+Liken's [built-in dedupers](./choosing-a-deduper.md#built-in-dedupers) are classed as being *Threshold* or *Predicate* dedupers.
 
 Threshold dedupers are easy to understand — things are likened one-to-another when a similarity score exceeds the threshold. Predicate dedupers operate based on a binary choice: something either is or isn't something, where that something is what the predicate deduper selects for.
 
@@ -15,10 +15,9 @@ The above explanation might still sound tricky, especially regarding predicate d
 1. Predicate dedupers are actually derived from the same base classes as threshold dedupers. Ultimately, this means you can use them just like you would a threshold deduper. But...
 2. ...they feel like "filters".
 3. Predicate Dedupers feel like "filters" because they can be powerfully composed using [AND semantics](../tutorials/applying-dedupers.md#and-semantics) with threshold dedupers in pipelines...
-4. ...in that regard it's generally recommended to use predicate dedupers **only** when defining pipelines with `lk.pipeline()` — you can use them outside of pipelines, but the use cases are limited.
-5. Because they are fundamentally based on the same base classes as threshold dedupers, they are also accessed with the `lk.col()` expression.
-6. The "filter" paradigm is especially useful when considering that Liken implements predicate-evaluation optimizations. Predicate evaluation states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent threshold dedupers will operate on a subset of data.
-7. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics).
+4. ...in that regard it's generally recommended to use predicate dedupers **only** when applying [pipelines](../tutorials/applying-dedupers.md#pipelines-of-dedupers) with `lk.pipeline()` — you can use them outside of pipelines, but the use cases are limited.
+5. Treating them under the "filter" paradigm is especially useful when considering that Liken implements [predicate-evaluation optimizations](./performance.md#use-pipelines), which cut down on compute. Predicate evaluation states that when combining dedupers using [AND semantics](../tutorials/applying-dedupers.md#and-semantics), the predicate dedupers will be executed first regardless of the defined order — and subsequent threshold dedupers will operate on a subset of data.
+6. Finally, predicate dedupers can always be subjected to a negation (with `~`), as defined in [NOT semantics](../tutorials/applying-dedupers.md#not-semantics).
 
 ## Powerful Pipelines
 
@@ -73,11 +72,9 @@ A few key points are worth noting:
 
 ## Recipes
 
-Each recipe states the problem, shows the code, and explains the result in one sentence.
+### Matching Company Names
 
-### Matching company names
-
-**Problem.** Company columns carry legal suffixes — `Ltd`, `LLC`, `SE`, `GmbH` — that defeat fuzzy matching and even exact matching on casing:
+Company columns carry legal suffixes (such as `Ltd`, `LLC`, `SE`, `GmbH`) that can create spurious fuzzy matching and even exact matching on casing:
 
 ```python
 import liken as lk
@@ -97,9 +94,9 @@ df = lk.dedupe(df).apply(pipeline).drop_duplicates()
 
 `normalize_company` strips the legal-form suffix and `lower` removes the casing, so `BASF SE` and `basf` merge, as do `Acme Ltd.` and `ACME Limited`.
 
-### Cleaning free text before exact matching
+### Cleaning Free Text Before Exact Matching
 
-**Problem.** Descriptions and titles that differ only by filler words — `the`, `a` — are the same text to you, but not to an exact matcher:
+Descriptions and titles that differ only by filler words, like `the` and `a`, are the same text to you, but not to an exact matcher:
 
 ```python
 import liken as lk
@@ -120,9 +117,12 @@ df = lk.dedupe(df).apply(pipeline).drop_duplicates()
 
 `remove_stopwords` deletes the filler words, `collapse_whitespace` closes the gaps it leaves behind, and `strip` removes the outer spacing, so `the quick brown fox` and `quick  brown fox` become equal strings for the `exact` deduper.
 
-### Canonicalizing person names
+!!! tip "Preprocessor order"
+    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `collapse_whitespace` then `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.
 
-**Problem.** Names arrive with titles, suffixes, punctuation and casing that hide the fact they are the same person:
+### Canonicalizing Person Names
+
+Names arrive with titles, suffixes, punctuation and casing that hide the fact they are the same person:
 
 ```python
 import liken as lk
@@ -142,6 +142,3 @@ df = lk.dedupe(df).apply(pipeline).canonicalize()
 ```
 
 `normalize_names` keeps only first, middle and last names, and the punctuation and casing preprocessors remove the rest, so `Dr. John A. Smith Jr.` and `john a smith` become one exact match.
-
-??? tip "Preprocessor order"
-    These recipes chain preprocessors, which run left to right (top to bottom). Order matters: `collapse_whitespace` then `strip` after `remove_stopwords`, because stopword removal leaves stray spacing behind.

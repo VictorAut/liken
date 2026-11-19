@@ -23,7 +23,7 @@ The key features are:
 - Pandas API extension
 - Composable, rules-based, deduplication pipelines
 - Predicate dedupers for rules
-- Record linkage and canonicalization
+- Entity resolution and canonicalization
 - Built-in Preprocessors
 - Pandas, Polars, Modin, Ray, Dask and PySpark support
 - Customizable in pure Python

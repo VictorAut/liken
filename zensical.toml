@@ -13,14 +13,19 @@ nav = [
     { "Liken" = "index.md" },
     { "Installation and Quick Start" = "installation-quick-start.md" },
     { "Tutorials" = [
+        "tutorials/index.md",
+        "tutorials/coming-from-pandas.md",
         "tutorials/first-steps.md",
         "tutorials/applying-dedupers.md",
-        "tutorials/record-linkage.md",
+        "tutorials/canonicalization.md",
+        "tutorials/representative-records.md",
         "tutorials/custom-dedupers.md",
     ] },
     { "In Practice" = [
+        "in-practice/index.md",
         "in-practice/common-recipes.md",
         "in-practice/iterative-workloads.md",
+        "in-practice/choosing-a-deduper.md",
         "in-practice/backends.md",
         "in-practice/ai-agent-skills.md",
         "in-practice/performance.md",
@@ -50,6 +55,7 @@ features = [
     "content.code.annotate",
     "content.code.copy",
     "content.code.select",
+    "navigation.indexes",
     "navigation.top",
     "navigation.tracking",
     "navigation.footer",
@@ -90,24 +96,21 @@ filters = ["!^_"]
 
 # MARKDOWN EXTENSIONS:
 
-[project.markdown_extensions.pymdownx.blocks.caption]
-[project.markdown_extensions.def_list]
-[project.markdown_extensions.pymdownx.caret]
-[project.markdown_extensions.pymdownx.details]
-[project.markdown_extensions.pymdownx.emoji]
-emoji_index = "zensical.extensions.emoji.twemoji"
-emoji_generator = "zensical.extensions.emoji.to_svg"
-[project.markdown_extensions.pymdownx.highlight]
-anchor_linenums = true
-pygments_lang_class = true
-line_spans = "__span"
-[project.markdown_extensions.pymdownx.inlinehilite]
-[project.markdown_extensions.pymdownx.superfences]
-custom_fences = [
+[project.markdown_extensions]
+admonition = {}
+pymdownx.caret = {}
+def_list = {}
+pymdownx.blocks.caption = {}
+pymdownx.details = {}
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.inlinehilite = {}
+pymdownx.snippets = {}
+pymdownx.superfences.custom_fences = [
     { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
 ]
-[project.markdown_extensions.pymdownx.snippets]
-[project.markdown_extensions.pymdownx.tabbed]
-alternate_style = true
-[project.markdown_extensions.pymdownx.tasklist]
-custom_checkbox = true
+pymdownx.tabbed.alternate_style = true
+pymdownx.tasklist.custom_checkbox = true

@@ -2,6 +2,14 @@
 title: Release History
 ---
 
+## Unreleased
+
+**Fixes**
+
+- Pandas accessors work when called more than once on the same
+  DataFrame. Previously, the second `drop_duplicates` call ignored
+  arguments such as `keep`.
+
 ## v0.16.1 (2026-11-10)
 
 **Fixes**

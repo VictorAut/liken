@@ -53,8 +53,7 @@ them into [clusters](#clustering).
 
 ### Entity resolution
 
-Another name for [record linkage](#record-linkage) in the literature.
-Liken's documentation uses *record linkage*.
+TODO.
 
 ### Golden record
 
@@ -65,12 +64,6 @@ Retired. Not liken vocabulary. Use
 
 Literature synonym of a *deduper* — the definition of what counts as a
 duplicate. Liken writes *deduper*.
-
-### Record linkage
-
-Labelling records that describe the same entity instead of dropping
-them: linked records are kept and receive a shared `canonical_id`. See
-the [Record Linkage tutorial](../tutorials/record-linkage.md).
 
 ### Representative record
 
