@@ -2,9 +2,8 @@
 title: Applying Dedupers
 ---
 
-In the [First Steps](../tutorials/first-steps.md#the-simplest-example) you found out how to replicate exact deduplication with Liken — in fact it was *the* [exact](../reference/liken.md#liken.exact) deduper in use. It came bundled with `dedupe` when you called the `drop_duplicates` function with no other deduper.
 
-To use a [built-in deduper](./first-steps.md#built-in-dedupers), a deduper is *applied* with the `apply` function:
+In the [First Steps](../tutorials/first-steps.md) you found out how to [instantiate](./first-steps.md#instantiating) Liken, and how to [profile near duplicate rates](./first-steps.md#duplicate-rate-profiling) in your data. Now, you can *apply* duplicates for execution, by using the [`apply`](../reference/liken.md#liken.Dedupe.apply) function:
 
 ```python
 import liken as lk
@@ -16,69 +15,51 @@ df = (
 )
 ```
 
+There are several ways to apply dedupers in Liken. Each offers incremental value, at the cost of complexity. For a quick reference use the following table as a guide to this tutorial:
+
+Different collections of dedupers, whether a single deduper, a dictionary or a pipeline, are best suited to different use cases:
+
+|  | Quick tasks | Multiple columns | Logical combination semantics | Preprocessors |
+| ---------- | ---------- | ---------- | ---------- | ---------- |
+| [Single Deduper](#single-dedupers) | :white_check_mark: | :material-close: | :material-close: | :material-close: |
+| [Dict of dedupers](#dictionaries-of-dedupers) | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: |
+| [Pipelines of dedupers](#pipelines-of-dedupers) | :material-close: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+
+
 ## Single Dedupers
 
-If you only need a single deduper, use it straight in an `apply` function as seen above, i.e. `apply(lk.fuzzy())`, or any other deduper. The column or columns to deduplicate are passed in `drop_duplicates`.
+If you only need a single deduper, use it straight in an `apply` function as seen above, i.e. `apply(lk.fuzzy())`, or any other deduper. The column or columns to deduplicate are passed in `drop_duplicates`:
 
-Usage of single dedupers is limited — you can only ever use a single deduper on a single set of columns.
+```python
+import liken as lk
 
-### Coming from Pandas?
+df = (
+    lk.dedupe(df)
+    .apply(lk.fuzzy())
+    .drop_duplicates("address")
+)
+```
 
-When it comes to single dedupers, as above, Liken is easy to use, but especially so if you are coming from Pandas. Special affordances have been made to supply you with the means to use Pandas's `drop_duplicates` in a "fuzzy manner". To do this, simply import `liken`, and pass the deduper as an accessor to your pandas dataframe. Any keyword arguments that usually get passed to the deduper, now simply get passed to `drop_duplicates`:
+For a deduper that accepts multiple columns, and keeping only the last instance (not the default first instance):
 
-=== "With Pandas Affordance"
+```python
+import liken as lk
 
-    ```python
-    import liken as lk # Only works if you import liken!
-    import pandas as pd
+df = (
+    lk.dedupe(df)
+    .apply(lk.cosine())
+    .drop_duplicates(("height", "width"), keep = "last")
+)
+```
+!!! info "`keep` argument"
+    The `keep` argument accepts the literals "first" or "last" which picks the *representative* of each duplicate cluster.
 
-    df = pd.read_csv("...")
+## Dictionaries of Dedupers
 
-    df = df.fuzzy.drop_duplicates("address", threshold=0.6) # (1)!
-    ```
+Dictionaries of dedupers have three properties:
 
-    1.  `kwargs` for `fuzzy` are delegated to `drop_duplicates`. This is also true for other dedupers; for example, when using the `tfidf` deduper, the `ngram` kwarg would be passed in `drop_duplicates` too i.e. `df.tfidf.drop_duplicates("address", threshold=0.6, ngram=3)`
-
-=== "Normal API Use"
-
-    ```python
-    import liken as lk
-    import pandas as pd
-
-    df = pd.read_csv("...")
-
-    df = (
-        lk.dedupe(df)
-        .apply(lk.fuzzy(threshold=0.6)) # (1)!
-        .drop_duplicates("address")
-    )
-    ```
-
-    1.  `kwargs` are applied in the function, as defined by the [API](../reference/liken.md)
-
-
-Pandas affordances are limited to [fuzzy](../reference/liken.md#liken.fuzzy), [tfidf](../reference/liken.md#liken.tfidf), [lsh](../reference/liken.md#liken.lsh), [jaccard](../reference/liken.md#liken.jaccard), and [cosine](../reference/liken.md#liken.cosine). Also, this special use is limited to single dedupers, and does not support the application of collections of dedupers, as shown next.
-
-??? info "Pandas affordances"
-    Liken's Pandas extension is only useable if you actually *import* `liken`!
-
-## Collections of Dedupers
-
-Liken supports deduplicating with a collection of dedupers. This allows:
-
-- Deduplicating multiple sets of columns with different dedupers
-- Defining several dedupers to be run sequentially on a set of columns
-
-Collections are supported in two formats. Dictionaries provide quick and easy composability; pipelines provide fully-featured composability with support for logical combination and built-in preprocessors.
-
-### Dictionaries
-
-When defining a collection as a dictionary, `drop_duplicates` no longer accepts a column label argument — columns will now be defined as the keys to the dictionary.
-
-Dictionaries have three properties:
-
-- **Keys are column sets.** A key is a column label (`"email"`) or a tuple of labels (`("first_name", "last_name")`) — the columns its deduper runs on.
-- **Tuple values are sequential steps.** A value is one deduper, or a tuple of dedupers chained on that key's columns: a record counts as a duplicate if it is linked by any deduper in the tuple.
+- **Keys are column sets.** A key is a column label (`"email"`) or a tuple of column labels (`("first_name", "last_name")`).
+- **Values are a deduper or a sequence of dedupers.** A value is one deduper, or a tuple of dedupers chained on that key's columns: a record counts as a duplicate if it is linked by any deduper in the tuple.
 - **Keys combine as OR.** Records linked by *any* key's deduper end up in the same cluster.
 
 ```python
@@ -99,35 +80,55 @@ df = (
 )
 ```
 
-The collection above reads as: deduplicate records that share an exact email; and separately, deduplicate records whose addresses are fuzzy-similar at 0.98, then token-similar at 0.9. Records caught by either deduper end up in one cluster.
+In the above: deduplicate records that share an exact email; and separately, deduplicate records whose addresses are fuzzy-similar at 0.98, then token-similar at 0.9. Records caught by either deduper end up in one cluster.
 
-Keys run in insertion order, and the dedupers in a tuple value run in their listed order — both can matter; see [How a pipeline executes](#how-a-pipeline-executes).
+Keys run in insertion order, and the dedupers in a tuple value run in their listed order.
 
-??? info "`keep` arg"
-    The `keep` argument accepts the literals "first" or "last" which picks the *representative* of each duplicate cluster — the record kept under the survivorship policy, based on its position in the dataframe.
 
-### Pipelines of Dedupers
+## Pipelines of Dedupers
 
 Liken exposes a pipeline builder function for you to build complex, composable pipelines.
 
-At a minimum, pipelines can replicate a dictionary collection. For example, the dictionary collection we saw above can be instead represented as:
+At a minimum, pipelines can replicate a dictionary collection. Compare the following two which produce identical outputs:
 
-```python
-import liken as lk
+=== "Dict"
 
-pipeline = (
-    lk.pipeline()
-    .step(lk.col("email").exact())
-    .step(lk.col("address").fuzzy(threshold=0.98))
-    .step(lk.col("address").tfidf(threshold=0.9, ngram=(1, 2), topn=1))
-)
+    ```python
+    import liken as lk
 
-df = (
-    lk.dedupe(df)
-    .apply(pipeline)
-    .drop_duplicates()
-)
-```
+    collection = {
+        "email": lk.exact(),
+        "address": (
+            lk.fuzzy(threshold=0.98),
+            lk.tfidf(threshold=0.9, ngram=(1, 2), topn=1),
+        ),
+    }
+
+    df = (
+        lk.dedupe(df)
+        .apply(collection)
+        .drop_duplicates(keep="first")
+    )
+    ```
+
+=== "Pipeline"
+
+    ```python
+    import liken as lk
+
+    pipeline = (
+        lk.pipeline()
+        .step(lk.col("email").exact())
+        .step(lk.col("address").fuzzy(threshold=0.98))
+        .step(lk.col("address").tfidf(threshold=0.9, ngram=(1, 2), topn=1))
+    )
+
+    df = (
+        lk.dedupe(df)
+        .apply(pipeline)
+        .drop_duplicates()
+    )
+    ```
 
 A pipeline has the following features:
 
@@ -135,39 +136,7 @@ A pipeline has the following features:
 - Column access is provided by `lk.col` expression.
 - Dedupers are provided as method calls to the `lk.col` expression.
 
-### How a pipeline executes
-
-Each step produces clusters of linked records. Steps combine as OR: records linked by any step end up in one cluster. But clusters are not recomputed from scratch at the end — each step rewrites the canonical ids built so far, so the order of steps can change the outcome.
-
- id   |    x     |    y
-------|----------|---------
-  0   |    a     |    m
-  1   |    a     |    n
-  2   |    z     |    n
-
-/// caption
-Three records: `x` links rows 0 and 1; `y` links rows 1 and 2.
-///
-
-With `x` first, step `x` merges rows 0 and 1; step `y` then merges rows 1 and 2, and row 2 inherits row 1's canonical id — all three records share one id. With `y` first, row 2's cluster forms before `x` runs — and `x` never touches it, so row 2 keeps its own id. Run both orders and compare:
-
-```python
-import liken as lk
-
-xy = lk.pipeline().step(lk.col("x").exact()).step(lk.col("y").exact())
-yx = lk.pipeline().step(lk.col("y").exact()).step(lk.col("x").exact())
-
-lk.dedupe(df).apply(xy).canonicalize().collect()  # canonical_id: [0, 0, 0]
-lk.dedupe(df).apply(yx).canonicalize().collect()  # canonical_id: [0, 0, 1]
-```
-
-/// caption
-Step order changes which records survive `drop_duplicates`.
-///
-
-The same applies to dictionaries: keys run in insertion order. If your dedupers are truly independent — no record is linked by more than one deduper — order does not matter. When dedupers overlap, order them from the broadest to the narrowest.
-
-#### AND semantics
+### AND semantics
 
 Pipelines support combining the effects of multiple dedupers using implicit and statements.
 
@@ -221,7 +190,7 @@ AND step output: only rows 0 and 1 were linked; the "99" records survive as two 
 
 AND steps are most effective when one of the dedupers is a *predicate* deduper. Liken optimises such steps with *predicate evaluation*: the predicate dedupers run first, and the remaining dedupers only see the records the predicates matched. Liken reorders the step for you — the step is stably sorted so predicates run first — so you do not need to order dedupers yourself. A record counts as matched by a predicate only when the predicate actually links it to another record, and predicates see only the records the earlier predicates kept, so in a step with several predicates the order can matter. The optimisation matters because predicate dedupers run in about O(n) time while threshold dedupers compare every pair of records at about O(n²): restricting the threshold deduper to the predicate-matched subset skips the quadratic cost over records that could never match.
 
-#### OR semantics
+### OR semantics
 
 OR semantics are captured by distinct steps in a pipeline.
 
@@ -256,7 +225,7 @@ OR semantics are actually implicitly supported when using dictionaries and are b
 ??? info "OR in dictionaries "
     OR semantics are achieved with dictionaries. If you are just using OR semantics in a pipeline, consider sticking to defining collections of dedupers as dictionaries, which are simpler to use.
 
-#### NOT semantics
+### NOT semantics
 
 Predicate dedupers can be inverted to form a NOT semantic by using the `~` operator on the column accessor `lk.col` expression:
 
@@ -276,6 +245,8 @@ pipeline = (
 
 A negated predicate links the records that *do not* satisfy it. Watch it isolate missing values on a small dataset:
 
+<!-- vale Vale.Spelling = NO -->
+
  id   |  address
 ------|-----------
   0   |  london
@@ -289,7 +260,11 @@ A negated predicate links the records that *do not* satisfy it. Watch it isolate
 Six addresses: three identical, two missing, one distinct.
 ///
 
-The step `~lk.col("address").isna()` links every record whose address is *not* missing — rows 0, 1, 2 and 5 — so the three london records merge and tokyo stays apart:
+<!-- vale Vale.Spelling = YES -->
+
+The step `~lk.col("address").isna()` links every record whose address is *not* missing — rows 0, 1, 2 and 5 — so the three `london` records merge and `tokyo` stays apart:
+
+<!-- vale Vale.Spelling = NO -->
 
  id   |  address
 ------|-----------
@@ -301,9 +276,11 @@ The step `~lk.col("address").isna()` links every record whose address is *not* m
 `~isna` output: the london records merged; the missing records were never in the cluster.
 ///
 
+<!-- vale Vale.Spelling = YES -->
+
 The un-negated `lk.col("address").isna()` is the mirror image: the two missing records merge into one, and every other record survives untouched.
 
-#### Preprocessors
+### Preprocessors
 
 Pipelines support the addition of a powerful feature: preprocessors. Liken's preprocessors transform data solely within the internals of the library for the purposes of deduplication whilst still returning data to you in the original format. Preprocessors never modify the data you get back — they run inside matching only, and your returned DataFrame keeps its original values.
 
@@ -402,82 +379,71 @@ pipeline = (
 )
 ```
 
-## Growing a Pipeline
+## Wait... What Did I Apply?
 
-The features above compose into a way of working: start narrow, observe what the dedupers miss, widen carefully, and qualify what overshoots. This section walks through that on one small dataset:
+You can see what is applied using the [explain](../reference/liken.md#liken.Dedupe.explain) function.
 
- id   |     name      |        email
-------|---------------|----------------------
-  1   |  Alice Wong   |     a.wong@ex.io
-  2   |  alice wong   |     a.wong@ex.io
-  3   |  Alicia Wong  |  alicia.wong@ex.io
-  4   | Bob Cratchit  |  bob.cratchit@ex.io
-  5   | Bob Cratchet  |  bob.cratchet@ex.io
+Single deduper application:
 
-/// caption
-Five customers: a case variant (rows 1–2), a false friend (row 3), a spelling variant (rows 4–5).
-///
-
-**Start with exact matching.** It merges nothing — all five names are distinct strings, and `alice wong` misses `Alice Wong` on case alone:
-
-```python
+```python exec="yes" source="above" session="quickstart" result="python"
 import liken as lk
+import pandas as pd
 
-df = lk.dedupe(df).drop_duplicates("name")
+df = pd.DataFrame([{"id": 1, "text": "apple", "cat_1": "sweden", "cat_2": "reddit"}]) # Dummy data
+
+dedupers = lk.dedupe(df).apply(lk.fuzzy(threshold=0.6))
+
+print("df will be deduped with...")
+print(dedupers.explain())
 ```
 
-**Widen to fuzzy.** At threshold 0.7, `fuzzy` catches the case variant (0.80) and both real duplicate pairs — and one record too many: `Alicia Wong` scores 0.86 against `Alice Wong`, so a different person is merged:
+!!! info
+    `.explain()` always shows any default arguments as well.
 
-```python
+For dictionaries of dedupers:
+
+```python exec="yes" source="above" session="quickstart" result="python"
 import liken as lk
+import pandas as pd
 
-pipeline = lk.pipeline().step(lk.col("name").fuzzy(threshold=0.7))
+df = pd.DataFrame([{"id": 1, "text": "apple", "height": 0.1, "width": 0.2 }]) # Dummy data
 
-df = lk.dedupe(df).apply(pipeline).drop_duplicates()
-```
-
- id   |     name      |        email
-------|---------------|----------------------
-  1   |  Alice Wong   |     a.wong@ex.io
-  4   | Bob Cratchit  |  bob.cratchit@ex.io
-
-/// caption
-After the fuzzy step: 5 records down to 2. Alicia Wong was absorbed by mistake.
-///
-
-**Qualify the match.** The false positive shares the surname but not the address. Requiring the emails to agree too splits her back out:
-
-```python
-import liken as lk
-
-pipeline = lk.pipeline().step(
-    [
-        lk.col("name").fuzzy(threshold=0.7),
-        lk.col("email").fuzzy(threshold=0.9),
-    ] # AND: both conditions must hold
+dedupers = lk.dedupe(df).apply(
+    {
+        "text": lk.fuzzy(threshold=0.6),
+        ("height", "width"): lk.cosine(),
+    }
 )
 
-df = lk.dedupe(df).apply(pipeline).drop_duplicates()
+print("df will be deduped with...")
+print(dedupers.explain())
 ```
 
- id   |     name      |        email
-------|---------------|----------------------
-  1   |  Alice Wong   |     a.wong@ex.io
-  3   |  Alicia Wong  |  alicia.wong@ex.io
-  4   | Bob Cratchit  |  bob.cratchit@ex.io
+For pipelines of dedupers:
 
-/// caption
-After the AND step: 3 records. `Alicia Wong` survives as her own record; both real duplicate pairs merged.
-///
+```python exec="yes" source="above" session="quickstart" result="python"
+import liken as lk
+import pandas as pd
 
-That is the loop: exact to see the baseline, fuzzy to catch the near-misses, and a second condition to protect against over-merging. `explore` gives you the duplicate-rate evidence to pick each threshold; the next tutorial applies the same loop to record linkage.
+df = pd.DataFrame([{"id": 1, "email": "x@y.io", "address": "10th street"}]) # Dummy data
 
-## Summary
+pipeline = (
+    lk.pipeline()
+    .step(
+        [
+            lk.col("address").fuzzy(threshold=0.8),
+            lk.col("address").str_startswith("10"),
+        ]
+    )
+    .step(lk.col("email").fuzzy(threshold=0.98))
+)
 
-Different collections of dedupers, whether a single deduper, a dictionary or a pipeline, are best suited to different use cases:
+deduper = lk.dedupe(df).apply(pipeline)
 
-| Collection | Pandas extension | Quick tasks | Multiple columns | Logical combination semantics | Preprocessors |
-| ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
-| Single | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: | :material-close: |
-| Dict | :material-close: | :white_check_mark: | :white_check_mark: | :material-close: | :material-close: |
-| Pipeline | :material-close: | :material-close: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+print("df will be deduped with...")
+print(dedupers.explain())
+```
+
+!!! warning
+
+    Preprocessors are **not** currently shown in the explained output of a pipeline.

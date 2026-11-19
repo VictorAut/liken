@@ -2,6 +2,8 @@
 title: "liken.preprocessors"
 ---
 
+<!-- vale off -->
+
 ::: liken.preprocessors
     options:
       members:

@@ -53,6 +53,9 @@ jobs:
           uv sync --locked --all-extras --group docs
 
       - run: |
+          uv run vale docs
+
+      - run: |
           uv run zensical build --clean
 
       - name: Upload static files as artifact

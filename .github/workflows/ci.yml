@@ -34,7 +34,7 @@ jobs:
 
       - name: lint
         run: |
-          task lint
+          task uv:lint
 
   test-extras:
     runs-on: ubuntu-latest
@@ -60,7 +60,7 @@ jobs:
 
       - name: test | optional imports
         run: |
-          task test-extras EXTRAS=${{ matrix.extras }} PY_VERSION=${{ matrix.python-version }}
+          task uv:test-extras EXTRAS=${{ matrix.extras }} PY_VERSION=${{ matrix.python-version }}
 
   test-matrix:
     runs-on: ubuntu-latest
@@ -95,7 +95,7 @@ jobs:
 
       - name: test | dependency matrix
         run: |
-          task test-matrix ENV=${{ matrix.env }}
+          task uv:test-matrix ENV=${{ matrix.env }}
 
       - name: coverage | upload data file
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

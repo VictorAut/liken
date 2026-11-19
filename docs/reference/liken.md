@@ -2,6 +2,8 @@
 title: "liken"
 ---
 
+<!-- vale off -->
+
 ::: liken
     options:
       inherited_members: false

@@ -3,14 +3,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
+from typing import cast
 
 import pandas as pd
 
 from liken.dedupers.cosine import cosine
+from liken.dedupers.edit_distance import edit_distance
 from liken.dedupers.fuzzy import fuzzy
 from liken.dedupers.jaccard import jaccard
+from liken.dedupers.knn import knn
 from liken.dedupers.lsh import lsh
+from liken.dedupers.sorted_neighbourhood import sorted_neighbourhood
 from liken.dedupers.tfidf import tfidf
+from liken.dedupers.token_overlap import token_overlap
+from liken.dedupers.within import within
 from liken.liken import Dedupe
 from liken.liken import dedupe
 
@@ -21,6 +27,7 @@ if TYPE_CHECKING:
     from liken.core.deduper import BaseDeduper
     from liken.types import Columns
     from liken.types import Keep
+    from liken.types import UserDataFrame
 
 
 class DeduperProtocol(Protocol):
@@ -29,6 +36,8 @@ class DeduperProtocol(Protocol):
 
 
 class DropMixin(DeduperProtocol):
+    _df: pd.DataFrame
+
     def drop_duplicates(
         self,
         columns: Columns | None = None,
@@ -37,19 +46,19 @@ class DropMixin(DeduperProtocol):
         **kwargs: Any,
     ) -> pd.DataFrame:
 
-        self._deduper: Dedupe
-
-        return self._deduper.apply(
+        deduper: Dedupe = dedupe(self._df)
+        result: UserDataFrame = deduper.apply(
             self.func(**kwargs),
         ).drop_duplicates(
             columns=columns,
             keep=keep,
         )
+        return cast("pd.DataFrame", result)
 
 
 class Accessor(DropMixin):
     def __init__(self, df: pd.DataFrame):
-        self._deduper: Dedupe = dedupe(df)
+        self._df: pd.DataFrame = df
 
 
 def register_pd_affordances() -> None:
@@ -66,3 +75,8 @@ def register_pd_affordances() -> None:
     make_accessor("lsh", lsh)
     make_accessor("cosine", cosine)
     make_accessor("jaccard", jaccard)
+    make_accessor("sorted_neighbourhood", sorted_neighbourhood)
+    make_accessor("token_overlap", token_overlap)
+    make_accessor("knn", knn)
+    make_accessor("within", within)
+    make_accessor("edit_distance", edit_distance)

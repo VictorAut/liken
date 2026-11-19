@@ -2,7 +2,7 @@
 title: Backends
 ---
 
-Liken runs on seven DataFrame backends: pandas, polars, modin, dask, ray, pyspark and pyarrow. You do not need choose a backend, Liken detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `pyarrow.Table` gets the pyarrow backend etc. Passing an unsupported dataframe type raises a `ValueError: Unsupported dataframe type`.
+Liken detects it from the DataFrame you pass to `lk.dedupe`: a pandas DataFrame gets the pandas backend, a `pyarrow.Table` gets the pyarrow backend etc. Passing an unsupported dataframe type raises a `ValueError`.
 
 The deduplication API is the same on every backend. What differs is where the work runs and what you get back. This page lays out those differences; the [First Steps](../tutorials/first-steps.md#instantiating) tabs show the instantiation code for each.
 
@@ -39,9 +39,13 @@ pandas, polars and pyarrow ship with Liken itself. The other backends are option
     uv pip install 'liken[all]'     # deduplicate with any of the above
     ```
 
+!!! warning
+
+    Python `3.15` is **not** supported for the `ray` and `modin` backends.
+
 ## Instantiating
 
-Each backend is instantiated by passing its DataFrame to `lk.dedupe` — see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all seven.
+Each backend is instantiated by passing its DataFrame to `lk.dedupe` (see the [Instantiating](../tutorials/first-steps.md#instantiating) tabs for all seven).
 
 For PySpark, the `SparkSession` is inferred from the DataFrame itself.
 
@@ -55,9 +59,9 @@ df = lk.dedupe(spark_df).apply(lk.fuzzy()).drop_duplicates("address")
 
 The first split is execution scope:
 
-- **pandas, polars, modin** run over the whole DataFrame in one process. modin is a drop-in for pandas — its DataFrames are pandas-like, and Liken treats them locally.
+- **pandas, polars, modin** run over the whole DataFrame in one process. modin is a drop-in for pandas: its DataFrames are pandas-like, and Liken treats them locally.
 - **pyarrow** runs over the whole table in one process. Arrow tables are columnar in memory, the same format Liken uses internally.
-- **dask, ray, pyspark** run over partitions — over batches, on ray. Deduplication executes per partition or batch, on the worker holding it.
+- **dask, ray, pyspark** run over partitions (over batches, on ray). Deduplication executes **per partition or batch**, on the worker holding it.
 
 The partitioned execution has a consequence you must plan around: **records are only matched within a partition**. Two identical rows in different partitions will not be deduplicated, and each partition's duplicates get ids from that partition's own numbering. Partition your data so that likely duplicates land together, or use `repartition` on the columns your dedupers match against — see [Use Partitioned Data](performance.md#use-partitioned-data).
 
@@ -79,9 +83,9 @@ The partitioned execution has a consequence you must plan around: **records are 
 
 Three methods pull data to the driver, so they trigger a collect on the distributed backends:
 
-- `canonicalize()` with no `source_id` — computing the auto-increment ids requires the whole frame's row positions.
-- `canonicals()` — counts clusters by materialising the canonical ids. On PySpark this needs Spark 4 or above, as documented on the method.
-- `synthesize()` — builds the synthetic records from collected clusters.
+- `canonicalize()` with no `source_id`. Computing the auto-increment ids requires the whole frame's row positions.
+- `canonicals()` counts clusters by materialising the canonical ids. On PySpark this needs Spark 4 or above, as documented on the method.
+- `synthesize()` builds the synthetic records from collected clusters.
 
 Passing an existing id column (`canonicalize(source_id="uid")`) avoids the auto-increment collect on dask and ray.
 
@@ -94,12 +98,12 @@ One API difference to know before you write code against a distributed backend:
 
 ## Which One Do I Pick?
 
-- **pandas** — in-memory frames. The reference backend: everything works, and results are the easiest to inspect.
-- **polars** — in-memory frames on a modern, multithreaded execution engine.
-- **pyarrow** — in-memory Arrow tables, when your data is already Arrow (for example loaded from Parquet with `pyarrow.parquet`).
-- **modin** — pandas code that has outgrown one core. Scales pandas across cores while keeping the pandas API.
-- **dask** — partitioned, pandas-like processing on one machine or a small cluster, when data does not fit in memory.
-- **ray** — dataset-oriented pipelines with ray already in your stack.
-- **pyspark** — data already lives in Spark. Deduplicate where the data is, rather than moving it.
+- **pandas**: in-memory frames. The reference backend: everything works, and results are the easiest to inspect.
+- **polars**: in-memory frames on a modern, multi-threaded execution engine.
+- **pyarrow**: in-memory Arrow tables, when your data is already Arrow (for example loaded from Parquet with `pyarrow.parquet`).
+- **modin**: pandas code that has outgrown one core. Scales pandas across cores while keeping the pandas API.
+- **dask**: partitioned, pandas-like processing on one machine or a small cluster, when data does not fit in memory.
+- **ray**: dataset-oriented pipelines with ray already in your stack.
+- **pyspark**: data already lives in Spark. Deduplicate where the data is, rather than moving it.
 
 All seven accept the same dedupers, dict collections and pipelines. The choice is about where your data lives and how far it must scale, not about which dedupers you can write.

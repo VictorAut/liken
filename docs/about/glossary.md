@@ -2,8 +2,6 @@
 title: Glossary
 ---
 
-The vocabulary of liken's documentation. Write against these terms.
-
 ### Blocking
 
 Literature synonym of [candidate generation](#candidate-generation).
@@ -34,13 +32,10 @@ In ER literature, canonicalization usually means consolidation:
 merging each [cluster](#clustering) of duplicates into a single record.
 Liken does not merge records at this stage.
 
-In prose, the en-GB `-ise` spelling of this word is retired; the API
-and the docs use `canonicalize`.
-
 ### Clustering
 
 The step that links candidate pairs into clusters. Matching is
-transitive — see [transitive closure](#transitive-closure) — so a
+transitive (see [transitive closure](#transitive-closure)) so a
 cluster is a chain of matches, not a set of records that all match each
 other directly.
 
@@ -53,24 +48,16 @@ them into [clusters](#clustering).
 
 ### Entity resolution
 
-Another name for [record linkage](#record-linkage) in the literature.
-Liken's documentation uses *record linkage*.
+The umbrella literature term for broadly undertakes [canonicalization](#canonicalize)
 
 ### Golden record
 
-Retired. Not liken vocabulary. Use
-[representative record](#representative-record).
+Not used by Liken, but appears in the literature. Prefer use of [representative record](#representative-record) instead.
 
 ### Match rule
 
 Literature synonym of a *deduper* — the definition of what counts as a
 duplicate. Liken writes *deduper*.
-
-### Record linkage
-
-Labelling records that describe the same entity instead of dropping
-them: linked records are kept and receive a shared `canonical_id`. See
-the [Record Linkage tutorial](../tutorials/record-linkage.md).
 
 ### Representative record
 
@@ -81,7 +68,7 @@ for its [cluster](#clustering).
 
 The policy that picks each cluster's
 [representative record](#representative-record): `"first"` keeps the
-earliest record of the cluster in row order, `"last"` the latest.
+earliest record of the cluster in row order, `"last"` the latest. Denoted by the `keep` argument in [.drop_duplicates()](../reference/liken.md#liken.Dedupe.drop_duplicates) and .[canonicalize()](../reference/liken.md#liken.Dedupe.canonicalize)
 
 ### Transitive closure
 

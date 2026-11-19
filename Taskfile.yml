@@ -15,19 +15,19 @@ vars:
     - pyarrow
 
 tasks:
-  install:
+  uv:install:
     desc: Install project
     cmds:
       - uv sync --locked --all-extras --all-groups
 
-  format:
+  uv:format:
     desc: Format code
     cmds:
       - uv run ruff check --select I --fix # sorts imports
       - uv run ruff format {{.ALL_PATHS}}
       - uv run ruff check {{.ALL_PATHS}} --fix
 
-  lint:
+  uv:lint:
     desc: lint and type-check
     cmds:
       - uv run ruff check --select I src/ tests/ scripts/
@@ -35,19 +35,19 @@ tasks:
       - uv run ruff check src/ tests/ scripts/
       - uv run mypy src/ scripts/
 
-  test-unit:
+  uv:test-unit:
     desc: Runs unit tests
     cmds:
       - uv run --active --all-extras pytest tests/unit/ -v
 
-  test-integration:
+  uv:test-integration:
     desc: Runs integration tests
     cmds:
       - for: { var: BACKENDS, as: BACKEND }
         cmd: uv run --active --all-extras pytest tests/integration/ --backend
           {{.BACKEND}} -v
 
-  test-extras:
+  uv:test-extras:
     desc: Runs tests for optional imports
     vars:
       EXTRAS: "{{.EXTRAS | default \"minimal\"}}"
@@ -56,7 +56,7 @@ tasks:
       - uv tool install tox --with tox-uv
       - tox run -e {{.EXTRAS}}-{{.PY_VERSION}}
 
-  test-matrix:
+  uv:test-matrix:
     desc: Runs dependency matrix envs; ENV=<name> for one
     vars:
       ENV: "{{.ENV | default \"\"}}"
@@ -65,13 +65,13 @@ tasks:
       - cmd: if [ -n "{{.ENV}}" ]; then tox run -e {{.ENV}}; else tox run-parallel
           -m matrix; fi
 
-  test:
+  uv:test:
     desc: Runs unit and integration tests against the lock only (local
       fast-iteration tooling; CI tests the matrix)
     cmds:
-      - task test-unit && task test-integration
+      - task uv:test-unit && task uv:test-integration
 
-  coverage:
+  uv:coverage:
     desc: Runs coverage against the lock only (local fast-iteration tooling;
       CI coverage comes from the matrix)
     vars:
@@ -83,19 +83,14 @@ tasks:
           tests/integration/ --backend {{.BACKEND}} -v
       - uv run --active coverage {{.COV_FORMAT}} --omit "tests/**/*"
 
-  docs:
-    desc: locally build and serve zensical
-    cmds:
-      - uv run zensical serve
-
-  profile:
+  uv:profile:
     desc: First-look profile of one canonicalize run
     vars:
       ARGS: '{{.ARGS | default "--deduper fuzzy --size 10000"}}'
     cmds:
       - uv run --active python scripts/profiling/profile.py {{.ARGS}}
 
-  bump:
+  uv:bump:
     desc: Bump the project version.
     summary: |
       Bump the project version.
@@ -106,3 +101,13 @@ tasks:
     cmds:
       - cmd: uv version --bump {{.VERSION}}
       - cmd: uv lock
+
+  docs:serve:
+    desc: locally build and serve zensical
+    cmds:
+      - uv run zensical serve
+
+  docs:lint:
+    desc: locally build and serve zensical
+    cmds:
+      - uv run vale docs/

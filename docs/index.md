@@ -25,7 +25,7 @@
 
 ## Why...
 
-Liken deduplicates DataFrames, resolves entities and canonicalizes records.
+Liken offers near deduplication tooling and entity resolution for DataFrames.
 
 ### Features
 
@@ -41,25 +41,22 @@ The key features are:
 - Pandas API extension
 - Composable, predicate-based, deduplication pipelines
 - Predicate dedupers for discrete checks
-- Record linkage and canonicalization
+- Entity resolution and canonicalization
 - Built-in Preprocessors
 - Pandas, Polars, Modin, Ray, Dask and PySpark support
 - Customizable in pure Python
 - Synthetic record creation
 - Easy to understand syntax
 - Dummy datasets for practice
+- ... And more!
 
-Liken makes near deduplication as approachable as exact deduplication. Describe the predicates, apply them, and get deduplicated or canonicalized DataFrames back.
-
-Terms used across the documentation are defined in the [Glossary](about/glossary.md).
 
 ### Use Cases
 
 - **Find near-duplicate records.** Catch what exact matching misses.
-- **Link records that describe the same entity.** Combine datasets and label duplicates with configurable predicates instead of exact keys.
 - **Canonicalize duplicate clusters.** Merge each cluster of duplicates into a single record and keep a canonical id on every record.
-- **Build representative records.** Consolidate each duplicate cluster into one synthetic record, the representative chosen by survivorship.
-- **Explore duplicate rates first.** Profile how much duplication each column carries.
+- **Build representative records.** Consolidate each duplicate cluster into one synthetic, representative, record.
+
 
 ## Supported DataFrame Libraries
 
@@ -94,12 +91,11 @@ Terms used across the documentation are defined in the [Glossary](about/glossary
 
 </div>
 
+## ... Wait What?
 
-### Pandas Affordances
+Liken was first conceived as means to provide near deduping to pandas DataFrames. Jump to the [Coming from Pandas?](tutorials/coming-from-pandas.md) section if that's all you need. It's a single page document showing you how to do that, and you won't need anything else.
 
-Liken's focus is on composable deduplication pipelines that scale to distributed datasets. Pandas users who want intuitive near-deduplication as a pandas API extension get a dedicated entry point: head to the [Coming from Pandas?](tutorials/applying-dedupers.md#coming-from-pandas) section!
-
-
+Otherwise, head to [First Steps](tutorials/first-steps.md).
 
 ## License
 

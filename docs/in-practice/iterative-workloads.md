@@ -4,7 +4,7 @@ title: "Iterative Workloads"
 
 ## Reminder
 
-In the [Record Linkage tutorial](../tutorials/record-linkage.md) you found out that Liken creates a `canonical_id`. By default this `canonical_id` is an autoincrementing numeric identifier starting from zero.
+In the [Canonicalization tutorial](../tutorials/canonicalization.md) you found out that Liken creates a `canonical_id`. By default this `canonical_id` is an auto-incrementing numeric identifier starting from `0`.
 
 In this chapter we explore the configuring needed to canonicalize a dataset iteratively. By iteratively we mean appending to the same dataset — for example a dataset of customers that is appended to with new customers in a given time interval.
 
@@ -13,7 +13,7 @@ In this chapter we explore the configuring needed to canonicalize a dataset iter
 
 ## Canonical IDs
 
-A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally a Liken `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `source_id` argument of the `canonicalize` function. See [the tutorial](../tutorials/record-linkage.md) for a recap.
+A new canonical ID every time we instantiate a `Dedupe` class isn't going to be practical for our use case. In fact, given our use case, we're likely to already have a canonical ID (literally a Liken `canonical_id`, or another). So we should use that instead and pass it in as a string identifier to the `source_id` argument of the `canonicalize` function. See [the tutorial](../tutorials/canonicalization.md) for a recap.
 
 Note that `source_id` names the *source* column whose values become the canonical ids, while the `canonical_id` argument names the *output* column. If your source column is not already labelled `canonical_id`, pass a different `canonical_id` label — for example `canonicalize(source_id="uid", canonical_id="master_id")`. A `canonical_id` label that already exists in the frame is rejected with a `ValueError`.
 
@@ -32,6 +32,8 @@ Preparing an existing `canonical_id` column for an append is your job, not Liken
 
 Say your canonicalized customers currently hold ids `0` and `1`, and an append batch carries two new records with pre-assigned ids `2` and `3` — one of which is a case-variant of an existing customer:
 
+<!-- vale Vale.Spelling = NO -->
+
  canonical_id  |     name
 ---------------|----------------
        0       |  Alice Wong
@@ -42,6 +44,8 @@ Say your canonicalized customers currently hold ids `0` and `1`, and an append b
 /// caption
 Existing records (ids 0–1) stacked with the append batch (ids 2–3).
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 Canonicalize the stacked frame with `source_id="canonical_id"`:
 
@@ -55,6 +59,8 @@ pipeline = lk.pipeline().step(
 df = lk.dedupe(stacked).apply(pipeline).canonicalize(source_id="canonical_id", keep="first")
 ```
 
+<!-- vale Vale.Spelling = NO -->
+
  canonical_id  |     name
 ---------------|----------------
        0       |  Alice Wong
@@ -65,6 +71,8 @@ df = lk.dedupe(stacked).apply(pipeline).canonicalize(source_id="canonical_id", k
 /// caption
 The new duplicate inherited the existing id `0` — the cluster keeps its established identity.
 ///
+
+<!-- vale Vale.Spelling = YES -->
 
 Because `keep="first"` picks the earliest record of the cluster under the survivorship policy, the new record joins the existing id rather than the other way around. Later appends that duplicate other members of the cluster likewise merge onto id `0`. The dataset keeps one continuous identifier space across runs.
 

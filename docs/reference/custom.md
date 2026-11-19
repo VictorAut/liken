@@ -2,6 +2,8 @@
 title: "liken.custom"
 ---
 
+<!-- vale off -->
+
 ::: liken.custom
     options:
       inherited_members: false

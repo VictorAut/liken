@@ -2,6 +2,8 @@
 title: "liken.datasets"
 ---
 
+<!-- vale off -->
+
 ::: liken.datasets
     options:
       inherited_members: false
